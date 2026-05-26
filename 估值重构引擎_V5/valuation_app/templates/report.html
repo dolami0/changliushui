@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>估值重构报告 — {{ stock_name }}({{ stock_code }})</title>
+<style>
+:root{--bg:#0a0e12;--card:#11161c;--border:#1e2833;--text:#bcc8d4;--dim:#5a6b7c;--gold:#c09040;--green:#3a9d6c;--red:#c04a4a;--steel:#4a80a8}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif;line-height:1.6;padding:20px}
+.container{max-width:900px;margin:0 auto}
+h1{font-size:22px;margin-bottom:4px}
+h2{font-size:15px;color:var(--steel);border-bottom:1px solid var(--border);padding-bottom:6px;margin:24px 0 12px;text-transform:uppercase;letter-spacing:2px}
+.meta{color:var(--dim);font-size:12px;margin-bottom:20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:16px;margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)}
+th{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:1px}
+td{font-family:'JetBrains Mono',monospace}
+.num{text-align:right}
+.up{color:var(--green)}.down{color:var(--red)}.gold{color:var(--gold)}
+.bignums{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.bignum{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:14px;text-align:center}
+.bignum .val{font-size:28px;font-weight:700}.bignum .lbl{font-size:10px;color:var(--dim);margin-top:4px}
+.bar{display:flex;height:24px;border-radius:4px;overflow:hidden;margin:8px 0}
+.bar>div{display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600}
+.bar-bear{background:rgba(192,74,74,.5)}.bar-base{background:rgba(74,128,168,.5)}.bar-bull{background:rgba(58,157,108,.5)}
+.tag{padding:1px 7px;border-radius:3px;font-size:10px;font-weight:700;letter-spacing:.5px}
+.tag-gold{background:rgba(192,144,64,.15);color:var(--gold)}
+.tag-green{background:rgba(58,157,108,.15);color:var(--green)}
+.tag-red{background:rgba(192,74,74,.15);color:var(--red)}
+.tag-steel{background:rgba(74,128,168,.15);color:var(--steel)}
+.dim{color:var(--dim);font-size:11px}
+.narrative{font-size:14px;line-height:1.7;padding:12px 0;border-left:3px solid var(--gold);padding-left:14px;margin:12px 0}
+.footer{text-align:center;color:var(--dim);font-size:10px;margin-top:30px;padding-top:14px;border-top:1px solid var(--border)}
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>{{ stock_name }} <span style="color:var(--dim);font-weight:400">({{ stock_code }})</span></h1>
+<div class="meta">
+  管线版本 V5 | {{ report_date }} | 主模型: <span class="tag tag-gold">{{ primary_model }}</span>
+  {% if response_level %}| 响应等级: <span class="tag tag-steel">L{{ response_level }}</span>{% end %}
+  {% if event_date %}| {{ event_date }}{% end %}
+</div>
+
+<!-- ═══ 执行摘要 ═══ -->
+<div class="bignums">
+  <div class="bignum"><div class="val {{ 'up' if upside > 0 else 'down' }}">{{ upside }}{{ '%' if upside else '' }}</div><div class="lbl">概率加权涨幅</div></div>
+  <div class="bignum"><div class="val gold">{{ asym }}</div><div class="lbl">不对称比</div></div>
+  <div class="bignum"><div class="val gold">{{ quality_flag }}</div><div class="lbl">质量等级</div></div>
+  <div class="bignum"><div class="val">{{ confidence }}/10</div><div class="lbl">置信度</div></div>
+</div>
+
+<div class="bar">
+  <div class="bar-bear" style="flex:{{ bear_prob }}">Bear {{ bear_prob }}%</div>
+  <div class="bar-base" style="flex:{{ base_prob }}">Base {{ base_prob }}%</div>
+  <div class="bar-bull" style="flex:{{ bull_prob }}">Bull {{ bull_prob }}%</div>
+</div>
+
+<!-- ═══ 估值路由 ═══ -->
+<h2>一、估值路由</h2>
+<div class="card">
+<table>
+  <tr><th>主模型</th><td><span class="tag tag-gold">{{ primary_model }}</span></td><th>模型类别</th><td>{{ model_category }}</td></tr>
+  <tr><th>校验模型</th><td>{{ secondary_model }}</td><th>路由理由</th><td style="font-size:12px">{{ routing_reason }}</td></tr>
+  {% if migration_path %}
+  <tr><th>迁移路径</th><td colspan="3" style="font-size:11px">{{ migration_path }}</td></tr>
+  {% end %}
+</table>
+</div>
+
+<!-- ═══ 市场定价 ═══ -->
+<h2>二、市场定价检测</h2>
+<div class="card">
+<p style="margin-bottom:8px"><span class="tag tag-gold">{{ bs_level }}</span></p>
+<table>
+  <tr><th>EV</th><td class="num">{{ ev }}亿</td><th>NOPAT</th><td class="num">{{ nopat }}亿</td><th>ROIC</th><td class="num">{{ roic }}%</td></tr>
+  <tr><th>WACC</th><td class="num">{{ wacc }}%</td><th>隐含g</th><td class="num">{{ implied_g }}%</td><th>市场溢价</th><td class="num {{ 'up' if market_premium > 0 else 'down' }}">{{ market_premium }}%</td></tr>
+  <tr><th>PE(TTM)</th><td class="num">{{ pe_ttm }}x</td><th>PE分位</th><td class="num">{{ pe_rank }}</td><th>PB</th><td class="num">{{ pb }}x</td></tr>
+</table>
+<p class="dim" style="margin-top:6px">{{ market_story }}</p>
+</div>
+
+<!-- ═══ 反向DCF ═══ -->
+<h2>三、反向DCF</h2>
+<div class="card">
+<table>
+  <tr><th>市场隐含g</th><td class="num">{{ market_g }}%</td><th>我的隐含g</th><td class="num">{{ my_g }}%</td></tr>
+  <tr><th>预期差</th><td class="num {{ 'up' if gap_pct > 0 else 'down' }}">{{ gap_pct }}%</td><th>方向</th><td>{{ gap_dir }} ({{ gap_mag }})</td></tr>
+</table>
+</div>
+
+<!-- ═══ 预期差 ═══ -->
+<h2>四、预期差</h2>
+<div class="card">
+<p style="margin-bottom:6px"><strong>{{ gap_level }}</strong></p>
+<p class="dim">{{ gap_note }}</p>
+<table style="margin-top:8px">
+  <tr><th>概率加权涨幅</th><td class="num {{ 'up' if upside > 0 else 'down' }}"><strong>{{ upside }}%</strong></td><th>不对称比</th><td class="num">{{ asym }}</td></tr>
+  <tr><th>目标市值</th><td class="num">{{ target_mcap }}亿</td><th>当前市值</th><td class="num">{{ current_mcap }}亿</td></tr>
+</table>
+</div>
+
+<!-- ═══ 三情景推演 ═══ -->
+<h2>五、三情景推演 — {{ primary_model }}</h2>
+<div class="card">
+<table>
+  <tr>
+    <th>情景</th><th>概率</th>
+    {% for col in param_columns %}<th>{{ col }}</th>{% end %}
+    <th>目标市值</th><th>涨跌幅</th>
+  </tr>
+  {% for s in scenarios %}
+  <tr>
+    <td><strong>{{ s['name'] }}</strong></td>
+    <td class="num">{{ s['prob'] }}%</td>
+    {% for val in s['params'] %}<td class="num">{{ val }}</td>{% end %}
+    <td class="num">{{ s['mcap'] }}亿</td>
+    <td class="num {{ 'up' if s['upside'] > 0 else 'down' }}"><strong>{{ s['upside'] }}%</strong></td>
+  </tr>
+  {% end %}
+</table>
+</div>
+
+<!-- ═══ 案例比对 ═══ -->
+<h2>六、案例比对</h2>
+<div class="card">
+{% if case_discount %}
+<p>综合参数折扣: <strong>{{ case_discount }}%</strong></p>
+<p class="dim">{{ case_rationale }}</p>
+{% end %}
+{% for c in compared_cases %}
+<div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+  <strong>{{ c['code'] }}</strong> <span class="tag tag-steel">折扣{{ c['discount'] }}%</span>
+  <table style="margin-top:6px">
+    <tr>{% for dk, dv in c['dims'].items() %}<th>{{ dk }}</th>{% end %}</tr>
+    <tr>{% for dk, dv in c['dims'].items() %}<td class="num">{{ dv }}</td>{% end %}</tr>
+  </table>
+</div>
+{% end %}
+</div>
+
+<!-- ═══ 置信度 ═══ -->
+<h2>七、置信度: {{ confidence }}/10 ({{ conf_label }})</h2>
+<div class="card">
+<table>
+  {% for d in conf_dims %}
+  <tr><th>{{ d['label'] }}</th><td class="num">{{ d['score'] }}/10</td><td style="font-size:12px">{{ d['note'] }}</td></tr>
+  {% end %}
+</table>
+</div>
+
+<!-- ═══ 交易标注 ═══ -->
+<h2>八、交易标注: {{ tier }}</h2>
+<div class="card">
+<table>
+  <tr><th>总评分</th><td class="num"><strong>{{ total_score }}</strong></td><th>建议</th><td>{{ suggested_action }}</td></tr>
+</table>
+{% for sig in alignment_signals %}
+<p style="margin-top:4px;font-size:12px">• {{ sig }}</p>
+{% end %}
+</div>
+
+<!-- ═══ 监测KPI ═══ -->
+<h2>九、监测KPI</h2>
+<div class="card">
+{% for cat, items in kpis.items() %}
+  {% if items %}
+  <h3 style="font-size:12px;color:var(--steel);margin:8px 0 4px">{{ cat }}</h3>
+  {% for item in items %}
+  <p style="font-size:12px;margin:3px 0">• <strong>{{ item['name'] }}</strong>: {{ item['target'] }} (基线: {{ item['baseline'] }}, 频率: {{ item['freq'] }})</p>
+  {% end %}
+  {% end %}
+{% end %}
+</div>
+
+<!-- ═══ 风险触发器 ═══ -->
+<h2>十、风险触发器</h2>
+<div class="card">
+<p>🔺 <strong>Bull触发</strong>: {{ bull_trigger }}</p>
+<p>🔻 <strong>Bear触发</strong>: {{ bear_trigger }}</p>
+<p class="dim">监测频率: {{ monitor_freq }}</p>
+</div>
+
+<!-- ═══ 叙事 ═══ -->
+<h2>叙事</h2>
+<div class="narrative">{{ narrative }}</div>
+
+<div class="footer">
+  估值重构引擎 V5 | {{ stock_code }} | 生成于 {{ report_date }} | 本报告不构成投资建议
+</div>
+
+</div>
+</body>
+</html>

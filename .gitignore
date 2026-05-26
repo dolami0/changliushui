@@ -1,0 +1,27 @@
+node_modules/
+dist/
+.claude/
+output/
+skills-lock.json
+__pycache__/
+*.pyc
+*.log
+*.tgz
+.env
+tmp.json
+config.json
+
+# 历史备份
+src_backup_20260521/
+src_v1.0/
+
+# 估值引擎 — 归档/调试/快照/报告/运行时配置
+估值重构引擎_V5/_archive_v4/
+估值重构引擎_V5/_debug_*.json
+估值重构引擎_V5/_snapshots/
+估值重构引擎_V5/reports/
+估值重构引擎_V5/evals/
+估值重构引擎_V5/config/
+
+# 案例导入数据（非构建产物）
+public/

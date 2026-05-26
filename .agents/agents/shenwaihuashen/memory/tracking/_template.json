@@ -1,0 +1,26 @@
+{
+  "_template": "追踪文件模板 — 创建新追踪时复制此结构",
+  "stockCode": "",
+  "stockName": "",
+  "status": "active",
+  "decisionCycle": {
+    "initialDecisionDate": "",
+    "decision": "",
+    "convictionScore": 0,
+    "suggestedPosition": 0,
+    "decisionBasis": "",
+    "keyAssumptions": [],
+    "entryPriceRef": 0,
+    "targetPriceRef": 0
+  },
+  "priceTracking": [],
+  "eventTracking": [],
+  "assumptionValidation": [],
+  "reassessmentNotes": [],
+  "exitConditions": [],
+  "feedbackLoop": {
+    "lastReviewDate": "",
+    "nextReviewDate": "",
+    "decisionQuality": null
+  }
+}

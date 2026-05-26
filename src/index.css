@@ -1,0 +1,385 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 2%;
+    --foreground: 140 6% 95%;
+    --card: 0 0% 4%;
+    --card-foreground: 140 6% 95%;
+    --popover: 0 0% 4%;
+    --popover-foreground: 140 6% 95%;
+    --primary: 78 100% 50%;
+    --primary-foreground: 0 0% 2%;
+    --secondary: 0 0% 7%;
+    --secondary-foreground: 140 6% 95%;
+    --muted: 0 0% 7%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 24 100% 50%;
+    --accent-foreground: 140 6% 95%;
+    --destructive: 0 60% 50%;
+    --destructive-foreground: 140 6% 95%;
+    --border: 0 0% 16%;
+    --input: 0 0% 7%;
+    --ring: 78 100% 50%;
+    --radius: 0px;
+  }
+
+  html {
+    font-size: 22px;
+  }
+
+  body {
+    font-family: 'Noto Sans SC', 'Space Mono', 'IBM Plex Mono', sans-serif;
+    background: #050401;
+    color: #F2F4F3;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* 符文瀑布 */
+  @keyframes runeFall {
+    0%   { transform: translateY(-100%); opacity: 0.06; }
+    100% { transform: translateY(100%); opacity: 0.04; }
+  }
+  .note-runes { animation: runeFall 8s linear infinite; pointer-events: none; position: absolute; inset: 0; overflow: hidden; }
+  .note-runes::before {
+    content: '◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈';
+    white-space: pre;
+    font-size: 10px;
+    color: rgba(173,255,0,0.08);
+    position: absolute;
+    top: -20%;
+    left: 5%;
+    line-height: 2.2;
+    width: 1em;
+  }
+  .note-runes::after {
+    content: '◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆';
+    white-space: pre;
+    font-size: 11px;
+    color: rgba(173,255,0,0.06);
+    position: absolute;
+    top: -50%;
+    left: 85%;
+    line-height: 2.0;
+    width: 1em;
+    animation-delay: -4s;
+  }
+  @keyframes arrayBreath {
+    0%,100% { opacity: 0.08; transform: scale(1); }
+    50%     { opacity: 0.18; transform: scale(1.02); }
+  }
+  .note-array-bg { animation: arrayBreath 3s ease-in-out infinite; pointer-events: none; position: absolute; inset: 0; }
+
+  /* 全站阵法底纹 — 点阵 */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.04;
+    background-image: radial-gradient(rgba(173,255,0,0.8) 0.5px, transparent 0.5px);
+    background-size: 28px 28px;
+  }
+  /* 全站圆角 — 覆盖所有带边框容器（不含圆形元素） */
+  [style*="border:"]:not([style*="radius"]):not([style*="circle"]):not([style*="50%"]),
+  button[style*="border"]:not([style*="radius"]) {
+    border-radius: 6px !important;
+  }
+
+  @media (max-width: 768px) {
+    body {
+      cursor: auto;
+    }
+    * {
+      cursor: auto !important;
+    }
+  }
+}
+
+@font-face {
+  font-family: 'Geist Pixel';
+  src: url('../node_modules/geist/dist/fonts/geist-pixel/GeistPixel-Line.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+@keyframes breathe {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 1; }
+}
+
+@keyframes breatheScale {
+  0%, 100% { opacity: 0.6; transform: scale(0.96); }
+  50% { opacity: 1; transform: scale(1.02); }
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes newSignal {
+  0%, 100% { box-shadow: 0 0 12px var(--glow, rgba(173,255,0,0.15)), inset 0 0 4px var(--glow, rgba(173,255,0,0.08)); }
+  50%      { box-shadow: 0 0 24px var(--glow, rgba(173,255,0,0.35)), inset 0 0 12px var(--glow, rgba(173,255,0,0.2)); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 源远流长 — 溪涧波浪流动 (密集亮段持续流淌) */
+@keyframes streamFlow {
+  from { stroke-dashoffset: 42; }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* 青山长流水 — 水纹流动 (短徽章) */
+@keyframes flowRight {
+  from { stroke-dashoffset: 20; }
+  to   { stroke-dashoffset: 0; }
+}
+/* 千里江山长卷 — 长距水纹 (直线虚线, 已弃用) */
+@keyframes flowRightLong {
+  from { stroke-dashoffset: 40; }
+  to   { stroke-dashoffset: 0; }
+}
+@keyframes mountainBreathe {
+  0%, 100% { opacity: 0.25; }
+  50%      { opacity: 0.50; }
+}
+
+
+@media (max-width: 768px) {
+  /* ── 通用 ── */
+  body {
+    font-size: 15px;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* ── 导航 ── */
+  nav {
+    padding-left: 12px !important;
+    padding-right: 12px !important;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  nav a, nav button {
+    font-size: 12px !important;
+    padding: 4px 8px !important;
+  }
+
+  /* ── 网格溢出保护 ── */
+  [style*="grid-template-columns"] {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ── Dashboard ── */
+  .dash-card {
+    padding: 12px 14px !important;
+  }
+  .dash-card h1 {
+    font-size: 22px !important;
+  }
+  .dash-card button {
+    font-size: 13px !important;
+    padding: 8px 14px !important;
+    min-height: 40px;
+  }
+
+  /* ═══════════════════════════════════════════
+     估值报告 — 移动端完整重排版
+     ═══════════════════════════════════════════ */
+  /* 容器 */
+  section[id] {
+    padding: 14px 12px !important;
+    margin-bottom: 12px !important;
+  }
+  /* 节标题 */
+  section[id] h1, section[id] h2, section[id] h3 {
+    font-size: 15px !important;
+    margin-bottom: 10px !important;
+  }
+  /* 正文段落 */
+  div[style*="textIndent"] {
+    font-size: 14px !important;
+    line-height: 1.9 !important;
+    text-indent: 1.2em !important;
+    word-break: break-word;
+  }
+  /* KvTable — 标签列缩小、整表可滚 */
+  table[style*="borderCollapse"] {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    font-size: 13px !important;
+  }
+  table[style*="borderCollapse"] td:first-child {
+    width: auto !important;
+    min-width: 90px !important;
+    max-width: 120px !important;
+    padding: 8px 10px !important;
+    font-size: 11px !important;
+  }
+  table[style*="borderCollapse"] td:last-child {
+    padding: 8px 10px !important;
+    font-size: 14px !important;
+  }
+  /* 大三数 — 横向排列但缩小 */
+  div[style*="gap: 40px"] {
+    gap: 16px !important;
+    flex-wrap: nowrap;
+    justify-content: space-between;
+  }
+  /* 阶段点状进度 */
+  div[style*="marginTop: '10px'"][style*="display: 'flex'"][style*="alignItems: 'center'"] {
+    flex-wrap: wrap;
+    gap: 4px !important;
+  }
+
+  /* ═══════════════════════════════════════════
+     HTML 报告 (report_builder.py 生成的 class 名)
+     ═══════════════════════════════════════════ */
+  .container {
+    padding: 12px 10px !important;
+  }
+  .rpt-header {
+    padding: 16px 10px !important;
+  }
+  .rpt-header h1 {
+    font-size: 20px !important;
+  }
+  .rpt-header .subtitle {
+    font-size: 11px !important;
+  }
+  .score-badges {
+    flex-wrap: wrap;
+    gap: 8px !important;
+  }
+  .badge {
+    font-size: 12px !important;
+    padding: 4px 10px !important;
+  }
+  .section {
+    padding: 14px 10px !important;
+    margin-bottom: 10px !important;
+  }
+  .section-title h2 {
+    font-size: 15px !important;
+  }
+  .section-num {
+    font-size: 12px !important;
+  }
+  .card {
+    padding: 12px 10px !important;
+    margin-bottom: 8px !important;
+  }
+  .md-block {
+    font-size: 14px !important;
+    line-height: 1.9 !important;
+  }
+  .md-block p {
+    margin: 8px 0 !important;
+    word-break: break-word;
+  }
+  .kv, .data {
+    font-size: 12px !important;
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .kv td, .kv th, .data td, .data th {
+    padding: 6px 8px !important;
+    font-size: 12px !important;
+    white-space: nowrap;
+  }
+  .bignums {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px !important;
+    justify-content: space-between;
+  }
+  .bignum {
+    flex: 1 1 auto;
+    min-width: 80px;
+    text-align: center;
+  }
+  .bignum .val {
+    font-size: 22px !important;
+  }
+  .bignum .lbl {
+    font-size: 11px !important;
+  }
+  .scenario-bar {
+    font-size: 11px !important;
+    flex-wrap: wrap;
+  }
+  .kpi-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .kpi-item {
+    padding: 8px 10px !important;
+  }
+  .kpi-name {
+    font-size: 13px !important;
+  }
+  .kpi-detail {
+    font-size: 11px !important;
+  }
+  .dim-bar-wrap {
+    flex-wrap: wrap;
+  }
+  .dim-label {
+    width: 100% !important;
+    margin-bottom: 4px;
+    font-size: 12px !important;
+  }
+  .dim-track {
+    flex: 1;
+  }
+  .rt-item {
+    font-size: 13px !important;
+    padding: 6px 8px !important;
+  }
+  .prose {
+    font-size: 14px !important;
+  }
+  blockquote {
+    font-size: 14px !important;
+    margin: 8px 10px !important;
+    padding: 8px 12px !important;
+  }
+
+  /* ── 追踪令 ── */
+  .track-list-item {
+    padding: 10px 12px !important;
+  }
+  .track-list-item h3 {
+    font-size: 15px !important;
+  }
+
+  /* ── 设施网格 ── */
+  .facilities-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .facilities-grid > div {
+    border-right: none !important;
+    border-bottom: 1px solid #2A2A2A;
+  }
+  .facilities-grid > div:last-child {
+    border-bottom: none;
+  }
+}

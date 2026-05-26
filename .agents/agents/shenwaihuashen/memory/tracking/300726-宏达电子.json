@@ -1,0 +1,87 @@
+{
+  "stockCode": "300726",
+  "stockName": "宏达电子",
+  "direction": "long",
+  "thesis": "军工钽电容龙头，松下/基美涨价+产能缺口驱动国产替代，AI服务器+光通信打开第二增长曲线。核心验证点：2026Q2民品增速能否>50%且毛利率>58%。",
+  "conviction": 58,
+  "decisionDate": "2026-05-23",
+  "decision": "有条件通过",
+  "recommendedPosition": 10,
+  "actualPosition": 0,
+  "entryCondition": "7月H1业绩预告：民品增速>50% + GM>58%",
+  "entryPriceTarget": null,
+  "pillars": [
+    {
+      "name": "AI转单驱动民品高增",
+      "expectation": "2026Q2民品收入同比增速>50%，单层瓷介电容环比>30%",
+      "status": "pending",
+      "verificationDate": "2026-07-15",
+      "lastChecked": "2026-05-23",
+      "history": []
+    },
+    {
+      "name": "毛利率稳定在高位",
+      "expectation": "综合毛利率维持在58%以上，Q2环比不降>1pct",
+      "status": "on_track",
+      "verificationDate": "2026-07-15",
+      "lastChecked": "2026-05-23",
+      "history": [{"date":"2026-05-23","actual":"Q1 GM 60.0%, FY2025 58.4%","trend":"up"}]
+    },
+    {
+      "name": "供给缺口持续+涨价落地",
+      "expectation": "松下/基美6月涨价执行，现货市场确认供给缺口",
+      "status": "on_track",
+      "verificationDate": "2026-06-30",
+      "lastChecked": "2026-05-23",
+      "history": [{"date":"2026-05-23","actual":"AVX 5月宣布TAJ/TLJ钽电容涨价12-20%，5月交付起生效","trend":"up"}]
+    },
+    {
+      "name": "军工基本盘稳定",
+      "expectation": "高可靠产品收入维持10%+增速，十五五订单持续释放",
+      "status": "on_track",
+      "verificationDate": "2026-08-31",
+      "lastChecked": "2026-05-23",
+      "history": [{"date":"2026-05-23","actual":"FY2025高可靠+12.88%，订单锁定至2026Q1-Q2","trend":"stable"}]
+    }
+  ],
+  "risks": [
+    {"name": "AI需求证伪", "probability": "低", "impact": "bear -52.1%", "monitoring": "Q2民品增速+英伟达资本开支指引"},
+    {"name": "PE 65x估值收缩", "probability": "中", "impact": "PE→45x亏30%", "monitoring": "每季check PE分位"},
+    {"name": "民品竞争加剧", "probability": "中", "impact": "毛利率承压", "monitoring": "火炬/振华产能+公司份额"},
+    {"name": "军工订单节奏波动", "probability": "低", "impact": "单季波动", "monitoring": "全年而非单季"}
+  ],
+  "exitConditions": [
+    "Q2民品增速<30% → 不参与（entry condition未满足）",
+    "已持有后：PE突破90x且无增速支撑 → 减半仓",
+    "已持有后：民品连续两季增速<30% → 清仓",
+    "已持有后：毛利率连续两季<56% → 清仓",
+    "国际大厂宣布大规模扩产(新增产能>20%) → 重新评估"
+  ],
+  "catalystCalendar": [
+    {"date": "2026-06", "event": "松下/基美涨价生效", "type": "行业", "impact": "H", "bull": "涨价如期执行", "bear": "涨价被下游抵制"},
+    {"date": "2026-07-15", "event": "H1业绩预告", "type": "财报", "impact": "H", "bull": "民品>60%,GM>58%", "bear": "民品<30%或GM降>1pct"},
+    {"date": "2026-08", "event": "半年报", "type": "财报", "impact": "H", "bull": "模块及其他占比>30%", "bear": "增速放缓"},
+    {"date": "2026-08-11", "event": "AI服务器厂商认证", "type": "公司", "impact": "H", "bull": "获正式供应商资格", "bear": "认证延迟"},
+    {"date": "2026-Q3", "event": "展芯半导体IPO", "type": "公司", "impact": "M", "bull": "IPO成功", "bear": ""},
+    {"date": "2026-10", "event": "三季报", "type": "财报", "impact": "M", "bull": "Q3环比增长", "bear": "Q3环比下滑"}
+  ],
+  "basePrice": 63.2,
+  "baseMarketCap": 260.4,
+  "baseDate": "2026-05-22",
+  "priceLog": [
+    {"date": "2026-05-22", "price": 63.2, "pe": 64.9, "mv_yi": 260.4, "return_pct": 0.0, "mv_change_pct": 0.0, "note": "建档基准价"},
+    {"date": "2026-05-23", "price": 63.2, "pe": 64.9, "mv_yi": 260.4, "return_pct": 0.0, "mv_change_pct": 0.0, "pct_chg_daily": 11.1, "note": "追踪审查-AVX涨价催化"}
+  ],
+  "positionLog": [],
+  "aShareTracking": {
+    "pledgeCheck": {"lastChecked": "2026-05-23", "result": "零质押"},
+    "unlockCheck": {"lastChecked": "2026-05-23", "result": "无未来解禁"},
+    "marginCheck": {"lastChecked": "2026-05-23", "result": "融资6.1亿(市值2.3%),无异常"},
+    "insiderTrading": {"lastChecked": "2026-05-23", "result": "实控人零减持记录"}
+  },
+  "reviewSchedule": {
+    "nextFullReview": "2026-08-31",
+    "nextQuickCheck": "2026-06-15",
+    "lastCheck": "2026-05-23"
+  }
+}

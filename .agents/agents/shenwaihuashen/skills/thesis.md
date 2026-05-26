@@ -1,0 +1,170 @@
+---
+name: shenwaihuashen-thesis
+description: 论点追踪 — 融合 Anthropic thesis-tracker，适配 A 股。建立/更新投资论点档案、支柱评分卡、催化剂日历、价格追踪日志。触发条件：决策通过或有条件通过后自动调用；后续追踪时独立调用。
+---
+
+# 论点追踪
+
+改编自 Anthropic `thesis-tracker`，A 股适配。
+
+## 输入
+
+### 初次建立时
+
+| 来源 | 内容 | 格式 |
+|------|------|------|
+| decision 输出 | 建议仓位、建仓策略、关键假设、退出条件、催化剂日历 | Markdown 报告 |
+| financial 输出 | 支柱相关的量化期望值 | 结构化数据 |
+| industry 输出 | 卡位评级、行业阶段 | 文本 |
+
+### 后续更新时
+
+| 来源 | 内容 | 格式 |
+|------|------|------|
+| memory/tracking/{code}-{name}.json | 已有论点档案 | JSON |
+| tushare | 最新价格/PE/市值 | data_helper.py |
+| WebSearch | 最新公告/财报/催化剂落地 | 搜索摘要 |
+
+## 输出
+
+| 去向 | 内容 | 格式 |
+|------|------|------|
+| memory/tracking/ | 论点档案（thesis/pillars/risks/exitConditions/catalystCalendar/priceLog/positionLog） | JSON |
+| 用户 | 论点评分卡（pillar 状态 + 趋势 + 行动建议） | Markdown 表格 |
+
+## 核心原则
+
+**论点必须是可证伪的。** 如果没有任何数据可以推翻你的论点，那它不是一个论点——它是一个信念。投资决策需要前者，不需要后者。
+
+## 执行流程
+
+### 1. 论点建立（决策通过后）
+
+**建档时必须拉取当日收盘价作为基准价：**
+
+```bash
+python data_helper.py daily <code> <决策日前一交易日> <决策日>
+# 取最近一个交易日的 close 作为 basePrice
+```
+
+创建 `memory/tracking/{stockCode}-{stockName}.json`：
+
+```json
+{
+  "stockCode": "300964",
+  "stockName": "本川智能",
+  "direction": "long",
+  "thesis": "一句话核心投资逻辑",
+  "conviction": 68,
+  "decisionDate": "2026-05-23",
+  "basePrice": 63.2,
+  "baseMarketCap": 260.4,
+  "baseDate": "2026-05-22",
+  "recommendedPosition": 10,
+  "entryPriceTarget": 50.0,
+  "actualEntry": null,
+  "pillars": [
+    {
+      "name": "支柱名称",
+      "expectation": "期望发生什么（可量化）",
+      "status": "pending",
+      "lastChecked": "2026-05-23",
+      "history": []
+    }
+  ],
+  "risks": [
+    {
+      "name": "风险名称",
+      "probability": "低/中/高",
+      "impact": "如果发生会怎样",
+      "monitoring": "如何监控"
+    }
+  ],
+  "exitConditions": [
+    "条件1 → 行动",
+    "条件2 → 行动"
+  ],
+  "catalystCalendar": [],
+  "priceLog": [],
+  "positionLog": [],
+  "reviewSchedule": {
+    "nextFullReview": "2026-08-30",
+    "nextQuickCheck": "2026-06-15"
+  }
+}
+```
+
+### 2. 支柱设计规则
+
+**好支柱 vs 坏支柱**：
+
+| 坏支柱 | 好支柱 |
+|--------|--------|
+| 「CIPB 会成功」 | 「2026 年 H1 无液氦产品收入 >1.5 亿」 |
+| 「公司会增长」 | 「2026 年营收增速 >25%，毛利率环比改善」 |
+| 「行业前景好」 | 「AI 服务器电源 TAM 在 2027 年前保持 >30% CAGR」 |
+
+每个支柱必须有：可量化的期望值 + 明确的验证时间点 + 当前状态（pending/on_track/behind/broken）
+
+### 3. 更新流程（每次追踪时）
+
+**读取** `tracking/{code}-{name}.json`
+
+**Step A — 拉取最新行情**：
+```bash
+python data_helper.py daily <code> <前一交易日> <今日>
+python data_helper.py valuation <code>     # 取当前 PE + 市值
+```
+取最近交易日收盘价和市值，计算：
+- `return_pct = (最新价 - basePrice) / basePrice × 100`
+- `mv_change_pct = (最新市值 - baseMarketCap) / baseMarketCap × 100`
+- 对比 priceLog 上一条，计算 `pct_chg_since_last`
+
+**Step B — 更新价格日志**：
+```json
+{"date": "2026-06-15", "price": 68.5, "pe": 70.2, "mv_yi": 282.1, "return_pct": 8.4, "mv_change_pct": 8.3, "note": "..."}
+```
+
+**Step C — 更新支柱状态**：对照最新财报/公告，更新每个 pillar
+**Step D — 更新催化剂日历**：标记已落地的事件，添加新发现的事件
+
+**输出论点评分卡**：
+
+| Pillar | 期望 | 实际 | 状态 | 趋势 |
+|--------|------|------|------|------|
+| | | | on_track / behind / broken | → / ↑ / ↓ |
+
+**行动建议**：
+- 维持 → 论点完好，继续持有/等待
+- 加仓 → 论点强化 + 催化剂正面
+- 减仓 → 某个支柱弱化但论点尚未破裂
+- 清仓 → 核心支柱 broken 或 exit condition 触发
+
+### 4. 论点审查（每季度）
+
+**核心问题**：我的论点还成立吗？
+
+审查清单：
+- [ ] 每个 pillar 的状态更新了吗？
+- [ ] 有新的数据点可能推翻某个 pillar 吗？
+- [ ] 退出条件是否仍然合理？（市场环境可能已变）
+- [ ] 催化剂日历是否需要调整？
+- [ ] 仓位是否仍符合风控铁律（≤20%）？
+
+### 5. A 股特有追踪项
+
+| 追踪项 | 频率 | 数据源 |
+|--------|------|--------|
+| 大股东质押率 | 每月 | investoday pledge-details |
+| 限售解禁 | 每季 | tushare share_float |
+| 两融余额异常 | 每月 | tushare margin |
+| 业绩预告/快报 | 随公告 | 公司公告 + WebSearch |
+| 机构调研 | 随公告 | WebSearch |
+| 股东户数变化 | 每季 | tushare `stk_holdernumber` |
+
+## 质量检查
+
+- [ ] 论点是一句话且可证伪
+- [ ] 每个 pillar 有可量化的期望值
+- [ ] 至少有 1 个明确的退出条件
+- [ ] A 股特有追踪项已纳入 review schedule

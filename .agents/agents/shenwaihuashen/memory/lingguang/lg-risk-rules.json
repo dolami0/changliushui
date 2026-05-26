@@ -1,0 +1,14 @@
+{
+  "id": "lg-risk-rules",
+  "title": "风控铁律",
+  "content": "单票仓位不超过20%。跌破建仓逻辑无条件止损。不碰大股东质押率超过50%的标的。业绩连续两季下滑立即重新评估。宁可错过，不可做错。",
+  "tags": ["风控", "仓位管理", "止损", "质押率"],
+  "source": "原创",
+  "confidence": 5,
+  "matches": [],
+  "revisionHistory": [
+    {"version": 1, "date": "2025-05-15", "change": "初始版本——从 localStorage 迁移至 JSON 记忆系统"}
+  ],
+  "createdAt": "2025-05-15T00:00:00Z",
+  "updatedAt": "2026-05-18T00:00:00Z"
+}

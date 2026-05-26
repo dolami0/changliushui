@@ -1,0 +1,627 @@
+{
+  "version": 1,
+  "lastUpdated": "2026-05-19T00:00:00Z",
+  "lingguangCount": 4,
+  "caseCount": 42,
+  "trackingCount": 0,
+  "lingguangIndex": {
+    "lg-core-philosophy": {
+      "title": "核心投资哲学",
+      "tags": [
+        "十倍股",
+        "产业趋势",
+        "企业生命周期",
+        "小市值",
+        "卡位"
+      ],
+      "updatedAt": "2026-05-18T00:00:00Z"
+    },
+    "lg-risk-rules": {
+      "title": "风控铁律",
+      "tags": [
+        "风控",
+        "仓位管理",
+        "止损",
+        "质押率"
+      ],
+      "updatedAt": "2026-05-18T00:00:00Z"
+    },
+    "lg-entry-valuation": {
+      "title": "起涨估值定律",
+      "tags": ["起涨估值", "PE", "三低起点", "估值压缩", "范式切换", "建仓纪律"],
+      "updatedAt": "2026-05-19T00:00:00Z"
+    },
+    "lg-gm-ceiling": {
+      "title": "毛利率天花板定律",
+      "tags": ["毛利率", "天花板", "范式切换", "利润弹性", "制造业", "估值框架"],
+      "updatedAt": "2026-05-19T00:00:00Z"
+    }
+  },
+  "caseIndex": {
+    "case-000408": {
+      "stockName": "藏格矿业",
+      "stockCode": "000408",
+      "sector": "农药化肥",
+      "gainMultiple": "8.8",
+      "returnType": "利润核弹",
+      "tags": [
+        "中盘(60-200亿)",
+        "景气上行",
+        "资源周期",
+        "戴维斯双击",
+        "钾锂双资源"
+      ]
+    },
+    "case-000426": {
+      "stockName": "兴业银锡",
+      "stockCode": "000426",
+      "sector": "铅锌",
+      "gainMultiple": "4.7",
+      "returnType": "利润核弹",
+      "tags": [
+        "中盘(60-200亿)",
+        "景气上行",
+        "资源周期",
+        "利润核弹"
+      ]
+    },
+    "case-002052": {
+      "stockName": "同洲电子",
+      "stockCode": "002052",
+      "sector": "家用电器",
+      "gainMultiple": "10.5",
+      "returnType": "利润核弹",
+      "tags": [
+        "起涨亏损",
+        "技术突破",
+        "利润核弹"
+      ]
+    },
+    "case-002270": {
+      "stockName": "华明装备",
+      "stockCode": "002270",
+      "sector": "电气设备",
+      "gainMultiple": "5.4",
+      "returnType": "戴维斯双击",
+      "tags": [
+        "小盘(30-60亿)",
+        "业绩拐点",
+        "隐形冠军",
+        "估值范式切换",
+        "戴维斯双击"
+      ]
+    },
+    "case-002384": {
+      "stockName": "东山精密",
+      "stockCode": "002384",
+      "sector": "元器件",
+      "gainMultiple": "6",
+      "returnType": "估值锚定重构",
+      "tags": [
+        "大盘(>200亿)",
+        "估值范式切换",
+        "硬科技",
+        "AI PCB",
+        "苹果供应链"
+      ]
+    },
+    "case-002432": {
+      "stockName": "九安医疗",
+      "stockCode": "002432",
+      "sector": "医疗保健",
+      "gainMultiple": "13.5",
+      "returnType": "利润核弹",
+      "tags": [
+        "小盘(30-60亿)",
+        "技术突破",
+        "医药",
+        "利润核弹"
+      ]
+    },
+    "case-002779": {
+      "stockName": "中坚科技",
+      "stockCode": "002779",
+      "sector": "园林机械→具身智能机器人",
+      "gainMultiple": "14.1",
+      "returnType": "估值锚定重构",
+      "tags": [
+        "中盘(60-200亿)",
+        "赛道切换",
+        "具身智能",
+        "人形机器人",
+        "华为合作",
+        "估值范式切换"
+      ]
+    },
+    "case-300049": {
+      "stockName": "福瑞医科",
+      "stockCode": "300049",
+      "sector": "医疗保健",
+      "gainMultiple": "5.16",
+      "returnType": "估值锚定重构",
+      "tags": [
+        "小盘(30-60亿)",
+        "估值范式切换",
+        "医药",
+        "SaaS化平台",
+        "全球金标准"
+      ]
+    },
+    "case-300100": {
+      "stockName": "双林股份",
+      "stockCode": "300100",
+      "sector": "汽车配件",
+      "gainMultiple": "10.2",
+      "returnType": "利润核弹",
+      "tags": [
+        "小盘(30-60亿)",
+        "业绩拐点",
+        "利润核弹"
+      ]
+    },
+    "case-300153": {
+      "stockName": "科泰电源",
+      "stockCode": "300153",
+      "sector": "电气设备",
+      "gainMultiple": "9.5",
+      "returnType": "利润核弹",
+      "tags": [
+        "微盘(<30亿)",
+        "业绩拐点",
+        "戴维斯双击",
+        "储能",
+        "充电桩"
+      ]
+    },
+    "case-300255": {
+      "stockName": "常山药业",
+      "stockCode": "300255",
+      "sector": "生物制药",
+      "gainMultiple": "5.4",
+      "returnType": "估值锚定重构",
+      "tags": [
+        "起涨亏损",
+        "估值范式切换",
+        "创新药",
+        "GLP-1",
+        "医药"
+      ]
+    },
+    "case-300260": {
+      "stockName": "新莱应材",
+      "stockCode": "300260",
+      "sector": "机械基件",
+      "gainMultiple": "4.45",
+      "returnType": "戴维斯双击",
+      "tags": [
+        "小盘(30-60亿)",
+        "业绩拐点",
+        "估值范式切换",
+        "半导体设备",
+        "戴维斯双击"
+      ]
+    },
+    "case-300308": {
+      "stockName": "中际旭创",
+      "stockCode": "300308",
+      "sector": "通信设备",
+      "gainMultiple": "18.2",
+      "returnType": "利润核弹",
+      "tags": [
+        "大盘(>200亿)",
+        "技术突破",
+        "硬科技",
+        "估值范式切换",
+        "利润核弹"
+      ]
+    },
+    "case-300436": {
+      "stockName": "广生堂",
+      "stockCode": "300436",
+      "sector": "化学制药",
+      "gainMultiple": "6.7",
+      "returnType": "估值锚定重构",
+      "tags": [
+        "起涨亏损",
+        "估值范式切换",
+        "创新药",
+        "国际化",
+        "医药"
+      ]
+    },
+    "case-300476": {
+      "stockName": "胜宏科技",
+      "stockCode": "300476",
+      "sector": "元器件",
+      "gainMultiple": "19.4",
+      "returnType": "戴维斯双击",
+      "tags": [
+        "中盘(60-200亿)",
+        "技术突破",
+        "硬科技",
+        "戴维斯双击",
+        "AI PCB"
+      ]
+    },
+    "case-300502": {
+      "stockName": "新易盛",
+      "stockCode": "300502",
+      "sector": "通信设备",
+      "gainMultiple": "9.5",
+      "returnType": "戴维斯双击",
+      "tags": [
+        "大盘(>200亿)",
+        "技术突破",
+        "硬科技",
+        "戴维斯双击",
+        "光模块龙头"
+      ]
+    },
+    "case-300548": {
+      "stockName": "长芯博创",
+      "stockCode": "300548",
+      "sector": "通信设备",
+      "gainMultiple": "6",
+      "returnType": "戴维斯双击",
+      "tags": [
+        "中盘(60-200亿)",
+        "技术突破",
+        "硬科技",
+        "估值范式切换",
+        "戴维斯双击"
+      ]
+    },
+    "case-300570": {
+      "stockName": "太辰光",
+      "stockCode": "300570",
+      "sector": "通信设备",
+      "gainMultiple": "8.9",
+      "returnType": "戴维斯双击",
+      "tags": [
+        "小盘(30-60亿)",
+        "技术突破",
+        "硬科技",
+        "戴维斯双击",
+        "全球龙头"
+      ]
+    },
+    "case-300641": {
+      "stockName": "正丹股份",
+      "stockCode": "300641",
+      "sector": "化工原料",
+      "gainMultiple": "6",
+      "returnType": "利润核弹",
+      "tags": [
+        "微盘(<30亿)",
+        "景气上行",
+        "供给冲击",
+        "资源周期",
+        "利润核弹"
+      ]
+    },
+    "case-300718": {
+      "stockName": "长盛轴承",
+      "stockCode": "300718",
+      "sector": "机械基件",
+      "gainMultiple": "7.9",
+      "returnType": "戴维斯双击",
+      "tags": [
+        "小盘(30-60亿)",
+        "业绩拐点",
+        "估值范式切换",
+        "机器人",
+        "戴维斯双击"
+      ]
+    },
+    "case-300757": {
+      "stockName": "罗博特科",
+      "stockCode": "300757",
+      "sector": "专用机械",
+      "gainMultiple": "5.11",
+      "returnType": "戴维斯双击",
+      "tags": [
+        "起涨亏损",
+        "硬科技",
+        "AI基础设施",
+        "估值范式切换",
+        "戴维斯双击",
+        "全球唯一"
+      ]
+    },
+    "case-300779": {
+      "stockName": "惠城环保",
+      "stockCode": "300779",
+      "sector": "环境保护",
+      "gainMultiple": "18.2",
+      "returnType": "利润核弹",
+      "tags": [
+        "起涨亏损",
+        "技术突破",
+        "利润核弹"
+      ]
+    },
+    "case-300857": {
+      "stockName": "协创数据",
+      "stockCode": "300857",
+      "sector": "IT设备",
+      "gainMultiple": "8.12",
+      "returnType": "戴维斯双击",
+      "tags": [
+        "小盘(30-60亿)",
+        "业绩拐点",
+        "硬科技",
+        "戴维斯双击",
+        "AI算力租赁"
+      ]
+    },
+    "case-300870": {
+      "stockName": "欧陆通",
+      "stockCode": "300870",
+      "sector": "电气设备",
+      "gainMultiple": "5.6",
+      "returnType": "利润核弹",
+      "tags": [
+        "小盘(30-60亿)",
+        "起涨亏损",
+        "业绩拐点",
+        "估值范式切换",
+        "利润核弹"
+      ]
+    },
+    "case-600105": {
+      "stockName": "永鼎股份",
+      "stockCode": "600105",
+      "sector": "通信设备",
+      "gainMultiple": "6.5",
+      "returnType": "利润核弹",
+      "tags": [
+        "小盘(30-60亿)",
+        "业绩拐点",
+        "硬科技"
+      ]
+    },
+    "case-600301": {
+      "stockName": "华锡有色",
+      "stockCode": "600301",
+      "sector": "小金属",
+      "gainMultiple": "9.61",
+      "returnType": "利润核弹",
+      "tags": [
+        "微盘(<30亿)",
+        "景气上行",
+        "资源周期",
+        "利润核弹",
+        "半导体材料"
+      ]
+    },
+    "case-601138": {
+      "stockName": "工业富联",
+      "stockCode": "601138",
+      "sector": "通信设备",
+      "gainMultiple": "4.7",
+      "returnType": "利润核弹",
+      "tags": [
+        "超大盘(>万亿)",
+        "业绩拐点",
+        "硬科技",
+        "AI基础设施",
+        "戴维斯双击",
+        "规模效应"
+      ]
+    },
+    "case-603009": {
+      "stockName": "北特科技",
+      "stockCode": "603009",
+      "sector": "汽车配件",
+      "gainMultiple": "8.9",
+      "returnType": "估值锚定重构",
+      "tags": [
+        "微盘(<30亿)",
+        "估值范式切换",
+        "特斯拉",
+        "比亚迪",
+        "双供应链"
+      ]
+    },
+    "case-603083": {
+      "stockName": "剑桥科技",
+      "stockCode": "603083",
+      "sector": "通信设备",
+      "gainMultiple": "10.3",
+      "returnType": "戴维斯双击",
+      "tags": [
+        "微盘(<30亿)",
+        "技术突破",
+        "硬科技",
+        "戴维斯双击",
+        "微软供应链",
+        "光模块"
+      ]
+    },
+    "case-603256": {
+      "stockName": "宏和科技",
+      "stockCode": "603256",
+      "sector": "新材料/碳纤维",
+      "gainMultiple": "5.4",
+      "returnType": "戴维斯双击",
+      "tags": [
+        "起涨亏损",
+        "技术突破",
+        "新材料",
+        "碳纤维",
+        "戴维斯双击",
+        "产品升级"
+      ]
+    },
+    "case-603516": {
+      "stockName": "淳中科技",
+      "stockCode": "603516",
+      "sector": "IT设备",
+      "gainMultiple": "12.5",
+      "returnType": "戴维斯双击",
+      "tags": [
+        "小盘(30-60亿)",
+        "技术突破",
+        "硬科技",
+        "戴维斯双击",
+        "英伟达概念",
+        "ASIC芯片"
+      ]
+    },
+    "case-603929": {
+      "stockName": "亚翔集成",
+      "stockCode": "603929",
+      "sector": "装修装饰",
+      "gainMultiple": "10.6",
+      "returnType": "利润核弹",
+      "tags": [
+        "微盘(<30亿)",
+        "起涨亏损",
+        "技术突破",
+        "利润核弹"
+      ]
+    },
+    "case-605255": {
+      "stockName": "天普股份",
+      "stockCode": "605255",
+      "sector": "汽车管路→AI芯片平台(中昊芯英)",
+      "gainMultiple": "14.4",
+      "returnType": "估值锚定重构",
+      "tags": [
+        "微盘(<30亿)",
+        "实控人变更",
+        "借壳预期",
+        "AI芯片",
+        "TPU",
+        "估值范式切换"
+      ]
+    },
+    "case-688027": {
+      "stockName": "国盾量子",
+      "stockCode": "688027",
+      "sector": "通信设备",
+      "gainMultiple": "4.7",
+      "returnType": "估值锚定重构",
+      "tags": [
+        "起涨亏损",
+        "商业模式升级",
+        "硬科技"
+      ]
+    },
+    "case-688068": {
+      "stockName": "热景生物",
+      "stockCode": "688068",
+      "sector": "医疗保健",
+      "gainMultiple": "4.1",
+      "returnType": "估值锚定重构",
+      "tags": [
+        "起涨亏损",
+        "估值范式切换",
+        "医药",
+        "FIC创新药",
+        "II期临床"
+      ]
+    },
+    "case-688109": {
+      "stockName": "品茗科技",
+      "stockCode": "688109",
+      "sector": "建筑信息化→AI具身智能平台(通研院)",
+      "gainMultiple": "6.4",
+      "returnType": "估值锚定重构",
+      "tags": [
+        "小盘(30-60亿)",
+        "战略入股",
+        "AI国家队",
+        "具身智能",
+        "资产注入预期",
+        "估值范式切换"
+      ]
+    },
+    "case-688183": {
+      "stockName": "生益电子",
+      "stockCode": "688183",
+      "sector": "元器件",
+      "gainMultiple": "10.85",
+      "returnType": "利润核弹",
+      "tags": [
+        "中盘(60-200亿)",
+        "起涨亏损",
+        "技术突破",
+        "硬科技",
+        "利润核弹"
+      ]
+    },
+    "case-688195": {
+      "stockName": "腾景科技",
+      "stockCode": "688195",
+      "sector": "元器件",
+      "gainMultiple": "5.53",
+      "returnType": "戴维斯双击",
+      "tags": [
+        "小盘(30-60亿)",
+        "技术突破",
+        "硬科技",
+        "估值范式切换",
+        "戴维斯双击"
+      ]
+    },
+    "case-688256": {
+      "stockName": "寒武纪",
+      "stockCode": "688256",
+      "sector": "半导体",
+      "gainMultiple": "29.1",
+      "returnType": "估值锚定重构",
+      "tags": [
+        "起涨亏损",
+        "硬科技",
+        "AI芯片",
+        "国产替代",
+        "估值范式切换"
+      ]
+    },
+    "case-688313": {
+      "stockName": "仕佳光子",
+      "stockCode": "688313",
+      "sector": "通信设备",
+      "gainMultiple": "8.6",
+      "returnType": "戴维斯双击",
+      "tags": [
+        "起涨亏损",
+        "技术突破",
+        "硬科技",
+        "戴维斯双击",
+        "国产替代",
+        "光芯片"
+      ]
+    },
+    "case-688585": {
+      "stockName": "上纬新材",
+      "stockCode": "688585",
+      "sector": "新材料→人形机器人平台",
+      "gainMultiple": "10.2",
+      "returnType": "估值锚定重构",
+      "tags": [
+        "小盘(30-60亿)",
+        "实控人变更",
+        "资产注入预期",
+        "人形机器人",
+        "壳价值重估",
+        "估值范式切换"
+      ]
+    },
+    "case-688656": {
+      "stockName": "浩欧博",
+      "stockCode": "688656",
+      "sector": "医疗保健",
+      "gainMultiple": "8.1",
+      "returnType": "利润核弹",
+      "tags": [
+        "微盘(<30亿)",
+        "业绩拐点",
+        "医药",
+        "利润核弹"
+      ]
+    }
+  },
+  "trackingIndex": {}
+}

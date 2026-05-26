@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>估值重构引擎 V5 — 实时进度仪表盘</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   CSS Variables & Reset
+   ═══════════════════════════════════════════════════════════════════ */
+:root {
+  --bg-root:    #0a0c0f;
+  --bg-card:    #11161c;
+  --bg-elevated:#181d25;
+  --text-primary:   #dce3eb;
+  --text-secondary: #8899aa;
+  --accent-amber:   #d4912a;
+  --accent-steel:   #4a9eb5;
+  --gain-green:     #22a86b;
+  --loss-red:       #d9454a;
+  --border:         #1e2630;
+  --font-mono:  "Iosevka","Cascadia Code","Consolas",monospace;
+  --font-title: "DM Sans","Sarabun",sans-serif;
+  --font-body:  "Charter","Georgia",serif;
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+html,body{
+  height:100%;
+  background:var(--bg-root);
+  color:var(--text-primary);
+  font-family:var(--font-body);
+  font-size:14px;
+  line-height:1.5;
+  overflow:hidden;
+}
+
+a{color:var(--accent-steel);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Animations
+   ═══════════════════════════════════════════════════════════════════ */
+@keyframes pulse-amber {
+  0%,100%{opacity:1}
+  50%{opacity:.35}
+}
+@keyframes shimmer-bar {
+  0%{background-position:-200% 0}
+  100%{background-position:200% 0}
+}
+@keyframes fade-in {
+  from{opacity:0;transform:translateY(4px)}
+  to{opacity:1;transform:translateY(0)}
+}
+@keyframes spin-slow {
+  to{transform:rotate(360deg)}
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Layout Shell
+   ═══════════════════════════════════════════════════════════════════ */
+#app{
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+  max-height:100vh;
+}
+
+/* ── Top Status Bar ─────────────────────────── */
+#topbar{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  padding:10px 20px;
+  background:var(--bg-card);
+  border-bottom:1px solid var(--border);
+  font-family:var(--font-mono);
+  font-size:12px;
+  flex-shrink:0;
+  min-height:44px;
+}
+#topbar .title{
+  font-family:var(--font-title);
+  font-size:15px;
+  font-weight:700;
+  color:var(--text-primary);
+  margin-right:auto;
+  letter-spacing:0.02em;
+}
+#topbar .title span{
+  color:var(--accent-amber);
+}
+#topbar .stat{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  color:var(--text-secondary);
+}
+#topbar .stat .val{
+  color:var(--text-primary);
+  font-weight:600;
+}
+#topbar .dot{
+  width:8px;height:8px;border-radius:50%;
+}
+#topbar .dot.connected{background:var(--gain-green)}
+#topbar .dot.disconnected{background:var(--loss-red)}
+#topbar .dot.reconnecting{background:var(--accent-amber);animation:pulse-amber 1s infinite}
+
+#btn-trigger{
+  padding:4px 14px;
+  background:var(--accent-amber);
+  color:#0a0c0f;
+  border:none;
+  border-radius:3px;
+  font-family:var(--font-mono);
+  font-size:11px;
+  font-weight:700;
+  cursor:pointer;
+  transition:opacity .15s;
+}
+#btn-trigger:hover{opacity:.85}
+#btn-trigger:disabled{opacity:.4;cursor:not-allowed}
+.btn-toggle{
+  border:none;background:var(--bg-elevated);color:var(--text-secondary);
+  font-size:13px;cursor:pointer;padding:2px 8px;border-radius:3px;
+  border:1px solid var(--border);transition:all .15s;
+}
+.btn-toggle:hover{color:var(--text-primary);border-color:var(--accent-steel)}
+.btn-toggle.running{color:var(--gain-green);border-color:var(--gain-green)}
+.interval-presets{display:flex;gap:3px;font-family:var(--font-mono)}
+.interval-presets button{
+  border:1px solid var(--border);background:transparent;color:var(--text-dim);
+  font-size:10px;cursor:pointer;padding:1px 6px;border-radius:3px;
+  font-family:var(--font-mono);transition:all .15s;
+}
+.interval-presets button:hover{color:var(--accent-amber);border-color:var(--accent-amber)}
+.interval-presets button.active{color:var(--accent-amber);border-color:var(--accent-amber);background:var(--gold-dim)}
+.btn-toggle.clicked{transform:scale(0.9);transition:transform .15s}
+@keyframes btn-pop{0%{transform:scale(1)}50%{transform:scale(0.85)}100%{transform:scale(1)}}
+.interval-presets button.active{animation:btn-pop .4s ease}
+@keyframes spin{to{transform:rotate(360deg)}}
+.btn-toggle.loading{animation:spin .8s linear infinite;opacity:.7}
+.interval-presets button.loading{animation:spin .8s linear infinite;opacity:.7;color:var(--accent-amber);border-color:var(--accent-amber)}
+
+/* ── Main Content ───────────────────────────── */
+#main{
+  display:flex;
+  flex:1;
+  overflow:hidden;
+}
+
+/* ── Left Panel (Queue) ─────────────────────── */
+#panel-left{
+  width:320px;
+  min-width:320px;
+  background:var(--bg-card);
+  border-right:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+#panel-left .panel-header{
+  padding:12px 16px;
+  font-family:var(--font-title);
+  font-size:12px;
+  font-weight:600;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  color:var(--text-secondary);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+#queue-list{
+  flex:1;
+  overflow-y:auto;
+  padding:6px 0;
+}
+#queue-list::-webkit-scrollbar{width:4px}
+#queue-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* ── Right Panel (Detail + Log) ─────────────── */
+#panel-right{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  background:var(--bg-root);
+  overflow:hidden;
+  min-width:0;
+}
+#detail-area{
+  flex:1;
+  overflow-y:auto;
+  padding:20px 24px;
+}
+#detail-area::-webkit-scrollbar{width:4px}
+#detail-area::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+#log-area{
+  height:140px;
+  min-height:140px;
+  flex-shrink:0;
+  background:var(--bg-card);
+  border-top:1px solid var(--border);
+  display:flex;
+  flex-direction:column;
+}
+#log-area .panel-header{
+  padding:8px 16px;
+  font-family:var(--font-title);
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:0.06em;
+  text-transform:uppercase;
+  color:var(--text-secondary);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+#log-area .panel-header .log-count{
+  font-family:var(--font-mono);
+  font-size:10px;
+  color:var(--accent-steel);
+}
+#log-scroll{
+  flex:1;
+  overflow-y:auto;
+  padding:6px 16px;
+  font-family:var(--font-mono);
+  font-size:11px;
+  line-height:1.7;
+  display:flex;
+  flex-direction:column-reverse;
+}
+#log-scroll::-webkit-scrollbar{width:4px}
+#log-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Queue Items
+   ═══════════════════════════════════════════════════════════════════ */
+.queue-item{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 16px;
+  cursor:pointer;
+  transition:background .12s;
+  border-left:3px solid transparent;
+  animation:fade-in .25s ease both;
+}
+.queue-item:hover{background:var(--bg-elevated)}
+.queue-item.selected{
+  background:var(--bg-elevated);
+  border-left-color:var(--accent-amber);
+}
+.queue-item .q-status{
+  width:18px;height:18px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;flex-shrink:0;
+}
+.queue-item .q-status.done{color:var(--gain-green)}
+.queue-item .q-status.running{color:var(--accent-amber);animation:pulse-amber 1s infinite}
+.queue-item .q-status.queued{color:var(--text-secondary)}
+.queue-item .q-status.error{color:var(--loss-red)}
+.queue-item .q-info{min-width:0;flex:1}
+.queue-item .q-code{
+  font-family:var(--font-mono);
+  font-size:13px;
+  font-weight:600;
+  color:var(--text-primary);
+}
+.queue-item .q-name{
+  font-family:var(--font-body);
+  font-size:12px;
+  color:var(--text-secondary);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.queue-item .q-stage{
+  font-family:var(--font-mono);
+  font-size:10px;
+  color:var(--accent-steel);
+  background:rgba(74,158,181,.1);
+  padding:1px 6px;
+  border-radius:2px;
+  flex-shrink:0;
+}
+.queue-item .q-elapsed{
+  font-family:var(--font-mono);
+  font-size:10px;
+  color:var(--text-secondary);
+  flex-shrink:0;
+  min-width:42px;
+  text-align:right;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Detail Panel
+   ═══════════════════════════════════════════════════════════════════ */
+.detail-empty{
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  height:100%;color:var(--text-secondary);
+  font-family:var(--font-body);
+  font-size:15px;
+  gap:8px;
+}
+.detail-empty .empty-icon{font-size:36px;opacity:.3}
+.detail-empty .empty-hint{font-size:13px;opacity:.5}
+
+.detail-header{
+  margin-bottom:20px;
+}
+.detail-header .dh-code{
+  font-family:var(--font-mono);
+  font-size:24px;
+  font-weight:700;
+  color:var(--text-primary);
+}
+.detail-header .dh-name{
+  font-family:var(--font-body);
+  font-size:14px;
+  color:var(--text-secondary);
+  margin-top:2px;
+}
+.detail-header .dh-meta{
+  display:flex;gap:16px;margin-top:8px;
+  font-family:var(--font-mono);font-size:11px;color:var(--text-secondary);
+}
+.btn-report-link{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:4px 10px;border-radius:4px;
+  background:var(--steel-dim);color:var(--steel);
+  font-family:var(--font-mono);font-size:11px;font-weight:600;
+  text-decoration:none;transition:all .15s;margin-left:auto;
+}
+.btn-report-link:hover{background:var(--steel);color:#fff;text-decoration:none}
+.q-report-link{
+  font-size:14px;text-decoration:none;opacity:0.6;transition:opacity .15s;
+  margin-left:auto;flex-shrink:0;
+}
+.q-report-link:hover{opacity:1}
+
+/* ── Stage group ────────────────────────────── */
+.stage-group{
+  background:var(--bg-card);
+  border:1px solid var(--border);
+  border-radius:4px;
+  margin-bottom:12px;
+  overflow:hidden;
+}
+.stage-group .sg-header{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;
+  background:var(--bg-elevated);
+  border-bottom:1px solid var(--border);
+  font-family:var(--font-title);
+  font-size:12px;
+  font-weight:600;
+  color:var(--text-primary);
+}
+.stage-group .sg-header .sg-icon{
+  width:20px;height:20px;
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;
+}
+.stage-group .sg-header .sg-icon.agent1{background:rgba(74,158,181,.15);color:var(--accent-steel)}
+.stage-group .sg-header .sg-icon.agent2{background:rgba(212,145,42,.15);color:var(--accent-amber)}
+.stage-group .sg-header .sg-icon.agent3{background:rgba(34,168,107,.15);color:var(--gain-green)}
+.stage-group .sg-header .sg-icon.report{background:rgba(136,153,170,.1);color:var(--text-secondary)}
+
+.stage-group .sg-progress{
+  margin-left:auto;
+  font-family:var(--font-mono);
+  font-size:11px;
+  color:var(--text-secondary);
+}
+
+/* ── Sub-step rows ──────────────────────────── */
+.substep{
+  display:flex;align-items:center;gap:10px;
+  padding:7px 14px;
+  border-bottom:1px solid var(--border);
+  font-size:12px;
+  animation:fade-in .2s ease both;
+}
+.substep:last-child{border-bottom:none}
+.substep .ss-icon{font-size:13px;width:18px;text-align:center;flex-shrink:0}
+.substep .ss-icon.done{color:var(--gain-green)}
+.substep .ss-icon.running{color:var(--accent-amber);animation:pulse-amber 1s infinite}
+.substep .ss-icon.pending{color:var(--text-secondary);opacity:.4}
+.substep .ss-icon.error{color:var(--loss-red)}
+.substep .ss-name{flex:1;min-width:0;color:var(--text-primary)}
+.substep .ss-elapsed{
+  font-family:var(--font-mono);font-size:10px;color:var(--text-secondary);flex-shrink:0
+}
+
+/* ── Progress bar with shimmer ──────────────── */
+.progress-bar-wrap{
+  height:4px;
+  background:var(--border);
+  border-radius:2px;
+  overflow:hidden;
+  margin:6px 14px 10px;
+}
+.progress-bar-fill{
+  height:100%;
+  border-radius:2px;
+  background:linear-gradient(
+    90deg,
+    var(--accent-amber) 0%,
+    var(--accent-amber) 40%,
+    #e8b44f 50%,
+    var(--accent-amber) 60%,
+    var(--accent-amber) 100%
+  );
+  background-size:200% 100%;
+  animation:shimmer-bar 2s ease-in-out infinite;
+  transition:width .4s ease;
+}
+.progress-bar-fill.done{
+  background:var(--gain-green);
+  animation:none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Log Lines
+   ═══════════════════════════════════════════════════════════════════ */
+.log-line{
+  white-space:nowrap;
+  animation:fade-in .15s ease both;
+  padding:1px 0;
+}
+.log-line .ll-time{color:var(--text-secondary);opacity:.6}
+.log-line .ll-code{color:var(--accent-steel);font-weight:600}
+.log-line .ll-step{color:var(--text-primary)}
+.log-line .ll-status-done{color:var(--gain-green)}
+.log-line .ll-status-running{color:var(--accent-amber)}
+.log-line .ll-status-error{color:var(--loss-red)}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Responsive: mobile single-col
+   ═══════════════════════════════════════════════════════════════════ */
+@media(max-width:768px){
+  #main{flex-direction:column}
+  #panel-left{width:100%;min-width:100%;max-height:40%}
+  #panel-right{min-height:0}
+  #topbar{gap:8px;padding:8px 12px;flex-wrap:wrap;font-size:10px}
+  #topbar .title{font-size:13px}
+  #log-area{height:100px;min-height:100px}
+}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ═══ Top Status Bar ═══ -->
+  <div id="topbar">
+    <div class="title">估值重构引擎 <span>V5</span></div>
+
+    <div class="stat" id="stat-sse" title="SSE 连接状态">
+      <span class="dot disconnected" id="sse-dot"></span>
+      <span id="sse-label">未连接</span>
+    </div>
+
+    <div class="stat">下次轮询 <span class="val" id="stat-next-poll">--</span></div>
+    <div class="stat">间隔 <span class="val" id="stat-interval">--</span></div>
+    <div class="stat">已完成 <span class="val" id="stat-done">0</span></div>
+    <div class="stat">队列 <span class="val" id="stat-queue">0</span></div>
+
+    <button id="btn-trigger" onclick="manualTrigger()">立即轮询</button>
+    <button id="btn-toggle" onclick="toggleScheduler()" class="btn-toggle">⏸</button>
+    <span class="interval-presets">
+      <button onclick="setIntervalSec(300)" title="5分钟">5分</button>
+      <button onclick="setIntervalSec(600)" title="10分钟">10分</button>
+      <button onclick="setIntervalSec(1800)" title="30分钟">30分</button>
+      <button onclick="setIntervalSec(3600)" title="1小时">1时</button>
+    </span>
+  </div>
+
+  <!-- ═══ Main Content ═══ -->
+  <div id="main">
+
+    <!-- Left Panel: Queue -->
+    <div id="panel-left">
+      <div class="panel-header">处理队列</div>
+      <div id="queue-list">
+        <div class="detail-empty" id="queue-empty" style="padding:40px 0">
+          <div class="empty-icon">&#9675;</div>
+          <div style="text-align:center">暂无处理任务</div>
+          <div class="empty-hint">等待调度器发现新记录</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Panel: Detail + Log -->
+    <div id="panel-right">
+      <div id="detail-area">
+        <div class="detail-empty" id="detail-empty">
+          <div class="empty-icon">&#9776;</div>
+          <div style="text-align:center">选择左侧任务查看详情</div>
+          <div class="empty-hint">每个任务包含 4 个处理阶段</div>
+        </div>
+        <div id="detail-content" style="display:none"></div>
+      </div>
+
+      <div id="log-area">
+        <div class="panel-header">
+          实时日志
+          <span class="log-count" id="log-count">0 条</span>
+        </div>
+        <div id="log-scroll"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════
+   State
+   ═══════════════════════════════════════════════════════════════════ */
+const STATE = {
+  activeJobs: {},       // { stock_code: { ...job, stages: { agent1:{}, agent2:{}, agent3:{}, report:{} } } }
+  completedCount: 0,
+  selectedCode: null,
+  sseConnected: false,
+  sseReconnecting: false,
+  logLines: [],
+  nextPollAt: null,
+  interval: null,
+};
+
+/* ═══════════════════════════════════════════════════════════════════
+   DOM Refs
+   ═══════════════════════════════════════════════════════════════════ */
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+const queueList    = $('#queue-list');
+const queueEmpty   = $('#queue-empty');
+const detailArea   = $('#detail-area');
+const detailEmpty  = $('#detail-empty');
+const detailCont   = $('#detail-content');
+const logScroll    = $('#log-scroll');
+const logCount     = $('#log-count');
+const btnTrigger   = $('#btn-trigger');
+const sseDot       = $('#sse-dot');
+const sseLabel     = $('#sse-label');
+const statDone     = $('#stat-done');
+const statQueue    = $('#stat-queue');
+const statNextPoll = $('#stat-next-poll');
+const statInterval = $('#stat-interval');
+const btnToggle    = $('#btn-toggle');
+const presetBtns   = $$('.interval-presets button');
+
+/* ═══════════════════════════════════════════════════════════════════
+   SSE Connection
+   ═══════════════════════════════════════════════════════════════════ */
+let es = null;
+
+function setSSEStatus(state) {
+  STATE.sseConnected = (state === 'connected');
+  STATE.sseReconnecting = (state === 'reconnecting');
+  sseDot.className = 'dot ' + state;
+  const labels = { connected: '已连接', disconnected: '已断开', reconnecting: '重连中' };
+  sseLabel.textContent = labels[state] || state;
+}
+
+function connectSSE() {
+  if (es) { es.close(); es = null; }
+  setSSEStatus('reconnecting');
+
+  es = new EventSource('/api/progress/stream');
+
+  es.addEventListener('connected', function(e) {
+    setSSEStatus('connected');
+    STATE.sseReconnecting = false;
+  });
+
+  es.addEventListener('progress', function(e) {
+    try {
+      const evt = JSON.parse(e.data);
+      handleProgressEvent(evt);
+    } catch(err) {
+      console.warn('SSE parse error:', err);
+    }
+  });
+
+  es.onerror = function() {
+    if (es) { es.close(); es = null; }
+    setSSEStatus('disconnected');
+    // Auto-reconnect after 5s
+    setTimeout(function() {
+      if (!STATE.sseConnected) connectSSE();
+    }, 5000);
+  };
+
+  // Heartbeat comments are ignored by EventSource
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Progress Event Handler
+   ═══════════════════════════════════════════════════════════════════ */
+function handleProgressEvent(evt) {
+  const code = evt.stock_code;
+  const stage = evt.stage; // "agent1"|"agent2"|"agent3"|"report"
+
+  // Init job if new
+  if (!STATE.activeJobs[code]) {
+    STATE.activeJobs[code] = {
+      stock_code: code,
+      stock_name: evt.stock_name || code,
+      status: 'running',
+      stages: { agent1: { done:0, total:13, steps:[] }, agent2: { done:0, total:6, steps:[] },
+                agent3: { done:0, total:6, steps:[] },  report:  { done:0, total:2, steps:[] } },
+      current_stage: stage,
+      elapsed_s: 0,
+      errors: 0,
+    };
+  }
+
+  const job = STATE.activeJobs[code];
+  job.current_stage = stage;
+  job.elapsed_s = evt.elapsed_s || 0;
+
+  // Update stage counters
+  const sg = job.stages[stage];
+  if (sg && evt.step) {
+    // Track unique steps with their names
+    var existingIdx = -1;
+    for (var si = 0; si < sg.steps.length; si++) {
+      if (sg.steps[si].num === evt.step) { existingIdx = si; break; }
+    }
+    if (existingIdx >= 0) {
+      sg.steps[existingIdx] = { num: evt.step, name: evt.step_name || ('步骤 ' + evt.step), status: evt.status };
+    } else {
+      sg.steps.push({ num: evt.step, name: evt.step_name || ('步骤 ' + evt.step), status: evt.status });
+    }
+    if (evt.status === 'done') sg.done = Math.max(sg.done, evt.step);
+    if (evt.status === 'error') job.errors++;
+    // total_steps from event is authoritative
+    if (evt.total_steps) sg.total = evt.total_steps;
+  }
+
+  // Job-level status
+  if (evt.stage === 'report' && evt.step_name === '构建HTML报告' && evt.status === 'done') {
+    job.status = 'done';
+    STATE.completedCount++;
+    updateStatBar();
+  }
+  if (evt.status === 'error' && evt.error_msg) {
+    // Don't mark entire job as error on first error — only if critical stages fail
+    if (stage === 'report' || job.errors >= 2) {
+      job.status = 'error';
+    }
+  }
+
+  // Add log line
+  addLogLine(evt);
+
+  // Re-render
+  renderQueue();
+  if (STATE.selectedCode === code) renderDetail(code);
+  updateStatBar();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Log
+   ═══════════════════════════════════════════════════════════════════ */
+function addLogLine(evt) {
+  const time = (evt.timestamp || '').slice(11,19) || '--:--:--';
+  const statusClass = 'll-status-' + evt.status;
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML =
+    '<span class="ll-time">' + esc(time) + '</span> ' +
+    '<span class="ll-code">' + esc(evt.stock_code) + '</span> ' +
+    '<span class="ll-step">' + esc(evt.stage) + '/' + evt.step + ' ' + esc(evt.step_name) + '</span> ' +
+    '<span class="' + statusClass + '">' + esc(evt.status) + '</span>' +
+    (evt.elapsed_s ? ' <span style="color:#8899aa">' + evt.elapsed_s.toFixed(1) + 's</span>' : '');
+  // Prepend so newest is at top in column-reverse layout
+  logScroll.insertBefore(line, logScroll.firstChild);
+  STATE.logLines.unshift(evt);
+  // Cap log at 500 lines
+  if (STATE.logLines.length > 500) {
+    STATE.logLines.pop();
+    if (logScroll.lastChild) logScroll.removeChild(logScroll.lastChild);
+  }
+  logCount.textContent = Math.min(STATE.logLines.length, 500) + ' 条';
+}
+
+function esc(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = String(str);
+  return div.innerHTML;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Render: Queue Panel
+   ═══════════════════════════════════════════════════════════════════ */
+function renderQueue() {
+  const codes = Object.keys(STATE.activeJobs);
+  queueEmpty.style.display = codes.length === 0 ? '' : 'none';
+
+  // Keep existing items for smooth updates; fully rebuild is fine given limited job count
+  queueList.querySelectorAll('.queue-item').forEach(function(el) { el.remove(); });
+
+  codes.forEach(function(code) {
+    const job = STATE.activeJobs[code];
+    const div = document.createElement('div');
+    div.className = 'queue-item' + (STATE.selectedCode === code ? ' selected' : '');
+    div.onclick = function() { selectJob(code); };
+
+    const statusIcon = statusIconHTML(job.status);
+    const stageLabel = job.current_stage ? (job.current_stage === 'agent1' ? 'A1' :
+                      job.current_stage === 'agent2' ? 'A2' :
+                      job.current_stage === 'agent3' ? 'A3' : 'RPT') : '';
+
+    div.innerHTML =
+      '<span class="q-status ' + job.status + '">' + statusIcon + '</span>' +
+      '<span class="q-info">' +
+        '<div class="q-code">' + esc(code) + '</div>' +
+        '<div class="q-name">' + esc(job.stock_name) + '</div>' +
+      '</span>' +
+      (stageLabel ? '<span class="q-stage">' + esc(stageLabel) + '</span>' : '') +
+      (job.status === 'done' ? '<a href="/report/' + encodeURIComponent(code) + '" target="_blank" class="q-report-link" title="查看报告" onclick="event.stopPropagation()">📄</a>' : '') +
+      '<span class="q-elapsed">' + (job.elapsed_s > 0 ? job.elapsed_s.toFixed(0) + 's' : '') + '</span>';
+    queueList.appendChild(div);
+  });
+}
+
+function statusIconHTML(status) {
+  switch(status) {
+    case 'done':  return '✓';  // checkmark
+    case 'running': return '⬢'; // hexagon
+    case 'error': return '✗';  // X mark
+    default: return '○';       // circle
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Render: Detail Panel
+   ═══════════════════════════════════════════════════════════════════ */
+function renderDetail(code) {
+  const job = STATE.activeJobs[code];
+  if (!job) return;
+
+  detailEmpty.style.display = 'none';
+  detailCont.style.display = '';
+
+  const stageDefs = [
+    { key:'agent1', label:'Agent 1 — 数据锚定', cls:'agent1' },
+    { key:'agent2', label:'Agent 2 — 事件情景建模', cls:'agent2' },
+    { key:'agent3', label:'Agent 3 — 报告引擎', cls:'agent3' },
+    { key:'report',  label:'Report — 写入与构建', cls:'report' },
+  ];
+
+  let html = '';
+  html += '<div class="detail-header">';
+  html += '<div class="dh-code">' + esc(code) + '</div>';
+  html += '<div class="dh-name">' + esc(job.stock_name) + '</div>';
+  html += '<div class="dh-meta">';
+  html += '<span>状态: ' + esc(job.status) + '</span>';
+  html += '<span>耗时: ' + (job.elapsed_s > 0 ? job.elapsed_s.toFixed(1) + 's' : '--') + '</span>';
+  if (job.errors > 0) html += '<span style="color:var(--loss-red)">错误: ' + job.errors + '</span>';
+  if (job.status === 'done') {
+    html += '<a href="/report/' + encodeURIComponent(code) + '" target="_blank" class="btn-report-link">📄 查看完整报告 →</a>';
+  }
+  html += '</div></div>';
+
+  stageDefs.forEach(function(sd) {
+    const sg = job.stages[sd.key];
+    const done = sg.done;
+    const total = sg.total || 1;
+    const pct = Math.round((done / total) * 100);
+
+    html += '<div class="stage-group">';
+    html += '<div class="sg-header">';
+    html += '<span class="sg-icon ' + sd.cls + '">' + (sd.key === 'agent1' ? '1' : sd.key === 'agent2' ? '2' : sd.key === 'agent3' ? '3' : 'R') + '</span>';
+    html += '<span>' + esc(sd.label) + '</span>';
+    html += '<span class="sg-progress">' + done + '/' + total + ' (' + pct + '%)</span>';
+    html += '</div>';
+
+    // Sub-step rows — use stored step names when available
+    var namedSteps = {};
+    for (var si = 0; si < sg.steps.length; si++) {
+      namedSteps[sg.steps[si].num] = sg.steps[si];
+    }
+    for (let s = 1; s <= total; s++) {
+      var ns = namedSteps[s];
+      var stepDone = s <= done;
+      var stepRunning = (s === done + 1) && job.status === 'running' && job.current_stage === sd.key;
+      var stepStatus = stepDone ? 'done' : (stepRunning ? 'running' : 'pending');
+      var stepIcon = stepDone ? '✓' : (stepRunning ? '⬢' : '○');
+      var stepName = (ns && ns.name) ? ns.name : ('步骤 ' + s);
+
+      html += '<div class="substep">';
+      html += '<span class="ss-icon ' + stepStatus + '">' + stepIcon + '</span>';
+      html += '<span class="ss-name">' + esc(stepName) + '</span>';
+      html += '<span class="ss-elapsed">' + (stepDone ? 'done' : (stepRunning ? '执行中' : '')) + '</span>';
+      html += '</div>';
+    }
+
+    // Progress bar
+    html += '<div class="progress-bar-wrap">';
+    html += '<div class="progress-bar-fill' + (pct >= 100 ? ' done' : '') + '" style="width:' + pct + '%"></div>';
+    html += '</div>';
+
+    html += '</div>'; // .stage-group
+  });
+
+  detailCont.innerHTML = html;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Selection
+   ═══════════════════════════════════════════════════════════════════ */
+function selectJob(code) {
+  STATE.selectedCode = code;
+  renderQueue();
+  renderDetail(code);
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Stat Bar
+   ═══════════════════════════════════════════════════════════════════ */
+function updateStatBar() {
+  statDone.textContent = STATE.completedCount;
+  statQueue.textContent = Object.keys(STATE.activeJobs).filter(function(c) {
+    return STATE.activeJobs[c].status !== 'done';
+  }).length;
+  if (STATE.nextPollAt) {
+    var next = new Date(STATE.nextPollAt);
+    var now = new Date();
+    var diffSec = Math.max(0, Math.floor((next - now) / 1000));
+    if (diffSec > 3600) statNextPoll.textContent = Math.floor(diffSec/3600) + '时' + Math.floor((diffSec%3600)/60) + '分后';
+    else if (diffSec > 60) statNextPoll.textContent = Math.floor(diffSec/60) + '分' + (diffSec%60) + '秒后';
+    else statNextPoll.textContent = diffSec + '秒后';
+  } else {
+    statNextPoll.textContent = '已暂停';
+  }
+  if (STATE.interval) {
+    statInterval.textContent = formatInterval(STATE.interval);
+    updatePresetBtns(STATE.interval);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   API: Fetch initial status + manual trigger
+   ═══════════════════════════════════════════════════════════════════ */
+async function fetchStatus() {
+  try {
+    const res = await fetch('/api/status');
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data.next_poll_at) {
+      STATE.nextPollAt = data.next_poll_at;
+      updateStatBar();
+    }
+    if (data.completed_jobs) {
+      STATE.completedCount = data.completed_jobs.length;
+      updateStatBar();
+    }
+    if (data.polling_interval_sec) {
+      STATE.interval = data.polling_interval_sec;
+      updateStatBar();
+    }
+    if (data.scheduler_running !== undefined) {
+      updateToggleBtn(data.scheduler_running);
+    }
+  } catch(e) {
+    console.warn('Fetch status error:', e);
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Scheduler Controls
+   ═══════════════════════════════════════════════════════════════════ */
+function updateToggleBtn(running) {
+  if (running) {
+    btnToggle.textContent = '⏸';
+    btnToggle.className = 'btn-toggle running';
+    btnToggle.title = '暂停定时轮询';
+  } else {
+    btnToggle.textContent = '▶';
+    btnToggle.className = 'btn-toggle';
+    btnToggle.title = '启动定时轮询';
+  }
+}
+
+async function toggleScheduler() {
+  btnToggle.classList.add('loading');
+  try {
+    const schedRes = await fetch('/api/scheduler/status');
+    const sched = await schedRes.json();
+    if (sched.running) {
+      await fetch('/api/scheduler/stop', { method: 'POST' });
+      STATE.nextPollAt = null;
+      updateToggleBtn(false);
+      updateStatBar();
+    } else {
+      await fetch('/api/scheduler/start', { method: 'POST' });
+      updateToggleBtn(true);
+      await fetchStatus();
+    }
+  } catch(e) {
+    console.warn('Toggle error:', e);
+  }
+  btnToggle.classList.remove('loading');
+}
+
+async function setIntervalSec(sec) {
+  // Loading animation on the matching preset button
+  var targetBtn = null;
+  presetBtns.forEach(function(btn) {
+    var match = btn.getAttribute('onclick').match(/\d+/);
+    if (match && parseInt(match[0]) === sec) { targetBtn = btn; }
+  });
+  if (targetBtn) targetBtn.classList.add('loading');
+  try {
+    const res = await fetch('/api/scheduler/interval', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ interval_sec: sec })
+    });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      STATE.interval = sec;
+      updateStatBar();
+      addLogLine({ stock_code:'SYSTEM', stage:'scheduler', step:0,
+        step_name:'轮询间隔已设为 ' + formatInterval(sec), status:'done',
+        elapsed_s:0, timestamp: new Date().toISOString() });
+    }
+  } catch(e) {
+    console.warn('Set interval error:', e);
+  }
+  if (targetBtn) targetBtn.classList.remove('loading');
+}
+
+function updatePresetBtns(sec) {
+  presetBtns.forEach(function(btn) {
+    var match = btn.getAttribute('onclick').match(/\d+/);
+    if (!match) return;
+    var val = parseInt(match[0]);
+    btn.className = (val === sec) ? 'active' : '';
+  });
+}
+
+function formatInterval(sec) {
+  if (sec >= 3600) return Math.floor(sec/3600) + '时' + ((sec%3600)/60) + '分';
+  if (sec >= 60) return Math.floor(sec/60) + '分' + (sec%60 ? (sec%60)+'秒' : '');
+  return sec + '秒';
+}
+
+async function manualTrigger() {
+  btnTrigger.disabled = true;
+  btnTrigger.textContent = '轮询中...';
+  try {
+    const res = await fetch('/api/trigger', { method: 'POST' });
+    const data = await res.json();
+    if (data.error) {
+      addLogLine({ stock_code:'SYSTEM', stage:'scheduler', step:0, step_name:'手动触发失败: ' + data.error,
+                   status:'error', elapsed_s:0, timestamp: new Date().toISOString() });
+    } else {
+      addLogLine({ stock_code:'SYSTEM', stage:'scheduler', step:0, step_name:'手动触发完成, 处理 ' + (data.processed||0) + ' 条',
+                   status:'done', elapsed_s:0, timestamp: new Date().toISOString() });
+    }
+  } catch(e) {
+    addLogLine({ stock_code:'SYSTEM', stage:'scheduler', step:0, step_name:'请求失败: ' + e.message,
+                 status:'error', elapsed_s:0, timestamp: new Date().toISOString() });
+  }
+  btnTrigger.disabled = false;
+  btnTrigger.textContent = '立即轮询';
+  fetchStatus();
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Init
+   ═══════════════════════════════════════════════════════════════════ */
+(function() {
+  connectSSE();
+  fetchStatus();
+  // Refresh status every 30s; countdown every second
+  setInterval(fetchStatus, 30000);
+  setInterval(updateStatBar, 2000);
+})();
+</script>
+
+</body>
+</html>
