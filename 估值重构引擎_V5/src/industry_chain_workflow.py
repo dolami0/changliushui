@@ -20,6 +20,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Callable
 
 from data_fetcher import DataFetcher
+from env_config import VOLC_AGENT_KEY
 
 # ═══════════════════════════════════════
 # API 配置
@@ -28,7 +29,6 @@ DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 DEEPSEEK_MODEL = "deepseek-v4-pro"
 VOLC_URL = "https://open.feedcoopapi.com/agent_api/agent/chat/completion"
 VOLC_BOT_ID = "7640524154441156122"
-VOLC_KEY = "8Kdlfi1ETYGpj04p3PEK5PlM6UnTUERs"
 
 # ═══════════════════════════════════════
 # LLM #1 — 产业链节点利润截留分析
@@ -690,7 +690,7 @@ class IndustryChainWorkflow:
             r = requests.post(VOLC_URL, json={
                 "bot_id": VOLC_BOT_ID, "stream": False,
                 "messages": [{"role": "user", "content": query}],
-            }, headers={"Authorization": f"Bearer {VOLC_KEY}", "Content-Type": "application/json"}, timeout=90)
+            }, headers={"Authorization": f"Bearer {VOLC_AGENT_KEY}", "Content-Type": "application/json"}, timeout=90)
             if r.status_code == 200:
                 choices = r.json().get("choices", [])
                 if choices:

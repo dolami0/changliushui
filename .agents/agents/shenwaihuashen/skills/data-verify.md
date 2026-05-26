@@ -32,6 +32,8 @@ python data_helper.py segment <code>       # 分产品拆解（含异常自动�
 python data_helper.py pledge <code>        # 质押（风控铁律）
 ```
 
+> **质押强制规则**：tushare pledge 返回 `[]` 视为拉取失败，必须立即切 investoday (`investoday-api stock/pledge-details --method POST stockCode=<code> pageSize=5`) 重试。investoday 也 `[]` 才可认定为「无质押」。不得以 tushare `[]` 直接结案。若 investoday 调用失败（非空），走 WebSearch 兜底。每一步切换都必须记录在 step1 文件中。```
+
 ### 2. 上游数据对照
 
 | 指标 | 定数录/藏经阁 | tushare 实测 | 偏差 | 采用 |
