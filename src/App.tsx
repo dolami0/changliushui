@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Routes, Route, useLocation, Link } from 'react-router-dom';
 import { siteConfig, navigationConfig } from './config';
-import Hero from './sections/Hero';
+import PanoramicMonitor from './sections/PanoramicMonitor';
 import Facilities from './sections/Facilities';
 import CangjingYun from './sections/Archives';
-import Footer from './sections/Footer';
 import FacilityDetail from './pages/FacilityDetail';
 import Dashboard from './pages/Dashboard';
 import ValuationReport from './pages/ValuationReport';
@@ -71,26 +70,11 @@ function NavigationGlow() {
 }
 
 function Home() {
-  const { hash } = useLocation();
-
-  useEffect(() => {
-    if (!hash) return;
-    const id = hash.slice(1);
-    const el = document.getElementById(id);
-    if (!el) return;
-    requestAnimationFrame(() => {
-      el.scrollIntoView({ behavior: 'auto', block: 'start' });
-    });
-  }, [hash]);
-
   return (
-    <>
-      <main>
-        <Hero />
-        <Facilities />
-      </main>
-      <Footer />
-    </>
+    <main>
+      <PanoramicMonitor />
+      <Facilities />
+    </main>
   );
 }
 

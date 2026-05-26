@@ -77,6 +77,12 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      '/investoday-market': {
+        target: 'https://data-api.investoday.net',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/investoday-market/, '/data/market'),
+        headers: { 'User-Agent': 'changliushui/1.0' },
+      },
     },
   },
 });

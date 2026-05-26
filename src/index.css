@@ -46,6 +46,8 @@
     100% { transform: translateY(100%); opacity: 0.04; }
   }
   .note-runes { animation: runeFall 8s linear infinite; pointer-events: none; position: absolute; inset: 0; overflow: hidden; }
+  .hide-scroll { scrollbar-width: none; -ms-overflow-style: none; }
+  .hide-scroll::-webkit-scrollbar { display: none; }
   .note-runes::before {
     content: '◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈';
     white-space: pre;
@@ -133,6 +135,11 @@
 @keyframes newSignal {
   0%, 100% { box-shadow: 0 0 12px var(--glow, rgba(173,255,0,0.15)), inset 0 0 4px var(--glow, rgba(173,255,0,0.08)); }
   50%      { box-shadow: 0 0 24px var(--glow, rgba(173,255,0,0.35)), inset 0 0 12px var(--glow, rgba(173,255,0,0.2)); }
+}
+
+@keyframes shimmer {
+  0%, 100% { background-position: -200% center; }
+  50% { background-position: 200% center; }
 }
 
 @keyframes spin {

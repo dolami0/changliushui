@@ -49,7 +49,7 @@ function generateStockLine(seed: number): string {
   return `${ticker} ${label}:${val} ${arrow}${Math.abs(parseFloat(change)).toFixed(1)}%`;
 }
 
-export default function AsciiCanvas() {
+export default function AsciiCanvas({ dense = false }: { dense?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export default function AsciiCanvas() {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
 
-      cols = width < 768 ? 50 : 72;
+      cols = width < 768 ? (dense ? 70 : 50) : (dense ? 110 : 72);
       const cellW = width / cols;
       const cellH = cellW * 1.25;
       rows = Math.ceil(height / cellH);
