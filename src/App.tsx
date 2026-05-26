@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Routes, Route, useLocation, Link } from 'react-router-dom';
 import { siteConfig, navigationConfig } from './config';
-import PanoramicMonitor from './sections/PanoramicMonitor';
+import Hero from './sections/Hero';
 import Facilities from './sections/Facilities';
 import CangjingYun from './sections/Archives';
+import Footer from './sections/Footer';
 import FacilityDetail from './pages/FacilityDetail';
 import Dashboard from './pages/Dashboard';
 import ValuationReport from './pages/ValuationReport';
@@ -12,7 +13,6 @@ import AgentAvatar from './pages/AgentAvatar';
 import AvatarCC from './pages/AvatarCC';
 import TianjiPeak from './pages/TianjiPeak';
 import Tracking from './pages/Tracking';
-import CustomCursor from './components/CustomCursor';
 import gsap from 'gsap';
 
 /* ------------------------------------------------------------------ */
@@ -71,10 +71,13 @@ function NavigationGlow() {
 
 function Home() {
   return (
-    <main>
-      <PanoramicMonitor />
-      <Facilities />
-    </main>
+    <>
+      <main>
+        <Hero />
+        <Facilities />
+      </main>
+      <Footer />
+    </>
   );
 }
 
@@ -241,7 +244,6 @@ function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      <CustomCursor />
       <NavigationGlow />
       <TopNav />
       <div style={{ flex: 1, minHeight: 0 }}>

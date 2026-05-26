@@ -2,9 +2,11 @@ import AsciiCanvas from '../components/AsciiCanvas';
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
-import { fetchDingshulu, fetchTianjijuan, extractNewsTitle, extractReportFilename, type DingshuluRecord } from '../services/cozeApi';
 import { useMobile } from '../hooks/useMobile';
 import { useBackendHealth } from '../hooks/useBackendHealth';
+import { fetchDingshulu, fetchTianjijuan, fetchDingshuluCount } from '../services/cozeApi';
+import { fetchStatus, createProgressStream } from '../services/valuationApi';
+import { DingshuluPanel, TianyanPanel, TrackingPanel } from './PanoramicMonitor';
 
 /* ------------------------------------------------------------------ */
 /*  Countdown                                                         */
@@ -36,6 +38,209 @@ function CountdownTimer() {
       }}>
         {remaining}
       </span>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  SpiritLamp — 灵灯：估值炉运转状态                                     */
+/* ------------------------------------------------------------------ */
+const STAGE_ORDER = ['agent0', 'agent1', 'agent2', 'agent3', 'report'];
+
+function SpiritLamp() {
+  const [running, setRunning] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [lastError, setLastError] = useState(false);
+  const [countdown, setCountdown] = useState('--:--');
+  const [processing, setProcessing] = useState(false);
+  const [currentStock, setCurrentStock] = useState({ code: '', name: '' });
+  const [queuedJobs, setQueuedJobs] = useState<Array<{ code: string; name: string }>>([]);
+  const [recentDone, setRecentDone] = useState<Array<{ code: string; name: string; time: string }>>([]);
+  const [totalCompleted, setTotalCompleted] = useState(0);
+  const [errorMsg, setErrorMsg] = useState('');
+  const nextPollRef = useRef<string | null>(null);
+  const stageMapRef = useRef<Record<string, number>>({});
+  const elapsedAccRef = useRef(0);
+  const jobResultsRef = useRef<Record<string, { elapsed: number; ok: boolean }>>({});
+
+  useEffect(() => {
+    const tick = () => {
+      fetchStatus().then((s) => {
+        const wasRunning = nextPollRef.current !== null;
+        setRunning(s.scheduler_running);
+        nextPollRef.current = s.next_poll_at;
+        setQueuedJobs((s.active_jobs || []).map((j: { stock_code: string; stock_name: string }) => ({ code: j.stock_code, name: j.stock_name })));
+        const done2 = (s.completed_jobs || []).slice(-1).map((j: { stock_code: string; stock_name: string; completed_at: string }) => ({
+          code: j.stock_code, name: j.stock_name,
+          time: j.completed_at ? new Date(j.completed_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' }) : '',
+        }));
+        setRecentDone(done2);
+        if (!wasRunning && s.scheduler_running) {
+          setLastError(false);
+          setErrorMsg('');
+          stageMapRef.current = {};
+          elapsedAccRef.current = 0;
+          setCurrentStock({ code: '', name: '' });
+        }
+        if (!s.scheduler_running) { setProgress(0); setProcessing(false); setCurrentStock({ code: '', name: '' }); }
+      }).catch(() => {});
+    };
+    tick();
+    fetchDingshuluCount().then(setTotalCompleted).catch(() => {});
+    const id = setInterval(tick, 15_000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const calc = () => {
+      const npr = nextPollRef.current;
+      if (!npr) { setCountdown('--:--'); return; }
+      const diff = Math.max(0, new Date(npr).getTime() - Date.now());
+      setCountdown(`${String(Math.floor(diff / 60000)).padStart(2, '0')}:${String(Math.floor((diff % 60000) / 1000)).padStart(2, '0')}`);
+    };
+    calc();
+    const id = setInterval(calc, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  useEffect(() => {
+    const es = createProgressStream((e) => {
+      setProcessing(true);
+      if (e.status === 'error') { setLastError(true); setErrorMsg(e.error_msg || ''); }
+      if (e.total_steps > 0) stageMapRef.current[e.stage] = e.step / e.total_steps;
+      setCurrentStock({ code: e.stock_code || '', name: e.stock_name || '' });
+      if (e.elapsed_s > 0) elapsedAccRef.current = e.elapsed_s;
+      if (e.stage === 'report' && (e.status === 'done' || e.status === 'error') && e.stock_code) {
+        jobResultsRef.current[e.stock_code] = { elapsed: elapsedAccRef.current, ok: e.status === 'done' };
+      }
+      let overall = 0;
+      for (let i = 0; i < STAGE_ORDER.length; i++) {
+        const p = stageMapRef.current[STAGE_ORDER[i]];
+        if (p === undefined) break;
+        if (p >= 1) { overall += 20; }
+        else { overall += p * 20; break; }
+      }
+      setProgress(Math.round(overall));
+    });
+    return () => es.close();
+  }, []);
+
+  return (
+    <div style={{
+      flexShrink: 0,
+      position: 'relative',
+      background: 'rgba(255,255,255,0.03)',
+      backdropFilter: 'blur(8px)',
+      WebkitBackdropFilter: 'blur(8px)',
+      borderRadius: '6px',
+      padding: '14px 16px',
+      display: 'flex', flexDirection: 'column', gap: '6px',
+      height: '100%',
+      transition: 'background 0.3s ease',
+      overflow: 'hidden',
+    }}
+      onMouseEnter={(e) => {}}
+      onMouseLeave={(e) => {}}
+    >
+      {/* 内容层 */}
+      <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: '6px', height: '100%' }}>
+      {/* 运转状态 + 进度 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: running ? '#ADFF00' : '#888', letterSpacing: '0.05em' }}>
+          {running ? '运转中' : '待命'}
+        </span>
+        {processing && (
+          <span style={{ fontFamily: "'Geist Pixel', monospace", fontSize: '22px', color: '#ADFF00', textShadow: '0 0 12px rgba(173,255,0,0.35)', marginLeft: 'auto' }}>
+            {progress}%
+          </span>
+        )}
+      </div>
+      {/* 处理中 + 排队 + 已完成列表 */}
+      <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+        {processing && currentStock.code && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', color: '#ADFF00', border: '1px solid rgba(173,255,0,0.25)', padding: '0px 4px', flexShrink: 0 }}>处理中</span>
+            <span style={{ fontFamily: "'IBM Plex Mono', 'Noto Sans SC', monospace", fontSize: '14px', fontWeight: 600, color: '#F2F4F3' }}>{currentStock.name || currentStock.code}</span>
+            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '12px', color: '#888' }}>{currentStock.code}</span>
+            <span style={{ flex: 1 }} />
+            <span style={{ fontFamily: "'Geist Pixel', monospace", fontSize: '13px', color: '#ADFF00' }}>{progress}%</span>
+          </div>
+        )}
+        {queuedJobs.filter(q => q.code !== currentStock.code).slice(0, 3).map((q, i) => {
+          const res = jobResultsRef.current[q.code];
+          return (
+            <div key={`q-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '2px 0' }}>
+              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', color: '#777', border: '1px solid rgba(255,255,255,0.08)', padding: '0px 4px', flexShrink: 0 }}>排队</span>
+              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '12px', color: '#999' }}>{q.code}</span>
+              <span style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '12px', color: '#AAA', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{q.name}</span>
+              <span style={{ flex: 1 }} />
+              {res ? (
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', color: res.ok ? '#999' : '#FF5C00' }}>
+                  {res.ok ? '✓' : '✗'} {res.elapsed >= 60 ? `${Math.floor(res.elapsed / 60)}m` : `${Math.floor(res.elapsed)}s`}
+                </span>
+              ) : (
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', color: '#555' }}>—</span>
+              )}
+            </div>
+          );
+        })}
+        {recentDone.map((d, i) => {
+          const res = jobResultsRef.current[d.code];
+          return (
+            <div key={`d-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '2px 0' }}>
+              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', color: '#AAA', border: '1px solid rgba(255,255,255,0.06)', padding: '0px 4px', flexShrink: 0 }}>完成</span>
+              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '12px', color: '#999' }}>{d.code}</span>
+              <span style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '12px', color: '#AAA', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name}</span>
+              <span style={{ flex: 1 }} />
+              {res ? (
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', color: res.ok ? '#999' : '#FF5C00' }}>
+                  {res.ok ? '✓' : '✗'} {res.elapsed >= 60 ? `${Math.floor(res.elapsed / 60)}m` : `${Math.floor(res.elapsed)}s`}
+                </span>
+              ) : (
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', color: '#555' }}>{d.time}</span>
+              )}
+            </div>
+          );
+        })}
+        {queuedJobs.length === 0 && recentDone.length === 0 && !processing && (
+          <div style={{ fontFamily: "'Space Mono', monospace", fontSize: '12px', color: '#555', paddingTop: '6px' }}>队列空闲</div>
+        )}
+      </div>
+      {/* 五阶段管线 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0' }}>
+        {STAGE_ORDER.map((sid, i) => {
+          const p = stageMapRef.current[sid];
+          const done = p !== undefined && p >= 1;
+          const cur = processing && p !== undefined && p > 0 && p < 1;
+          const dot = cur ? '◎' : done ? '●' : '○';
+          const c = cur ? '#ADFF00' : done ? '#C88D3A' : '#444';
+          return (
+            <span key={sid} style={{ display: 'flex', alignItems: 'center' }}>
+              {i > 0 && <span style={{ width: '18px', height: '1px', background: done ? 'rgba(200,141,58,0.25)' : 'rgba(255,255,255,0.05)', flexShrink: 0 }} />}
+              <span style={{
+                fontSize: cur ? '11px' : '8px', color: c,
+                textShadow: cur ? '0 0 6px rgba(173,255,0,0.4)' : 'none',
+                animation: cur ? 'pulse 2s ease-in-out infinite' : 'none',
+                lineHeight: 1,
+              }}>{dot}</span>
+            </span>
+          );
+        })}
+      </div>
+      {/* 错误信息 */}
+      {errorMsg && (
+        <div style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', color: '#FF5C00', padding: '2px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {errorMsg}
+        </div>
+      )}
+      {/* 底栏 — 倒计时 + 总量 */}
+      <div style={{ display: 'flex', alignItems: 'center', paddingTop: '5px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '11px', color: '#777' }}>下次启动</span>
+        <span style={{ fontFamily: "'Geist Pixel', monospace", fontSize: '14px', color: '#BBB', marginLeft: '6px' }}>{countdown}</span>
+        <span style={{ flex: 1 }} />
+        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '11px', color: '#777' }}>累计 {totalCompleted}</span>
+      </div>
+      </div>
     </div>
   );
 }
@@ -282,9 +487,9 @@ function MascotSprite() {
       title="身外化身 · AI投资推演"
       style={{
         position: 'absolute',
-        bottom: '240px',
-        left: '48px',
-        zIndex: 12,
+        bottom: '290px',
+        right: '48px',
+        zIndex: 8,
         cursor: 'pointer',
         transition: 'all 0.55s cubic-bezier(0.22, 0.61, 0.36, 1)',
         transform: hover
@@ -393,155 +598,93 @@ function MascotSprite() {
 /* ------------------------------------------------------------------ */
 /*  ValuationCorePanel                                                */
 /* ------------------------------------------------------------------ */
-function ValuationCorePanel({ mobile }: { mobile: boolean }) {
-  const navigate = useNavigate();
-  const [total, setTotal] = useState(0);
-  const [activeCount, setActiveCount] = useState(0);
-  const online = useBackendHealth();
-  const isBurning = activeCount > 0;
+function MiaoyinPanel({ mobile }: { mobile: boolean }) {
+  const [hover, setHover] = useState(false);
+  const [input, setInput] = useState('');
+  const [stockCode, setStockCode] = useState('');
+  const [stockName, setStockName] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
 
-  useEffect(() => {
-    fetchDingshulu().then((ds) => setTotal(ds.length)).catch(() => setTotal(-1));
-    const check = () => {
-      fetch('/api/status')
-        .then((r) => r.json())
-        .then((s) => setActiveCount((s.active_jobs || []).length))
-        .catch(() => setActiveCount(-1));
-    };
-    check();
-    const id = setInterval(check, 15_000);
-    return () => clearInterval(id);
-  }, []);
-
-  const glowIntensity = isBurning ? '0 0 28px rgba(173,255,0,0.6), 0 0 60px rgba(255,92,0,0.25)' : '0 0 16px rgba(173,255,0,0.3)';
-  const borderColor = isBurning ? 'rgba(173, 255, 0, 0.4)' : 'rgba(173, 255, 0, 0.15)';
-  const bgAlpha = isBurning ? '0.92' : '0.85';
+  const handleSend = async () => {
+    if (!input.trim() || sending) return;
+    setSending(true);
+    try {
+      const TOKEN = import.meta.env.VITE_COZE_TOKEN || '';
+      await fetch('https://api.coze.cn/v1/databases/7479116110479048754/records', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + TOKEN, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          records: [{ fields: {
+            news_content: input.trim(),
+            stock_code: stockCode.trim() || 'USER_INPUT',
+            stock_name: stockName.trim() || '用户传讯',
+            level: '3', mode: 'manual',
+          }}]
+        }),
+      });
+      setSent(true); setInput(''); setStockCode(''); setStockName('');
+      setTimeout(() => setSent(false), 3000);
+      fetch('/api/trigger', { method: 'POST' }).catch(() => {});
+    } catch {}
+    setSending(false);
+  };
 
   return (
-    <div
-      onClick={() => navigate('/dashboard')}
-      title="进入估值重构仪表盘"
-      style={{
-        position: 'absolute',
-        bottom: mobile ? '16px' : '48px',
-        left: mobile ? '16px' : '48px',
-        zIndex: 15,
-        width: mobile ? 'calc(100% - 32px)' : '420px',
-        background: `rgba(5, 4, 1, ${bgAlpha})`,
-        backdropFilter: 'blur(10px)',
-        border: `1px solid ${borderColor}`, borderRadius: 6,
-        padding: mobile ? '20px 24px' : '32px 36px',
-        pointerEvents: 'auto',
-        cursor: 'pointer',
-        transition: 'all 0.4s ease',
-        boxShadow: isBurning ? glowIntensity : 'none',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = '#ADFF00';
-        e.currentTarget.style.boxShadow = isBurning
-          ? '0 0 40px rgba(173,255,0,0.75), 0 0 80px rgba(255,92,0,0.35)'
-          : '0 0 24px rgba(173,255,0,0.4)';
-        e.currentTarget.style.transform = 'translateY(-2px)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = borderColor;
-        e.currentTarget.style.boxShadow = isBurning ? glowIntensity : 'none';
-        e.currentTarget.style.transform = 'translateY(0)';
-      }}
+    <div style={{
+      position: 'absolute', bottom: mobile ? '16px' : '16px', right: mobile ? '16px' : '24px', top: mobile ? 'auto' : '53%',
+      zIndex: 15, width: mobile ? 'calc(100% - 32px)' : '540px',
+      background: 'rgba(5,4,1,0.90)', backdropFilter: 'blur(3px)',
+      border: '1px solid rgba(173,255,0,0.1)', padding: mobile ? '16px 20px' : '20px 28px',
+      transition: 'all 0.3s ease', overflow: 'hidden', cursor: 'default',
+      display: 'flex', flexDirection: 'column',
+    }}
+      onMouseEnter={(e) => { setHover(true); e.currentTarget.style.boxShadow = '0 0 24px rgba(173,255,0,0.25)'; e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.borderColor = '#ADFF00'; }}
+      onMouseLeave={(e) => { setHover(false); e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = 'rgba(173,255,0,0.1)'; }}
     >
-      <span style={{
-        fontFamily: "'Space Mono', monospace", fontSize: '11px', color: '#777',
-        letterSpacing: '0.18em',
-      }}>
-        宗门核心系统
-      </span>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <h2 style={{
-          fontFamily: "'Geist Pixel', 'Noto Sans SC', monospace",
-          fontSize: mobile ? '22px' : '28px', fontWeight: 400, color: '#ADFF00',
-          letterSpacing: '0.08em', margin: '10px 0 0 0',
-          textShadow: glowIntensity,
-          animation: isBurning ? 'pulse 1.5s ease-in-out infinite' : 'none',
-        }}>
-          估值重构炉
-        </h2>
-        {isBurning && (
-          <span style={{
-            marginTop: '10px', fontFamily: "'Space Mono', monospace", fontSize: '10px',
-            color: '#FF5C00', border: '1px solid rgba(255,92,0,0.3)',
-            padding: '1px 8px', animation: 'pulse 1.2s ease-in-out infinite',
-          }}>
-            炼化中 · {activeCount}
-          </span>
-        )}
+      {['top-left','top-right','bottom-left','bottom-right'].map(pos => {
+        const o = hover ? '-3px' : '0px';
+        return (<div key={pos} style={{position:'absolute',width:'10px',height:'10px',zIndex:3,pointerEvents:'none',transition:'all 0.3s ease',opacity:hover?1:0.8,
+          ...(pos.includes('top')?{top:o}:{bottom:o}),...(pos.includes('left')?{left:o}:{right:o}),
+          ...(pos==='top-left'?{borderTop:'2px solid #ADFF00',borderLeft:'2px solid #ADFF00'}:pos==='top-right'?{borderTop:'2px solid #ADFF00',borderRight:'2px solid #ADFF00'}:pos==='bottom-left'?{borderBottom:'2px solid #ADFF00',borderLeft:'2px solid #ADFF00'}:{borderBottom:'2px solid #ADFF00',borderRight:'2px solid #ADFF00'})}} />);
+      })}
+      {/* 头部 — 固定 */}
+      <div style={{ flexShrink: 0 }}>
+        <span style={{ fontFamily:"'Space Mono', monospace",fontSize:'14px',color:'#777',letterSpacing:'0.15em' }}>宗门传讯 · 风闻入阵</span>
+        <h2 style={{ fontFamily:"'Geist Pixel','Noto Sans SC',monospace",fontSize:mobile?'20px':'24px',fontWeight:400,color:'#ADFF00',letterSpacing:'0.06em',margin:'8px 0 4px 0' }}>风闻入阵</h2>
+        <p style={{ fontFamily:"'Noto Sans SC',sans-serif",fontSize:'14px',color:'#888',margin:'0 0 12px 0',lineHeight:1.5 }}>粘贴资讯或分析命题，直送估值引擎炼化</p>
       </div>
-
-      <div style={{ margin: '20px 0', display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span style={{ display: 'block', width: '40px', height: '2px', background: isBurning ? 'rgba(255,92,0,0.5)' : 'rgba(173,255,0,0.3)', transition: 'background 0.4s' }} />
-        <span style={{ width: '4px', height: '4px', background: isBurning ? '#FF5C00' : '#ADFF00', boxShadow: isBurning ? '0 0 8px rgba(255,92,0,0.6)' : 'none', transition: 'all 0.4s' }} />
-        <span style={{ display: 'block', flex: 1, height: '2px', background: 'rgba(255,255,255,0.06)' }} />
-      </div>
-
-      <p style={{
-        fontFamily: "'IBM Plex Mono', 'Noto Sans SC', monospace",
-        fontSize: '15px', fontWeight: 400, lineHeight: 1.9,
-        color: '#AAA', margin: '0 0 20px 0',
-      }}>
-        {isBurning
-          ? `丹炉烈焰正盛 · ${activeCount} 道工序正在炼化中`
-          : '以事件驱动引擎扫描市场异动，以预研数据炼制「潜力报告」。念念相续，天机无相。'}
-      </p>
-
-      <div style={{
-        display: 'grid', gridTemplateColumns: '1fr 1fr',
-        gap: '16px', borderTop: '1px solid rgba(255,255,255,0.06)',
-        paddingTop: '18px',
-      }}>
-        <div>
-          <span style={{
-            display: 'block', fontFamily: "'Space Mono', monospace",
-            fontSize: '11px', color: '#777', letterSpacing: '0.1em', marginBottom: '6px',
-          }}>
-            引擎状态
-          </span>
-          <span style={{
-            display: 'block', fontFamily: "'Geist Pixel', monospace",
-            fontSize: '18px', color: !online ? '#FF5C00' : (isBurning ? '#FF5C00' : '#ADFF00'),
-            letterSpacing: '0.04em', transition: 'color 0.4s',
-          }}>
-            {!online ? '离线' : (isBurning ? '炼化中' : '运转中')}
-          </span>
+      {/* 正文输入 — 弹性填充 */}
+      <textarea value={input} onChange={(e)=>setInput(e.target.value)} placeholder="在此输入资讯内容或分析命题…" rows={mobile?2:6}
+        style={{ flex:1,minHeight:0,width:'100%',boxSizing:'border-box',background:'rgba(255,255,255,0.04)',border:'1px solid rgba(173,255,0,0.15)',color:'#F2F4F3',padding:'10px 12px',fontFamily:"'IBM Plex Mono','Noto Sans SC',monospace",fontSize:'15px',lineHeight:1.6,resize:'none',outline:'none',borderRadius:'4px',transition:'border-color 0.2s' }}
+        onFocus={(e)=>{e.currentTarget.style.borderColor='#ADFF00'}} onBlur={(e)=>{e.currentTarget.style.borderColor='rgba(173,255,0,0.15)'}} />
+      {/* 底部 — 固定 */}
+      <div style={{ flexShrink: 0 }}>
+        <div style={{ display:'flex',gap:'8px',marginTop:'10px' }}>
+          <input value={stockCode} onChange={(e)=>setStockCode(e.target.value)} placeholder="代码(可选)"
+            style={{ flex:1,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)',color:'#AAA',padding:'6px 10px',fontFamily:"'Space Mono',monospace",fontSize:'14px',outline:'none',borderRadius:'4px' }}
+            onFocus={(e)=>{e.currentTarget.style.borderColor='#ADFF00'}} onBlur={(e)=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.1)'}} />
+          <input value={stockName} onChange={(e)=>setStockName(e.target.value)} placeholder="名称(可选)"
+            style={{ flex:1,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.1)',color:'#AAA',padding:'6px 10px',fontFamily:"'Space Mono','Noto Sans SC',monospace",fontSize:'14px',outline:'none',borderRadius:'4px' }}
+            onFocus={(e)=>{e.currentTarget.style.borderColor='#ADFF00'}} onBlur={(e)=>{e.currentTarget.style.borderColor='rgba(255,255,255,0.1)'}} />
         </div>
-        <div>
-          <span style={{
-            display: 'block', fontFamily: "'Space Mono', monospace",
-            fontSize: '11px', color: '#777', letterSpacing: '0.1em', marginBottom: '6px',
-          }}>
-            报告产出
-          </span>
-          <span style={{
-            display: 'block', fontFamily: "'Geist Pixel', monospace",
-            fontSize: '18px', color: total < 0 ? '#FF5C00' : '#A7A7A7', letterSpacing: '0.04em',
-          }}>
-            {total < 0 ? '—' : total.toLocaleString()}
-          </span>
+        <div style={{ display:'flex',alignItems:'center',gap:'10px',marginTop:'10px' }}>
+          <button onClick={handleSend} disabled={sending||!input.trim()}
+            style={{ flex:1,padding:'8px 16px',background:sending?'rgba(173,255,0,0.05)':'rgba(173,255,0,0.1)',border:'1px solid '+(sending?'rgba(173,255,0,0.2)':'rgba(173,255,0,0.3)'),color:sending?'#888':'#ADFF00',fontFamily:"'Space Mono','Noto Sans SC',monospace",fontSize:'15px',letterSpacing:'0.08em',cursor:sending||!input.trim()?'not-allowed':'pointer',borderRadius:'4px',transition:'all 0.2s',opacity:input.trim()?1:0.5 }}
+            onMouseEnter={(e)=>{if(input.trim()&&!sending)e.currentTarget.style.background='rgba(173,255,0,0.18)'}}
+            onMouseLeave={(e)=>{if(!sending)e.currentTarget.style.background='rgba(173,255,0,0.1)'}}>
+            {sending?'传讯中…':sent?'✓ 已传讯':'⟐ 传讯入阵'}
+          </button>
+          <span style={{ fontFamily:"'Noto Sans SC',sans-serif",fontSize:'13px',color:'#FF5C00',letterSpacing:'0.06em',whiteSpace:'nowrap',opacity:0.6 }}>⚒ 施工升级中</span>
         </div>
-      </div>
-
-      {/* hover 提示 */}
-      <div style={{
-        marginTop: '14px', textAlign: 'right', opacity: 0.6,
-        fontFamily: "'Space Mono', monospace", fontSize: '10px', color: '#ADFF00',
-        letterSpacing: '0.1em', transition: 'opacity 0.3s',
-      }}>
-        → 进入仪表盘
+        {sent&&<div style={{marginTop:'8px',fontFamily:"'Space Mono',monospace",fontSize:'13px',color:'#ADFF00',textAlign:'center'}}>传讯已入阵，估值引擎将自动处理</div>}
       </div>
     </div>
   );
 }
 
-/* ------------------------------------------------------------------ */
+
+/* ---/* ------------------------------------------------------------------ */
 /*  Hero                                                               */
 /* ------------------------------------------------------------------ */
 export default function Hero() {
@@ -566,65 +709,57 @@ export default function Hero() {
         borderRight: mobile ? 'none' : '1px solid #2A2A2A',
         display: 'flex', flexDirection: 'column',
       }}>
-        {/* Header — 固定标题区 */}
+        {/* Header — 左文右卡，flex 横排 */}
         <div style={{
           flexShrink: 0,
-          padding: mobile ? '24px 20px 0' : '32px 40px 0',
+          display: 'flex', alignItems: 'stretch', gap: '52px',
+          padding: mobile ? '24px 20px 20px' : '32px 40px 20px',
         }}>
-          <p style={{
-            fontFamily: "'Space Mono', monospace", fontSize: '13px',
-            letterSpacing: '0.2em', color: '#555', margin: '0 0 16px 0',
-          }}>
-            // 长流水
-          </p>
-          <h1 style={{
-            fontFamily: "'Geist Pixel', 'Noto Sans SC', monospace",
-            fontSize: mobile ? '42px' : 'clamp(48px, 6vw, 84px)',
-            fontWeight: 400, lineHeight: 1.0, color: '#ADFF00',
-            margin: '0 0 24px 0', letterSpacing: '0.04em',
-            textShadow: '0 0 32px rgba(173,255,0,0.28)',
-          }}>
-            神机百炼
-          </h1>
-          <div style={{ marginBottom: '24px' }}>
+          {/* 左列 — 文案 */}
+          <div style={{ width: '340px', flexShrink: 0 }}>
             <p style={{
-              fontFamily: "'Noto Sans SC', sans-serif", fontSize: '18px',
-              fontWeight: 400, lineHeight: 2.0, color: '#888', margin: 0, letterSpacing: '0.08em',
-            }}>念念相续，天机无相。</p>
-            <p style={{
-              fontFamily: "'Noto Sans SC', sans-serif", fontSize: '18px',
-              fontWeight: 400, lineHeight: 2.0, color: '#888', margin: 0, letterSpacing: '0.08em',
-            }}>大道所向，因果成章。</p>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px' }}>
-            <span style={{
-              width: '8px', height: '8px', background: '#ADFF00',
-              boxShadow: '0 0 8px rgba(173,255,0,0.5)',
-              display: 'inline-block', animation: 'pulse 2s ease-in-out infinite',
-            }} />
-            <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '15px', color: '#A7A7A7', letterSpacing: '0.1em', margin: 0 }}>
-              当前状态: 持续运转
+              fontFamily: "'Space Mono', monospace", fontSize: '13px',
+              letterSpacing: '0.2em', color: '#555', margin: '0 0 16px 0',
+            }}>
+              // 长流水 壹号神器估值重构炉，赛博奇技：
             </p>
+            <h1 style={{
+              fontFamily: "'Geist Pixel', 'Noto Sans SC', monospace",
+              fontSize: mobile ? '42px' : 'clamp(48px, 6vw, 84px)',
+              fontWeight: 400, lineHeight: 1.0, color: '#ADFF00',
+              margin: '0 0 24px 0', letterSpacing: '0.04em',
+              textShadow: '0 0 32px rgba(173,255,0,0.28)',
+              whiteSpace: 'nowrap',
+            }}>
+              神机百炼
+            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{
+                width: '8px', height: '8px', background: '#ADFF00',
+                boxShadow: '0 0 8px rgba(173,255,0,0.5)',
+                display: 'inline-block', animation: 'pulse 2s ease-in-out infinite',
+                flexShrink: 0,
+              }} />
+              <p style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '14px', color: '#888', letterSpacing: '0.06em', margin: 0, lineHeight: 1.6 }}>
+                AI大阵驱动天眼→估值→追踪全链路
+              </p>
+            </div>
           </div>
+          {/* 右列 — 状态卡 */}
+          {!mobile && (
+            <div style={{ flex: 1, minWidth: 0, marginRight: '-24px' }}>
+              <SpiritLamp />
+            </div>
+          )}
         </div>
 
-        {/* Scroll — 报告列表 */}
+        {/* Scroll — 定数录 */}
         <div style={{
-          flex: 1, overflowY: 'auto', overflowX: 'hidden',
-          padding: mobile ? '0 20px 24px' : '0 40px 28px',
-          scrollbarWidth: 'none',
+          flex: 1, minHeight: 0,
+          display: 'flex', flexDirection: 'column',
+          padding: '0 16px 16px',
         }}>
-          <TodayReports />
-        </div>
-
-        {/* Bottom: Countdown */}
-        <div style={{
-          padding: mobile ? '16px 20px' : '20px 40px',
-          borderTop: '1px solid rgba(173,255,0,0.12)',
-          background: '#050401',
-          zIndex: 10,
-        }}>
-          <CountdownTimer />
+          <DingshuluPanel />
         </div>
       </div>
 
@@ -632,9 +767,34 @@ export default function Hero() {
       {!mobile && (
         <div style={{ position: 'relative', width: '60%', background: '#050401', overflow: 'hidden' }}>
           <AsciiCanvas />
+          {/* 天眼 — 上方全宽，与估值炉左侧对齐 */}
+          <div style={{ position: 'absolute', top: '8px', left: '24px', right: '24px', height: '49%', zIndex: 5, display: 'flex', flexDirection: 'column', overflow: 'hidden', transition: 'all 0.3s ease' }}
+            onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 0 24px rgba(173,255,0,0.3)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}
+          >
+            <TianyanPanel />
+          </div>
+          {/* 跟踪令 — 与风闻入阵上下沿对齐 */}
+          <div style={{ position: 'absolute', bottom: '16px', left: '24px', right: '588px', top: '53%', zIndex: 10, display: 'flex', flexDirection: 'column', overflow: 'hidden', transition: 'all 0.3s ease' }}
+            onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 0 24px rgba(173,255,0,0.3)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; e.currentTarget.style.transform = 'translateY(0)'; }}
+          >
+            <TrackingPanel />
+          </div>
+          {/* 有钱花遮罩 — 盖住吉祥物，边缘羽化 */}
+          <div style={{
+            position: 'absolute',
+            bottom: '230px',
+            right: '20px',
+            width: '230px',
+            height: '230px',
+            background: 'radial-gradient(ellipse at center, #050401 55%, transparent 100%)',
+            zIndex: 9,
+            pointerEvents: 'none',
+          }} />
           {/* 有钱花吉祥物 — 面板背后 */}
           <MascotSprite />
-          <ValuationCorePanel mobile={false} />
+          <MiaoyinPanel mobile={false} />
         </div>
       )}
     </section>

@@ -13,14 +13,37 @@ import {
 /*  通用样式常量                                                        */
 /* ================================================================== */
 const PANEL_STYLE: React.CSSProperties = {
-  background: 'rgba(5,4,1,0.87)',
+  background: 'rgba(5,4,1,0.90)',
   backdropFilter: 'blur(3px)',
   border: '1px solid rgba(173,255,0,0.1)',
   overflow: 'hidden',
   display: 'flex',
   flexDirection: 'column',
-  height: '100%',
+  flex: 1,
+  minHeight: 0,
+  cursor: 'pointer',
+  transition: 'all 0.3s ease',
 };
+
+// 四角阵眼 — hover 时外扩
+function Corners({ hover }: { hover: boolean }) {
+  const offset = hover ? '-3px' : '0px';
+  return <>
+    {['top-left','top-right','bottom-left','bottom-right'].map(pos => (
+      <div key={pos} style={{
+        position:'absolute',width:'10px',height:'10px',zIndex:3,pointerEvents:'none',
+        transition: 'all 0.3s ease',
+        ...(pos.includes('top')?{top:offset}:{bottom:offset}),
+        ...(pos.includes('left')?{left:offset}:{right:offset}),
+        ...(pos==='top-left'?{borderTop:'2px solid #ADFF00',borderLeft:'2px solid #ADFF00'}:
+            pos==='top-right'?{borderTop:'2px solid #ADFF00',borderRight:'2px solid #ADFF00'}:
+            pos==='bottom-left'?{borderBottom:'2px solid #ADFF00',borderLeft:'2px solid #ADFF00'}:
+            {borderBottom:'2px solid #ADFF00',borderRight:'2px solid #ADFF00'}),
+        opacity:hover ? 1 : 0.8,
+      }} />
+    ))}
+  </>;
+}
 
 const PANEL_HEADER_STYLE: React.CSSProperties = {
   display: 'flex',
@@ -30,6 +53,12 @@ const PANEL_HEADER_STYLE: React.CSSProperties = {
   borderBottom: '1px solid rgba(173,255,0,0.08)',
   flexShrink: 0,
 };
+
+function formatDate(ts: string) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return `${d.getMonth() + 1}/${d.getDate()}`;
+}
 
 const PANEL_BODY_STYLE: React.CSSProperties = {
   flex: 1,
@@ -41,16 +70,15 @@ const PANEL_BODY_STYLE: React.CSSProperties = {
 /* ================================================================== */
 /*  阵法运转特效 — 面板边框符文流光                                        */
 /* ================================================================== */
-function ZhenfaBorder({ active }: { active: boolean }) {
+export function ZhenfaBorder({ active }: { active: boolean }) {
   return (
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 2 }}>
-      {/* 四角阵眼 */}
       {['top-left', 'top-right', 'bottom-left', 'bottom-right'].map((pos) => {
         const style: React.CSSProperties = {
           position: 'absolute',
-          width: '12px', height: '12px',
-          ...(pos.includes('top') ? { top: '-1px' } : { bottom: '-1px' }),
-          ...(pos.includes('left') ? { left: '-1px' } : { right: '-1px' }),
+          width: '10px', height: '10px',
+          ...(pos.includes('top') ? { top: '0px' } : { bottom: '0px' }),
+          ...(pos.includes('left') ? { left: '0px' } : { right: '0px' }),
           ...(pos === 'top-left' && { borderTop: '2px solid #ADFF00', borderLeft: '2px solid #ADFF00' }),
           ...(pos === 'top-right' && { borderTop: '2px solid #ADFF00', borderRight: '2px solid #ADFF00' }),
           ...(pos === 'bottom-left' && { borderBottom: '2px solid #ADFF00', borderLeft: '2px solid #ADFF00' }),
@@ -60,23 +88,20 @@ function ZhenfaBorder({ active }: { active: boolean }) {
         };
         return <div key={pos} style={style} />;
       })}
-      {/* 顶边符文流动线 */}
       <div style={{
-        position: 'absolute', top: '-1px', left: '16px', right: '16px', height: '1px',
-        background: active
-          ? 'linear-gradient(90deg, transparent, rgba(173,255,0,0.5) 20%, rgba(173,255,0,0.8) 50%, rgba(173,255,0,0.5) 80%, transparent)'
-          : 'linear-gradient(90deg, transparent, rgba(173,255,0,0.1) 50%, transparent)',
+        position: 'absolute', top: '0px', left: '16px', right: '16px', height: '3px',
+        backgroundImage: active
+          ? 'linear-gradient(90deg, transparent 0%, rgba(173,255,0,0.3) 20%, rgba(173,255,0,0.95) 50%, rgba(173,255,0,0.3) 80%, transparent 100%)'
+          : 'linear-gradient(90deg, transparent, rgba(173,255,0,0.2) 50%, transparent)',
         backgroundSize: '200% 100%',
+        backgroundRepeat: 'no-repeat',
         animation: active ? 'shimmer 3s ease-in-out infinite' : 'none',
-        transition: 'background 0.8s',
+        boxShadow: active ? '0 0 8px rgba(173,255,0,0.4)' : 'none',
       }} />
     </div>
   );
 }
 
-/* ================================================================== */
-/*  PanelHeader — 统一面板头部                                          */
-/* ================================================================== */
 function PanelHeader({ code, name, subtitle, status }: {
   code: string; name: string; subtitle: string; status?: 'active' | 'idle' | 'warning';
 }) {
@@ -120,8 +145,9 @@ interface TianjiEvent {
   bstudio_create_time?: string;
 }
 
-function TianyanPanel() {
+export function TianyanPanel() {
   const navigate = useNavigate();
+  const [hover, setHover] = useState(false);
   const [allRecords, setAllRecords] = useState<TianjiEvent[]>([]);
   const [pollInfo, setPollInfo] = useState({ last: '—', next: '—' });
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -156,8 +182,11 @@ function TianyanPanel() {
   const normalItems = allRecords.filter((r) => !highResponse.includes(r));
 
   return (
-    <div style={{ ...PANEL_STYLE, position: 'relative' }}>
-      <ZhenfaBorder active />
+    <div style={{ ...PANEL_STYLE, position: 'relative' }}
+      onMouseEnter={(e) => { setHover(true); e.currentTarget.style.borderColor = '#ADFF00'; }}
+      onMouseLeave={(e) => { setHover(false); e.currentTarget.style.borderColor = 'rgba(173,255,0,0.1)'; }}
+    >
+      <Corners hover={hover} />
       <PanelHeader code="天眼司" name="天眼" subtitle={`监听天下异象 · ${allRecords.length}条`} status="active" />
       <div ref={scrollRef} style={PANEL_BODY_STYLE} className="hide-scroll">
         {allRecords.length === 0 && (
@@ -234,8 +263,9 @@ const TIER_STYLE: Record<string, { color: string }> = {
   '★☆☆': { color: '#666' },
 };
 
-function DingshuluPanel() {
+export function DingshuluPanel() {
   const navigate = useNavigate();
+  const [hover, setHover] = useState(false);
   const [reports, setReports] = useState<DingshuluRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -279,13 +309,16 @@ function DingshuluPanel() {
   };
 
   return (
-    <div ref={containerRef} style={{ ...PANEL_STYLE, position: 'relative' }}>
-      <ZhenfaBorder active />
-      <PanelHeader code="定数录" name="定数录" subtitle={`估值重构 · 情景推演 · ${reports.length}份`} status="active" />
+    <div ref={containerRef} style={{ ...PANEL_STYLE, position: 'relative' }}
+      onMouseEnter={(e) => { setHover(true); e.currentTarget.style.borderColor = '#ADFF00'; }}
+      onMouseLeave={(e) => { setHover(false); e.currentTarget.style.borderColor = 'rgba(173,255,0,0.1)'; }}
+    >
+      <Corners hover={hover} />
+      <PanelHeader code="定数录" name="定数录" subtitle="估值重构 · 情景推演" status="active" />
 
       {/* 今日产出 */}
       <div style={{ padding: '6px 14px', borderBottom: '1px solid rgba(255,255,255,0.04)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#ADFF00' }}>今日产出 {reports.length} 份估值报告</span>
+        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#ADFF00' }}>近期产出 {reports.length} 份估值报告</span>
       </div>
 
       {/* 报告列表 */}
@@ -343,11 +376,13 @@ function DingshuluPanel() {
                 </span>
                 <span style={{ color: '#444', fontSize: '16px', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
               </div>
-              {/* 三情景始终可见 */}
-              <div style={{ padding: '0 10px 4px 10px', display: 'flex', gap: '10px' }}>
-                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '16px', color: '#AAA' }}>基 <span style={{ color: '#F2F4F3' }}>{rep.base_upside_pct || '—'}%</span></span>
-                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '16px', color: '#AAA' }}>牛 <span style={{ color: '#ADFF00' }}>{rep.bull_upside_pct || '—'}%</span></span>
-                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '16px', color: '#AAA' }}>熊 <span style={{ color: '#FF5C00' }}>{rep.bear_upside_pct || '—'}%</span></span>
+              {/* 三情景 + 日期 */}
+              <div style={{ padding: '0 10px 4px 10px', display: 'flex', alignItems: 'center' }}>
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '16px', color: '#AAA', marginRight: '10px' }}>基 <span style={{ color: '#F2F4F3' }}>{rep.base_upside_pct || '—'}%</span></span>
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '16px', color: '#AAA', marginRight: '10px' }}>牛 <span style={{ color: '#ADFF00' }}>{rep.bull_upside_pct || '—'}%</span></span>
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '16px', color: '#AAA', marginRight: '10px' }}>熊 <span style={{ color: '#FF5C00' }}>{rep.bear_upside_pct || '—'}%</span></span>
+                <span style={{ flex: 1 }} />
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#555' }}>{formatDate(rep.bstudio_create_time)}</span>
               </div>
               {/* 展开详情 */}
               {isOpen && (
@@ -355,11 +390,16 @@ function DingshuluPanel() {
                   {narrativeStr && (
                     <div style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '18px', lineHeight: 1.5, color: '#888', marginBottom: '4px' }}>{narrativeStr}</div>
                   )}
-                  <div style={{ textAlign: 'right' }}>
+                  <div style={{ textAlign: 'right', display: 'flex', gap: '14px', justifyContent: 'flex-end' }}>
+                    <span onClick={(e) => { e.stopPropagation(); navigate(`/avatar-cc?code=${rep.stock_code}`); }}
+                      style={{ fontFamily: "'Space Mono', monospace", fontSize: '16px', color: '#C88D3A', letterSpacing: '0.06em', cursor: 'pointer', opacity: 0.85 }}
+                      onMouseEnter={(e2) => { e2.currentTarget.style.opacity = '1'; e2.currentTarget.style.textShadow = '0 0 8px rgba(200,141,58,0.3)'; }}
+                      onMouseLeave={(e2) => { e2.currentTarget.style.opacity = '0.85'; e2.currentTarget.style.textShadow = 'none'; }}
+                    >→ 化身决策</span>
                     <span onClick={(e) => { e.stopPropagation(); if (fn) navigate(`/report/v4/${fn}`); }}
-                      style={{ fontFamily: "'Space Mono', monospace", fontSize: '16px', color: '#ADFF00', letterSpacing: '0.06em', cursor: 'pointer', opacity: 0.6 }}
-                      onMouseEnter={(e2) => { e2.currentTarget.style.opacity = '1'; }}
-                      onMouseLeave={(e2) => { e2.currentTarget.style.opacity = '0.6'; }}
+                      style={{ fontFamily: "'Space Mono', monospace", fontSize: '16px', color: '#ADFF00', letterSpacing: '0.06em', cursor: 'pointer', opacity: 0.85 }}
+                      onMouseEnter={(e2) => { e2.currentTarget.style.opacity = '1'; e2.currentTarget.style.textShadow = '0 0 8px rgba(173,255,0,0.3)'; }}
+                      onMouseLeave={(e2) => { e2.currentTarget.style.opacity = '0.85'; e2.currentTarget.style.textShadow = 'none'; }}
                     >→ 完整报告</span>
                   </div>
                 </div>
@@ -404,8 +444,9 @@ interface TrackingSummary {
   atRiskCount: number;
 }
 
-function TrackingPanel() {
+export function TrackingPanel() {
   const navigate = useNavigate();
+  const [hover, setHover] = useState(false);
   const [stocks, setStocks] = useState<TrackingSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -470,8 +511,11 @@ function TrackingPanel() {
   };
 
   return (
-    <div style={{ ...PANEL_STYLE, position: 'relative' }}>
-      <ZhenfaBorder active={stats.atRisk > 0} />
+    <div style={{ ...PANEL_STYLE, position: 'relative' }}
+      onMouseEnter={(e) => { setHover(true); e.currentTarget.style.borderColor = '#ADFF00'; }}
+      onMouseLeave={(e) => { setHover(false); e.currentTarget.style.borderColor = 'rgba(173,255,0,0.1)'; }}
+    >
+      <Corners hover={hover} />
       <PanelHeader
         code="跟踪令" name="跟踪令"
         subtitle={`论点追踪 · 催化剂监控 · ${stats.total}标的`}
@@ -479,12 +523,12 @@ function TrackingPanel() {
       />
       <div style={PANEL_BODY_STYLE} className="hide-scroll">
         {loading && (
-          <div style={{ padding: '20px', textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: '24px', color: '#555' }}>
+          <div style={{ padding: '16px', textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: '16px', color: '#555' }}>
             读取追踪令...
           </div>
         )}
         {!loading && stocks.length === 0 && (
-          <div style={{ padding: '20px', textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: '24px', color: '#555' }}>
+          <div style={{ padding: '16px', textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: '16px', color: '#555' }}>
             暂无追踪令签发
           </div>
         )}
@@ -512,45 +556,45 @@ function TrackingPanel() {
               >
                 <span style={{
                   fontFamily: "'IBM Plex Mono', 'Noto Sans SC', monospace",
-                  fontSize: '28px', fontWeight: 600, color: '#F2F4F3',
+                  fontSize: '20px', fontWeight: 600, color: '#F2F4F3',
                 }}>{s.stockName}</span>
-                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '24px', color: '#666' }}>{s.stockCode}</span>
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '17px', color: '#666' }}>{s.stockCode}</span>
                 <span style={{
-                  fontSize: '24px', color: isLong ? '#ADFF00' : '#FF5C00',
+                  fontSize: '17px', color: isLong ? '#ADFF00' : '#FF5C00',
                 }}>{isLong ? '多' : '空'}</span>
                 <span style={{ flex: 1 }} />
                 <span style={{
-                  fontFamily: "'Space Mono', monospace", fontSize: '24px', color: tc,
-                  border: `1px solid ${tc}40`, padding: '0px 5px',
+                  fontFamily: "'Space Mono', monospace", fontSize: '17px', color: tc,
+                  border: `1px solid ${tc}40`, padding: '0px 4px',
                 }}>{thesisLabel[s.thesisStatus]}</span>
                 <span style={{
-                  fontFamily: "'Geist Pixel', monospace", fontSize: '28px',
+                  fontFamily: "'Geist Pixel', monospace", fontSize: '20px',
                   color: s.returnPct >= 0 ? '#ADFF00' : '#FF5C00',
                 }}>
                   {s.returnPct >= 0 ? '+' : ''}{s.returnPct.toFixed(1)}%
                 </span>
-                <span style={{ color: '#444', fontSize: '24px', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none' }}>▼</span>
+                <span style={{ color: '#444', fontSize: '17px', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none' }}>▼</span>
               </div>
 
               {/* 展开详情 */}
               {isOpen && (
                 <div style={{ padding: '0 10px 10px 14px', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
                   {/* 论点状态 + 置信度 */}
-                  <div style={{ display: 'flex', gap: '12px', margin: '8px 0' }}>
-                    <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '24px', color: '#888' }}>
+                  <div style={{ display: 'flex', gap: '10px', margin: '6px 0' }}>
+                    <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '17px', color: '#888' }}>
                       信心 <span style={{ color: s.conviction >= 70 ? '#ADFF00' : s.conviction >= 40 ? '#C88D3A' : '#FF5C00' }}>{s.conviction}</span>
                     </span>
                     {s.atRiskCount > 0 && (
-                      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '24px', color: '#FF5C00' }}>
+                      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '17px', color: '#FF5C00' }}>
                         异常支柱 {s.atRiskCount}
                       </span>
                     )}
                   </div>
                   {/* 投资论点 + 入场条件 */}
                   {(s.thesis || s.entryCondition) && (
-                    <div style={{ marginBottom: '6px', fontSize: '20px', lineHeight: 1.4 }}>
-                      {s.thesis && <div style={{ fontFamily: "'Noto Sans SC', sans-serif", color: '#AAA', marginBottom: '2px' }}><span style={{ color: '#ADFF00', fontSize: '18px' }}>论点 </span>{s.thesis}</div>}
-                      {s.entryCondition && <div style={{ fontFamily: "'Noto Sans SC', sans-serif", color: '#888' }}><span style={{ color: '#C88D3A', fontSize: '18px' }}>入场 </span>{s.entryCondition}</div>}
+                    <div style={{ marginBottom: '4px', fontSize: '15px', lineHeight: 1.4 }}>
+                      {s.thesis && <div style={{ fontFamily: "'Noto Sans SC', sans-serif", color: '#AAA', marginBottom: '2px' }}><span style={{ color: '#ADFF00', fontSize: '14px' }}>论点 </span>{s.thesis}</div>}
+                      {s.entryCondition && <div style={{ fontFamily: "'Noto Sans SC', sans-serif", color: '#888' }}><span style={{ color: '#C88D3A', fontSize: '14px' }}>入场 </span>{s.entryCondition}</div>}
                     </div>
                   )}
                   {/* 下一个催化剂 */}
@@ -559,14 +603,14 @@ function TrackingPanel() {
                       padding: '6px 8px', background: 'rgba(255,255,255,0.02)',
                       border: '1px solid rgba(255,255,255,0.04)', marginBottom: '6px',
                     }}>
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '24px', color: '#ADFF00' }}>⌖</span>
-                        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '24px', color: '#AAA' }}>{s.nextCatalyst.date}</span>
-                        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '24px', color: s.nextCatalyst.impact === 'H' ? '#FF5C00' : '#888' }}>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#ADFF00' }}>⌖</span>
+                        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#AAA' }}>{s.nextCatalyst.date}</span>
+                        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: s.nextCatalyst.impact === 'H' ? '#FF5C00' : '#888' }}>
                           {s.nextCatalyst.impact === 'H' ? '高' : s.nextCatalyst.impact === 'M' ? '中' : '低'}影响
                         </span>
                       </div>
-                      <div style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '24px', color: '#777', marginTop: '2px', lineHeight: 1.4 }}>
+                      <div style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '14px', color: '#777', marginTop: '2px', lineHeight: 1.4 }}>
                         {s.nextCatalyst.event}
                       </div>
                     </div>
@@ -575,7 +619,7 @@ function TrackingPanel() {
                   <div style={{ textAlign: 'right', marginTop: '4px' }}>
                     <span
                       onClick={(e) => { e.stopPropagation(); navigate(`/tracking?code=${s.stockCode}`); }}
-                      style={{ fontFamily: "'Space Mono', monospace", fontSize: '24px', color: '#ADFF00', letterSpacing: '0.06em', cursor: 'pointer', opacity: 0.6 }}
+                      style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#ADFF00', letterSpacing: '0.06em', cursor: 'pointer', opacity: 0.6 }}
                       onMouseEnter={(e2) => { e2.currentTarget.style.opacity = '1'; }}
                       onMouseLeave={(e2) => { e2.currentTarget.style.opacity = '0.6'; }}
                     >→ 查看追踪令</span>
@@ -586,10 +630,10 @@ function TrackingPanel() {
           );
         })}
       </div>
-      <div style={{ padding: '7px 18px', borderTop: '1px solid rgba(255,255,255,0.04)', textAlign: 'right', flexShrink: 0 }}>
+      <div style={{ padding: '6px 14px', borderTop: '1px solid rgba(255,255,255,0.04)', textAlign: 'right', flexShrink: 0 }}>
         <span
           onClick={(e) => { e.stopPropagation(); navigate('/tracking'); }}
-          style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#ADFF00', letterSpacing: '0.08em', cursor: 'pointer', opacity: 0.6, transition: 'opacity 0.2s' }}
+          style={{ fontFamily: "'Space Mono', monospace", fontSize: '13px', color: '#ADFF00', letterSpacing: '0.08em', cursor: 'pointer', opacity: 0.6, transition: 'opacity 0.2s' }}
           onMouseEnter={(e2) => { e2.currentTarget.style.opacity = '1'; }}
           onMouseLeave={(e2) => { e2.currentTarget.style.opacity = '0.6'; }}
         >→ 追踪司</span>

@@ -49,7 +49,7 @@ function generateStockLine(seed: number): string {
   return `${ticker} ${label}:${val} ${arrow}${Math.abs(parseFloat(change)).toFixed(1)}%`;
 }
 
-export default function AsciiCanvas({ dense = false }: { dense?: boolean }) {
+export default function AsciiCanvas({ dense = false, centerX = 0.5, centerY = 0.45, furnace = false, cols: colsProp, noCore = false }: { dense?: boolean; centerX?: number; centerY?: number; furnace?: boolean; cols?: number; noCore?: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -81,7 +81,7 @@ export default function AsciiCanvas({ dense = false }: { dense?: boolean }) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
 
-      cols = width < 768 ? (dense ? 70 : 50) : (dense ? 110 : 72);
+      cols = colsProp ?? (width < 768 ? (dense ? 70 : 50) : (dense ? 110 : 72));
       const cellW = width / cols;
       const cellH = cellW * 1.25;
       rows = Math.ceil(height / cellH);
@@ -120,9 +120,9 @@ export default function AsciiCanvas({ dense = false }: { dense?: boolean }) {
       const cellH = cellW * 1.25;
 
       // 中心区域
-      const coreX = width * 0.5;
-      const coreY = height * 0.45;
-      const coreRadius = Math.min(width, height) * 0.2;
+      const coreX = width * centerX;
+      const coreY = height * (furnace ? 0.55 : centerY);
+      const coreRadius = Math.min(width, height) * (furnace ? 0.22 : 0.2);
 
       ctx.font = `${cellH * 0.78}px "IBM Plex Mono", "Noto Sans SC", monospace`;
       ctx.textAlign = 'center';
@@ -138,7 +138,9 @@ export default function AsciiCanvas({ dense = false }: { dense?: boolean }) {
 
           const dxCore = x - coreX;
           const dyCore = y - coreY;
-          const distCore = Math.hypot(dxCore, dyCore);
+          const distCore = furnace
+            ? Math.hypot(dxCore * 0.65, dyCore)  // 炉型：横宽纵短，如鼎炉圆腹
+            : Math.hypot(dxCore, dyCore);
           const normCore = distCore / coreRadius;
           const angleCore = Math.atan2(dyCore, dxCore);
 
@@ -153,8 +155,8 @@ export default function AsciiCanvas({ dense = false }: { dense?: boolean }) {
           let drawY = y;
           let isCore = false;
 
-          // 核心区域：高密度中文+财务混合字符
-          if (normCore < 1.0) {
+          // 核心区域：高密度中文+财务混合字符（noCore 时跳过）
+          if (!noCore && normCore < 1.0) {
             isCore = true;
             const coreIntensity = 1.0 - normCore;
             const idx = Math.floor(

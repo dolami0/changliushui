@@ -211,6 +211,14 @@ export function extractReportFilename(record: DingshuluRecord): string | null {
   return parts[parts.length - 1] || null;
 }
 
+export async function fetchDingshuluCount(): Promise<number> {
+  const result = await cozeQuery<DingshuluRecord>(DB_DINGSHULU, {
+    page_size: 1,
+    order_by: [{ direction: 'desc', field_name: 'bstudio_create_time' }],
+  });
+  return result.data?.total_count || 0;
+}
+
 export async function fetchDingshulu(pageSize = 500): Promise<DingshuluRecord[]> {
   const result = await cozeQuery<DingshuluRecord>(DB_DINGSHULU, {
     page_size: pageSize,
