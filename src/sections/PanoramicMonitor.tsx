@@ -102,12 +102,20 @@ export function ZhenfaBorder({ active }: { active: boolean }) {
   );
 }
 
-function PanelHeader({ code, name, subtitle, status }: {
+function PanelHeader({ code, name, subtitle, status, onClick }: {
   code: string; name: string; subtitle: string; status?: 'active' | 'idle' | 'warning';
+  onClick?: () => void;
 }) {
+  const [h, setH] = useState(false);
   const dotColor = status === 'active' ? '#ADFF00' : status === 'warning' ? '#FF5C00' : '#555';
+  const codeColor = h ? '#ADFF00' : '#777';
+  const subColor = h ? '#888' : '#555';
   return (
-    <div style={PANEL_HEADER_STYLE}>
+    <div style={{ ...PANEL_HEADER_STYLE, cursor: onClick ? 'pointer' : undefined }}
+      onClick={onClick}
+      onMouseEnter={() => { if (onClick) setH(true); }}
+      onMouseLeave={() => { if (onClick) setH(false); }}
+    >
       <span style={{
         width: '6px', height: '6px', borderRadius: '50%',
         background: dotColor,
@@ -115,11 +123,11 @@ function PanelHeader({ code, name, subtitle, status }: {
         animation: status === 'active' ? 'pulse 2s ease-in-out infinite' : 'none',
         flexShrink: 0,
       }} />
-      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#777', letterSpacing: '0.1em', flexShrink: 0 }}>
+      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: codeColor, letterSpacing: '0.1em', flexShrink: 0, transition: 'color 0.2s' }}>
         {code}
       </span>
       <span style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.04)', margin: '0 8px' }} />
-      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#555', letterSpacing: '0.08em' }}>
+      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: subColor, letterSpacing: '0.08em', transition: 'color 0.2s' }}>
         {subtitle}
       </span>
     </div>
@@ -150,6 +158,8 @@ export function TianyanPanel() {
   const [hover, setHover] = useState(false);
   const [allRecords, setAllRecords] = useState<TianjiEvent[]>([]);
   const [pollInfo, setPollInfo] = useState({ last: '—', next: '—' });
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [fullContent, setFullContent] = useState<Record<string, string>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const refresh = useCallback(() => {
@@ -181,13 +191,29 @@ export function TianyanPanel() {
   );
   const normalItems = allRecords.filter((r) => !highResponse.includes(r));
 
+  const handleItemClick = (ev: TianjiEvent, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const lvl = parseInt(ev.level) || 0;
+    if (lvl >= 3) {
+      const eid = ev.id || `${ev.stock_code}-${ev.bstudio_create_time}`;
+      if (expandedId === eid) {
+        setExpandedId(null);
+      } else {
+        setExpandedId(eid);
+        if (!fullContent[eid]) {
+          setFullContent(prev => ({ ...prev, [eid]: ev.news_content || '' }));
+        }
+      }
+    }
+  };
+
   return (
     <div style={{ ...PANEL_STYLE, position: 'relative' }}
       onMouseEnter={(e) => { setHover(true); e.currentTarget.style.borderColor = '#ADFF00'; }}
       onMouseLeave={(e) => { setHover(false); e.currentTarget.style.borderColor = 'rgba(173,255,0,0.1)'; }}
     >
       <Corners hover={hover} />
-      <PanelHeader code="天眼司" name="天眼" subtitle={`监听天下异象 · ${allRecords.length}条`} status="active" />
+      <PanelHeader code="天眼司" name="天眼" subtitle="监听天下异象" status="active" onClick={() => navigate('/tianjifeng')} />
       <div ref={scrollRef} style={PANEL_BODY_STYLE} className="hide-scroll">
         {allRecords.length === 0 && (
           <div style={{ padding: '20px', textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: '24px', color: '#555' }}>
@@ -197,58 +223,80 @@ export function TianyanPanel() {
         {/* 今日高响应信号 */}
         {highResponse.length > 0 ? (
           <div style={{ marginBottom: '12px' }}>
-            <div style={{ fontFamily: "'Space Mono', 'Noto Sans SC', monospace", fontSize: '26px', color: '#FF5C00', letterSpacing: '0.1em', marginBottom: '6px', borderBottom: '1px solid rgba(255,92,0,0.15)', paddingBottom: '6px' }}>
+            <div style={{ fontFamily: "'Space Mono', 'Noto Sans SC', monospace", fontSize: '18px', color: '#FF5C00', letterSpacing: '0.1em', marginBottom: '6px', borderBottom: '1px solid rgba(255,92,0,0.15)', paddingBottom: '6px' }}>
               ▍今日高响应 ({highResponse.length})
             </div>
             {highResponse.map((ev) => {
               const lvl = LEVEL_LABEL[ev.level] || LEVEL_LABEL['0'];
               const timeStr = ev.bstudio_create_time ? new Date(ev.bstudio_create_time + '+08:00').toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' }) : '';
+              const eid = ev.id || `${ev.stock_code}-${ev.bstudio_create_time}`;
+              const isOpen = expandedId === eid;
               const newsText = (ev.news_content || '').replace(/<[^>]*>/g, '').slice(0, 55);
-              return (<div key={ev.id} onClick={() => navigate('/tianjifeng')} style={{ padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.025)', cursor: 'pointer', borderLeft: `3px solid ${lvl.color}40`, paddingLeft: '6px', transition: 'background 0.15s' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,92,0,0.04)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '20px', color: lvl.color, border: `1px solid ${lvl.color}40`, padding: '0px 3px', flexShrink: 0 }}>{lvl.name}</span>
-                  <span style={{ fontFamily: "'IBM Plex Mono', 'Noto Sans SC', monospace", fontSize: '22px', fontWeight: 600, color: '#F2F4F3', flexShrink: 0 }}>{ev.stock_name}</span>
-                  <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '18px', color: '#666', flexShrink: 0 }}>{ev.stock_code}</span>
-                  <span style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '18px', color: '#F2F4F3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{newsText || '(无内容)'}</span>
-                  <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '18px', color: '#FF8C00', flexShrink: 0 }}>{timeStr}</span>
+              return (<div key={ev.id}>
+                <div onClick={(e) => handleItemClick(ev, e)} style={{ padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.025)', cursor: 'pointer', borderLeft: `3px solid ${lvl.color}40`, paddingLeft: '6px', transition: 'background 0.15s' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,92,0,0.04)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '15px', color: lvl.color, border: `1px solid ${lvl.color}40`, padding: '0px 3px', flexShrink: 0 }}>{lvl.name}</span>
+                    <span style={{ fontFamily: "'IBM Plex Mono', 'Noto Sans SC', monospace", fontSize: '17px', fontWeight: 600, color: '#F2F4F3', flexShrink: 0 }}>{ev.stock_name}</span>
+                    <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#666', flexShrink: 0 }}>{ev.stock_code}</span>
+                    <span style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '14px', color: '#F2F4F3', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{newsText || '(无内容)'}</span>
+                    <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#FF8C00', flexShrink: 0 }}>{timeStr}</span>
+                    <span style={{ color: '#444', fontSize: '12px', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>
+                  </div>
                 </div>
+                {isOpen && fullContent[eid] && (
+                  <div style={{ padding: '8px 12px 8px 18px', background: 'rgba(255,255,255,0.02)', borderLeft: `3px solid ${lvl.color}30`, borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                    <div style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '14px', lineHeight: 1.8, color: '#AAA' }}>
+                      {fullContent[eid].replace(/<[^>]*>/g, '')}
+                    </div>
+                  </div>
+                )}
               </div>);
             })}
           </div>
         ) : allRecords.length > 0 && (
           <div style={{ marginBottom: '12px', padding: '12px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)' }}>
-            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#555', letterSpacing: '0.06em' }}>天机潜藏 · 暂无道变天兆</span>
+            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '12px', color: '#555', letterSpacing: '0.06em' }}>天机潜藏 · 暂无道变天兆</span>
           </div>
         )}
         {/* 其余资讯瀑布 */}
         {normalItems.map((ev, i) => {
           const lvl = LEVEL_LABEL[ev.level] || LEVEL_LABEL['0'];
           const timeStr = ev.bstudio_create_time ? new Date(ev.bstudio_create_time + '+08:00').toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' }) : '';
+          const eid = ev.id || `n-${i}`;
+          const isOpen = expandedId === eid;
           const newsText = (ev.news_content || '').replace(/<[^>]*>/g, '').slice(0, 55);
-          return (<div key={ev.id || `n-${i}`} onClick={() => navigate('/tianjifeng')} style={{ padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.025)', cursor: 'pointer', transition: 'background 0.15s' }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(173,255,0,0.03)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '20px', color: lvl.color, border: `1px solid ${lvl.color}40`, padding: '0px 3px', flexShrink: 0, lineHeight: 1.2 }}>{lvl.name}</span>
-              <span style={{ fontFamily: "'IBM Plex Mono', 'Noto Sans SC', monospace", fontSize: '22px', fontWeight: 600, color: '#F2F4F3', flexShrink: 0 }}>{ev.stock_name}</span>
-              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '18px', color: '#666', flexShrink: 0 }}>{ev.stock_code}</span>
-              <span style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '18px', color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{newsText || '(无内容)'}</span>
-              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '18px', color: '#444', flexShrink: 0 }}>{timeStr}</span>
+          return (<div key={ev.id || `n-${i}`}>
+            <div onClick={(e) => handleItemClick(ev, e)} style={{ padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.025)', cursor: 'pointer', transition: 'background 0.15s' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(173,255,0,0.03)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '15px', color: lvl.color, border: `1px solid ${lvl.color}40`, padding: '0px 3px', flexShrink: 0, lineHeight: 1.2 }}>{lvl.name}</span>
+                <span style={{ fontFamily: "'IBM Plex Mono', 'Noto Sans SC', monospace", fontSize: '17px', fontWeight: 600, color: '#F2F4F3', flexShrink: 0 }}>{ev.stock_name}</span>
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#666', flexShrink: 0 }}>{ev.stock_code}</span>
+                <span style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '14px', color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, minWidth: 0 }}>{newsText || '(无内容)'}</span>
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#444', flexShrink: 0 }}>{timeStr}</span>
+                {parseInt(ev.level) >= 3 && <span style={{ color: '#444', fontSize: '12px', transform: isOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}>▼</span>}
+              </div>
             </div>
+            {isOpen && fullContent[eid] && (
+              <div style={{ padding: '8px 12px 8px 18px', background: 'rgba(255,255,255,0.02)', borderLeft: `3px solid ${lvl.color}30`, borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                <div style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '14px', lineHeight: 1.8, color: '#AAA' }}>
+                  {fullContent[eid].replace(/<[^>]*>/g, '')}
+                </div>
+              </div>
+            )}
           </div>);
         })}
       </div>
-      <div style={{ padding: '7px 18px', borderTop: '1px solid rgba(255,255,255,0.04)', textAlign: 'right', flexShrink: 0 }}>
-        <span
-          onClick={(e) => { e.stopPropagation(); navigate('/tianjifeng'); }}
-          style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#ADFF00', letterSpacing: '0.08em', cursor: 'pointer', opacity: 0.6, transition: 'opacity 0.2s' }}
-          onMouseEnter={(e2) => { e2.currentTarget.style.opacity = '1'; }}
-          onMouseLeave={(e2) => { e2.currentTarget.style.opacity = '0.6'; }}
-        >→ 天机峰</span>
+      <div style={{ padding: '7px 18px', borderTop: '1px solid rgba(255,255,255,0.04)', textAlign: 'right', flexShrink: 0, cursor: 'pointer', transition: 'background 0.15s' }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; const s = e.currentTarget.querySelector('span'); if (s) { s.style.opacity = '1'; s.style.textShadow = '0 0 8px rgba(173,255,0,0.3)'; } }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; const s = e.currentTarget.querySelector('span'); if (s) { s.style.opacity = '0.6'; s.style.textShadow = 'none'; } }}
+        onClick={() => navigate('/tianjifeng')}
+        ><span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#ADFF00', letterSpacing: '0.08em', opacity: 0.6 }}>→ 天机峰</span>
       </div>
     </div>
   );
@@ -314,7 +362,7 @@ export function DingshuluPanel() {
       onMouseLeave={(e) => { setHover(false); e.currentTarget.style.borderColor = 'rgba(173,255,0,0.1)'; }}
     >
       <Corners hover={hover} />
-      <PanelHeader code="定数录" name="定数录" subtitle="估值重构 · 情景推演" status="active" />
+      <PanelHeader code="定数录" name="定数录" subtitle="估值重构 · 情景推演" status="active" onClick={() => navigate('/cangjingyun?table=dingshulu')} />
 
       {/* 今日产出 */}
       <div style={{ padding: '6px 14px', borderBottom: '1px solid rgba(255,255,255,0.04)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -411,19 +459,12 @@ export function DingshuluPanel() {
 
       <div style={{
         padding: '8px 18px', borderTop: '1px solid rgba(255,255,255,0.04)',
-        textAlign: 'right', flexShrink: 0,
-      }}>
-        <span
-          onClick={(e) => { e.stopPropagation(); navigate('/cangjingyun?table=dingshulu'); }}
-          style={{
-            fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#ADFF00',
-            letterSpacing: '0.08em', cursor: 'pointer', opacity: 0.6,
-            transition: 'opacity 0.2s',
-          }}
-          onMouseEnter={(e2) => { e2.currentTarget.style.opacity = '1'; }}
-          onMouseLeave={(e2) => { e2.currentTarget.style.opacity = '0.6'; }}
-        >→ 藏经云</span>
-      </div>
+        textAlign: 'right', flexShrink: 0, cursor: 'pointer', transition: 'background 0.15s',
+      }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; const s = e.currentTarget.querySelector('span'); if (s) { s.style.opacity = '1'; s.style.textShadow = '0 0 8px rgba(173,255,0,0.3)'; } }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; const s = e.currentTarget.querySelector('span'); if (s) { s.style.opacity = '0.6'; s.style.textShadow = 'none'; } }}
+        onClick={() => navigate('/cangjingyun?table=dingshulu')}
+      ><span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#ADFF00', letterSpacing: '0.08em', opacity: 0.6 }}>→ 藏经云</span></div>
     </div>
   );
 }
@@ -520,6 +561,7 @@ export function TrackingPanel() {
         code="跟踪令" name="跟踪令"
         subtitle={`论点追踪 · 催化剂监控 · ${stats.total}标的`}
         status={stats.atRisk > 0 ? 'warning' : 'active'}
+        onClick={() => navigate('/tracking')}
       />
       <div style={PANEL_BODY_STYLE} className="hide-scroll">
         {loading && (
@@ -630,14 +672,14 @@ export function TrackingPanel() {
           );
         })}
       </div>
-      <div style={{ padding: '6px 14px', borderTop: '1px solid rgba(255,255,255,0.04)', textAlign: 'right', flexShrink: 0 }}>
-        <span
-          onClick={(e) => { e.stopPropagation(); navigate('/tracking'); }}
-          style={{ fontFamily: "'Space Mono', monospace", fontSize: '13px', color: '#ADFF00', letterSpacing: '0.08em', cursor: 'pointer', opacity: 0.6, transition: 'opacity 0.2s' }}
-          onMouseEnter={(e2) => { e2.currentTarget.style.opacity = '1'; }}
-          onMouseLeave={(e2) => { e2.currentTarget.style.opacity = '0.6'; }}
-        >→ 追踪司</span>
-      </div>
+      <div style={{
+        padding: '6px 14px', borderTop: '1px solid rgba(255,255,255,0.04)',
+        textAlign: 'right', flexShrink: 0, cursor: 'pointer', transition: 'background 0.15s',
+      }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; const s = e.currentTarget.querySelector('span'); if (s) { s.style.opacity = '1'; s.style.textShadow = '0 0 8px rgba(173,255,0,0.3)'; } }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; const s = e.currentTarget.querySelector('span'); if (s) { s.style.opacity = '0.6'; s.style.textShadow = 'none'; } }}
+        onClick={() => navigate('/tracking')}
+      ><span style={{ fontFamily: "'Space Mono', monospace", fontSize: '13px', color: '#ADFF00', letterSpacing: '0.08em', opacity: 0.6 }}>→ 追踪司</span></div>
     </div>
   );
 }
