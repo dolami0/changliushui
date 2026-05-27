@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { useMobile } from '../hooks/useMobile';
 import { useBackendHealth } from '../hooks/useBackendHealth';
-import { fetchDingshulu, fetchTianjijuan, fetchDingshuluCount } from '../services/cozeApi';
+import { fetchDingshulu, fetchTianjijuan, fetchDingshuluCount, fetchAll } from '../services/cozeApi';
 import { fetchStatus, createProgressStream } from '../services/valuationApi';
 import { DingshuluPanel, TianyanPanel, TrackingPanel } from './PanoramicMonitor';
 
@@ -62,6 +62,9 @@ function SpiritLamp() {
   const stageMapRef = useRef<Record<string, number>>({});
   const elapsedAccRef = useRef(0);
   const jobResultsRef = useRef<Record<string, { elapsed: number; ok: boolean }>>({});
+  const [pendingStocks, setPendingStocks] = useState<Array<{ code: string; name: string }>>([]);
+  const [triggering, setTriggering] = useState(false);
+  const [, setJobResultsTick] = useState(0);
 
   useEffect(() => {
     const tick = () => {
@@ -87,6 +90,19 @@ function SpiritLamp() {
     };
     tick();
     fetchDingshuluCount().then(setTotalCompleted).catch(() => {});
+    Promise.all([
+      fetchStatus(),
+      fetchAll<{ stock_code: string; stock_name: string }>('7639784337973477386', 10, {
+        conditions: [{ left: 'is_complete', operation: 'equal', right: 'false' }],
+      }),
+    ]).then(([status, items]) => {
+      const activeCodes = new Set((status.active_jobs || []).map((j: { stock_code: string }) => j.stock_code));
+      const doneCodes = new Set((status.completed_jobs || []).map((j: { stock_code: string }) => j.stock_code));
+      setPendingStocks(
+        items.filter(r => !activeCodes.has(r.stock_code) && !doneCodes.has(r.stock_code))
+          .map(r => ({ code: r.stock_code, name: r.stock_name }))
+      );
+    }).catch(() => {});
     const id = setInterval(tick, 15_000);
     return () => clearInterval(id);
   }, []);
@@ -112,6 +128,7 @@ function SpiritLamp() {
       if (e.elapsed_s > 0) elapsedAccRef.current = e.elapsed_s;
       if (e.stage === 'report' && (e.status === 'done' || e.status === 'error') && e.stock_code) {
         jobResultsRef.current[e.stock_code] = { elapsed: elapsedAccRef.current, ok: e.status === 'done' };
+        setJobResultsTick(t => t + 1); // 触发重渲染
       }
       let overall = 0;
       for (let i = 0; i < STAGE_ORDER.length; i++) {
@@ -133,10 +150,12 @@ function SpiritLamp() {
       backdropFilter: 'blur(8px)',
       WebkitBackdropFilter: 'blur(8px)',
       borderRadius: '6px',
+      border: `1px solid ${processing ? 'rgba(173,255,0,0.35)' : 'rgba(255,255,255,0.04)'}`,
+      boxShadow: processing ? '0 0 24px rgba(173,255,0,0.12), inset 0 0 24px rgba(173,255,0,0.04)' : 'none',
       padding: '14px 16px',
       display: 'flex', flexDirection: 'column', gap: '6px',
       height: '100%',
-      transition: 'background 0.3s ease',
+      transition: 'border 0.5s ease, box-shadow 0.5s ease, background 0.3s ease',
       overflow: 'hidden',
     }}
       onMouseEnter={(e) => {}}
@@ -149,9 +168,9 @@ function SpiritLamp() {
         <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: running ? '#ADFF00' : '#888', letterSpacing: '0.05em' }}>
           {running ? '运转中' : '待命'}
         </span>
-        {processing && (
+        {running && (
           <span style={{ fontFamily: "'Geist Pixel', monospace", fontSize: '22px', color: '#ADFF00', textShadow: '0 0 12px rgba(173,255,0,0.35)', marginLeft: 'auto' }}>
-            {progress}%
+            {processing ? `${progress}%` : '...'}
           </span>
         )}
       </div>
@@ -166,7 +185,7 @@ function SpiritLamp() {
             <span style={{ fontFamily: "'Geist Pixel', monospace", fontSize: '13px', color: '#ADFF00' }}>{progress}%</span>
           </div>
         )}
-        {queuedJobs.filter(q => q.code !== currentStock.code).slice(0, 3).map((q, i) => {
+        {queuedJobs.filter(q => q.code !== currentStock.code && !recentDone.some(d => d.code === q.code)).slice(0, 3).map((q, i) => {
           const res = jobResultsRef.current[q.code];
           return (
             <div key={`q-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '2px 0' }}>
@@ -231,6 +250,38 @@ function SpiritLamp() {
       {errorMsg && (
         <div style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', color: '#FF5C00', padding: '2px 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {errorMsg}
+        </div>
+      )}
+      {/* 手动触发 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <button
+          onClick={() => { if (processing) return; setTriggering(true); setPendingStocks([]); fetch('/api/trigger', { method: 'POST' }).finally(() => setTriggering(false)); }}
+          disabled={processing}
+          style={{
+            flex: 1, padding: '5px 0', border: 'none', borderRadius: '4px',
+            background: processing ? 'rgba(255,255,255,0.03)' : 'rgba(173,255,0,0.08)',
+            color: processing ? '#555' : '#ADFF00',
+            fontFamily: "'Space Mono', monospace", fontSize: '11px', letterSpacing: '0.06em',
+            cursor: processing ? 'default' : 'pointer', transition: 'all 0.2s',
+            opacity: processing ? 0.4 : 1,
+          }}
+          onMouseEnter={(e) => { if (!processing) e.currentTarget.style.background = 'rgba(173,255,0,0.15)'; }}
+          onMouseLeave={(e) => { if (!processing) e.currentTarget.style.background = 'rgba(173,255,0,0.08)'; }}
+        >{processing ? '管线处理中' : triggering ? '触发中…' : '⟐ 手动触发'}</button>
+        {pendingStocks.length > 0 && (
+          <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', color: '#C88D3A', flexShrink: 0 }}>待拉取 {pendingStocks.length}</span>
+        )}
+      </div>
+      {/* 待拉取标的 */}
+      {pendingStocks.length > 0 && (
+        <div style={{ maxHeight: '60px', overflow: 'hidden' }}>
+          {pendingStocks.slice(0, 4).map((p, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '1px 0' }}>
+              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', color: '#C88D3A', opacity: 0.5 }}>待</span>
+              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', color: '#777' }}>{p.code}</span>
+              <span style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '10px', color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</span>
+            </div>
+          ))}
         </div>
       )}
       {/* 底栏 — 倒计时 + 总量 */}

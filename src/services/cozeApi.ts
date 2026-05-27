@@ -32,7 +32,7 @@ async function cozeQuery<T>(databaseId: string, body: Record<string, unknown> = 
   return resp.json();
 }
 
-async function fetchAll<T>(databaseId: string, maxPages = 10): Promise<T[]> {
+export async function fetchAll<T>(databaseId: string, maxPages = 10, filter?: Record<string, unknown>): Promise<T[]> {
   const items: T[] = [];
   let pageToken = '';
   for (let i = 0; i < maxPages; i++) {
@@ -40,6 +40,7 @@ async function fetchAll<T>(databaseId: string, maxPages = 10): Promise<T[]> {
       page_size: 1000,
       order_by: [{ direction: 'desc', field_name: 'bstudio_create_time' }],
     };
+    if (filter) body.filter = filter;
     if (pageToken) body.page_token = pageToken;
     const result = await cozeQuery<T>(databaseId, body);
     items.push(...(result.data?.items || []));
@@ -245,6 +246,7 @@ export interface WanyepuRecord {
   industry_expert_research: string;
   confidence_score: string;
   status: string;
+  is_complete?: boolean;
   uuid: string;
   bstudio_create_time: string;
 }
