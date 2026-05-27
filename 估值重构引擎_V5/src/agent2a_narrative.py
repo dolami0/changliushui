@@ -282,16 +282,16 @@ NARRATIVE_DIAGNOSIS_PROMPT = """你是估值叙事诊断师。你的职责不是
 **本条不选具体模型，只划定边界。**
 
 - `model_family_constraint`: 从 primary_anchor 映射:
-  - earnings → earnings_multiples (A/C/G/I)
+  - earnings → earnings_multiples (A/C/G/I/K)
   - revenue → revenue_multiples (B)
   - asset → asset_multiples (D/H)
   - resource → resource (E)
   - pipeline → pipeline (F)
-  - sotp → sotp (J)
+  - **SOTP 覆盖规则**: 若 sotp_triggered=true，model_family_constraint 必须 = "sotp"，无论 primary_anchor 是什么。因为当新旧业务锚不同、收入占比显著时，必须按 SOTP 分部估值，不能用单一锚。
 
 - `event_nature`: 把事件分类透传给 2b（影响校验模型选择策略）
 - `pricing_bias`: 综合计价判断的输出
-- `key_risk_for_routing`: 标注路由判官需要注意的陷阱
+- `key_risk_for_routing`: 标注路由判官需要注意的陷阱。SOTP 触发时必须标注"需J模型(SOTP)做分部估值"
 
 # 核心约束
 1. 不选具体估值模型 — 那是 Agent-2b 的职责
