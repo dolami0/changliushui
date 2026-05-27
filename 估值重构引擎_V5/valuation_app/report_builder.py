@@ -414,11 +414,17 @@ def _sec_narrative_diagnosis(mn, ep, pr, pa, pt, sanity, cf):
                     "narrow_base_dominant": "极窄(趋势延续)"}
 
     # 估值锚
-    body = _card("估值锚", _kv_table([
-        ("主锚", anchor_labels.get(anchor, anchor)),
-        ("证据", mn.get("primary_anchor_evidence", "?")[:200]),
-        ("SOTP触发", "是" if mn.get("sotp_triggered") else "否"),
-    ]))
+    rows = []
+    if mn.get("core_bet"):
+        rows.append(("核心赌注", mn.get("core_bet", "")))
+    rows.append(("主锚", anchor_labels.get(anchor, anchor)))
+    rows.append(("证据", mn.get("primary_anchor_evidence", "?")[:200]))
+    if mn.get("narrative_summary"):
+        rows.append(("叙事总结", mn.get("narrative_summary", "")[:250]))
+    if mn.get("anchor_conflict"):
+        rows.append(("锚冲突 ⚠️", mn.get("anchor_conflict", "")[:150]))
+    rows.append(("SOTP触发", "是" if mn.get("sotp_triggered") else "否"))
+    body = _card("估值锚", _kv_table(rows))
 
     # 三维光谱
     body += _card("三维事件光谱", _kv_table([
