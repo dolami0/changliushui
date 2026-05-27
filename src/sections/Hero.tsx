@@ -131,12 +131,18 @@ function SpiritLamp() {
         jobResultsRef.current[e.stock_code] = { elapsed: elapsedAccRef.current, ok: e.status === 'done' };
         setJobResultsTick(t => t + 1); // 触发重渲染
       }
+      // 找到最远已触及的阶段索引，之前阶段视为已完成
+      let maxIdx = -1;
+      for (let i = STAGE_ORDER.length - 1; i >= 0; i--) {
+        if (stageMapRef.current[STAGE_ORDER[i]] !== undefined) { maxIdx = i; break; }
+      }
       let overall = 0;
       for (let i = 0; i < STAGE_ORDER.length; i++) {
-        const p = stageMapRef.current[STAGE_ORDER[i]];
-        if (p === undefined) break;
-        if (p >= 1) { overall += 20; }
-        else { overall += p * 20; break; }
+        if (i < maxIdx) { overall += 20; }
+        else if (i === maxIdx) {
+          const p = stageMapRef.current[STAGE_ORDER[i]] || 0;
+          overall += p * 20;
+        }
       }
       setProgress(Math.round(overall));
     });
