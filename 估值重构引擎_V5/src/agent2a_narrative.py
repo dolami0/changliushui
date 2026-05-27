@@ -26,7 +26,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from valuation_utils import call_deepseek, build_forward_signal_panel, fmt_pct
 from pricing_tools import compute_pricing_anchor
-import case_loader
 
 
 # ═══════════════════════════════════════
@@ -259,7 +258,6 @@ def _build_narrative_user_message(
     data_package: dict,
     event_data: dict,
     pricing_result: dict,
-    case_anchors: str,
 ) -> str:
     """构建 Agent-2a 的用户消息：注入全量数据。"""
     core = data_package.get("packages", {}).get("core", {}).get("fields", {})
@@ -354,8 +352,6 @@ def _build_narrative_user_message(
 
 {build_forward_signal_panel(core)}
 
-{case_anchors}
-
 请按清单项 1→2→3→4 顺序完成诊断。输出纯 JSON。
 """
     return msg
@@ -389,10 +385,7 @@ class NarrativeDiagnosis:
         event_data = event_data or {}
         core = data_package.get("packages", {}).get("core", {}).get("fields", {})
 
-        # ── Step 1: V3 案例锚点 ──
-        case_matches, case_anchors_text = self._step_case_match(data_package)
-
-        # ── Step 2: 定量定价工具计算 ──
+        # ── Step 1: 定量定价工具计算 ──
         anchor_hint = self._infer_anchor_hint(core)
         pricing_result = compute_pricing_anchor(
             anchor_hint, core, wacc_params
@@ -401,12 +394,11 @@ class NarrativeDiagnosis:
         # ── Step 3: LLM 叙事诊断 ──
         user_msg = _build_narrative_user_message(
             data_package, event_data, pricing_result,
-            case_anchors_text,
         )
 
         result = call_deepseek(
             NARRATIVE_DIAGNOSIS_PROMPT, user_msg,
-            max_tokens=30720, temperature=0.1,
+            max_tokens=30720, temperature=0,
             api_key=self.api_key,
         )
 
@@ -414,19 +406,15 @@ class NarrativeDiagnosis:
             # 重试一次
             result = call_deepseek(
                 NARRATIVE_DIAGNOSIS_PROMPT, user_msg,
-                max_tokens=30720, temperature=0.1,
+                max_tokens=30720, temperature=0,
                 api_key=self.api_key,
             )
 
         if "_parse_error" in result:
-            return self._fallback_diagnosis(core, pricing_result, case_anchors_text)
+            return self._fallback_diagnosis(core, pricing_result)
 
         # 注入代码计算值（LLM 不能修改）
         result["_pricing_tool"] = pricing_result
-        result["_case_anchors"] = {
-            "top3": [c for c, _ in case_matches[:3]],
-            "reliability": case_loader.assess_anchor_reliability(case_matches),
-        }
 
         return result
 
@@ -452,25 +440,8 @@ class NarrativeDiagnosis:
             return "asset"
         return "earnings"
 
-    def _step_case_match(self, data_package: dict) -> tuple:
-        """V3 案例匹配。"""
-        core = data_package.get("packages", {}).get("core", {}).get("fields", {})
-        a1_sim = {
-            "clean_financials": {
-                "roic_pct": core.get("roic_pct", 0),
-                "market_cap_yi": core.get("market_cap_yi", 0),
-                "industry": data_package.get("industry", ""),
-                "pe_ttm": core.get("pe_ttm", 0),
-            },
-        }
-        cases = case_loader.load_cases()
-        matches = case_loader.find_similar(a1_sim, top_n=8, cases=cases)
-        anchors_text = case_loader.build_rich_anchors(matches, top_n=5) if matches else ""
-        return matches, anchors_text
-
     @staticmethod
-    def _fallback_diagnosis(core: dict, pricing_result: dict,
-                            case_anchors: str) -> dict:
+    def _fallback_diagnosis(core: dict, pricing_result: dict) -> dict:
         """LLM 不可用时的纯代码 fallback。"""
         np = core.get("net_profit_ttm_yi", 0)
         roic = core.get("roic_pct", 0)

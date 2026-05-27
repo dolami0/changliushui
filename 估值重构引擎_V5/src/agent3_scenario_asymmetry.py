@@ -106,7 +106,7 @@ reasoning_trace 按清单项顺序组织，每项写 3-6 句话：你的分析�
 **再从事件原文中**自行提取（2a 未覆盖的细节）:
 - 因果分叉点（event_deduction 中的证实/证伪节点 + adversarial_thinking 的证伪路径）
 - 风险边界（TAM 从 knowledge_supplement + 竞争格局从 industry_expert_research）
-- 案例参照系（V3案例锚点 — 同族案例的参数上四分位/中位/下四分位）
+- 参照系：行业估值中枢 + 2a 的 precedent_richness 提供的先例丰富度
 
 **关键**: 估值锚和计价程度以 2a 为准（不可推翻），因果细节可从原文补充。
 
@@ -201,11 +201,11 @@ base = 100% - bull - bear。
 
 **重要: 永远不要"凑"概率**——bear 需要 N 个独立环节同时崩塌 → 联合概率自然就是小概率。
 
-### 3e. 案例比对 + 赋参数
+### 3e. 赋参数
 
-案例锚定同族案例的参数统计量（上四分位/中位/下四分位），你的参数不应偏离过大。
 赋参数时，用 3a 的分布形状约束和 3b 的 upside 天花板反向验证。
-剧本 + 案例校验 + 清单项2评分修正 → 三情景参数。
+剧本 + 清单项2评分修正 → 三情景参数。
+参数锚定行业估值中枢（来自 knowledge_supplement 或行业常识），不锚定具体个股案例。
 
 当前模型是 {PRIMARY_MODEL} ({MODEL_DESC})，你必须使用的参数体系:
 {MODEL_PARAM_NAMES}
@@ -306,9 +306,9 @@ quality_flag: 亏损企业→SPECULATIVE, ROIC<8%→MODERATE_QUALITY, ROIC≥8%�
 
 **4e. 置信度(4维, 每维1-10)**
 - info_quality: 信息来源可靠性。硬证据≥2环(订单/产能/专利/政策)→≥7; 纯主题无锚点→1-3。**强制降级: 清单项2c标注"事件-产品映射失败"→info_quality≤5**
-- financial_feasibility: 财务假设可行性。参数改善幅度有案例支撑→≥7; 凭空跳变→≤5。**强制降级: 案例锚点可靠性=low→financial_feasibility≤5**
+- financial_feasibility: 财务假设可行性。参数改善幅度有逻辑支撑→≥7; 凭空跳变→≤5
 - valuation_safety: 估值安全边际。bear 下行≤50%→≥7; bear 下行>90%→≤4
-- historical_precedent: 案例匹配度。案例匹配≥8分→≥7; 无同族案例→≤4。**强制降级: 案例锚点可靠性=low→historical_precedent≤4**
+- historical_precedent: 参照 2a 的 precedent_richness。先例丰富(P≥8)→≥7; 史无前例(P≤3)→≤4
 
 ## 清单项 5: 交易标注 + KMI + 风险触发器
 - 交易标注: 4维(每维0-3) — odds_quality/pricing_headroom/transmission_confidence/model_consistency
@@ -334,7 +334,7 @@ quality_flag: 亏损企业→SPECULATIVE, ROIC<8%→MODERATE_QUALITY, ROIC≥8%�
 # 共享输出 Schema（字段顺序 = 清单项推理顺序）:
 
 {
-  "reasoning_trace": ["清单项1-素材吸收(引用2a锚+计价+事件分类): ...", "清单项2-引用2a审核结论(step2d=X,关键交叉验证:...): ...", "清单项3a-投资命题: ...", "清单项3d-案例比对: ...", "清单项3e-赋参数: ...", "清单项4a-一致性校验: ...", "清单项4b-计价验证(按锚选工具): ...", "清单项4c-校验交叉: ...", "清单项4d-非对称: ...", "清单项4e-置信度: ..."],
+  "reasoning_trace": ["清单项1-素材吸收(引用2a锚+计价): ...", "清单项2-引用2a审核结论(step2d=X): ...", "清单项3a-投资命题: ...", "清单项3e-赋参数: ...", "清单项4a-一致性校验: ...", "清单项4b-计价验证(按锚选工具): ...", "清单项4c-校验交叉: ...", "清单项4d-非对称: ...", "清单项4e-置信度: ..."],
   "signal_audit": {
     "step2a_restate": ["[合同负债] 当前值=0.13亿 (↑1.1σ, 历史均值=0.08亿)", "..."],
     "step2b_match": [
@@ -352,15 +352,6 @@ quality_flag: 亏损企业→SPECULATIVE, ROIC<8%→MODERATE_QUALITY, ROIC≥8%�
     "probability_weighted_upside_pct": XX,
     "asymmetry_ratio": X.X,
     "quality_flag": "HIGH_QUALITY|MODERATE_QUALITY|SPECULATIVE"
-  },
-  "case_comparison_summary": {
-    "compared_cases": [
-      {"case_code": "300308", "comprehensive_discount_pct": 75,
-       "six_dimension_judgment": {"driver_strength": "优于: 证据", "market_space": "相似: 证据",
-         "moat": "劣于: 证据", "paradigm": "相似: 证据",
-         "catalyst_density": "优于: 证据", "failure_risk": "相似: 证据"}}
-    ],
-    "parameter_impact": {"target_param_discount_pct": XX, "adjustment_rationale": "参数调整说明"}
   },
   "reverse_dcf": {
     "applicable": true,
@@ -1156,7 +1147,6 @@ def _call_llm_scenario(
     wacc_params: dict,
     data_package: dict,
     routing: dict,
-    case_anchors: str,
     event_data: dict,
     agent2a_output: dict | None = None,
 ) -> dict:
@@ -1261,8 +1251,6 @@ def _call_llm_scenario(
 响应等级: L{event_data.get('response_level','?')}（仅反映事件确定性，不直接决定概率）
 事件原文: {event_data.get('raw_event_text','')}
 预研推理: {event_data.get('preliminary_reasoning','')}
-
-{case_anchors}
 
 ## Agent-2a 叙事诊断结论（已审核，可直接信任）
 """
@@ -1972,7 +1960,6 @@ class ScenarioAsymmetry:
         data_package: dict,
         routing_decision: dict,
         event_data: dict | None = None,
-        case_anchors: str = "",
         progress_cb: Callable[[int, str], None] | None = None,
         agent2a_output: dict | None = None,
     ) -> dict:
@@ -1982,7 +1969,6 @@ class ScenarioAsymmetry:
         data_package: Agent-1 DataForge 输出
         routing_decision: Agent-2b routing_decision 部分
         event_data: Coze Agent0 输入
-        case_anchors: Agent-2a 案例锚点文本（向后兼容）
         agent2a_output: V6 新增 — Agent-2a 叙事诊断输出（信号审核 + 计价判断）
         """
         cb = progress_cb or (lambda s, n: None)
@@ -2002,7 +1988,7 @@ class ScenarioAsymmetry:
         try:
             llm_output = _call_llm_scenario(
                 bs_profile, wacc_params, data_package,
-                routing_decision, case_anchors, event_data,
+                routing_decision, event_data,
                 agent2a_output=agent2a_output,
             )
         except ScenarioError as e:
@@ -2011,7 +1997,7 @@ class ScenarioAsymmetry:
                 try:
                     llm_output = _call_llm_scenario(
                         bs_profile, wacc_params, data_package,
-                        routing_decision, case_anchors, event_data,
+                        routing_decision, event_data,
                         agent2a_output=agent2a_output,
                     )
                 except ScenarioError:
@@ -2120,10 +2106,8 @@ def run_scenario_asymmetry(
     data_package: dict,
     routing_decision: dict,
     event_data: dict | None = None,
-    case_anchors: str = "",
 ) -> dict:
     """便捷入口。"""
     agent = ScenarioAsymmetry()
     return agent.run(data_package, routing_decision,
-                     event_data=event_data,
-                     case_anchors=case_anchors)
+                     event_data=event_data)

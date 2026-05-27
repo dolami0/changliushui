@@ -268,13 +268,9 @@ class Orchestrator:
         a3 = ScenarioAsymmetry(deepseek_key=self.api_key)
         rd = agent2b_output.get("routing_decision", {})
 
-        # 案例锚点文本 (从 2a 获取, V6 中案例匹配在 2a 完成)
-        case_anchors = agent2a_output.get("_case_anchors_text", "")
-
         try:
             return a3.run(
                 data_package, rd, event_data,
-                case_anchors=case_anchors,
                 agent2a_output=agent2a_output,
             )
         except ScenarioError as e:
@@ -282,7 +278,6 @@ class Orchestrator:
                 try:
                     return a3.run(
                         data_package, rd, event_data,
-                        case_anchors=case_anchors,
                         agent2a_output=agent2a_output,
                     )
                 except ScenarioError:
@@ -363,23 +358,7 @@ class Orchestrator:
     def _assemble_result(self, state: PipelineState) -> dict:
         """组装最终结果 dict（兼容 scheduler + server V5/V6 格式）。"""
         a2b = dict(state.agent2b_output or {})
-
-        # 案例数据合并: Agent-3 的 compared_cases → Agent-2b 的 case_matches_top3
         a3 = state.agent3_output or {}
-        a3_ccs = a3.get("case_comparison_summary", {})
-        a3_cases = a3_ccs.get("compared_cases", [])
-        if a3_cases:
-            a3_case_map = {c.get("case_code", ""): c for c in a3_cases}
-            enriched_top3 = []
-            for cm in a2b.get("case_matches_top3", []):
-                code = cm.get("case_code", "")
-                rich = a3_case_map.get(code, {})
-                enriched_top3.append({
-                    **cm,
-                    "comprehensive_discount_pct": rich.get("comprehensive_discount_pct"),
-                    "six_dimension_judgment": rich.get("six_dimension_judgment", {}),
-                })
-            a2b["case_matches_top3"] = enriched_top3
 
         result = {
             "agent0": state.agent0_output or {},

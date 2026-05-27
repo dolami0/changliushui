@@ -215,9 +215,6 @@ def _build_routing_user_message(
 {event_data.get('investment_theme','')}
 {event_data.get('event_deduction','')[:500]}
 
-## 案例锚点
-{agent2a_output.get('_case_anchors',{}).get('top3',[])}
-
 请在指定模型族内完成路由判决。输出纯 JSON。
 """
     return msg

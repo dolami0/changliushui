@@ -188,7 +188,6 @@ def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict) -> str:
     # Agent-3 数据
     vs = a3.get("valuation_summary", {})
     scenarios = a3.get("scenarios", [])
-    cc = a3.get("case_comparison_summary", {})
     conf = a3.get("confidence", {})
     gap = a3.get("expectation_gap", {})
     vx = a3.get("validation_crosscheck", {})
@@ -208,7 +207,6 @@ def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict) -> str:
         + _v5_bs_profile(sanity, cf)
         + _v5_signal_audit(sa, fw)
         + _v5_scenarios(scenarios, primary, cf)
-        + _v5_case_comparison(cc)
         + _v5_validation_crosscheck(vx)
         + _v5_reverse_dcf(rd)
         + _v5_expectation_gap(gap)
@@ -269,7 +267,6 @@ def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict, agent2a
     vs = a3.get("valuation_summary", {})
     sv = a3.get("scenario_valuation", {})
     scenarios = a3.get("scenarios", [])
-    cc = a3.get("case_comparison_summary", {})
     conf = a3.get("confidence", {})
     gap = a3.get("expectation_gap", {})
     vx = a3.get("validation_crosscheck", {})
@@ -297,7 +294,6 @@ def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict, agent2a
         + _sec_bs_profile(sanity, cf, a2a_mn.get("primary_anchor","earnings"))
         + _sec_forward_signals(sa, fw, cf)
         + _sec_scenarios(scenarios, primary, pr)
-        + _sec_case_comparison(cc, a2)
         + _sec_validation(vx, rd, gap, vs)
         + _sec_confidence(conf)
         + _sec_trade(ta)
@@ -612,23 +608,6 @@ def _sec_scenarios(scenarios, primary, pr):
     return _section("05", "三情景推演", body)
 
 
-def _sec_case_comparison(cc, a2):
-    cases = cc.get("compared_cases", [])
-    if not cases: return ""
-    pi = cc.get("parameter_impact", {})
-    body = f'<p style="font-size:14px"><strong>综合参数折扣: {pi.get("target_param_discount_pct","?")}%</strong> — {pi.get("adjustment_rationale","")}</p>'
-    for c in cases:
-        code = c.get("case_code","?"); disc = c.get("comprehensive_discount_pct","?")
-        dims = c.get("six_dimension_judgment",{})
-        labels = {"driver_strength":"驱动强度","market_space":"市场空间","moat":"卡位壁垒","paradigm":"范式切换","catalyst_density":"催化剂密度","failure_risk":"失败风险"}
-        rows = "".join(f'<tr><td style="color:var(--text-dim)">{labels.get(k,k)}</td><td>{v}</td></tr>' for k,v in dims.items())
-        body += _card(f"vs {code} (折扣 {disc}%)", f'<table class="data">{rows}</table>')
-    similar = a2.get("similar_cases",[])
-    if similar:
-        body += f'<p style="font-size:12px;color:var(--text-dim);margin-top:8px">相似案例: {", ".join(str(s) for s in similar[:10])}</p>'
-    return _section("06", "案例比对", body)
-
-
 def _sec_validation(vx, rd, gap, vs):
     parts = []
     if vx and vx.get("assessment"):
@@ -744,7 +723,6 @@ def build_markdown_report(agent0_record: dict, a1: dict, a2: dict, a3: dict, age
     ta = a3.get("trade_annotation", {})
     scenarios = a3.get("scenarios", [])
     narrative = a3.get("narrative", "")
-    cc = a3.get("case_comparison_summary", {})
     vx = a3.get("validation_crosscheck", {})
     kpis = a3.get("monitoring_kpis", {})
     triggers = a3.get("risk_triggers", {})
@@ -855,20 +833,7 @@ def build_markdown_report(agent0_record: dict, a1: dict, a2: dict, a3: dict, age
     if pr:
         md += f"**概率推导**: {pr}\n\n"
 
-    # ── 五、案例比对 ──
-    pi = cc.get("parameter_impact", {})
-    md += f"## 五、案例比对\n\n**综合参数折扣**: {pi.get('target_param_discount_pct','?')}% — {pi.get('adjustment_rationale','?')}\n\n"
-    for c in cc.get("compared_cases", []):
-        md += f"### vs {c.get('case_code','?')} (折扣率: {c.get('comprehensive_discount_pct','?')}%)\n\n"
-        md += "| 维度 | 判断 |\n|------|------|\n"
-        dims = c.get("six_dimension_judgment", {})
-        labels = {"driver_strength":"驱动强度","market_space":"市场空间","moat":"卡位壁垒",
-                  "paradigm":"范式切换","catalyst_density":"催化剂密度","failure_risk":"失败风险"}
-        for dk, dv in dims.items():
-            md += f"| {labels.get(dk,dk)} | {dv} |\n"
-        md += "\n"
-
-    # ── 六、校验交叉验证 ──
+    # ── 五、校验交叉验证 ──
     if vx.get("validation_model"):
         md += f"## 六、校验交叉验证: {vx.get('validation_model','?')} ({vx.get('validation_paradigm','?')})\n\n"
         md += f"| 指标 | 值 |\n|------|-----|\n"
