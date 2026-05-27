@@ -73,7 +73,7 @@ function SpiritLamp() {
         setRunning(s.scheduler_running);
         nextPollRef.current = s.next_poll_at;
         setQueuedJobs((s.active_jobs || []).map((j: { stock_code: string; stock_name: string; status: string }) => ({ code: j.stock_code, name: j.stock_name, status: j.status })));
-        const done2 = (s.completed_jobs || []).slice(-3).reverse().map((j: { stock_code: string; stock_name: string; completed_at: string }) => ({
+        const done2 = (s.completed_jobs || []).slice(-1).map((j: { stock_code: string; stock_name: string; completed_at: string }) => ({
           code: j.stock_code, name: j.stock_name,
           time: j.completed_at ? new Date(j.completed_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' }) : '',
         }));

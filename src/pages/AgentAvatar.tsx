@@ -27,6 +27,29 @@ const N = (v: unknown, d = '—'): string => {
 };
 const Pct = (v: unknown): string => { const s = N(v); return s === '—' ? s : s + '%'; };
 
+// ── V6 叙事诊断·术语自解释映射 ──
+const SHAPE_EXPLAIN: Record<string,string> = {
+  'narrow_concentrated': '窄集中: 方向确定、幅度可参照历史——置信度应较高',
+  'narrow_base_dominant': '窄集中: 基底情景占主导——尾部风险可控',
+  'wide_unimodal': '宽单峰: 方向确定但幅度不确定——需留安全边际',
+  'wide_bimodal': '宽双峰: 结果高度二元分化——注意尾部风险',
+  'wide_bimodal_date_anchored': '宽双峰: 关键时间节点决定方向——关注催化剂日期',
+};
+const ANCHOR_FOCUS: Record<string,string> = {
+  'earnings': '市场在定价盈利能力——核心看ROIC趋势、利润增速、边际变化',
+  'revenue': '市场在定价收入增长/TAM扩张——核心看PS倍数、收入增速、渗透率',
+  'asset': '市场在定价资产价值重估——核心看PB、ROE改善、资产质量',
+  'resource': '市场在定价资源量/价——核心看EV/EBITDA、储量、商品价格',
+  'pipeline': '市场在定价管线价值——核心看PoS、峰值销售、rNPV',
+  'sotp': '市场需分部估值——不同业务用不同锚，加总后对比市值',
+};
+const BIAS_EXPLAIN: Record<string,string> = {
+  'undervalued': '模型认为当前市值低于内在价值（存在安全边际）',
+  'fairly_valued': '当前市值与内在价值基本吻合',
+  'overvalued': '模型认为当前市值已高于内在价值（警惕追高）',
+  'uncertain': '方向不明确，需结合其他信号综合判断',
+};
+
 /* ================================================================== */
 /*  模块注册                                                             */
 /* ================================================================== */
@@ -41,6 +64,8 @@ const MODULES = [
   { id: 'trade', label: '标注', cat: 'core', on: false },
   { id: 'kpi', label: 'KPI', cat: 'core', on: false },
   { id: 'triggers', label: '触发', cat: 'core', on: false },
+  { id: 'narrative', label: '叙事诊断', cat: 'core', on: true },
+  { id: 'signal', label: '信号审计', cat: 'core', on: false },
   { id: 'a0_theme', label: '投资主题', cat: 'a0', on: true },
   { id: 'a0_deduction', label: '事件推演', cat: 'a0', on: true },
   { id: 'a0_reasoning', label: '推理', cat: 'a0', on: false },
@@ -222,13 +247,14 @@ export default function AgentAvatar() {
     const memory = loadMemory();
     const a0 = (reportJSON.agent0 || {}) as Record<string, unknown>;
     const a3 = (reportJSON.agent3 || {}) as Record<string, unknown>;
+    const a2a = (reportJSON.agent2a || {}) as Record<string, unknown>;
+    const routing = (reportJSON.routing_decision || {}) as Record<string, unknown>;
     const cf = (G(reportJSON, 'agent1', 'packages', 'core', 'fields') || G(reportJSON, 'agent1', 'clean_financials') || {}) as Record<string, unknown>;
     const parts: string[] = [];
     const add = (t: string, b: string) => { if (b.trim()) parts.push(`## ${t}\n${b}`); };
 
     const ms = (G(a3, 'market_sanity') || {}) as Record<string, unknown>;
     const vs = (G(a3, 'valuation_summary') || G(a3, 'scenario_valuation') || {}) as Record<string, unknown>;
-    const vr = (G(a3, 'valuation_routing') || {}) as Record<string, unknown>;
     const gap = (G(a3, 'expectation_gap') || {}) as Record<string, unknown>;
     const conf = (G(a3, 'confidence') || {}) as Record<string, unknown>;
     const ta = (G(a3, 'trade_annotation') || {}) as Record<string, unknown>;
@@ -260,7 +286,49 @@ export default function AgentAvatar() {
       ].join('\n'));
     }
     if (toggles.routing) {
-      add('估值路由', `- ${String(vr?.primary_model || '?')} (${String(vr?.model_category || '?')}) | 校验: ${String(vr?.secondary_model || '?')}\n- ${String(vr?.routing_reason || '')}`);
+      const vm = Array.isArray(routing.validation_models) ? routing.validation_models.join('+') : String(routing?.validation_models || routing?.secondary_model || '?');
+      const cc = routing?.constraint_compliance as Record<string,unknown> | undefined;
+      add('估值路由', [
+        `- 主模型: ${String(routing?.primary_model || '?')} (${String(routing?.model_category || '?')})`,
+        `- 校验: ${vm} | 策略: ${String(routing?.validation_strategy || '?')}`,
+        `- 理由: ${String(routing?.routing_reason || '—')}`,
+        cc?.constraint_override ? `- ⚠️ 约束覆写: ${String(cc?.override_rationale || '—')}` : '',
+        routing?.anchor_shift_warning ? `- ⚠️ 锚切换预警: ${String(routing?.anchor_shift_warning)}` : '',
+      ].filter(Boolean).join('\n'));
+    }
+    if (toggles.narrative) {
+      const mn = (a2a?.market_narrative || a2a?.marketNarrative || {}) as Record<string,unknown>;
+      const ep = (a2a?.event_pricing || a2a?.eventPricing || {}) as Record<string,unknown>;
+      const epr = (ep?.event_profile || ep?.eventProfile || {}) as Record<string,unknown>;
+      const pa = (ep?.pricing_assessment || ep?.pricingAssessment || {}) as Record<string,unknown>;
+      const fwd = (a2a?.forward_to_routing || a2a?.forwardToRouting || {}) as Record<string,unknown>;
+      const anchor = String(mn?.primary_anchor || '?');
+      const shape = String(epr?.distribution_shape || '?');
+      const bias = String(fwd?.pricing_bias || 'uncertain');
+      const pricedIn = String(pa?.overall_priced_in || '?');
+      const pricedEst = String(pa?.priced_in_estimate || '');
+      const timing = String(epr?.timing_certainty || '?');
+      const binary = String(epr?.outcome_binaryness || '?');
+      const precedent = String(epr?.precedent_richness || '?');
+      const lines = [
+        `- ★ 主锚: **${anchor}** — ${ANCHOR_FOCUS[anchor] || '关注锚定对应指标'}`,
+        mn?.narrative_summary ? `- 锚叙事: ${String(mn.narrative_summary).slice(0, 300)}` : '',
+        `- 事件分布: ${shape}（${SHAPE_EXPLAIN[shape] || '分布形态反映市场共识度与不确定性'}）`,
+        `- 定价偏向: ${bias} — ${BIAS_EXPLAIN[bias] || '需结合情景推演判断'}`,
+        pricedIn !== '?' ? `- 市场计价: ${pricedIn}${pricedEst ? ' / ' + pricedEst : ''}${pa?.residual_catalyst ? ' | 剩余催化: ' + String(pa.residual_catalyst) : ''}` : '',
+        `- 3D光谱: 时点确定性${timing}/10 | 结果二元性${binary}/10 | 先例丰富度${precedent}/10`,
+        mn?.anchor_conflict ? `- ⚠️ 锚冲突: ${String(mn.anchor_conflict)}` : '',
+        mn?.sotp_triggered ? '- ⚠️ SOTP已触发 — 需分部估值，不同业务不能混用一个锚' : '',
+      ].filter(Boolean);
+      add('叙事诊断（Agent-2a V6）', lines.join('\n'));
+    }
+    if (toggles.signal) {
+      const sa = (a2a?.signal_audit || a2a?.signalAudit || {}) as Record<string,unknown>;
+      const matches = (G(sa, 'step2b_match') || []) as Array<Record<string,unknown>>;
+      const lines = matches.map(m =>
+        `- **${String(m?.match || m?.signal || '?')}** (${String(m?.source_level || m?.sourceLevel || '?')}) — ${String(m?.basis || '—')}`
+      );
+      if (lines.length) add(`信号审计: 评分${String(G(sa, 'step2d_score') || '?')}`, lines.join('\n'));
     }
     if (toggles.financial) {
       const wp = (G(ms, 'wacc_params') || {}) as Record<string, unknown>;
