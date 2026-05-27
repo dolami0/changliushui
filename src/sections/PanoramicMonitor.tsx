@@ -160,6 +160,7 @@ export function TianyanPanel() {
   const [pollInfo, setPollInfo] = useState({ last: '—', next: '—' });
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [fullContent, setFullContent] = useState<Record<string, string>>({});
+  const [showBackTop, setShowBackTop] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const refresh = useCallback(() => {
@@ -214,7 +215,8 @@ export function TianyanPanel() {
     >
       <Corners hover={hover} />
       <PanelHeader code="天眼司" name="天眼" subtitle="监听天下异象" status="active" onClick={() => navigate('/tianjifeng')} />
-      <div ref={scrollRef} style={PANEL_BODY_STYLE} className="hide-scroll">
+      <div ref={scrollRef} style={PANEL_BODY_STYLE} className="hide-scroll"
+        onScroll={() => { if (scrollRef.current) setShowBackTop(scrollRef.current.scrollTop > 200); }}>
         {allRecords.length === 0 && (
           <div style={{ padding: '20px', textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: '24px', color: '#555' }}>
             天眼巡游中，暂无资讯...
@@ -292,6 +294,22 @@ export function TianyanPanel() {
           </div>);
         })}
       </div>
+      {/* 回到顶部 */}
+      {showBackTop && (
+        <div style={{
+          position: 'absolute', bottom: '42px', right: '16px', zIndex: 10,
+          width: '28px', height: '28px', borderRadius: '50%',
+          background: 'rgba(5,4,1,0.85)', border: '1px solid rgba(173,255,0,0.2)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', transition: 'all 0.2s',
+        }}
+          onClick={(e) => { e.stopPropagation(); scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' }); }}
+          onMouseEnter={(e2) => { e2.currentTarget.style.borderColor = '#ADFF00'; e2.currentTarget.style.background = 'rgba(173,255,0,0.1)'; }}
+          onMouseLeave={(e2) => { e2.currentTarget.style.borderColor = 'rgba(173,255,0,0.2)'; e2.currentTarget.style.background = 'rgba(5,4,1,0.85)'; }}
+        >
+          <span style={{ color: '#ADFF00', fontSize: '14px', lineHeight: 1 }}>▲</span>
+        </div>
+      )}
       <div style={{ padding: '7px 18px', borderTop: '1px solid rgba(255,255,255,0.04)', textAlign: 'right', flexShrink: 0, cursor: 'pointer', transition: 'background 0.15s' }}
         onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; const s = e.currentTarget.querySelector('span'); if (s) { s.style.opacity = '1'; s.style.textShadow = '0 0 8px rgba(173,255,0,0.3)'; } }}
         onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; const s = e.currentTarget.querySelector('span'); if (s) { s.style.opacity = '0.6'; s.style.textShadow = 'none'; } }}
