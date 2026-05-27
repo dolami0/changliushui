@@ -786,8 +786,13 @@ def _bs_level_from_g_wacc(implied_g_pct: float, wacc_pct: float) -> str:
 
 
 def precompute_bs_profile(primary_model: str, data_package: dict,
-                          wacc_params: dict) -> dict:
-    """计算 BS 画像。双算法并行：反向DCF(主) + 模型专属(辅)，标注差异。"""
+                          wacc_params: dict, valuation_anchor: str = "earnings") -> dict:
+    """计算 BS 画像。V6: 根据估值锚选择对应工具。
+
+    earnings → 反向DCF (g/WACC)
+    revenue → 隐含收入CAGR (PS→3y增速)
+    asset → 隐含ROE改善 (PB→当前ROE)
+    """
     core = data_package.get("packages", {}).get("core", {}).get("fields", {})
     mcap = core.get("market_cap_yi", 50)
     equity = core.get("total_equity_yi", 1)
@@ -797,53 +802,96 @@ def precompute_bs_profile(primary_model: str, data_package: dict,
     roic = core.get("roic_pct", 0)
     cash = core.get("cash_yi", 0)
     debt = core.get("interest_bearing_debt_yi", 0)
+    revenue = core.get("revenue_ttm_yi", 1)
+    ps = core.get("ps_ttm", 0)
+    roe = core.get("roe_ttm_pct", 0)
     ev = mcap + debt - cash
     wacc = wacc_params["wacc_pct"] / 100 if wacc_params["wacc_pct"] > 0 else 0.1
     wacc_pct = wacc_params["wacc_pct"]
 
-    # ── 算法1: 反向 DCF g/WACC（所有模型通用）──
+    # 始终计算反向DCF作为参考
     rdcf = _compute_reverse_dcf(nopat, ev, wacc)
-    bs_level = _bs_level_from_g_wacc(rdcf["implied_g_pct"], wacc_pct)
-    bs_method = "反向DCF(g/WACC)"
     warnings = list(rdcf["warnings"])
-
-    # ── 算法2: 模型专属水位 ──
     secondary = ""
-    m = primary_model[0] if primary_model else "A"
-    if m == "B":
-        rev = core.get("revenue_ttm_yi", 1)
-        ps = mcap / rev if rev > 0 else 0
-        secondary = f"PS={ps:.1f}x"
-        if rdcf["applicable"]:
-            g_ratio = rdcf["implied_g_pct"] / wacc_pct * 100 if wacc_pct > 0 else 0
-            secondary += f" | 反向DCF g/WACC={g_ratio:.0f}%({bs_level.split(':')[0]})"
-    elif m == "D":
-        secondary = f"PB={pb_val:.1f}x"
-        if rdcf["applicable"]:
-            g_ratio = rdcf["implied_g_pct"] / wacc_pct * 100 if wacc_pct > 0 else 0
-            secondary += f" | 反向DCF g/WACC={g_ratio:.0f}%({bs_level.split(':')[0]})"
-    elif m == "E":
-        op = core.get("operating_profit_ttm_yi", 0)
-        ev_ebitda_val = ev / op if op > 0 else 0
-        ebitda = core.get("ebitda_ttm_yi", op)
-        ev_ebitda_real = ev / ebitda if ebitda > 0 else 0
-        secondary = f"EV/EBITDA={ev_ebitda_real:.1f}x"
-        if rdcf["applicable"]:
-            g_ratio = rdcf["implied_g_pct"] / wacc_pct * 100 if wacc_pct > 0 else 0
-            secondary += f" | 反向DCF g/WACC={g_ratio:.0f}%({bs_level.split(':')[0]})"
-            # 标注两种算法的差异
-            ev_level = "低估" if ev_ebitda_real < 5 else ("正常" if ev_ebitda_real < 10 else ("溢价" if ev_ebitda_real < 20 else "极高"))
-            if "折价" in bs_level and ev_level in ("溢价", "极高"):
-                secondary += "  与反向DCF方向相反: EV/EBITDA显示溢价但DCF显示折价，差异源于NOPAT极薄而EBITDA正常——市场定价的是资源/产能价值而非当前盈利"
-    elif m in ("F", "H", "J"):
-        secondary = f"PB={pb_val:.1f}x (资产基线)"
+    market_story = ""
+    icagr = {}  # 作用域占位
+    iroe = {}
 
-    premium_str = f" 溢价{rdcf['market_premium_pct']}%" if rdcf['market_premium_pct'] < 999 else ""
-    market_story = (
-        f"EV={ev:.0f}亿 NOPAT={nopat:.2f}亿 ROIC={roic:.1f}% "
-        f"WACC={wacc_pct}% 隐含g={rdcf['implied_g_pct']}% "
-        f"DCF基准={rdcf['base_dcf']}亿{premium_str}"
-    )
+    if valuation_anchor == "revenue":
+        # ── 收入锚: 用隐含 CAGR ──
+        from pricing_tools import implied_revenue_cagr
+        ps_val = core.get("ps_ttm", 0)
+        icagr = implied_revenue_cagr(mcap, revenue, ps_val, wacc_pct)
+        if icagr.get("applicable"):
+            imp = icagr["implied_value"]
+            bs_method = "隐含收入CAGR (收入锚)"
+            bs_level = f"当前PS={ps_val:.1f}x → 市场隐含3年收入CAGR≈{imp}%"
+            market_story = f"PS={ps_val:.1f}x 营收={revenue:.1f}亿 市值={mcap:.0f}亿 → 隐含3y CAGR={imp}%"
+        else:
+            bs_method = "隐含收入CAGR — 不适用"
+            bs_level = f"PS={ps_val:.1f}x (营收数据不足以推算CAGR)"
+            market_story = f"PS={ps_val:.1f}x 营收={revenue:.1f}亿"
+        # 标注反向DCF仅供参考
+        if rdcf["applicable"]:
+            g_ratio = rdcf["implied_g_pct"] / wacc_pct * 100 if wacc_pct > 0 else 0
+            secondary = f"(参考)反向DCF: g/WACC={g_ratio:.0f}% — 基于NOPAT,对收入锚仅供参考"
+        if rdcf["market_premium_pct"] >= 999:
+            warnings.append("反向DCF不适用: NOPAT极薄,溢价失真(999%=标记值)")
+    elif valuation_anchor == "asset":
+        # ── 资产锚: 用隐含 ROE 改善 ──
+        from pricing_tools import implied_roe_improvement
+        iroe = implied_roe_improvement(mcap, equity, pb_val, roe, wacc_pct)
+        if iroe.get("applicable"):
+            imp = iroe["implied_value"]
+            bs_method = "隐含ROE改善 (资产锚)"
+            bs_level = f"当前PB={pb_val:.1f}x → 市场隐含ROE需改善{imp}ppt (当前ROE={roe:.1f}%)"
+            market_story = f"PB={pb_val:.1f}x ROE={roe:.1f}% 净资产={equity:.0f}亿"
+        else:
+            bs_method = "隐含ROE改善 — 不适用"
+            bs_level = f"PB={pb_val:.1f}x"
+            market_story = f"PB={pb_val:.1f}x 净资产={equity:.0f}亿"
+        if rdcf["applicable"]:
+            g_ratio = rdcf["implied_g_pct"] / wacc_pct * 100 if wacc_pct > 0 else 0
+            secondary = f"(参考)反向DCF: g/WACC={g_ratio:.0f}% — 基于NOPAT,对资产锚仅供参考"
+    else:
+        # ── 利润锚: 用反向 DCF（保持原逻辑）──
+        bs_method = "反向DCF(g/WACC)"
+        bs_level = _bs_level_from_g_wacc(rdcf["implied_g_pct"], wacc_pct)
+        premium_str = f" 溢价{rdcf['market_premium_pct']}%" if rdcf['market_premium_pct'] < 999 else ""
+        market_story = (
+            f"EV={ev:.0f}亿 NOPAT={nopat:.2f}亿 ROIC={roic:.1f}% "
+            f"WACC={wacc_pct}% 隐含g={rdcf['implied_g_pct']}% "
+            f"DCF基准={rdcf['base_dcf']}亿{premium_str}"
+        )
+        # 模型专属辅助
+        m = primary_model[0] if primary_model else "A"
+        if m == "B":
+            rev = core.get("revenue_ttm_yi", 1)
+            ps_val2 = mcap / rev if rev > 0 else 0
+            secondary = f"PS={ps_val2:.1f}x"
+        elif m == "D":
+            secondary = f"PB={pb_val:.1f}x"
+        elif m == "E":
+            ebitda = core.get("ebitda_ttm_yi", 0)
+            ev_ebitda_real = ev / ebitda if ebitda > 0 else 0
+            secondary = f"EV/EBITDA={ev_ebitda_real:.1f}x"
+
+    # V6: 锚感知的隐含指标
+    if valuation_anchor == "revenue":
+        implied_main = icagr.get("implied_value", 0) if icagr.get("applicable") else 0
+        premium_main = 0  # CAGR无溢价概念
+        tool_applicable = icagr.get("applicable", False)
+        tool_note = "" if tool_applicable else "隐含CAGR不适用"
+    elif valuation_anchor == "asset":
+        implied_main = iroe.get("implied_value", 0) if iroe.get("applicable") else 0
+        premium_main = 0
+        tool_applicable = iroe.get("applicable", False)
+        tool_note = "" if tool_applicable else "隐含ROE不适用"
+    else:
+        implied_main = rdcf["implied_g_pct"]
+        premium_main = rdcf["market_premium_pct"]
+        tool_applicable = rdcf["applicable"]
+        tool_note = rdcf["applicable_note"]
 
     return {
         "bs_method": bs_method,
@@ -853,16 +901,17 @@ def precompute_bs_profile(primary_model: str, data_package: dict,
         "nopat_yi": round(nopat, 2),
         "roic_pct": round(roic, 1),
         "wacc_simple_pct": wacc_pct,
-        "market_premium_pct": rdcf["market_premium_pct"],
-        "implied_g_pct": rdcf["implied_g_pct"],
+        "market_premium_pct": min(premium_main, 999),
+        "implied_g_pct": implied_main,
         "pe_ttm": pe,
         "pb": pb_val,
         "market_story": market_story,
         "warnings": warnings,
         "wacc_params": wacc_params,
         "note_to_llm": "BS画像是代码计算的已知事实。你是LLM裁判——不可修改上述数据，只能解读并围绕它们构建情景。",
-        "reverse_dcf_applicable": rdcf["applicable"],
-        "reverse_dcf_applicable_note": rdcf["applicable_note"],
+        "reverse_dcf_applicable": tool_applicable if valuation_anchor != "earnings" else rdcf["applicable"],
+        "reverse_dcf_applicable_note": tool_note if valuation_anchor != "earnings" else rdcf["applicable_note"],
+        "valuation_anchor_used": valuation_anchor,  # V6: 标注使用的锚
     }
 
 
@@ -1944,7 +1993,9 @@ class ScenarioAsymmetry:
         cb(1, "WACC/BS预计算")
         wacc_params = precompute_wacc(self.fetcher, stock_code, data_package)
         primary = routing_decision.get("primary_model", "A")
-        bs_profile = precompute_bs_profile(primary, data_package, wacc_params)
+        # V6: 从 Agent-2a 获取估值锚，传给 BS 画像选择正确工具
+        anchor = (agent2a_output or {}).get("market_narrative", {}).get("primary_anchor", "earnings")
+        bs_profile = precompute_bs_profile(primary, data_package, wacc_params, anchor)
 
         # ── Step 1: LLM 推演裁决 ──
         cb(2, "LLM推演裁决")

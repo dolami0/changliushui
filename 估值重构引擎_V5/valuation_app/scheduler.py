@@ -427,6 +427,7 @@ class Scheduler:
 
         # V5→V4 兼容转换
         a1_out, a2_out, a3_out = self._v5_to_v4_compat(result)
+        a2a_raw = result.get("agent2a", {})  # V6: 叙事诊断数据，提前提取供报告和保存使用
 
         stock_code = agent0_record.get("stock_code", "")
         stock_name = agent0_record.get("stock_name", "")
@@ -477,7 +478,6 @@ class Scheduler:
         data_dir = Path(__file__).resolve().parent.parent / "reports" / "data"
         data_dir.mkdir(parents=True, exist_ok=True)
         json_path = data_dir / f"{stock_code}_{ts}.json"
-        a2a_raw = result.get("agent2a", {})
         # 从原始结果中提取 routing_decision (V6 agent2b 输出，compat层会丢失)
         raw_agent2 = result.get("agent2", {})
         raw_routing = raw_agent2.get("routing_decision", {})
@@ -492,6 +492,14 @@ class Scheduler:
         }
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2, default=str)
+
+        # V6: 自动构建评测记录（时间冻结）
+        try:
+            from evals.eval_builder import build_eval_record
+            eval_id = build_eval_record(agent0_record, result, a1_out)
+            logger.info(f"[Eval] 评测记录已保存: {eval_id}")
+        except Exception as e:
+            logger.warning(f"[Eval] 评测记录保存失败: {e}")
 
         logger.info(f"[V5] 结果已写入输出表: {stock_code} — 报告: {report_path}")
         return ts
