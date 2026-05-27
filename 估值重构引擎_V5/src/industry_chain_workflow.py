@@ -284,13 +284,13 @@ class IndustryChainWorkflow:
             node1_ok = best1 >= 6.5
 
             if node1_ok:
-                # ✅ 节点1有达标标的，直接输出
+                #  节点1有达标标的，直接输出
                 print(f"[PASS1-OK] node1 best={best1}, using node1 only", flush=True)
                 final_scores = scores1
                 final_noms = noms1
                 final_enriched = enriched1
             else:
-                # ❌ 节点1无达标标的 → Pass 2 加入节点2
+                #  节点1无达标标的 → Pass 2 加入节点2
                 print(f"[PASS1-FAIL] node1 best={best1} < 6.5, adding node2...", flush=True)
 
                 self._p(progress_cb, 7, "Pass2-提名节点2候选股")

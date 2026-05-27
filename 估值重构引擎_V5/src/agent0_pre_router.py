@@ -199,6 +199,8 @@ class Agent0:
             "pre_routing_result": {
                 "ticker": stock_code,
                 "stock_name": event_data.get("stock_name", ""),
+                "event_date": event_data.get("event_date", ""),
+                "event_source": event_data.get("event_source", ""),
                 "industry_classification": f"{sw_l1}-{sw_l2}".strip("-"),
                 "industry_key_matched": industry_key,
                 "event_tags_matched": event_tags,

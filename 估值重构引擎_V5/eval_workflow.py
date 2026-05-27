@@ -209,4 +209,4 @@ if all_results:
         json.dump(full, f, ensure_ascii=False, indent=2)
     log(f'\n结果已保存: {RESULT_FILE}')
 else:
-    log('\n⚠ 没有跑出任何结果')
+    log('\n 没有跑出任何结果')

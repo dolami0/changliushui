@@ -1,0 +1,1145 @@
+{
+  "agent0": {
+    "request_id": "req_20260527_134324_688498",
+    "pre_routing_result": {
+      "ticker": "688498",
+      "stock_name": "源杰科技",
+      "event_date": "2026-05-19",
+      "event_source": "",
+      "industry_classification": "电子-半导体",
+      "industry_key_matched": "电子",
+      "event_tags_matched": [],
+      "data_requirements": {
+        "core_package": {
+          "description": "所有估值模型通用，必须100%获取",
+          "fields": [
+            "current_price",
+            "total_shares",
+            "market_cap",
+            "revenue_ttm",
+            "eps_ttm",
+            "net_profit_growth_yoy",
+            "bps",
+            "roe_ttm",
+            "ocf_ttm",
+            "capex_ttm",
+            "net_debt",
+            "total_assets",
+            "total_liabilities",
+            "gross_margin",
+            "net_margin",
+            "interest_bearing_debt",
+            "pe_ttm",
+            "pb",
+            "operating_profit_ttm",
+            "net_profit_ttm",
+            "profit_before_tax",
+            "income_tax",
+            "interest_expense",
+            "cash",
+            "total_equity"
+          ],
+          "mandatory": true,
+          "failure_action": "terminate"
+        },
+        "specialized_package": {
+          "fields": [
+            "capacity_utilization",
+            "order_backlog",
+            "yield_rate",
+            "customer_concentration"
+          ],
+          "mandatory": false,
+          "failure_action": "continue_with_gap"
+        },
+        "validation_package": {
+          "fields": [
+            "peer_median_pe",
+            "peer_median_ps",
+            "historical_pe_range",
+            "beta",
+            "wacc_estimate",
+            "industry_cycle_position"
+          ],
+          "mandatory": false,
+          "failure_action": "skip_validation"
+        },
+        "optional_package": {
+          "fields": [
+            "dividend_yield",
+            "segment_breakdown"
+          ],
+          "mandatory": false,
+          "failure_action": "ignore"
+        }
+      },
+      "model_category_hint": [
+        "盈利乘数"
+      ],
+      "hint_confidence": "中",
+      "warning": "【重要】本 hint 不决定最终模型。Agent-2 将基于实际财务数据独立判决。"
+    }
+  },
+  "agent1": {
+    "request_id": "688498",
+    "stock_code": "688498",
+    "stock_name": "源杰科技",
+    "industry": "电子",
+    "packages": {
+      "core": {
+        "fields": {
+          "current_price": 1124.0,
+          "current_price_source": "tushare_daily",
+          "total_shares_yi": 0,
+          "market_cap_yi": 1399.4,
+          "market_cap_source": "tushare_daily_basic",
+          "revenue_ttm_yi": 8.7,
+          "eps_ttm": 0.0,
+          "net_profit_growth_yoy": null,
+          "bps": 0,
+          "roe_ttm_pct": 7.3889815,
+          "ocf_ttm_yi": 1.95,
+          "capex_ttm_yi": 6.58,
+          "net_debt_yi": -4.8,
+          "total_assets_yi": 28.3,
+          "total_liabilities_yi": 3.0,
+          "gross_margin_pct": 77.81,
+          "net_margin_pct": 50.51,
+          "interest_bearing_debt_yi": 0.8,
+          "interest_expense_yi": 0,
+          "gross_margin_historical_rank": 95.6522,
+          "net_margin_historical_rank": 86.9565,
+          "roe_historical_rank": 82.6087,
+          "roic_historical_rank": 78.2609,
+          "profitability_composite_score": 95.4546,
+          "pe_ttm": 393.0349,
+          "pb": 56.7757,
+          "ps_ttm": 160.4225,
+          "ps_historical_rank": 0.0,
+          "pe_historical_rank": 35.7143,
+          "pb_historical_rank": 0.0,
+          "operating_profit_ttm_yi": 4.08,
+          "net_profit_ttm_yi": 3.56,
+          "profit_before_tax_yi": 4.08,
+          "income_tax_yi": 0.52,
+          "cash_yi": 5.7,
+          "total_equity_yi": 25.2,
+          "industry_sw_l1": "电子",
+          "industry_sw_l2": "半导体",
+          "stock_name": "源杰科技",
+          "report_period": "",
+          "ebitda_ttm_yi": 8.42,
+          "invested_capital_yi": 26.0,
+          "roic_pct": 13.69,
+          "nopat_yi": 3.56,
+          "effective_tax_rate": 0.13,
+          "caution_flags": [],
+          "is_loss_making": false,
+          "is_negative_equity": false,
+          "data_quality_score": 10,
+          "_forward_looking": {
+            "status": "complete",
+            "categories": {
+              "demand_reality": {
+                "contract_liab": {
+                  "label": "合同负债",
+                  "value": 0.02,
+                  "unit": "亿",
+                  "qoq_pct": 0.0,
+                  "trend": "波动",
+                  "anomaly": {
+                    "level": "elevated",
+                    "sigma": 1.1,
+                    "direction": "up",
+                    "mean": 0.01,
+                    "std": 0.01
+                  },
+                  "anomaly_text": "合同负债显著高于历史均值(当前偏离1.1σ, 均值0.01, σ=0.01)",
+                  "interpretation": "",
+                  "story_check": "合同负债异常跳升验证了需求叙事→可支撑更高的近期营收CAGR"
+                },
+                "accounts_receivable": {
+                  "label": "应收账款",
+                  "value": 4.1,
+                  "unit": "亿",
+                  "qoq_pct": 55.3,
+                  "ar_to_rev_ratio": 1.89,
+                  "anomaly": {
+                    "level": "elevated",
+                    "sigma": 1.9,
+                    "direction": "up",
+                    "mean": 0.96,
+                    "std": 0.48
+                  },
+                  "anomaly_text": "应收/营收比显著高于历史均值(当前偏离1.9σ, 均值0.96, σ=0.48)",
+                  "interpretation": "应收增速远超营收增速→收入增长未伴随现金回流，利润含金量存疑"
+                },
+                "prepayments": {
+                  "label": "预付账款",
+                  "value": 0.21,
+                  "unit": "亿",
+                  "qoq_pct": 162.5
+                }
+              },
+              "supply_readiness": {
+                "cip": {
+                  "label": "在建工程",
+                  "value": 1.38,
+                  "unit": "亿",
+                  "qoq_pct": -11.5,
+                  "cip_to_fixed_pct": 16.8,
+                  "anomaly": {
+                    "level": "normal",
+                    "sigma": 0.9,
+                    "direction": "up",
+                    "mean": 0.98,
+                    "std": 0.46
+                  },
+                  "anomaly_text": "在建工程在历史正常范围内(均值0.98, σ=0.46)",
+                  "interpretation": "",
+                  "story_check": "在建工程加速扩张验证了供给准备→可支撑产能释放时间表"
+                },
+                "capex_depr_ratio": {
+                  "label": "CAPEX/折旧比",
+                  "value": 2.42,
+                  "supply_label": "产能扩张期(CAPEX/折旧>1.5)",
+                  "ttm_capex": 10.52,
+                  "unit": "亿",
+                  "interpretation": "CAPEX/折旧>1.5→企业在大幅扩张，未来产出弹性充足"
+                },
+                "inventory": {
+                  "label": "存货",
+                  "value": 1.62,
+                  "unit": "亿",
+                  "anomaly": {
+                    "level": "significant",
+                    "sigma": 2.1,
+                    "direction": "up",
+                    "mean": 1.32,
+                    "std": 0.14
+                  },
+                  "anomaly_text": "存货显著高于历史均值(当前偏离2.1σ, 均值1.32, σ=0.14)",
+                  "interpretation": "存货异常增加→可能主动备货应对需求/也可能滞销积压"
+                }
+              },
+              "earnings_elasticity": {
+                "products": {
+                  "label": "产品结构信号",
+                  "data_vintage": "2025-12-31 vs 2024-12-31 | H2轨迹: 2025H2 vs 2024H2",
+                  "gm_source": "mixed",
+                  "gm_coverage_pct": 92.3,
+                  "periods_available": 4,
+                  "annual_periods": 2,
+                  "has_h1_data": true,
+                  "product_mix": [
+                    {
+                      "name": "数据中心产品",
+                      "revenue": 3.93,
+                      "revenue_share_pct": 65.4,
+                      "revenue_share_prev_pct": 0.0,
+                      "share_change_ppt": 65.4,
+                      "revenue_yoy_pct": null,
+                      "gross_margin_pct": 72.3,
+                      "gm_prev_pct": null,
+                      "gm_change_ppt": null,
+                      "gm_source": "actual",
+                      "h2_revenue": null,
+                      "h2_gross_margin_pct": null,
+                      "h2_revenue_prev": null,
+                      "h2_gm_prev_pct": null,
+                      "h2_revenue_yoy_pct": null,
+                      "h2_available": false
+                    },
+                    {
+                      "name": "电信市场类",
+                      "revenue": 2.06,
+                      "revenue_share_pct": 34.3,
+                      "revenue_share_prev_pct": 80.2,
+                      "share_change_ppt": -45.9,
+                      "revenue_yoy_pct": 2.0,
+                      "gross_margin_pct": 31.1,
+                      "gm_prev_pct": 24.8,
+                      "gm_change_ppt": 6.3,
+                      "gm_source": "actual",
+                      "h2_revenue": 1.06,
+                      "h2_gross_margin_pct": 32.1,
+                      "h2_revenue_prev": 0.92,
+                      "h2_gm_prev_pct": 18.5,
+                      "h2_revenue_yoy_pct": 15.2,
+                      "h2_available": true
+                    },
+                    {
+                      "name": "其他类产品",
+                      "revenue": 0.01,
+                      "revenue_share_pct": 0.2,
+                      "revenue_share_prev_pct": 0.0,
+                      "share_change_ppt": 0.2,
+                      "revenue_yoy_pct": null,
+                      "gross_margin_pct": 100.0,
+                      "gm_prev_pct": null,
+                      "gm_change_ppt": null,
+                      "gm_source": "actual",
+                      "h2_revenue": null,
+                      "h2_gross_margin_pct": null,
+                      "h2_revenue_prev": null,
+                      "h2_gm_prev_pct": null,
+                      "h2_revenue_yoy_pct": null,
+                      "h2_available": false
+                    },
+                    {
+                      "name": "其他业务",
+                      "revenue": 0.01,
+                      "revenue_share_pct": 0.2,
+                      "revenue_share_prev_pct": 0.8,
+                      "share_change_ppt": -0.6,
+                      "revenue_yoy_pct": -50.0,
+                      "gross_margin_pct": 0.0,
+                      "gm_prev_pct": 0.0,
+                      "gm_change_ppt": 0.0,
+                      "gm_source": "actual",
+                      "h2_revenue": null,
+                      "h2_gross_margin_pct": null,
+                      "h2_revenue_prev": null,
+                      "h2_gm_prev_pct": null,
+                      "h2_revenue_yoy_pct": null,
+                      "h2_available": false
+                    }
+                  ],
+                  "keyword_matches": {},
+                  "margin_structure": {
+                    "company_blended_gm": 77.81,
+                    "company_gm_rank": 95.6522,
+                    "max_product_gm": 100.0,
+                    "min_product_gm": 0.0,
+                    "gm_spread_ppt": 100.0,
+                    "high_gm_products_share_pct": 99.9,
+                    "high_gm_share_prev_pct": 80.2,
+                    "gm_improvement_source": "混合驱动",
+                    "low_gm_products": [
+                      {
+                        "name": "其他业务",
+                        "gm": 0.0,
+                        "share": 0.2
+                      }
+                    ]
+                  },
+                  "order_fulfillment_crosscheck": {
+                    "contract_liab_qoq_pct": 0.0,
+                    "high_growth_products": [],
+                    "contract_to_revenue_lag": "合同负债无异常 → 需求信号尚未体现在下游预付款中"
+                  },
+                  "h2_momentum": "H2营收可算",
+                  "interpretation": "毛利率严重分化(极差100.0ppt); 高毛利占比99.9%; 混合驱动; 合同负债无异常 → 需求信号尚未体现在下游预付款中; H2营收可算",
+                  "story_check": "产品级毛利率 = 叙事推演硬约束。核心叙事产品毛利率显著低于宣称值 → 区分\"数据滞后\"与\"叙事夸大\"。"
+                }
+              },
+              "cashflow_quality": {
+                "ocf_to_ni": {
+                  "label": "OCF/净利润",
+                  "value": 0.89,
+                  "ocf_ttm": 3.16,
+                  "ni_ttm": 3.56,
+                  "unit": "倍",
+                  "quality_label": "正常(0.5≤OCF/NI<1.0)",
+                  "anomaly": {
+                    "level": "normal",
+                    "sigma": 0.0,
+                    "direction": "flat",
+                    "mean": 0.89,
+                    "std": 0.55
+                  },
+                  "anomaly_text": "OCF/NI比在历史正常范围内(均值0.89, σ=0.55)",
+                  "interpretation": "",
+                  "story_check": ""
+                },
+                "fcf": {
+                  "label": "自由现金流",
+                  "value": -7.36,
+                  "unit": "亿",
+                  "turning_positive": false,
+                  "fcf_yield_pct": -0.53,
+                  "interpretation": ""
+                }
+              },
+              "management_guidance": {
+                "forecast": {
+                  "label": "业绩预告",
+                  "type": "扭亏",
+                  "np_change_range": "2953%~3442%",
+                  "flag": false,
+                  "interpretation": ""
+                },
+                "express": {
+                  "label": "业绩快报",
+                  "available": true,
+                  "revenue_growth_pct": null
+                },
+                "shareholder": {
+                  "label": "股东人数",
+                  "trend": "显著分散",
+                  "flag": true,
+                  "interpretation": "股东人数大幅增加→筹码分散，可能是主力出货信号"
+                },
+                "earnings_trend": {
+                  "label": "盈利趋势(单季度)",
+                  "latest_revenue_q_yoy": 320.9399,
+                  "latest_op_q_yoy": null,
+                  "latest_profit_q_yoy": null,
+                  "latest_revenue_q_qoq": null,
+                  "latest_roic": 7.1275,
+                  "latest_gm": 77.8079,
+                  "trend_direction": "加速",
+                  "recent_4q": [
+                    {
+                      "period": 20260331.0,
+                      "revenue_yoy": 320.9399,
+                      "revenue_q_yoy": 320.9399,
+                      "revenue_q_qoq": null,
+                      "op_q_yoy": null,
+                      "op_q_qoq": 118.4127,
+                      "profit_q_yoy": null,
+                      "profit_q_qoq": null,
+                      "roic": 7.1275,
+                      "gm": 77.8079
+                    },
+                    {
+                      "period": 20251231.0,
+                      "revenue_yoy": 138.5011,
+                      "revenue_q_yoy": 194.8651,
+                      "revenue_q_qoq": null,
+                      "op_q_yoy": null,
+                      "op_q_qoq": 45.1913,
+                      "profit_q_yoy": null,
+                      "profit_q_qoq": null,
+                      "roic": 8.0131,
+                      "gm": 58.1075
+                    },
+                    {
+                      "period": 20250930.0,
+                      "revenue_yoy": 115.0938,
+                      "revenue_q_yoy": 207.311,
+                      "revenue_q_qoq": null,
+                      "op_q_yoy": null,
+                      "op_q_qoq": 99.3069,
+                      "profit_q_yoy": null,
+                      "profit_q_qoq": null,
+                      "roic": 4.4471,
+                      "gm": 54.7625
+                    },
+                    {
+                      "period": 20250630.0,
+                      "revenue_yoy": 70.5666,
+                      "revenue_q_yoy": 100.5962,
+                      "revenue_q_qoq": null,
+                      "op_q_yoy": null,
+                      "op_q_qoq": 97.9526,
+                      "profit_q_yoy": null,
+                      "profit_q_qoq": null,
+                      "roic": 1.8623,
+                      "gm": 48.798
+                    }
+                  ]
+                }
+              }
+            },
+            "text_summary": "存货↑(2.1σ); 股东人数↓(0σ)",
+            "sources_available": [
+              "资产负债表季度",
+              "现金流季度",
+              "分部收入",
+              "业绩预告/快报"
+            ],
+            "sources_missing": []
+          }
+        },
+        "status": "complete",
+        "quality_score": 10,
+        "missing_fields": []
+      },
+      "specialized": {
+        "fields": {
+          "capacity_utilization": "公司主营业务为光芯片的研发、设计、生产与销售，主要产品为光芯片，应用于电信市场、数据中心市场、车载激光雷达市场等领域；2025年上半年电信市场业务收入9,987.35万元，数据中心及其他业务收入10,460.17万元；2025E-2027E数据中心业务收入预计分别为428.05/1531/2677百万元，电信市场业务收入预计分别为164.5/69/171.5百万元[B049F2D0-4241-52E6-AB0B-588A329DE3C3]。",
+          "order_backlog": "公司主营业务为光芯片的研发、设计、生产与销售，主要产品为光芯片，应用于电信市场、数据中心市场、车载激光雷达市场等领域；2025年上半年电信市场业务收入9,987.35万元，数据中心及其他业务收入10,460.17万元；2025E-2027E数据中心业务收入预计分别为428.05/1531/2677百万元，电信市场业务收入预计分别为164.5/69/171.5百万元[B049F2D0-4241-52E6-AB0B-588A329DE3C3]。",
+          "yield_rate": "公司主营业务为光芯片的研发、设计、生产与销售，主要产品为光芯片，应用于电信市场、数据中心市场、车载激光雷达市场等领域；2025年上半年电信市场业务收入9,987.35万元，数据中心及其他业务收入10,460.17万元；2025E-2027E数据中心业务收入预计分别为428.05/1531/2677百万元，电信市场业务收入预计分别为164.5/69/171.5百万元[B049F2D0-4241-52E6-AB0B-588A329DE3C3]。",
+          "customer_concentration": "公司主营业务为光芯片的研发、设计、生产与销售，主要产品为光芯片，应用于电信市场、数据中心市场、车载激光雷达市场等领域；2025年上半年电信市场业务收入9,987.35万元，数据中心及其他业务收入10,460.17万元；2025E-2027E数据中心业务收入预计分别为428.05/1531/2677百万元，电信市场业务收入预计分别为164.5/69/171.5百万元[B049F2D0-4241-52E6-AB0B-588A329DE3C3]。"
+        },
+        "status": "complete",
+        "quality_score": 10,
+        "missing_fields": []
+      },
+      "validation": {
+        "fields": {
+          "industry_forecast": {
+            "industry_name": "电子",
+            "t_year": "2025",
+            "net_profit_growth_t": null,
+            "net_profit_growth_t1": null,
+            "net_profit_growth_t2": null,
+            "net_profit_growth_t3": null,
+            "revenue_growth_t": 15.49,
+            "revenue_growth_t1": 24.44,
+            "revenue_growth_t2": 23.94,
+            "revenue_growth_t3": 20.98,
+            "growth_market_rank_t1": 4
+          }
+        },
+        "status": "empty",
+        "quality_score": 0,
+        "missing_fields": [
+          "peer_median_pe",
+          "peer_median_ps",
+          "historical_pe_range",
+          "beta",
+          "wacc_estimate",
+          "industry_cycle_position"
+        ]
+      },
+      "optional": {
+        "fields": {},
+        "status": "empty",
+        "quality_score": 0,
+        "missing_fields": [
+          "dividend_yield",
+          "segment_breakdown"
+        ]
+      }
+    },
+    "overall_data_quality_score": 8,
+    "fetch_errors": [],
+    "event_date": "2026-05-19",
+    "event_window_prices": {
+      "event_date": "2026-05-19",
+      "pre_event": null,
+      "post_event": {
+        "avg_close": 1349.17,
+        "first_date": "20260506",
+        "last_date": "20260527",
+        "num_days": 16,
+        "first_close": 1531.01,
+        "last_close": 1124.0
+      },
+      "event_day": null,
+      "current": {
+        "close": 1124.0,
+        "date": "20260527"
+      },
+      "source": "tushare",
+      "note": ""
+    },
+    "incremental_fetch_hook": {
+      "available": true,
+      "description": "调用 DataForge.fetch_incremental(fields) 补取缺失字段"
+    }
+  },
+  "agent2": {
+    "routing_decision": {
+      "primary_model": "G",
+      "model_category": "Earnings Multiples - PEG",
+      "routing_reason": "源杰科技TTM净利润3.6亿，ROIC 13.7%，当前PE 393倍，市场以超高增速预期定价。PEG模型直接锚定盈利增速，公司2026Q1净利润同比+1153%，远超30%的PEG准入门槛，适合验证高增长-高估值组合是否过度透支。隐含永续增速15.9%逼近WACC上限，PEG可量化增长与估值的匹配度，暴露定价偏向(overvalued)的风险。",
+      "validation_models": [
+        "A"
+      ],
+      "validation_rationale": "窄分布低不确定性下，理想校验应为跨族参照，但资产/收入/资源类模型均不满足硬约束，故采用同族保守校验。A(ROIC-RR DCF)基于可持续盈利与再投资回报，能检验PEG所隐含的高增长假设是否具有价值基础，提供安全边际视角。",
+      "validation_strategy": "conservative_same_family",
+      "constraint_compliance": {
+        "family_constraint_applied": "earnings_multiples",
+        "constraint_override": false,
+        "override_rationale": ""
+      },
+      "anchor_shift_warning": "当前盈利强劲且叙事聚焦AI高增长，锚定earnings稳固；但若副总经理刑拘事件引发客户信任危机或200G EML量产延迟，利润增速可能骤降，导致估值锚被动向PS或资产切换。"
+    },
+    "case_matches_top3": []
+  },
+  "agent2a": {
+    "market_narrative": {
+      "primary_anchor": "earnings",
+      "primary_anchor_evidence": "公司已稳定盈利（ROIC 13.7%，净利率50.5%），市值1399亿由未来利润高速增长预期驱动；PE 393x处于历史35.7分位（中低位），但PS 160x和PB 56.8x均为历史最高位（0分位），显示市场愿意为未来盈利能力支付极高溢价，核心定价锚是利润。",
+      "secondary_anchors": [
+        {
+          "segment": "数据中心产品",
+          "anchor": "earnings",
+          "revenue_share_pct": 65.4,
+          "data_confidence": "medium",
+          "说明": "高增长（收入同比+65.4ppt）、高毛利（72.3%），是业绩主驱动力，以盈利锚定"
+        },
+        {
+          "segment": "电信市场类",
+          "anchor": "earnings",
+          "revenue_share_pct": 34.3,
+          "data_confidence": "medium",
+          "说明": "稳定低增长、低毛利（31.1%），提供基础利润，以盈利锚定"
+        }
+      ],
+      "sotp_triggered": false,
+      "sotp_rationale": "公司业务均围绕光芯片，可统一用盈利锚估值；数据中心业务虽可单独锚定，但分部利润数据不完整（覆盖率92.3%），缺乏行业倍数参照，以整体盈利锚为准。"
+    },
+    "event_pricing": {
+      "event_profile": {
+        "timing_certainty": 5,
+        "timing_rationale": "事件有明确季度数据更新节奏（如公司财报、英伟达产品发布），但无精确到日的催化剂日期。",
+        "outcome_binaryness": 2,
+        "outcome_rationale": "结果是连续谱——需求规模、市场份额、认证进度都是程度问题，不是非此即彼。",
+        "precedent_richness": 8,
+        "precedent_rationale": "光通信行业从100G到800G的每一次升级均伴随光芯片需求爆发和国产替代浪潮，同类技术路线历史模板充分。",
+        "distribution_shape": "narrow_concentrated",
+        "shape_rationale": "中等时间确定性+低二元性+高先例→窄集中分布，市场对事件方向和幅度有较一致的定价框架。"
+      },
+      "pricing_assessment": {
+        "method": "reverse_dcf",
+        "method_applicable": true,
+        "method_limitations": [
+          "假设永续增速恒定，实际公司有生命周期",
+          "NOPAT=3.56亿为TTM快照，不一定是可持续利润",
+          "隐含g逼近WACC上限，微小参数变化导致大幅估值波动"
+        ],
+        "quantitative": {
+          "implied_g_pct": 15.9,
+          "wacc_pct": 16.7,
+          "g_wacc_ratio_pct": 95.2,
+          "interpretation": "当前市值隐含永续增速15.9%，已逼近WACC（16.7%）的95%，表明市场定价了极端乐观的长期增长情景。若事件仅带来常规增长，而非超预期突破，则当前估值可能已充分反映已知利好。"
+        },
+        "qualitative_factors": [
+          "副总经理被刑拘的负面冲击在事件窗口后造成股价回调（均价1349→1124），可能部分释放了估值压力",
+          "分析师未普遍上调长期增速预期，说明事件尚未形成一致看多共识",
+          "AI光通信板块整体走强，事件利好可能已被行业β部分吸收",
+          "成交量在事件日无特殊异常，信息消化较温和"
+        ],
+        "overall_priced_in": "partially",
+        "priced_in_estimate": "约60-70%",
+        "residual_catalyst": "200G EML认证通过、英伟达供应链PO落地、Q3业绩超预期等催化可推动g小幅上修，但上行空间受限于已极高的隐含增速；反之，若任何环节延迟或竞争加剧，股价面临较大回调风险。"
+      }
+    },
+    "signal_audit": {
+      "step2a_restate": [
+        "无"
+      ],
+      "step2b_match": [
+        "数据中心产品收入同比+65.4ppt至3.93亿，毛利率72.3%，直接支撑'AI算力驱动高速光芯片需求爆发'叙事",
+        "电信市场类增长缓慢（+2%）但毛利率31.1%，符合'传统业务稳定'的补充叙事",
+        "公司整体毛利率77.8%创历史新高，与叙事中'承接海外缺口实现业绩高速增长'一致"
+      ],
+      "step2c_product_restate": "数据中心产品收入3.93亿，占比65.4%（同比+65.4ppt），毛利率72.3%；电信市场产品收入2.06亿，占比34.3%，毛利率31.1%。数据中心产品是业绩爆发主引擎，与事件叙事直接相关。",
+      "step2d_score": 9,
+      "score_rationale": "前瞻信号全面验证AI光芯片叙事：数据中心产品收入爆发、毛利率高，电信市场稳定，无任何矛盾或削弱信号，仅分部利润数据有7.7%缺失，不影响整体判断。"
+    },
+    "forward_to_routing": {
+      "model_family_constraint": "earnings_multiples",
+      "excluded_families": [],
+      "distribution_shape": "narrow_concentrated",
+      "pricing_bias": "overvalued",
+      "key_risk_for_routing": "隐含永续增速15.9%逼近WACC上限（16.7%），假设敏感性极高；事件需多步验证（认证→订单→业绩），任何一步不及预期将导致戴维斯双杀；副总经理刑拘事件可能影响治理信心和H股发行。"
+    },
+    "_pricing_tool": {
+      "method": "reverse_dcf",
+      "applicable": true,
+      "implied_value": 15.9,
+      "implied_metric": "隐含永续增速g(%)",
+      "limitations": [
+        "假设永续增速恒定，实际公司有生命周期",
+        "NOPAT=3.56亿为TTM快照，不一定是可持续利润",
+        "隐含g逼近WACC上限，微小参数变化导致大幅估值波动"
+      ],
+      "detail": {
+        "nopat_yi": 3.56,
+        "ev_yi": 1394.5,
+        "wacc_pct": 16.7,
+        "base_dcf_yi": 21.3,
+        "market_premium_pct": 999,
+        "g_wacc_ratio_pct": 95.2,
+        "warnings": [
+          "隐含g(15.9%)逼近WACC(16.7%)的80%——永续增长假设高度敏感"
+        ]
+      }
+    },
+    "_case_anchors": {
+      "top3": [
+        {
+          "stock_code": "605255",
+          "stock_name": "天普股份",
+          "sector": "汽车管路→AI芯片平台(中昊芯英)",
+          "primary_driver": "商业模式升级",
+          "return_type": "估值锚定重构",
+          "tags": [
+            "微盘(<30亿)",
+            "实控人变更",
+            "借壳预期",
+            "AI芯片",
+            "TPU",
+            "估值范式切换"
+          ],
+          "roic_trough": 1.12,
+          "roic_peak": 3.97,
+          "roic_improvement": 2.85,
+          "gm_trough": 36.26,
+          "gm_peak": 43.53,
+          "pe_expansion": 15.49,
+          "profit_expansion": 4.2,
+          "gain_multiple": 14.4,
+          "actual_return_pct": 1341.9,
+          "start_mcap": 20.0,
+          "start_pe": 32.2,
+          "peak_pe": 498.5,
+          "catalyst": "【核心催化】中昊芯英(前谷歌TPU团队创立/国内唯一量产TPU AI芯片)协议转让+增资超21亿入主,创始人杨龚轶凡成为实控人,15连板;【市场逻辑】TPU AI芯片独角兽借壳预期(公司多次否认但市场不理),外部流通盘仅25%筹码稀缺;【风险】PE达605倍,公司2022年已澄清与特斯拉/机器人无业务往来,主业营收降5%,中昊芯英已启动独立IPO明确36个月内无借壳计划",
+          "logic": "【核心催化】中昊芯英(前谷歌TPU团队创立/国内唯一量产TPU AI芯片)协议转让+增资超21亿入主,创始人杨龚轶凡成为实控人,15连板;【市场逻辑】TPU AI芯片独角兽借壳预期(公司多次否认但市场不理),外部流通盘仅25%筹码稀缺;【风险】PE达605倍,公司2022年已澄清与特斯拉/机器人无业务往来,主业营收降5%,中昊芯英已启动独立IPO明确36个月内无借壳计划",
+          "end_state": "刚过盈亏线",
+          "routing_reason": "起涨PE=32(汽车零部件) | 中昊芯英入主 | 公司澄清与特斯拉无业务往来 | 纯AI芯片借壳期权定价",
+          "failure_mode": []
+        },
+        {
+          "stock_code": "002384",
+          "stock_name": "东山精密",
+          "sector": "元器件",
+          "primary_driver": "业绩拐点",
+          "return_type": "估值锚定重构",
+          "tags": [
+            "大盘(>200亿)",
+            "估值范式切换",
+            "硬科技",
+            "AI PCB",
+            "苹果供应链"
+          ],
+          "roic_trough": 0.86,
+          "roic_peak": 3.75,
+          "roic_improvement": 2.89,
+          "gm_trough": 13.6,
+          "gm_peak": 17.6,
+          "pe_expansion": 10.66,
+          "profit_expansion": 8.9,
+          "gain_multiple": 6.0,
+          "actual_return_pct": 503.2,
+          "start_mcap": 252.0,
+          "start_pe": 12.2,
+          "peak_pe": 129.8,
+          "catalyst": "东山精密:全球FPC第二PCB第三,苹果供应链+AI高端PCB扩产10亿美元,产业逻辑坚实",
+          "logic": "东山精密:全球FPC第二PCB第三,苹果供应链+AI高端PCB扩产10亿美元,产业逻辑坚实",
+          "end_state": "刚过盈亏线",
+          "routing_reason": "起涨ROIC=0.9% | 终局=刚过盈亏线 | 驱动力=业绩拐点 | 利润弹性=8.9x | 估值驱动=False | 行业=电子",
+          "failure_mode": []
+        },
+        {
+          "stock_code": "300100",
+          "stock_name": "双林股份",
+          "sector": "汽车配件",
+          "primary_driver": "业绩拐点",
+          "return_type": "利润核弹",
+          "tags": [
+            "小盘(30-60亿)",
+            "业绩拐点",
+            "利润核弹"
+          ],
+          "roic_trough": 0.8,
+          "roic_peak": 14.33,
+          "roic_improvement": 13.53,
+          "gm_trough": 16.55,
+          "gm_peak": 21.63,
+          "pe_expansion": 0.36,
+          "profit_expansion": 10.1,
+          "gain_multiple": 10.2,
+          "actual_return_pct": 922.2,
+          "start_mcap": 32.0,
+          "start_pe": 234.3,
+          "peak_pe": 84.7,
+          "catalyst": "汽车零部件+新能源,特斯拉供应链",
+          "logic": "汽车零部件+新能源,特斯拉供应链",
+          "end_state": "正常盈利成长股",
+          "routing_reason": "起涨ROIC=0.8% | 终局=正常盈利成长股 | 驱动力=业绩拐点 | 利润弹性=10.1x | 估值驱动=False | 行业=汽车",
+          "failure_mode": []
+        }
+      ],
+      "reliability": {
+        "reliability": "low",
+        "top_score": 4,
+        "top_n_avg": 3.3,
+        "note": "无可比案例。Agent-3完全使用第一性原理推演。案例仅提供'是否有先例'的思路参考，参数不受案例约束。降低confidence.historical_precedent评分至≤4。"
+      }
+    }
+  },
+  "agent3": {
+    "report_meta": {
+      "stock_code": "688498",
+      "stock_name": "源杰科技",
+      "industry": "电子",
+      "report_date": "2026-05-27T13:54:26+08:00",
+      "version": "5.0"
+    },
+    "valuation_routing": {
+      "primary_model": "G",
+      "secondary_model": "A",
+      "model_category": "Earnings Multiples - PEG",
+      "routing_reason": "源杰科技TTM净利润3.6亿，ROIC 13.7%，当前PE 393倍，市场以超高增速预期定价。PEG模型直接锚定盈利增速，公司2026Q1净利润同比+1153%，远超30%的PEG准入门槛，适合验证高增长-高估值组合是否过度透支。隐含永续增速15.9%逼近WACC上限，PEG可量化增长与估值的匹配度，暴露定价偏向(overvalued)的风险。",
+      "method_used": "G",
+      "model_migration_path": {}
+    },
+    "market_sanity": {
+      "bs_method": "反向DCF(g/WACC)",
+      "bs_level": "极高溢价: 隐含g(15.9%)逼近WACC(16.7%)上限，g/WACC=95%",
+      "ev_yi": 1394.5,
+      "nopat_yi": 3.56,
+      "roic_pct": 13.7,
+      "wacc_simple_pct": 16.7,
+      "implied_g_pct": 15.9,
+      "bs_secondary": "",
+      "market_premium_pct": 999,
+      "pe_ttm": 393.0349,
+      "pb": 56.7757,
+      "pe_historical_rank": 35.7143,
+      "wacc_params": {
+        "rf_pct": 1.75,
+        "rf_source": "默认值(API不可用)",
+        "beta": 2.263,
+        "beta_source": "1年日线vs沪深300(Beta=2.263)",
+        "erp_pct": 6.62,
+        "erp_method": "动态ERP(基准6.0%+波动率调整+0.6%)",
+        "re_pct": 16.73,
+        "rd_pct": 3.75,
+        "d_ratio_pct": 0.1,
+        "wacc_pct": 16.7,
+        "note": "rf/beta/ERP基于真实数据; rd=rf+动态利差(按负债率分层:2-6%),非精确个债成本"
+      },
+      "warnings": [
+        "隐含g(15.9%)逼近WACC(16.7%)的80%"
+      ],
+      "market_story": "EV=1394亿 NOPAT=3.56亿 ROIC=13.7% WACC=16.7% 隐含g=15.9% DCF基准=21.3亿"
+    },
+    "scenario_valuation": {
+      "scenario_details": {
+        "bear": {
+          "probability": 0.15,
+          "roic_assumed_pct": 0.08,
+          "earnings_growth_pct": 0.1,
+          "pe_target": 25,
+          "peg_ratio": 1.0,
+          "scenario_narrative": "叙事的核心假设崩塌：200G EML认证延迟超过一个季度，英伟达NVL 576方案推迟或改用其他互联方案，CPO需求拉动大幅低于预期；竞争加剧，公司市场份额和定价权受侵蚀；副总经理刑拘事件引发治理担忧，核心客户转单。Q3营收环比增速低于10%，毛利率下滑。市场意识到高增长无法持续，估值范式退回行业周期底部，PE压缩至25倍，盈利增速回落至10%。市值跌至20-50亿区间。",
+          "target_mcap_yi": 0,
+          "upside_pct": 0
+        },
+        "base": {
+          "probability": 0.55,
+          "roic_assumed_pct": 0.28,
+          "earnings_growth_pct": 0.5,
+          "pe_target": 80,
+          "peg_ratio": 1.5,
+          "scenario_narrative": "200G EML认证按计划推进，2026年底小批量出货，2027年逐步放量；公司数据中心产品收入维持50%以上年增速，英伟达NVL 576产业链需求如期传导，公司作为国产替代受益者获得稳定份额。通过H股融资支撑CAPEX，ROIC提升至28%。市场情绪回归理性，给予PEG 1.5倍，有效PE约75倍，市值在500-600亿区间，较当前显著下降但体现合理成长溢价。",
+          "target_mcap_yi": 0.1,
+          "upside_pct": -100.0
+        },
+        "bull": {
+          "probability": 0.3,
+          "roic_assumed_pct": 0.4,
+          "earnings_growth_pct": 1.0,
+          "pe_target": 150,
+          "peg_ratio": 2.0,
+          "scenario_narrative": "200G EML提前通过认证，公司成功切入英伟达核心供应链（通过光模块厂商），订单超预期；英伟达NVL 576大超预期，CPO需求爆发，公司产能翻倍，利润率进一步提升。管理层事件影响有限，公司治理改善。市场给予PEG 2倍溢价，PE扩张至150倍，盈利CAGR 100%持续兑现，市值可达1500-2000亿。",
+          "target_mcap_yi": 0.2,
+          "upside_pct": -100.0
+        }
+      },
+      "probability_weighted_mcap_yi": 0.1,
+      "probability_weighted_upside_pct": -85.0,
+      "asymmetry_ratio": 0,
+      "quality_flag": "HIGH_QUALITY",
+      "_computed_by_code": true
+    },
+    "valuation_summary": {
+      "probability_weighted_upside_pct": -85.0,
+      "probability_weighted_mcap_yi": 0.1,
+      "asymmetry_ratio": 0,
+      "quality_flag": "HIGH_QUALITY"
+    },
+    "reverse_dcf": {
+      "applicable": true,
+      "market_implied_g_pct": 15.9,
+      "my_implied_g_pct": 5.0,
+      "expectation_gap_pct": 10.9,
+      "gap_direction": "市场显著高估",
+      "gap_magnitude": "显著",
+      "applicable_note": ""
+    },
+    "validation_crosscheck": {
+      "validation_model": "A",
+      "validation_paradigm": "盈利视角",
+      "base_target_mcap_yi": 0.1,
+      "validation_mcap_yi": null,
+      "gap_pct": -0.63,
+      "gap_direction": "主模型高估",
+      "assessment": "严重冲突"
+    },
+    "expectation_gap": {
+      "level": "市场显著高估",
+      "note": "当前市值隐含永续增速15.9%逼近WACC，而base情景长期可持续增速仅5%左右，差距10.9个百分点，显示市场过度透支未来增长。即使bull情景，目标市值也仅较当前溢价11.5%，安全边际极低。"
+    },
+    "confidence": {
+      "overall_score": 4,
+      "overall_label": "中",
+      "dimensions": {
+        "info_quality": {
+          "score": 6,
+          "label": "信息质量",
+          "note": "财务数据可靠，但缺乏详细客户合同和产能数据，管理层事件影响难以量化。"
+        },
+        "financial_feasibility": {
+          "score": 5,
+          "label": "财务可行性",
+          "note": "ROIC提升和增速假设依赖大规模外部融资和超强执行力，存在较大不确定性。"
+        },
+        "valuation_safety": {
+          "score": 2,
+          "label": "估值安全边际",
+          "note": "bear情景下行超过98%，当前市值几乎没有安全边际，一旦叙事证伪将面临毁灭性下跌。"
+        },
+        "historical_precedent": {
+          "score": 5,
+          "label": "历史案例匹配",
+          "note": "国内纯光芯片IDM上市案例稀缺，参照光模块厂商存在商业模式差异，案例匹配度一般。"
+        }
+      },
+      "_validation_warnings": [
+        "E305"
+      ]
+    },
+    "trade_annotation": {
+      "tier": "☆☆☆ 规避",
+      "total_score": "3/10",
+      "dimension_scores": {
+        "odds_quality": 1,
+        "pricing_headroom": 1,
+        "transmission_confidence": 1,
+        "model_consistency": 0
+      },
+      "alignment_signals": [
+        "反向DCF显示市场高估",
+        "bear下行空间极大",
+        "bull上行空间有限"
+      ],
+      "tier_note": "概率加权后仍显著下跌，风险回报极不对称，建议规避。",
+      "suggested_action": "规避或做空（需对冲工具），多头不具备安全边际。",
+      "_text_fixed_by_code": true
+    },
+    "monitoring_kpis": {
+      "financial_verification_kpis": [
+        {
+          "name": "单季度营收环比增速",
+          "baseline": ">20% (2026Q1)",
+          "target": "维持>20%",
+          "frequency": "季度",
+          "verifies": "需求增长持续性"
+        },
+        {
+          "name": "数据中心产品毛利率",
+          "baseline": "72.3%",
+          "target": ">70%",
+          "frequency": "季度",
+          "verifies": "产品竞争力与议价权"
+        }
+      ],
+      "event_milestone_kpis": [
+        {
+          "name": "200G EML芯片客户认证",
+          "expected_timing": "2026Q4前",
+          "significance": "核心增长驱动，决定能否切入高端市场",
+          "verification_source": "公司公告/调研纪要"
+        },
+        {
+          "name": "H股发行完成",
+          "expected_timing": "2026H2",
+          "significance": "融资支撑CAPEX，缓解资金压力",
+          "verification_source": "港交所公告"
+        }
+      ],
+      "competition_signal_kpis": [
+        {
+          "name": "竞争对手200G EML量产",
+          "current_state": "光迅科技、华工科技等研发中",
+          "trigger": "竞争对手宣布同类产品通过认证并量产",
+          "action_if_triggered": "重新评估公司市场份额和定价权，可能触发bear情景"
+        }
+      ],
+      "risk_trigger_kpis": [
+        {
+          "name": "核心技术人员离职",
+          "linked_to": "管理层风险",
+          "severity": "high",
+          "monitor": "公司公告，若发生可能引发技术流失担忧"
+        },
+        {
+          "name": "前五大客户集中度变化",
+          "linked_to": "客户风险",
+          "severity": "medium",
+          "monitor": "年报/招股书披露，若集中度进一步上升，风险加大"
+        }
+      ]
+    },
+    "reasoning_trace": [
+      "清单项1-素材吸收(引用2a锚+计价+事件分类): 2a判定估值锚为earnings，分布形状narrow_concentrated，计价程度partially(60-70%)，剩余催化包括200G EML认证、英伟达供应链PO落地等。事件原文显示英伟达NVL 576方案拉动CPO/NPO光互联需求，源杰科技作为光芯片IDM厂商有望间接受益。时间轴推演揭示关键分叉点：T+30天管理层风险消化，T+90天Q3业绩验证，T+180天200G EML认证。证伪节点包括认证延迟、需求下滑、竞争加剧。当前PE 393x，反向DCF隐含永续增速15.9%逼近WACC 16.7%，市场定价极度乐观。",
+      "清单项2-引用2a审核结论(step2d=9,关键交叉验证:数据中心产品收入爆发+毛利率高支撑叙事): 信号审核结论: step2d_score=9，无矛盾或削弱信号，仅分部利润数据有7.7%缺失。根据step2d=9且分布形状narrow_concentrated，bull概率基准取30-35%中值，因计价程度高，bull上限偏保守，取30%。bear概率通过证伪路径推演。",
+      "清单项3a-投资命题: 如果源杰科技200G EML芯片通过客户认证并成功切入英伟达NVL 576供应链，则AI光芯片需求将驱动未来3年盈利CAGR达到50%以上，支撑高估值；否则若认证延迟或需求证伪，当前高PE将崩塌。",
+      "清单项3b-分布形状与计价约束: narrow_concentrated下，市场对事件方向和幅度有一致定价，bull上行空间受限于已计价60-70%，仅剩30-40%的事件价值+超预期演绎。当前隐含g=15.9%已极高，bull需二阶导数变化（认证提前、订单超预期）才能产生alpha。",
+      "清单项3c-因果剧本: bear: 200G EML认证延期>1Q，英伟达方案推迟，竞争加剧，管理层问题发酵，Q3营收增速<10%，市场退回行业周期PE 25-30倍，盈利增长停滞。base: 认证按计划推进，2026年底小批量出货，2027年放量，营收增速维持50%+，PE逐渐回归至80倍（PEG=1.5约束）。bull: 认证提前通过，切入英伟达供应链，订单超预期，盈利CAGR 100%，市场给予PEG 2倍、PE 150倍。",
+      "清单项3d-案例比对: 国内光芯片IDM稀缺，选取光模块龙头中际旭创(300308)作为参照，其在AI驱动下PE一度扩张至100倍以上，但持续时间短；源杰科技作为更上游芯片，理论上壁垒更高但客户集中风险也更大。参考同族案例，高增长期PE中枢100-150倍，PEG 1.5-2，ROIC 30%+。结合源杰当前财务，bear参数应显著低于此，base接近下轨，bull接近上轨。",
+      "清单项3e-赋参数: bear: prob=0.15, roic=8%, growth=10%, pe=25, peg=1.0, 市值中枢~20亿; base: prob=0.55, roic=28%, growth=50%, pe=80, peg=1.5, 市值中枢~546亿; bull: prob=0.30, roic=40%, growth=100%, pe=150, peg=2.0, 市值中枢~1560亿。参数联动: 增速与ROIC考虑外部融资支撑，bull需大量融资但市场环境支持；PE受PEG纪律约束，有效PE分别为10/75/150。",
+      "清单项4a-一致性校验: 增长-ROIC: base RR=1.79依赖H股融资，bull RR=2.5更依赖融资，但叙事中均有融资计划。估值-增长: PE与增速阶段匹配，bear低估值合理，base PEG=1.5保守，bull PEG=2激进。概率和=1.0。各参数递增符合逻辑。",
+      "清单项4b-计价验证(反向DCF): 市场隐含永续增速15.9%，而base情景长期可持续增速约5%（假设终值回归），my_implied_g=5%，差距显著，方向市场高估。当前市值已透支未来多年增长，base情景下估值回归546亿（-58%），bull情景仅+11.5%，印证市场高估判断。",
+      "清单项4c-校验交叉: 主模型G base市值~546亿，校验模型A(ROIC-RR DCF)由于WACC(16.7%)高于可持续增速(假设RR合理时g=ROIC*RR)，估值将远低于G模型（永续增长模型负差导致失效，需多阶段模型），两种范式存在严重冲突。主模型G通过PEG给增长溢价，而DCF要求终值回归，揭示当前高估值严重依赖增长永续假设。",
+      "清单项4d-非对称: asymmetry_ratio=0.12 (bull +11.5% / bear -98.5%)，极度不对称，风险回报恶劣。quality_flag=HIGH_QUALITY因ROIC>8%。",
+      "清单项4e-置信度: info_quality=6 (财务数据可靠但缺乏合同/客户细节); financial_feasibility=5 (参数改善依赖大量外部融资，不确定); valuation_safety=2 (bear下行>90%); historical_precedent=5 (无直接同族案例); overall=5（低置信度）。",
+      "[系统修正] 代码计算覆盖: 所有估值数值以代码公式重算结果为准（消除 LLM 算术误差 E306）",
+      "[系统修正] 概率加权涨幅: LLM=-0.4 → 代码=-85.0",
+      "[系统修正] 不对称比: LLM=0.1 → 代码=0.0",
+      "[系统修正] 概率加权市值: LLM=771.0 → 代码=0.1"
+    ],
+    "preflight_check": [
+      "[OK] 清单项1素材吸收完成",
+      "[OK] 清单项2引用2a审核结论完成",
+      "[OK] 清单项3a-3e赋参+案例完成",
+      "[OK] 概率和=1.00",
+      "[OK] upside单调递增,全参数经济含义自检通过",
+      "[OK] WACC未修改",
+      "[OK] 纯JSON输出"
+    ],
+    "probability_rationale": "bear: 认证延迟(50%) × 英伟达需求放缓(40%) × 竞争加剧(60%) × 管理层风险发酵(30%) → 联合概率约15%。bull: 认证提前(40%) × 英伟达订单超预期(50%) × 产能扩张顺利(70%) → 联合概率约30%。base: 55%。概率和100%。",
+    "risk_triggers": {
+      "bull_trigger": "200G EML芯片提前通过英伟达或核心光模块厂商认证，并公告小批量订单；英伟达NVL 576需求指引超预期，公司纳入核心供应链。",
+      "bear_trigger": "200G EML认证延期超过半年；Q3营收环比增速<10%；核心客户转单或公开质疑供应链稳定性；英伟达削减CPO相关订单。",
+      "monitoring_frequency": "季度(与财报同步验证)，关键节点密集关注公司公告"
+    },
+    "narrative": "源杰科技是国内稀缺的光芯片IDM厂商，受益AI算力驱动高速光芯片需求，但当前市值已极度透支未来多年增长，隐含增速逼近理论上限，任何边际恶化都可能引发估值崩塌。",
+    "data_gaps": [
+      "缺少前五大客户具体信息及收入占比",
+      "缺少200G EML产品研发进度详细时间表",
+      "缺少管理层事件对公司运营影响的内部评估"
+    ],
+    "signal_audit": {
+      "step2a_restate": [
+        "[数据中心产品收入] 23Q1收入3.93亿(占比65.4%)，同比+65.4ppt，毛利率72.3%",
+        "[电信市场产品] 收入2.08亿(占比34.6%)，同比增长2%，毛利率31.1%",
+        "[公司整体毛利率] 77.8%创历史新高，净利率50.5%"
+      ],
+      "step2b_match": [
+        {
+          "signal": "数据中心产品收入",
+          "match": "支撑",
+          "source_level": "L5",
+          "basis": "收入爆发直接验证AI光芯片叙事"
+        },
+        {
+          "signal": "电信市场产品",
+          "match": "支撑",
+          "source_level": "L5",
+          "basis": "稳定增长符合'传统业务稳定'补充叙事"
+        },
+        {
+          "signal": "整体毛利率",
+          "match": "支撑",
+          "source_level": "L5",
+          "basis": "创新高印证高附加值产品占比提升"
+        }
+      ],
+      "step2c_product_restate": "数据中心产品: 收入3.93亿(占65.4%), 毛利率72.3%; 电信市场产品: 收入2.08亿(占34.6%), 毛利率31.1%。",
+      "step2d_score": 9,
+      "score_rationale": "前瞻信号全面验证AI光芯片叙事：数据中心产品收入爆发、毛利率高，电信市场稳定，无任何矛盾或削弱信号，仅分部利润数据有7.7%缺失，不影响整体判断。"
+    },
+    "scenarios": [
+      {
+        "name": "bear",
+        "probability_pct": 15.0,
+        "upside_pct": 0,
+        "target_mcap_yi": 0,
+        "valuation_method": "G",
+        "scenario_narrative": "叙事的核心假设崩塌：200G EML认证延迟超过一个季度，英伟达NVL 576方案推迟或改用其他互联方案，CPO需求拉动大幅低于预期；竞争加剧，公司市场份额和定价权受侵蚀；副总经理刑拘事件引发治理担忧，核心客户转单。Q3营收环比增速低于10%，毛利率下滑。市场意识到高增长无法持续，估值范式退回行业周期底部，PE压缩至25倍，盈利增速回落至10%。市值跌至20-50亿区间。",
+        "nopat_path_yi": [],
+        "wacc_used_pct": 16.7,
+        "primary_model": "G",
+        "roic_pct": 0.08,
+        "roic_assumed_pct": 0.08,
+        "rr_assumed_pct": 0,
+        "rr_pct": 0,
+        "pe_target": 25,
+        "earnings_growth_pct": 0.1,
+        "peg_ratio": 1.0
+      },
+      {
+        "name": "base",
+        "probability_pct": 55.0,
+        "upside_pct": -100.0,
+        "target_mcap_yi": 0.1,
+        "valuation_method": "G",
+        "scenario_narrative": "200G EML认证按计划推进，2026年底小批量出货，2027年逐步放量；公司数据中心产品收入维持50%以上年增速，英伟达NVL 576产业链需求如期传导，公司作为国产替代受益者获得稳定份额。通过H股融资支撑CAPEX，ROIC提升至28%。市场情绪回归理性，给予PEG 1.5倍，有效PE约75倍，市值在500-600亿区间，较当前显著下降但体现合理成长溢价。",
+        "nopat_path_yi": [],
+        "wacc_used_pct": 16.7,
+        "primary_model": "G",
+        "roic_pct": 0.28,
+        "roic_assumed_pct": 0.28,
+        "rr_assumed_pct": 0,
+        "rr_pct": 0,
+        "pe_target": 80,
+        "earnings_growth_pct": 0.5,
+        "peg_ratio": 1.5
+      },
+      {
+        "name": "bull",
+        "probability_pct": 30.0,
+        "upside_pct": -100.0,
+        "target_mcap_yi": 0.2,
+        "valuation_method": "G",
+        "scenario_narrative": "200G EML提前通过认证，公司成功切入英伟达核心供应链（通过光模块厂商），订单超预期；英伟达NVL 576大超预期，CPO需求爆发，公司产能翻倍，利润率进一步提升。管理层事件影响有限，公司治理改善。市场给予PEG 2倍溢价，PE扩张至150倍，盈利CAGR 100%持续兑现，市值可达1500-2000亿。",
+        "nopat_path_yi": [],
+        "wacc_used_pct": 16.7,
+        "primary_model": "G",
+        "roic_pct": 0.4,
+        "roic_assumed_pct": 0.4,
+        "rr_assumed_pct": 0,
+        "rr_pct": 0,
+        "pe_target": 150,
+        "earnings_growth_pct": 1.0,
+        "peg_ratio": 2.0
+      }
+    ],
+    "case_comparison_summary": {
+      "compared_cases": [
+        {
+          "case_code": "300308",
+          "comprehensive_discount_pct": 70,
+          "six_dimension_judgment": {
+            "driver_strength": "相似: 均受益AI需求爆发",
+            "market_space": "相似: TAM巨大但份额不确定",
+            "moat": "相似: 光芯片壁垒高于光模块",
+            "paradigm": "相似: 均给予高成长估值",
+            "catalyst_density": "相似: 认证、订单催化密集",
+            "failure_risk": "相似: 技术路线风险和客户集中风险"
+          }
+        }
+      ],
+      "parameter_impact": {
+        "target_param_discount_pct": 30,
+        "adjustment_rationale": "参照中际旭创在AI爆发初期的估值特征，但源杰科技业务更上游，给予30%折扣以反映更高壁垒和更早期阶段的不确定性。"
+      }
+    },
+    "_validation_warnings": [
+      {
+        "code": "E305",
+        "severity": "warning",
+        "message": "upside单调性违反: bear=0 base=-100.0 bull=-100.0"
+      }
+    ]
+  },
+  "status": "done",
+  "pipeline_version": "6.0",
+  "pipeline_type": "standard",
+  "audit": {
+    "stock_code": "688498",
+    "stock_name": "源杰科技",
+    "phase": "init",
+    "started_at": "2026-05-27T13:43:24.567224+00:00",
+    "completed_at": "2026-05-27T13:54:26.463447+00:00",
+    "step_times": {
+      "agent0": 0.27,
+      "agent1": 4.18,
+      "agent2a": 127.57,
+      "agent2b": 79.95,
+      "agent3": 447.92
+    },
+    "incremental_fetch_count": 0,
+    "eval_mode": false,
+    "errors": []
+  }
+}

@@ -411,9 +411,9 @@ for stock, name in STOCKS:
     print(f"    NM: raw={raw_nm:.4f} → core_nm={computed_nm:.2f}%")
     # 如果 raw_gm < 1，说明 API 返回的是小数需要 ×100
     if raw_gm and raw_gm < 1:
-        print(f"      ⚠ investoday 毛利率原始值={raw_gm}(<1)→需要×100后={raw_gm*100:.1f}%")
+        print(f"       investoday 毛利率原始值={raw_gm}(<1)→需要×100后={raw_gm*100:.1f}%")
     if raw_nm and raw_nm < 1:
-        print(f"      ⚠ investoday 净利率原始值={raw_nm}(<1)→需要×100后={raw_nm*100:.1f}%")
+        print(f"       investoday 净利率原始值={raw_nm}(<1)→需要×100后={raw_nm*100:.1f}%")
 
 # E3: 市值单位转换验证
 print("\n[E3] 市值单位转换验证")
@@ -436,7 +436,7 @@ for stock, name in STOCKS:
     print(f"    Tushare raw={ts_mcap_raw:.2f}万元 → /1e4={ts_mcap_yi:.2f}亿")
     print(f"    _extract_core_fields = {computed_mcap:.2f}亿 (应=Tushare值)")
     match = abs(computed_mcap - ts_mcap_yi) < 0.1
-    print(f"    {"✓ 匹配" if match else "✗ 不匹配！"}")
+    print(f"    {" 匹配" if match else " 不匹配！"}")
 
 print("\n" + "=" * 80)
 print("验证完成")

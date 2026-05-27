@@ -1,10 +1,10 @@
 """
-管线编排器 (V5) — Web 层进度通知包装器。
+管线编排器 (V6) — Web 层进度通知包装器。
 
-使用 src/orchestrator.py 编排 4-Agent 管线，
+使用 src/orchestrator.py 编排 V6 5-Agent 管线 (Agent-0→1→2a→2b→3)，
 将 Orchestrator 的回调映射为 ProgressEvent 供 Web UI (SSE) 使用。
 
-与 V4 兼容: run_single() 返回 dict 格式保持一致。
+向后兼容: run_single() 返回 dict 格式保持 agent2 键名不变。
 """
 
 import sys
@@ -48,17 +48,18 @@ class ProgressEvent:
 
 AGENT0_STEPS = ["预路由(行业+事件标签→数据清单)"]
 AGENT1_STEPS = ["分层数据拉取(core/specialized/validation/optional)"]
-AGENT2_STEPS = ["联网搜索", "V3案例匹配", "LLM路由判决", "迁移路径预判", "增量补取检查", "路由完成"]
-AGENT3_STEPS = ["WACC/BS预计算", "LLM推演裁决", "一致性校验", "组装输出", "推演裁决完成"]
+AGENT2A_STEPS = ["V3案例匹配", "定量定价工具计算", "LLM叙事诊断", "诊断完成"]
+AGENT2B_STEPS = ["LLM路由判决", "校验模型选择", "约束合规检查", "路由完成"]
+AGENT3_STEPS = ["WACC/BS预计算", "LLM推演裁决", "代码重算", "一致性校验", "交易标注修正", "组装输出"]
 REPORT_STEPS = ["写入Coze输出表", "构建HTML报告"]
 
 
 # ═══════════════════════════════════════
-# PipelineRunner — V5
+# PipelineRunner — V6
 # ═══════════════════════════════════════
 
 class PipelineRunner:
-    """管线编排器。持有进度回调，将 Agent0 记录送入 4-Agent 管线。"""
+    """管线编排器 (V6)。持有进度回调，将 Agent0 记录送入 5-Agent 管线。"""
 
     def __init__(self, progress_callback: Callable[[ProgressEvent], None]):
         self.on_progress = progress_callback
@@ -114,7 +115,7 @@ class PipelineRunner:
                 "knowledge_supplement": record.get("knowledge_supplement", ""),
                 "industry_expert_research": record.get("industry_expert_research", ""),
                 "future": record.get("future", ""),
-                "event_date": record.get("event_date", ""),
+                "event_date": (record.get("bstudio_create_time", "") or record.get("event_date", ""))[:10],
                 "event_source": record.get("event_source", ""),
                 "stock_name": stock_name,
             }

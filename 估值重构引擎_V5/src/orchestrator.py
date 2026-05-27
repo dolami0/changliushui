@@ -1,14 +1,16 @@
 """
-宗门中枢 (Orchestrator) — V5
+宗门中枢 (Orchestrator) — V6
 
-状态机 + 缓存 + 增量补取回退 + 评测模式 + 审计追踪。
+V6 变化: Agent-2 拆分为 Agent-2a(叙事诊断) + Agent-2b(路由判决)。
+管线从 4 步变为 5 步: Agent-0→1→2a→2b→3。2a 输出约束 2b 和 3。
 
 职责:
-  1. 按状态机编排 4-Agent 管线 (Agent-0→1→2→3)
-  2. 增量补取闭环 (Agent-2 发现缺失→回退 Agent-1)
-  3. 评测模式 (frozen 数据注入，跳过 Agent-0/1 数据拉取)
-  4. 故障处理 (DeepSeek/Volcengine/investoday 故障降级)
-  5. 审计追踪 (每个 Agent 的输入/输出/耗时/错误)
+  1. 按状态机编排 5-Agent 管线 (Agent-0→1→2a→2b→3)
+  2. rNPV 分叉 (Agent-0 行业判定→标准/rNPV管线, rNPV 延后实现)
+  3. 增量补取闭环 (Agent-2b 发现缺失→回退 Agent-1)
+  4. 评测模式 (frozen 数据注入，跳过 Agent-0/1 数据拉取)
+  5. 故障处理 (DeepSeek/Volcengine/investoday 故障降级)
+  6. 审计追踪 (每个 Agent 的输入/输出/耗时/错误)
 
 原则:
   - 唯一硬终止条件: core_package 数据不可用 (E101)
@@ -28,9 +30,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from agent0_pre_router import Agent0
 from agent1_data_forge import DataForge, DataForgeError
-from agent2_route_judge import RouteJudge
-from agent3_scenario_asymmetry import ScenarioAsymmetry, ScenarioError
+from agent2a_narrative import NarrativeDiagnosis
+from agent2b_routing import RouteJudgeV6
+from agent3_scenario_asymmetry import ScenarioAsymmetry, ScenarioError, precompute_wacc
+from data_fetcher import DataFetcher
 from env_config import DEEPSEEK_API_KEY
+
+# rNPV 管线 (条件导入，避免缺失依赖时阻塞标准管线)
+try:
+    from rnpv.agent1r_pipeline_data import PipelineDataAssembler
+    from rnpv.agent2r_pipeline_valuation import PipelineValuation
+    from rnpv.agent3r_scenario import PipelineScenario
+    _RNPV_AVAILABLE = True
+except ImportError:
+    _RNPV_AVAILABLE = False
 
 
 # ═══════════════════════════════════════
@@ -39,17 +52,19 @@ from env_config import DEEPSEEK_API_KEY
 
 @dataclass
 class PipelineState:
-    """管线执行状态追踪。"""
+    """管线执行状态追踪 (V6)。"""
     stock_code: str
     stock_name: str
     request_id: str = ""
     phase: str = "init"
     status: str = "running"  # running | done | error | terminated
+    pipeline_type: str = "standard"  # standard | rnpv (rNPV延后)
 
     # 各 Agent 输出
     agent0_output: dict | None = None
     agent1_output: dict | None = None
-    agent2_output: dict | None = None
+    agent2a_output: dict | None = None   # V6 新增: 叙事诊断
+    agent2b_output: dict | None = None   # V6 改名: 路由判决
     agent3_output: dict | None = None
 
     # 增量补取
@@ -67,25 +82,23 @@ class PipelineState:
 
 
 # ═══════════════════════════════════════
-# Orchestrator
+# Orchestrator V6
 # ═══════════════════════════════════════
 
 class Orchestrator:
-    """V5 管线编排器 — 状态机 + 缓存 + 评测模式。"""
+    """V6 管线编排器 — 5-Agent 状态机 + 缓存 + 评测模式。"""
 
     def __init__(self, deepseek_key: str | None = None):
         self.api_key = deepseek_key or DEEPSEEK_API_KEY
-        self._cache: dict[str, Any] = {}  # 按 stock_code 缓存各层输出
+        self._cache: dict[str, Any] = {}
         self._eval_mode = False
         self._frozen_data: dict | None = None
 
     def enable_eval_mode(self, frozen_data: dict | None = None):
-        """启用评测模式：跳过 Agent-0/Agent-1，注入 frozen 数据。"""
         self._eval_mode = True
         self._frozen_data = frozen_data
 
     def disable_eval_mode(self):
-        """关闭评测模式，恢复正常管线。"""
         self._eval_mode = False
         self._frozen_data = None
 
@@ -96,14 +109,9 @@ class Orchestrator:
         progress_cb: Callable[[str, int, int, str, str], None] | None = None,
     ) -> dict:
         """
-        执行完整 4-Agent 管线。
+        执行 V6 5-Agent 管线: Agent-0 → 1 → 2a → 2b → 3
 
         progress_cb(stage, step, total, status, message)
-          stage: agent0|agent1|agent2|agent3
-          step: 当前步骤序号
-          total: 总步骤数
-          status: running|done|error
-          message: 步骤描述
         """
         cb = progress_cb or (lambda *a: None)
         event_data = event_data or {}
@@ -114,61 +122,79 @@ class Orchestrator:
 
         try:
             # ── Agent-0: 预路由 ──
-            cb("agent0", 1, 1, "running", "预路由")
+            cb("agent0", 1, 1, "running", "预路由(行业+数据清单)")
             t0 = time.time()
             state.agent0_output = self._run_agent0(stock_code, event_data)
             state.step_times["agent0"] = round(time.time() - t0, 2)
-            cb("agent0", 1, 1, "done", f"行业:{state.agent0_output.get('pre_routing_result',{}).get('industry_classification','?')}")
+            pr = state.agent0_output.get("pre_routing_result", {})
+            industry = pr.get("industry_classification", "?")
+            cb("agent0", 1, 1, "done", f"行业:{industry}")
+
+            # ── rNPV 分叉 ──
+            if self._is_rnpv_candidate(pr) and _RNPV_AVAILABLE:
+                state.pipeline_type = "rnpv"
+                return self._run_rnpv_pipeline(state, event_data, cb)
 
             # ── Agent-1: 数据炼器 ──
             if self._eval_mode and self._frozen_data:
                 cb("agent1", 1, 1, "running", "注入frozen数据(评测模式)")
-                frozen = self._frozen_data.get("frozen_agent1", {})
-                # 规范化 frozen 数据为标准 data_package 格式
-                state.agent1_output = self._normalize_frozen(frozen, stock_code,
-                                                             event_data.get("stock_name", ""))
+                state.agent1_output = self._normalize_frozen(
+                    self._frozen_data.get("frozen_agent1", {}),
+                    stock_code, event_data.get("stock_name", ""),
+                )
                 cb("agent1", 1, 1, "done", "frozen数据已注入")
             else:
-                cb("agent1", 1, 1, "running", "数据拉取")
+                cb("agent1", 1, 1, "running", "数据拉取(investoday+Tushare)")
                 t0 = time.time()
-                state.agent1_output = self._run_agent1(
-                    state.agent0_output.get("pre_routing_result", {}))
+                state.agent1_output = self._run_agent1(pr)
                 state.step_times["agent1"] = round(time.time() - t0, 2)
-                cb("agent1", 1, 1, "done",
-                   f"quality={state.agent1_output.get('overall_data_quality_score','?')}")
+                quality = state.agent1_output.get("overall_data_quality_score", "?")
+                cb("agent1", 1, 1, "done", f"quality={quality}")
 
-            # ── Agent-2: 路由判官 ──
-            cb("agent2", 1, 1, "running", "路由判决")
+            # ── WACC 预计算 (Agent-2a 定价工具需要) ──
+            fetcher = DataFetcher()
+            wacc_params = precompute_wacc(fetcher, stock_code, state.agent1_output)
+
+            # ── Agent-2a: 叙事诊断 ──
+            cb("agent2a", 1, 2, "running", "叙事诊断(锚+计价+信号审核)")
             t0 = time.time()
-            state.agent2_output = self._run_agent2(state.agent1_output, event_data)
+            state.agent2a_output = self._run_agent2a(
+                state.agent1_output, event_data, wacc_params,
+            )
+            state.step_times["agent2a"] = round(time.time() - t0, 2)
+            a2a_mn = state.agent2a_output.get("market_narrative", {})
+            a2a_ep = state.agent2a_output.get("event_pricing", {})
+            a2a_pr = a2a_ep.get("event_profile", {})
+            cb("agent2a", 1, 2, "done",
+               f"锚:{a2a_mn.get('primary_anchor','?')} "
+               f"光谱:{a2a_pr.get('distribution_shape','?')} "
+               f"计价:{a2a_ep.get('pricing_assessment',{}).get('overall_priced_in','?')}")
 
-            # 增量补取检查（评测模式跳过）
-            inc = state.agent2_output.get("incremental_fetch_request", {})
-            if inc.get("triggered") and state.incremental_fetch_count < 1 and not self._eval_mode:
-                state.incremental_fetch_count += 1
-                cb("agent2", 1, 3, "running", f"增量补取:{inc.get('missing_fields')}")
-                # 仅补取缺失字段
-                forge = DataForge()
-                forge.run(state.agent0_output.get("pre_routing_result", {}))  # re-init
-                extra = forge.fetch_incremental(inc["missing_fields"])
-                # 合并到数据包
-                core = state.agent1_output.get("packages", {}).get("core", {}).get("fields", {})
-                core.update(extra)
-                # 重新路由
-                state.agent2_output = self._run_agent2(state.agent1_output, event_data)
-            state.step_times["agent2"] = round(time.time() - t0, 2)
-            rd = state.agent2_output.get("routing_decision", {})
-            cb("agent2", 1, 1, "done", f"模型:{rd.get('primary_model','?')}")
+            # ── Agent-2b: 路由判决 ──
+            cb("agent2b", 2, 2, "running", "路由判决(受2a约束)")
+            t0 = time.time()
+            state.agent2b_output = self._run_agent2b(
+                state.agent1_output, state.agent2a_output, event_data,
+            )
+            state.step_times["agent2b"] = round(time.time() - t0, 2)
+            rd = state.agent2b_output.get("routing_decision", {})
+            cc = rd.get("constraint_compliance", {})
+            override_str = "(override)" if cc.get("constraint_override") else ""
+            cb("agent2b", 2, 2, "done",
+               f"主:{rd.get('primary_model','?')} 校验:{rd.get('validation_models',[])} {override_str}")
 
             # ── Agent-3: 推演裁决 ──
-            cb("agent3", 1, 1, "running", "推演裁决")
+            cb("agent3", 1, 1, "running", "推演裁决(三情景)")
             t0 = time.time()
             state.agent3_output = self._run_agent3(
-                state.agent1_output, state.agent2_output, event_data)
+                state.agent1_output, state.agent2b_output,
+                event_data, state.agent2a_output,
+            )
             state.step_times["agent3"] = round(time.time() - t0, 2)
-            sv = state.agent3_output.get("valuation_summary", {})
+            vs = state.agent3_output.get("valuation_summary", {})
             cb("agent3", 1, 1, "done",
-               f"upside={sv.get('probability_weighted_upside_pct',0):.1f}% asym={sv.get('asymmetry_ratio',0):.1f}")
+               f"upside={vs.get('probability_weighted_upside_pct',0):+.1f}% "
+               f"asym={vs.get('asymmetry_ratio',0):.1f}x")
 
             state.status = "done"
             state.completed_at = datetime.now(timezone.utc).isoformat()
@@ -181,28 +207,24 @@ class Orchestrator:
         except Exception as e:
             state.status = "error"
             state.errors.append({"code": "UNKNOWN", "message": str(e)})
-            cb("agent1", 1, 1, "error", str(e)[:100])
+            cb("agent3", 1, 1, "error", str(e)[:100])
 
         return self._assemble_result(state)
 
-    # ── 各 Agent 运行器 ──
+    # ── Agent 运行器 ──
 
     def _run_agent0(self, stock_code: str, event_data: dict) -> dict:
-        """运行 Agent-0，含 fallback（无匹配时全量拉取）。"""
         a0 = Agent0()
         try:
             return a0.run(stock_code, event_data)
         except Exception:
-            # fallback: 最小预路由
             return {
                 "pre_routing_result": {
                     "ticker": stock_code,
                     "industry_classification": "未知",
                     "event_tags_matched": [],
                     "data_requirements": {
-                        "core_package": {
-                            "fields": [], "mandatory": True, "failure_action": "terminate",
-                        },
+                        "core_package": {"fields": [], "mandatory": True, "failure_action": "terminate"},
                         "specialized_package": {"fields": [], "mandatory": False},
                         "validation_package": {"fields": [], "mandatory": False},
                         "optional_package": {"fields": [], "mandatory": False},
@@ -214,84 +236,177 @@ class Orchestrator:
             }
 
     def _run_agent1(self, pre_routing: dict) -> dict:
-        """运行 Agent-1。"""
         forge = DataForge()
         return forge.run(pre_routing)
 
-    def _run_agent2(self, data_package: dict, event_data: dict) -> dict:
-        """运行 Agent-2，含 DeepSeek 故障时 fallback 规则路由。"""
-        judge = RouteJudge(deepseek_key=self.api_key)
-
-        # 注入 pre_routing_result（用于 hint 参考）
-        enriched = dict(data_package)
-        if "pre_routing_result" not in enriched:
-            enriched["pre_routing_result"] = event_data.get("_pre_routing", {})
-
+    def _run_agent2a(self, data_package: dict, event_data: dict,
+                     wacc_params: dict) -> dict:
+        a2a = NarrativeDiagnosis(deepseek_key=self.api_key)
         try:
-            return judge.run(enriched, event_data)
+            return a2a.run(data_package, event_data, wacc_params)
         except Exception as e:
-            print(f"  [Orchestrator] Agent-2 异常, 重试: {e}", flush=True)
-            try:
-                return judge.run(enriched, event_data)
-            except Exception as e2:
-                print(f"  [Orchestrator] Agent-2 重试仍失败, fallback路由: {e2}", flush=True)
-                rd = judge._fallback_routing(enriched)
+            print(f"  [Orchestrator] Agent-2a 异常, fallback: {e}", flush=True)
+            return a2a._fallback_diagnosis(
+                data_package.get("packages", {}).get("core", {}).get("fields", {}),
+                {}, "",
+            )
+
+    def _run_agent2b(self, data_package: dict, agent2a_output: dict,
+                     event_data: dict) -> dict:
+        a2b = RouteJudgeV6(deepseek_key=self.api_key)
+        try:
+            return a2b.run(data_package, agent2a_output, event_data)
+        except Exception as e:
+            print(f"  [Orchestrator] Agent-2b 异常, fallback: {e}", flush=True)
             return {
-                "routing_decision": rd,
-                "case_matches_top3": [],
-                "case_matches_all": [],
-                "case_anchors_text": "",
-                "incremental_fetch_request": {"triggered": False},
-                "hint_rejection_note": "LLM故障,fallback路由",
+                "routing_decision": a2b._fallback_routing(data_package, agent2a_output),
                 "_fallback": True,
             }
 
-    def _run_agent3(self, data_package: dict, agent2_output: dict,
-                    event_data: dict) -> dict:
-        """运行 Agent-3，含重试+故障处理。"""
+    def _run_agent3(self, data_package: dict, agent2b_output: dict,
+                    event_data: dict, agent2a_output: dict) -> dict:
         a3 = ScenarioAsymmetry(deepseek_key=self.api_key)
-        rd = agent2_output.get("routing_decision", {})
-        case_anchors = self._build_case_anchors_text(agent2_output)
+        rd = agent2b_output.get("routing_decision", {})
+
+        # 案例锚点文本 (从 2a 获取, V6 中案例匹配在 2a 完成)
+        case_anchors = agent2a_output.get("_case_anchors_text", "")
 
         try:
             return a3.run(
                 data_package, rd, event_data,
                 case_anchors=case_anchors,
+                agent2a_output=agent2a_output,
             )
         except ScenarioError as e:
             if e.code in ("E301", "E302", "E303"):
-                # 重试1次: JSON解析/超时/API故障
                 try:
                     return a3.run(
                         data_package, rd, event_data,
                         case_anchors=case_anchors,
+                        agent2a_output=agent2a_output,
                     )
                 except ScenarioError:
                     pass
             raise
 
-    def _build_case_anchors_text(self, a2_output: dict) -> str:
-        """从 Agent-2 输出构建案例锚点文本。包含可靠性评估。"""
-        # 优先: Agent-2 已构建的丰富锚点（含 catalyst/logic/routing_reason/end_state）
-        rich = a2_output.get("case_anchors_text", "")
-        if rich:
-            text = rich
-        else:
-            top3 = a2_output.get("case_matches_top3", [])
-            if not top3:
-                return ""
-            lines = ["## 案例锚点"]
-            for cm in top3:
-                lines.append(f"  {cm['case_code']} score={cm['score']} — {cm['key_anchor']}")
-            text = "\n".join(lines)
+    # ── rNPV 检测 ──
 
-        # 附加锚点可靠性评估
-        ar = a2_output.get("anchor_reliability", {})
-        if ar:
-            text += f"\n\n## 案例锚点可靠性: {ar.get('reliability', '?')} (top={ar.get('top_score', 0)}/20)\n"
-            text += f"{ar.get('note', '')}\n"
+    @staticmethod
+    def _is_rnpv_candidate(pre_routing: dict) -> bool:
+        """检测是否为 rNPV 候选 (医药生物-创新药)。"""
+        ic = pre_routing.get("industry_classification", "")
+        ik = pre_routing.get("industry_key_matched", "")
+        return "创新药" in ic or "医药生物" in ik
 
-        return text
+    # ── rNPV 管线 ──
+
+    def _run_rnpv_pipeline(self, state: PipelineState, event_data: dict, cb) -> dict:
+        """执行 rNPV 专用管线: Agent-1r → Agent-2r → Agent-3r"""
+        stock_code = state.stock_code
+        stock_name = state.stock_name
+
+        # Agent-1r: 管线数据组装 + Volc 搜索
+        cb("agent1r", 1, 3, "running", "管线数据+Volc搜索")
+        t0 = time.time()
+        a1r = PipelineDataAssembler()
+        a1_std = state.agent1_output  # 复用标准管线的财务数据
+        pipeline_data = a1r.run(stock_code, stock_name, event_data, a1_std)
+        state.step_times["agent1r"] = round(time.time() - t0, 2)
+        drugs_found = pipeline_data.get("extracted_from_pre_research", {}).get("drug_count", 0)
+        cb("agent1r", 1, 3, "done", f"识别管线:{drugs_found}条")
+
+        # Agent-2r: 管线估值
+        cb("agent2r", 2, 3, "running", "两段式估值(成熟产品+管线)")
+        t0 = time.time()
+        a2r = PipelineValuation(deepseek_key=self.api_key)
+        valuation = a2r.run(pipeline_data, event_data)
+        state.step_times["agent2r"] = round(time.time() - t0, 2)
+        sotp = valuation.get("sotp_total", {})
+        imp = valuation.get("implied_pos_check", {})
+        cb("agent2r", 2, 3, "done",
+           f"公允值:{sotp.get('total_fair_value_yi','?')}亿 计价:{imp.get('priced_in_assessment','?')}")
+
+        # Agent-3r: 情景推演
+        cb("agent3r", 3, 3, "running", "rNPV情景推演")
+        t0 = time.time()
+        a3r = PipelineScenario(deepseek_key=self.api_key)
+        scenario = a3r.run(pipeline_data, valuation, event_data)
+        state.step_times["agent3r"] = round(time.time() - t0, 2)
+        pw = scenario.get("probability_weighted", {})
+        cb("agent3r", 3, 3, "done",
+           f"upside={pw.get('weighted_upside_pct',0):+.1f}% asym={pw.get('asymmetry_ratio',0):.1f}x")
+
+        state.status = "done"
+        state.completed_at = datetime.now(timezone.utc).isoformat()
+
+        return {
+            "agent0": state.agent0_output or {},
+            "agent1": state.agent1_output or {},
+            "agent1r": pipeline_data,
+            "agent2r": valuation,
+            "agent3r": scenario,
+            "status": "done",
+            "pipeline_version": "6.0-rnpv",
+            "pipeline_type": "rnpv",
+            "audit": {
+                "stock_code": stock_code,
+                "stock_name": stock_name,
+                "started_at": state.started_at,
+                "completed_at": state.completed_at,
+                "step_times": state.step_times,
+                "errors": state.errors,
+            },
+        }
+
+    # ── 结果组装 ──
+
+    def _assemble_result(self, state: PipelineState) -> dict:
+        """组装最终结果 dict（兼容 scheduler + server V5/V6 格式）。"""
+        a2b = dict(state.agent2b_output or {})
+
+        # 案例数据合并: Agent-3 的 compared_cases → Agent-2b 的 case_matches_top3
+        a3 = state.agent3_output or {}
+        a3_ccs = a3.get("case_comparison_summary", {})
+        a3_cases = a3_ccs.get("compared_cases", [])
+        if a3_cases:
+            a3_case_map = {c.get("case_code", ""): c for c in a3_cases}
+            enriched_top3 = []
+            for cm in a2b.get("case_matches_top3", []):
+                code = cm.get("case_code", "")
+                rich = a3_case_map.get(code, {})
+                enriched_top3.append({
+                    **cm,
+                    "comprehensive_discount_pct": rich.get("comprehensive_discount_pct"),
+                    "six_dimension_judgment": rich.get("six_dimension_judgment", {}),
+                })
+            a2b["case_matches_top3"] = enriched_top3
+
+        result = {
+            "agent0": state.agent0_output or {},
+            "agent1": state.agent1_output or {},
+            "agent2": a2b,   # 保持 agent2 键名向后兼容
+            "agent2a": state.agent2a_output or {},  # V6 新增
+            "agent3": state.agent3_output or {},
+            "status": state.status,
+            "pipeline_version": "6.0",
+            "pipeline_type": state.pipeline_type,
+            "audit": {
+                "stock_code": state.stock_code,
+                "stock_name": state.stock_name,
+                "phase": state.phase,
+                "started_at": state.started_at,
+                "completed_at": state.completed_at,
+                "step_times": state.step_times,
+                "incremental_fetch_count": state.incremental_fetch_count,
+                "eval_mode": self._eval_mode,
+                "errors": state.errors,
+            },
+        }
+
+        if state.errors:
+            result["error"] = state.errors[0]["message"]
+
+        return result
 
     # ── Frozen 数据规范化 ──
 
@@ -302,7 +417,6 @@ class Orchestrator:
         va = frozen.get("valuation_anchor", {})
         sanity = frozen.get("market_sanity", {})
 
-        # 合并 flat 字段到 packages.core.fields
         fields = dict(cf)
         fields.update({
             "pe_ttm": va.get("pe_ttm", cf.get("pe_ttm", 0)),
@@ -315,7 +429,6 @@ class Orchestrator:
             "effective_tax_rate": 0.15,
         })
 
-        # 确保缺失字段有默认值
         defaults = {
             "market_cap_yi": 50, "revenue_ttm_yi": 1,
             "net_profit_ttm_yi": 0, "ebitda_ttm_yi": 0, "operating_profit_ttm_yi": 0,
@@ -335,7 +448,6 @@ class Orchestrator:
             if k not in fields or fields[k] is None:
                 fields[k] = v
 
-        # 旧版 frozen 数据缺失新字段时，从已有字段推导
         if fields.get("invested_capital_yi", 0) <= 1:
             eq = fields.get("total_equity_yi", 1)
             debt = fields.get("interest_bearing_debt_yi", 0)
@@ -365,54 +477,6 @@ class Orchestrator:
             "_source": "eval_frozen",
         }
 
-    # ── 结果组装 ──
-
-    def _assemble_result(self, state: PipelineState) -> dict:
-        """组装最终结果 dict（兼容 scheduler + server）。"""
-        # 将 Agent-3 的案例比对数据合入 Agent-2 的 case_matches_top3
-        # （Agent-3 产出完整的 comprehensive_discount_pct + six_dimension_judgment，
-        #   前端从 Agent-2 取案例数据，需要合并才能正确展示）
-        a2 = dict(state.agent2_output or {})
-        a3 = state.agent3_output or {}
-        a3_ccs = a3.get("case_comparison_summary", {})
-        a3_cases = a3_ccs.get("compared_cases", [])
-        if a3_cases:
-            a3_case_map = {c.get("case_code", ""): c for c in a3_cases}
-            enriched_top3 = []
-            for cm in a2.get("case_matches_top3", []):
-                code = cm.get("case_code", "")
-                rich = a3_case_map.get(code, {})
-                enriched_top3.append({
-                    **cm,
-                    "comprehensive_discount_pct": rich.get("comprehensive_discount_pct"),
-                    "six_dimension_judgment": rich.get("six_dimension_judgment", {}),
-                })
-            a2["case_matches_top3"] = enriched_top3
-
-        result = {
-            "agent0": state.agent0_output or {},
-            "agent1": state.agent1_output or {},
-            "agent2": a2,
-            "agent3": state.agent3_output or {},
-            "status": state.status,
-            "audit": {
-                "stock_code": state.stock_code,
-                "stock_name": state.stock_name,
-                "phase": state.phase,
-                "started_at": state.started_at,
-                "completed_at": state.completed_at,
-                "step_times": state.step_times,
-                "incremental_fetch_count": state.incremental_fetch_count,
-                "eval_mode": self._eval_mode,
-                "errors": state.errors,
-            },
-        }
-
-        if state.errors:
-            result["error"] = state.errors[0]["message"]
-
-        return result
-
 
 # ═══════════════════════════════════════
 # 缓存辅助
@@ -423,7 +487,6 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def load_cache(stock_code: str, layer: str) -> dict | None:
-    """加载指定层的缓存。"""
     path = CACHE_DIR / f"{stock_code}_{layer}.json"
     if not path.exists():
         return None
@@ -435,7 +498,6 @@ def load_cache(stock_code: str, layer: str) -> dict | None:
 
 
 def save_cache(stock_code: str, layer: str, data: dict):
-    """保存指定层的缓存。"""
     path = CACHE_DIR / f"{stock_code}_{layer}.json"
     try:
         with open(path, "w", encoding="utf-8") as f:
@@ -447,14 +509,12 @@ def save_cache(stock_code: str, layer: str, data: dict):
 # ── 便捷函数 ──
 
 def run_pipeline(stock_code: str, event_data: dict | None = None) -> dict:
-    """便捷入口：运行完整管线。"""
     orch = Orchestrator()
     return orch.run(stock_code, event_data)
 
 
 def run_eval_pipeline(stock_code: str, frozen_data: dict,
                       event_data: dict | None = None) -> dict:
-    """便捷入口：评测模式运行。"""
     orch = Orchestrator()
     orch.enable_eval_mode(frozen_data)
     return orch.run(stock_code, event_data)
