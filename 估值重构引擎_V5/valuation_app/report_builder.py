@@ -578,6 +578,7 @@ _MODEL_COLS = {
     "D": [("ROE目标","target_roe_pct","%"),("PB目标","target_pb","x"),("分红率","payout_ratio_pct","%")],
     "E": [("EBITDA增速","ebitda_growth_pct","%"),("EV/EBITDA","target_ev_ebitda","x"),("资源调整","resource_value_adj_pct","%")],
     "F": [("成功率","pos_pct","%"),("峰值销售","peak_sales_yi","亿"),("折现率","discount_rate_pct","%")],
+    "K": [("阶段1增速","stage1_growth_pct","%"),("高增长年数","stage1_years","年"),("ROIC","roic_assumed_pct","%"),("终值PE","terminal_pe","x")],
 }
 
 

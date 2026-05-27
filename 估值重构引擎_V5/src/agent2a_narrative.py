@@ -131,13 +131,14 @@ NARRATIVE_DIAGNOSIS_PROMPT = """你是估值叙事诊断师。你的职责不是
 
 2. **副锚收入占比显著**: 该 secondary_anchor 的业务 `revenue_share_pct ≥ 20%`。
 
-3. **数据可支撑 SOTP 计算**: 副锚业务的财务数据足以支撑独立估值判断。具体标准:
-   - 分部收入数据可用（`revenue_share_pct` 有来源）（Coze Agent0 通常提供）
-   - 分部估值倍数有行业参照（如"半导体材料PE 40-55x"来自 knowledge_supplement）
-   - **不要求分部利润数据精确**——SOTP 可以用行业参照倍数替代利润数据
-   - **若 data_confidence=low 且缺乏行业倍数参照** → 不触发，依赖主锚
+3. **数据可支撑 SOTP 计算**: 条件3的门槛是"有数据可用"而非"数据精确"。具体标准:
+   - 分部收入占比已知（`revenue_share_pct` 有来源）✓ —— 只要收入能拆分就算满足
+   - 分部估值倍数有行业参照（来自 knowledge_supplement 或通用行业常识）✓
+   - **不要求分部利润数据**——SOTP 用收入×行业毛利率推算利润，或用行业PE/PB直接乘
+   - **data_confidence=low 不构成阻碍**——数据不准仍比混在一起用单一锚强
+   - 唯一不触发场景: **完全无分部收入数据**（revenue_share_pct 无来源）
 
-**不满足条件3时的 fallback**: 设置 sotp_triggered=false，在 sotp_rationale 中说明"分部数据不足以支撑SOTP,以主锚为准"。Agent-2b 看到 false 后按主锚模型族路由。
+**不满足条件3时的 fallback**: 仅当完全无分部收入拆分时，设置 sotp_triggered=false，说明"无分部收入数据,以主锚为准"。
 
 # 清单项 2: 事件计价判断
 

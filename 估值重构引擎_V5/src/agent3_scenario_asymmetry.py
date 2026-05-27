@@ -132,7 +132,21 @@ reasoning_trace 按清单项顺序组织，每项写 3-6 句话：你的分析�
 
 **分布形状调节逻辑**: bimodal 类（高二元性）结果不确定性最高 → bull 不应趋近 0（尾部保护）。narrow 类（低不确定性）超预期难度大 → bull 应保守。unimodal 居中。
 
-bear 概率不由表决定——聚焦 2-3 个核心假设，推演"如果这个假设错了，整个故事就塌了"的概率。
+**bear 概率上限**（防过度悲观）:
+| distribution_shape | bear 上限 | 理由 |
+|:------|:------:|------|
+| wide_bimodal | 35% | 高不确定性→两个极端都可能 |
+| narrow_concentrated | **15%** | 低不确定性→极端尾部概率天然低 |
+| narrow_base_dominant | 8% | 趋势有惯性→逆转是小概率 |
+中间形状按线性插值。若证伪需要N个独立环节同时崩塌→联合概率自然更低。
+
+**bear 估值硬底**: 故事证伪不等于公司归零。自行选择适用底线:
+  - 盈利企业: bear mcap ≥ TTM净利 × 保守PE(行业底部,通常10-20x)
+  - 有硬资产: bear mcap ≥ 净资产 × 保守PB(通常0.8-1.2x)
+  - 纯故事型: bear mcap ≥ 净现金
+bear 不可推翻已发生的业务事实（如已出货产品→不应给0估值）。
+
+bear 概率聚焦 2-3 个核心假设，推演"如果这个错了故事就塌了"的概率。
 base = 100% - bull - bear。
 
 **禁止**: 重新从面板逐条审核信号——2a 已完成此工作。你只需引用结论。
@@ -221,7 +235,12 @@ base = 100% - bull - bear。
 
 PE: 不是抽象数字。PE=600x 需要极高增速支撑。bear（事件失败）的 PE 必须回到行业周期底部（通常 10-30x，不是 600x）。
 
-PS: 当前 PS 本身就是市场讲的故事——它隐含了市场对增长的预期。你的任务是判断：叙事兑现后，这个故事是维持、升级还是降级？若公司仍是成长股中枢，PS 不应大幅压缩。从叙事出发给 PS，滞后财务数据不应锚定你的判断。
+PS: 当前 PS 是市场讲的故事。base PS = 当前PS × f(priced_in):
+  - priced_in=not_priced: f=1.0-1.2 (故事刚开始,PS可扩张)
+  - priced_in=partially: f=0.85-1.0 (部分计价,PS大体维持)
+  - priced_in=fully: f=0.7-0.85 (已充分计价,PS应部分回归)
+  再结合增长可持续性微调: 增长加速→取上限,增长放缓→取下限。
+  禁止"因为PS很高所以base给低PS"的均值回归,也禁止"因为PS高所以维持高PS"的惯性。
 
 PB: 与 ROE 匹配。ROE<5% 不应 >2x PB（除非隐蔽资产重估）。
 
@@ -250,6 +269,7 @@ CAGR/增速: 高增速必须匹配高再投资率（RR=g/ROIC）。增速和 RR 
 | H | `equity / (1−NAV折价%)` | NAV折价 |
 | I | `投入资本 × 正常化ROIC% × 正常化PE` | 正常化ROIC、正常化PE |
 | J | 保留你的估值 | target_mcap |
+| K | `Σ[FCFF_t/(1+WACC)^t] + NOPAT_N×PE/(1+WACC)^N` | stage1_growth(高增长NOPAT年增速), stage1_years, ROIC(→RR=g/ROIC→FCFF), terminal_PE | 代码逐年折现,NOPAT逐年复利增长,RR封顶[0.3,0.9] |
 
 **赋参数时反向验证: 用上表公式心算一遍，你的参数产出的数字和你因果剧本应得的估值是否匹配？**
 
@@ -435,6 +455,10 @@ scenario_details 为字典 {"bear":{...}, "base":{...}, "bull":{...}}，每个�
 scenario_details 为字典 {"bear":{...}, "base":{...}, "bull":{...}}，每个情景含: probability, pos_pct, peak_sales_yi(峰值销售,亿), discount_rate_pct, target_mcap_yi(代码计算), upside_pct(代码计算), valuation_method, scenario_narrative(<=60字因果剧本)""",
     "J": """Model J - SOTP sum-of-parts:
 scenario_details 为字典 {"bear":{...}, "base":{...}, "bull":{...}}，每个情景含: probability, target_mcap_yi(目标市值,亿), upside_pct(目标涨幅,%), valuation_method, rationale (<=80 chars), scenario_narrative(<=60字因果剧本)""",
+    "K": """Model K - Two-Stage DCF (高增长→稳态):
+scenario_details 为字典 {"bear":{...}, "base":{...}, "bull":{...}}，每个情景含: probability, stage1_growth_pct(阶段1:未来N年的NOPAT年增速,如30表示30%), stage1_years(高增长持续年数,通常3-7), roic_assumed_pct(阶段1的ROIC%), terminal_pe(阶段2:终值PE,高增长回落后的稳态倍数), target_mcap_yi(代码计算), upside_pct(代码计算), valuation_method, scenario_narrative(<=60字因果剧本)
+    公式: Σ[NOPAT_t × (1-RR_t) / (1+WACC)^t] + NOPAT_N × terminal_PE / (1+WACC)^N
+    RR_t = g1/ROIC, 约束在 [0.3, 0.9] 区间。WACC由代码预计算。""",
 }
 
 MODEL_NAMES = {
@@ -442,6 +466,7 @@ MODEL_NAMES = {
     "D": "PB-ROE", "E": "EV/EBITDA+Resource", "F": "rNPV Pipeline",
     "G": "PEG Growth", "H": "NAV Revaluation", "I": "Earnings Normalization",
     "J": "SOTP",
+    "K": "Two-Stage DCF",
 }
 
 MODEL_FAMILIES = {
@@ -451,6 +476,7 @@ MODEL_FAMILIES = {
     "E": "资源",
     "F": "管线",
     "J": "分拆",
+    "K": "盈利乘数",
 }
 
 
@@ -467,6 +493,7 @@ PARAM_SELF_CHECK_MAP = {
     "H": "- nav_discount_pct: NAV折价必须反映资产流动性/变现难度。重资产折价20-40%,现金类资产折价0-10%",
     "F": "- pos_pct: 成功率必须基于临床阶段(Phase1=10%,Phase2=30%,Phase3=60%)\n- peak_sales_yi: 峰值销售必须与TAM×市场份额一致\n- discount_rate_pct: 管线折现率通常12-20%(高于WACC,反映管线风险)",
     "J": "- target_mcap_yi: 必须是SOTP加总结果(各业务线独立估值+现金+投资-负债)",
+    "K": "- stage1_growth_pct: 阶段1 NOPAT年增速,从当前出发推演。高增长阶段通常3-7年,增速>ROIC意味着需要外部融资(RR>100%会被代码封顶)\n- stage1_years: 高增长持续年数,根据行业周期和企业生命周期判断(通常3-7)\n- roic_assumed_pct: 阶段1的ROIC,可以高于当前值(改善逻辑)。不能脱离叙事凭空跳变\n- terminal_pe: 终值PE,高增长回落后进入稳态的合理倍数。与行业中枢匹配(通常15-30x)",
 }
 
 # Model-specific parameter names (just the names, for inline listing)
@@ -481,6 +508,7 @@ MODEL_PARAM_NAMES_MAP = {
     "E": "probability, ebitda_growth_pct, target_ev_ebitda, resource_value_adj_pct, target_mcap_yi, upside_pct, valuation_method, scenario_narrative",
     "F": "probability, pos_pct, peak_sales_yi, discount_rate_pct, target_mcap_yi, upside_pct, valuation_method, scenario_narrative",
     "J": "probability, target_mcap_yi, upside_pct, valuation_method, scenario_narrative",
+    "K": "probability, stage1_growth_pct, stage1_years, roic_assumed_pct, terminal_pe, target_mcap_yi, upside_pct, valuation_method, scenario_narrative",
 }
 
 SCENARIO_PARAMS_MAP = {
@@ -494,6 +522,7 @@ SCENARIO_PARAMS_MAP = {
     "E": '"bear": {"probability":0.XX, "ebitda_growth_pct":X, "target_ev_ebitda":X, "resource_value_adj_pct":X, "scenario_narrative":"..."}, "base": {...}, "bull": {...}',
     "F": '"bear": {"probability":0.XX, "pos_pct":X, "peak_sales_yi":X, "discount_rate_pct":X, "scenario_narrative":"..."}, "base": {...}, "bull": {...}',
     "J": '"bear": {"probability":0.XX, "target_mcap_yi":X, "scenario_narrative":"..."}, "base": {...}, "bull": {...}',
+    "K": '"bear": {"probability":0.XX, "stage1_growth_pct":X, "stage1_years":X, "roic_assumed_pct":X, "terminal_pe":X, "scenario_narrative":"..."}, "base": {...}, "bull": {...}',
 }
 
 def _build_model_aware_prompt(primary_model, validation_model=""):
@@ -1466,6 +1495,32 @@ def _compute_scenario_mcap(model: str, params: dict, core: dict) -> float | None
         return None
     elif m == "J":
         return None  # SOTP 无标准公式
+    elif m == "K":
+        # 两阶段 DCF: 阶段1(高增长N年) + 阶段2(终值PE)
+        # LLM控制: stage1_growth_pct, stage1_years, terminal_pe, roic_assumed_pct
+        g1 = params.get("stage1_growth_pct", 0) / 100
+        years = int(params.get("stage1_years", 5) or 5)
+        term_pe = params.get("terminal_pe", 0)
+        roic_k = params.get("roic_assumed_pct", 0) / 100
+        wacc_k = core.get("_wacc_decimal", 0.10)
+
+        if g1 <= 0 or term_pe <= 0 or roic_k <= 0:
+            return None
+
+        nopat = core.get("nopat_yi", 0.01)
+        pv_stage1 = 0.0
+        for t in range(1, min(years, 10) + 1):
+            nopat = nopat * (1 + g1)
+            rr = g1 / roic_k if roic_k > 0 else 0.5
+            rr = max(0.3, min(0.9, rr))  # RR in [30%, 90%]
+            fcff = nopat * (1 - rr)
+            pv_stage1 += fcff / (1 + wacc_k) ** t
+
+        # 终值 = 第N年NOPAT × terminal_PE
+        tv = nopat * term_pe
+        pv_tv = tv / (1 + wacc_k) ** min(years, 10)
+
+        return round(pv_stage1 + pv_tv, 1)
     return None
 
 
@@ -2015,6 +2070,7 @@ class ScenarioAsymmetry:
             "mcap": sv_pre.get("probability_weighted_mcap_yi", None),
         }
         core_fields = data_package.get("packages", {}).get("core", {}).get("fields", {})
+        core_fields["_wacc_decimal"] = wacc_params.get("wacc_pct", 10) / 100  # Model K 需要
         computed = _compute_from_assumptions(
             llm_output.get("scenario_valuation", {}), primary, core_fields,
         )

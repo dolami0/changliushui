@@ -75,7 +75,7 @@ ROUTING_V6_PROMPT = """你是估值路由判官。叙事诊断师已经确定了
 
 | 族 | 包含模型 |
 |----|---------|
-| earnings_multiples | A(ROIC-RR DCF), C(DCF+拐点), G(PEG), I(盈利正常化) |
+| earnings_multiples | A(ROIC-RR DCF), C(DCF+拐点), G(PEG), I(盈利正常化), K(两阶段DCF) |
 | revenue_multiples | B(PS+TAM) |
 | asset_multiples | D(PB-ROE), H(NAV) |
 | resource | E(EV/EBITDA+资源) |
@@ -97,7 +97,12 @@ ROUTING_V6_PROMPT = """你是估值路由判官。叙事诊断师已经确定了
 **E (EV/EBITDA+资源)**: 拥有自然资源, 事件核心是资源量/价
 **H (NAV)**: 隐蔽资产型, 事件触发资产价值再发现
 **F (rNPV)**: 仅限创新药/biotech, 临床阶段管线
-**J (SOTP)**: **仅当2a的 sotp_triggered=true 时使用。** 2a已验证: 估值范式冲突 + 副锚占比≥20% + 数据可支撑SOTP。若sotp_triggered=false,跳过J,按主锚选模型。
+**K (两阶段DCF)**: 盈利企业(ROIC>8%)且预期高增长持续3-7年后回落。与A/G的区别:
+  - K vs A: A假设ROIC和利润永续,K承认高增长不可持续→在第N年切换到终值PE
+  - K vs G: G用PEG封顶PE,K用折现反映增长价值→K对高增长标的更友好,不会被PEG压制
+  选择K的场景: 公司当前高增长(>25%)但行业终局清晰(5年后增速必然回落)
+  不选K的场景: 增速已放缓到行业水平→选A;增速波动大难以预测→选G
+  无硬约束——LLM根据增长曲线的可预见性自主判断。 2a已验证: 估值范式冲突 + 副锚占比≥20% + 数据可支撑SOTP。若sotp_triggered=false,跳过J,按主锚选模型。
   **SOTP的本质**: 防止用主锚去估"另一类业务"时产生系统性偏差。
   **SOTP估值方法**: 分部独立估(各用正确的倍数锚),加总。行业倍数参照来自knowledge_supplement。不要求分部利润精确。
   **数据不足时**: 2a会设置sotp_triggered=false,此时以主锚为准——宁可单锚近似,也不在无数据时强行SOTP。
@@ -135,7 +140,7 @@ ROUTING_V6_PROMPT = """你是估值路由判官。叙事诊断师已经确定了
 # ═══════════════════════════════════════
 
 FAMILY_MODELS = {
-    "earnings_multiples": "A(ROIC-RR DCF), C(DCF+拐点), G(PEG), I(盈利正常化)",
+    "earnings_multiples": "A(ROIC-RR DCF), C(DCF+拐点), G(PEG), I(盈利正常化), K(两阶段DCF)",
     "revenue_multiples": "B(PS+TAM)",
     "asset_multiples": "D(PB-ROE), H(NAV)",
     "resource": "E(EV/EBITDA+资源)",
@@ -239,7 +244,7 @@ FALLBACK_HARD_CONSTRAINTS = {
 }
 
 FAMILY_TO_MODELS = {
-    "earnings_multiples": ["A", "C", "G", "I"],
+    "earnings_multiples": ["A", "C", "G", "I", "K"],
     "revenue_multiples": ["B"],
     "asset_multiples": ["D", "H"],
     "resource": ["E"],
