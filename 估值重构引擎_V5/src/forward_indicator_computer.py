@@ -66,11 +66,11 @@ def _anomaly(value: float | None, series: list[float | None]) -> dict:
 def _anomaly_label(a: dict) -> str:
     """异常等级 → 可视化标签。"""
     m = {
-        'extreme': '🔴',
-        'significant': '🟡',
-        'elevated': '🟢',
+        'extreme': '',
+        'significant': '',
+        'elevated': '',
         'normal': '',
-        'insufficient_data': '⚪',
+        'insufficient_data': '',
     }
     return m.get(a['level'], '')
 

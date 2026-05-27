@@ -187,6 +187,7 @@ def _extract_core_fields(raw_bundle: dict, stock_code: str) -> dict[str, Any]:
         "pe_ttm": ts_db.get("pe_ttm") or v.get("pe_ttm") or 0,
         "pb": ts_db.get("pb") or v.get("pb") or 0,
         "ps_ttm": ts_db.get("ps_ttm") or v.get("ps_ttm") or 0,
+        "ps_historical_rank": v.get("ps_historical_rank"),
         "pe_historical_rank": v.get("pe_ttm_historical_rank") or 30,
         "pb_historical_rank": v.get("pb_historical_rank"),
 
@@ -350,6 +351,17 @@ class DataForge:
         ticker = (pr.get("ticker", "") or
                   pre_routing_result.get("stock_code", ""))
         stock_name = pr.get("stock_name", "")
+        event_date = pr.get("event_date", "")
+
+        # ── Step 0.5: 事件窗口价格（Phase 2 计价判断用）──
+        event_window_prices = None
+        if event_date:
+            try:
+                event_window_prices = self.fetcher.fetch_event_window_prices(
+                    ticker, event_date
+                )
+            except Exception:
+                pass
 
         # ── Step 1: 并行拉取核心数据源（一次调用获取全部 raw） ──
         self._raw_bundle = _fetch_core_bundle(self.fetcher, ticker)
@@ -439,6 +451,8 @@ class DataForge:
             },
             "overall_data_quality_score": round(overall_q),
             "fetch_errors": all_errors,
+            "event_date": event_date,
+            "event_window_prices": event_window_prices or {},
             "incremental_fetch_hook": {
                 "available": True,
                 "description": "调用 DataForge.fetch_incremental(fields) 补取缺失字段",

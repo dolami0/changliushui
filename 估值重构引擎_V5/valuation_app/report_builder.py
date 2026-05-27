@@ -370,7 +370,7 @@ def _sec_financials(cf, va, wacc):
     ]
     flags = cf.get("caution_flags", [])
     if flags:
-        fin_rows.append(("⚠ 异常标记", ", ".join(str(f) for f in flags)))
+        fin_rows.append((" 异常标记", ", ".join(str(f) for f in flags)))
     wacc_rows = [
         ("无风险利率", f'{_n(wacc.get("rf_pct"))}% ({wacc.get("rf_source","")})'),
         ("Beta", f'{_n(wacc.get("beta"))} ({wacc.get("beta_source","")})'),
@@ -419,7 +419,7 @@ def _sec_bs_profile(sanity, cf):
         body += f'<blockquote>{story}</blockquote>'
     warnings = sanity.get("warnings", [])
     if warnings:
-        body += "<p style='font-size:13px;color:var(--gold)'>⚠ " + "; ".join(str(w) for w in warnings) + "</p>"
+        body += "<p style='font-size:13px;color:var(--gold)'> " + "; ".join(str(w) for w in warnings) + "</p>"
     return _section("03", "市场定价检测 (BS画像)", body)
 
 
@@ -640,10 +640,10 @@ def _sec_narrative(narrative, dg):
 def _sec_appendix(pf, warnings):
     parts = []
     if pf:
-        items = "".join(f'<div style="font-size:13px;color:var(--text-dim);margin:2px 0">✅ {p}</div>' for p in pf)
+        items = "".join(f'<div style="font-size:13px;color:var(--text-dim);margin:2px 0"> {p}</div>' for p in pf)
         parts.append(_card("Preflight Check", items))
     if warnings:
-        items = "".join(f'<div style="font-size:13px;color:var(--gold);margin:2px 0">⚠ {w}</div>' for w in warnings)
+        items = "".join(f'<div style="font-size:13px;color:var(--gold);margin:2px 0"> {w}</div>' for w in warnings)
         parts.append(_card("校验警告", items))
     return "".join(parts) if parts else ""
 

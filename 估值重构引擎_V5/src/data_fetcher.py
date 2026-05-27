@@ -160,6 +160,7 @@ class DataFetcher:
             "peg_industry_rank": self._num(item.get("f2270Rk")),
             "ps_ttm": self._num(item.get("f2280")),
             "ps_industry_rank": self._num(item.get("f2280Rk")),
+            "ps_historical_rank": self._num(item.get("f2280RkHist")),
             "pb": self._num(item.get("f2290")),                       # f2290=市净率(PB标准)
             "pb_industry_rank": self._num(item.get("f2290Rk")),
             "pb_historical_rank": self._num(item.get("f2290RkHist")),
@@ -417,6 +418,119 @@ class DataFetcher:
             {"date": i.get("tradeDate", i.get("date", "")), "close": self._num(i.get("closePrice"))}
             for i in items if self._num(i.get("closePrice"))
         ]
+
+    def fetch_event_window_prices(self, stock_code: str, event_date: str) -> dict:
+        """
+        拉取事件日前后股价窗口，用于 Phase 2 计价判断。
+
+        Tushare 优先（pro.daily 日期范围），investoday fallback。
+
+        返回:
+          {
+            "event_date": "2025-03-15",
+            "pre_event": {"avg_close": 25.3, "dates": ["2025-03-07", ...], "prices": [...]},
+            "post_event": {"avg_close": 28.1, "dates": [...], "prices": [...]},
+            "event_day": {"close": 26.5},
+            "current": {"close": 30.2, "date": "2025-05-26"},
+            "source": "tushare | investoday",
+            "note": ""
+          }
+        """
+        from datetime import datetime as dt, timedelta
+
+        try:
+            ed = dt.strptime(event_date[:10], "%Y-%m-%d")
+        except (ValueError, TypeError):
+            ed = dt.now()
+
+        pre_start = (ed - timedelta(days=15)).strftime("%Y-%m-%d")
+        pre_end = (ed - timedelta(days=1)).strftime("%Y-%m-%d")
+        post_start = ed.strftime("%Y-%m-%d")
+        post_end = min(ed + timedelta(days=15), dt.now()).strftime("%Y-%m-%d")
+
+        prices = []
+        source = ""
+
+        # 优先 Tushare
+        try:
+            from tushare_fetcher import TushareFetcher
+            tf = TushareFetcher()
+            if tf.available:
+                tsc = tf.to_ts_code(stock_code)
+                window_start = (ed - timedelta(days=15)).strftime("%Y%m%d")
+                window_end = min(ed + timedelta(days=15), dt.now()).strftime("%Y%m%d")
+                df = tf._safe_call(
+                    tf.pro.daily,
+                    ts_code=tsc,
+                    start_date=window_start,
+                    end_date=window_end,
+                )
+                if df is not None and len(df) > 0:
+                    df = df.sort_values("trade_date")
+                    prices = [
+                        {"date": str(r["trade_date"]), "close": tf._f(r.get("close"))}
+                        for _, r in df.iterrows()
+                        if tf._f(r.get("close"))
+                    ]
+                    source = "tushare"
+        except Exception:
+            pass
+
+        # fallback investoday
+        if not prices:
+            try:
+                raw_prices = self.fetch_daily_prices(
+                    stock_code,
+                    (ed - timedelta(days=20)).strftime("%Y-%m-%d"),
+                    min(ed + timedelta(days=20), dt.now()).strftime("%Y-%m-%d"),
+                )
+                if raw_prices:
+                    prices = raw_prices
+                    source = "investoday"
+            except Exception:
+                pass
+
+        if not prices:
+            return {
+                "event_date": event_date,
+                "pre_event": None, "post_event": None,
+                "event_day": None, "current": None,
+                "source": "none",
+                "note": "Tushare和investoday均无法获取事件窗口价格",
+            }
+
+        event_day_str = ed.strftime("%Y-%m-%d")
+        event_day = next((p for p in prices if p["date"] == event_day_str), None)
+
+        pre_prices = [p for p in prices if p["date"] < event_day_str]
+        post_prices = [p for p in prices if p["date"] >= event_day_str]
+
+        current = prices[-1] if prices else None
+
+        def _avg_window(px_list, label):
+            if not px_list:
+                return None
+            closes = [p["close"] for p in px_list if p["close"]]
+            if not closes:
+                return None
+            return {
+                "avg_close": round(sum(closes) / len(closes), 2),
+                "first_date": px_list[0]["date"],
+                "last_date": px_list[-1]["date"],
+                "num_days": len(closes),
+                "first_close": closes[0],
+                "last_close": closes[-1],
+            }
+
+        return {
+            "event_date": event_date,
+            "pre_event": _avg_window(pre_prices, "pre"),
+            "post_event": _avg_window(post_prices, "post"),
+            "event_day": {"close": event_day["close"]} if event_day else None,
+            "current": {"close": current["close"], "date": current["date"]} if current else None,
+            "source": source,
+            "note": "",
+        }
 
     def fetch_index_daily_prices(self, index_code: str, begin_date: str, end_date: str) -> list[dict]:
         """指数历史日行情 — 用于Beta计算"""

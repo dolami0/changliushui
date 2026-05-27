@@ -195,10 +195,10 @@ def print_summary(report: dict):
             for t in timeline:
                 if not isinstance(t, dict): continue
                 status = t.get('status', '')
-                marker = "✓" if status == "已达成" else "○"
+                marker = "" if status == "已达成" else "○"
                 print(f"  {marker} {t.get('date','?')} | {str(t.get('event', t.get('expected','?')))[:80]}")
                 threat = t.get('threat', '')
-                if threat: print(f"     ⚠ {str(threat)[:80]}")
+                if threat: print(f"      {str(threat)[:80]}")
 
         # KPI分类 — 通用解析(从tf中找所有list[dict]类型的值)
         kpi_cats = tf.get("kpi_categories", tf.get("categories", {}))

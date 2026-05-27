@@ -1,10 +1,11 @@
 """
-Agent-3 推演裁决司命 (ScenarioAsymmetry) — V5
+Agent-3 推演裁决司命 (ScenarioAsymmetry) — V6
 
-V5 管线的最终产出层。合并 V4 的 Agent-3(报告) + Agent-4(反向DCF) + Agent-5(裁决)。
+V6 变化: 叙事诊断和信号审核已前置至 Agent-2a。Agent-3 信任 2a 的结论，
+专注于情景推演和估值计算。裁掉了约 1/3 的 system prompt（信号审核+BS解读）。
 
-LLM 在一次调用中完成: 参数估计 + 估值计算 + BS检测 + 反向DCF + 非对称评分 + 置信度 + KMI + 叙事。
-代码仅做: WACC预计算 + BS画像预计算 + 一致性校验。
+保留: WACC预计算 + BS画像计算(纯代码) + 三情景推演(LLM) + 一致性校验 + 交易标注 + KMI
+移除: 前瞻信号审核(→2a) + BS画像解读(→2a) + 信号面板构建(→valuation_utils)
 
 原则: LLM有足够计算能力，参数估计和估值计算无需代码画蛇添足。
 """
@@ -62,10 +63,21 @@ SCENARIO_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 - 禁止使用行业平均数据作为默认输入。如果叙事说"这家公司不一样"，数字就必须不一样。
 - 禁止模板化估值：不允许不经思考就套用行业默认值。
 - 禁止数字脱离叙事：每个输入假设必须能追溯"这来自叙事的哪一部分"。
-- 禁止忽视反向验证：只做正向估值是半成品，必须做反向DCF检验市场定价。
+- 禁止忽视反向验证：只做正向估值是半成品，必须用对应锚的工具检验市场定价（earnings→反向DCF, revenue→隐含CAGR, asset→隐含ROE改善）。
+- 禁止对收入锚公司使用反向DCF——NOPAT是利润锚工具，收入锚应分析当前PS隐含的收入CAGR。
 - 禁止假装精确：承认不确定性是估值的一部分。
 - 禁止混淆价格与价值：当前股价是事实，内在价值是判断。你的任务是判断二者差距，而非解释股价为什么涨。
-- 关键：如果当前市值已经很高，优先使用反向DCF——把市值作为已知，反解隐含增长率/利润率，与叙事对比。
+- 关键：拒绝所有已发生的、已验证的事实在bear中被推翻——Bear的证伪空间在未发生的推测上。
+
+## V6 上下文: Agent-2a 已完成叙事诊断
+
+用户消息末尾的"Agent-2a 叙事诊断结论"是你必须信任的输入——不要重做以下工作:
+- **估值锚识别** — 2a 已判定市场在根据什么给公司定价，直接引用
+- **事件计价判断** — 2a 已判断事件是否已计价、distribution_shape 分布形状，作为情景概率的起点
+- **信号审核** — 2a 已完成前瞻信号 vs 叙事的交叉验证，直接引用 step2d_score 和审核结论
+- **BS画像解读** — 2a 已解读市场定价水位，你引用其结论，不做重复解读
+
+你的职责: 基于上述已被验证的叙事框架，做**三情景的参数推演和估值计算**。
 
 你掌握 A/B/C/D/E/F/G/H/I/J 共 10 种估值模型。路由判官已选定最适合当前标的的模型，你的职责是在选定的模型框架内完成参数推演。
 
@@ -84,76 +96,126 @@ SCENARIO_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 以下 6 个清单项必须按顺序执行，不可跳过、不可调换顺序。
 reasoning_trace 按清单项顺序组织，每项写 3-6 句话：你的分析、你的依据、你的结论。
 
-## 清单项 1: 素材吸收
-从用户消息中提取核心信息:
-- 投资命题雏形（从 investment_theme 提取 1 句"如果 X → 公司将变成 Y，市场用 Z 估值"）
-- 因果分叉点（从 event_deduction 提取证实/证伪节点 + adversarial_thinking 的证伪路径）
+## 清单项 1: 素材吸收（引用 2a 诊断 + 吸收事件原文）
+
+**Agent-2a 已完成叙事诊断。** 从用户消息末尾的"Agent-2a 叙事诊断结论"中提取:
+- 估值锚: 2a 判定的 primary_anchor 和 evidence
+- 计价程度: 2a 判定的 overall_priced_in 和 residual_catalyst
+- 事件分布形状: distribution_shape — 决定概率分布的形状和宽度
+
+**再从事件原文中**自行提取（2a 未覆盖的细节）:
+- 因果分叉点（event_deduction 中的证实/证伪节点 + adversarial_thinking 的证伪路径）
 - 风险边界（TAM 从 knowledge_supplement + 竞争格局从 industry_expert_research）
-- 用户消息不同字段内容互相有重叠、有补充，你可以综合提炼信息以供推演时使用。
 - 案例参照系（V3案例锚点 — 同族案例的参数上四分位/中位/下四分位）
 
-## 清单项 2: 前瞻信号审核（用财务数据验证叙事）
+**关键**: 估值锚和计价程度以 2a 为准（不可推翻），因果细节可从原文补充。
 
-**2a. 信号状态确认**（逐项填空，禁止添加面板中未出现的任何信号）
-a) 异常信号: [列出面板中所有 🔴🟡 标记的信号名称和数值。若面板"定量异常检测"显示"未触发"，只写"无"，不补充其他内容]
-b) 结构性变化: [仅当面板中需求/供给/现金流/管理层四类中有非异常但值得注意的趋势时才写，限50字]
-c) 产品结构: 转到 2c
+## 清单项 2: 引用 Agent-2a 诊断结论（不重做审核）
 
-**2b. 逐条交叉验证（时序校准 + 来源等级）**
-叙事来源等级: L5(公司公告) > L4(行业权威数据) > L3(券商研报) > L2(媒体调研) > L1(推测/传闻)
-每条信号判定: 支撑(L≥3) / 支撑(L≤2,谨慎) / 时序错位(不判矛盾) / 削弱(L≥3) / 削弱(L≤2,仅风险提示) / 无关
+**Agent-2a 已完成信号审核和叙事诊断。** 在用户消息末尾的"Agent-2a 叙事诊断结论"中提取:
 
-核心原则: Agent-0 的实时信号是**最新信息**，财报是**历史快照**。偏差 = 事件窗口内的基本面变化。沿叙事方向推演，用来源等级调节置信度。
+**2a. 信号审核结论** — 直接引用:
+- step2d_score: 2a 的信号匹配度评分 (0-10)
+- score_rationale: 2a 的评分理由
+- step2b_match: 关键的交叉验证结论（支撑/削弱/时序错位）
+- 数据异常标注: 2a 已在 data_gaps 中标注的数据问题
 
-**2c. 产品结构数据复述**（纯粹财务数据，不做异常判断）
-从面板"3. 盈利弹性—产品结构"中，找出与事件叙事相关的产品线，复述:
-- 收入占比及同比变化
-- 毛利率及与公司整体 GM 的差额
-若代码匹配 `[匹配: 关键词]` 为空但你识别出语义关联 → 补充映射。完全无法匹配 → 标注"事件-产品映射失败"，清单项 2d 评分上限 -3。
+**2b. 信号评分→bull概率基准**（再经 distribution_shape 调节）:
 
-**2d. 匹配度评分 (0-10)**
-- 9-10: 信号同向支撑，无矛盾
-- 7-8: 主要支撑，轻微矛盾/缺口
-- 5-6: 信号混杂，显著矛盾/关键缺失
-- 3-4: 主要矛盾，数据大面积缺失
-- 0-2: 严重背离
+| step2d | bull 概率基准 | bimodal类调节 | unimodal类调节 | narrow类调节 |
+|:------:|:--------:|:---------:|:---------:|:---------:|
+| 9-10 | 30-45% | 取上限 (40-45%) | 取中上 (35-40%) | 取中值 (30-35%) |
+| 7-8  | 20-35% | 取上限 (28-35%) | 取中值 (23-28%) | 取下限 (20-23%) |
+| 5-6  | 12-25%（代码封顶15%） | 取上限(15%) | 取中值(13%) | 取下限(12%) |
+| 3-4  | 5-15%（代码封顶8%） | 取上限(8%) | 取中值(6%) | 取下限(5%) |
+| 0-2  | 0-8% | 取上限 | 取中值 | 取下限 |
 
-**step2d→bull概率分配**（信号匹配度驱动）:
+**分布形状调节逻辑**: bimodal 类（高二元性）结果不确定性最高 → bull 不应趋近 0（尾部保护）。narrow 类（低不确定性）超预期难度大 → bull 应保守。unimodal 居中。
 
-| step2d | 信号状态 | bull 概率 |
-|:------:|----------|:--------:|
-| 9-10 | 数据全面支撑叙事 | 30-45% |
-| 7-8  | 主要支撑，轻微矛盾 | 20-35% |
-| 5-6  | 信号混杂，显著缺口 | 12-25% |
-| 3-4  | 矛盾为主，大面积缺失 | 5-15% |
-| 0-2  | 数据严重背离叙事 | 0-8% |
+bear 概率不由表决定——聚焦 2-3 个核心假设，推演"如果这个假设错了，整个故事就塌了"的概率。
+base = 100% - bull - bear。
 
-bull 取值依据: 基线上限当参数可取上限，基线中值当参数维持上限，基线下限当上限参数下调。
+**禁止**: 重新从面板逐条审核信号——2a 已完成此工作。你只需引用结论。
 
-bear 概率不由表决定——聚焦 2-3 个核心假设，推演"如果这个假设错了，整个故事就塌了"的概率。根据你自己的历史经验和逻辑推演，不锚定任何固定区间。在 `probability_rationale` 中说明"哪些核心假设、为什么取这个概率"。
+## 清单项 3: 三情景因果推演（事件感知）
 
-base = 100% - bull - bear。时序错位 → 不扣分，标注验证节点。
+**核心公理: 概率分布由三个维度联合决定，不是模板。**
 
-**数据异常识别**: 若前瞻面板中的数据存在明显逻辑矛盾（如 H2毛利率>95% 或 为负、合同负债暴增但营收下降、ROIC 单季跳变>20ppt 且无故事节点对应），必须在 `data_gaps` 中标注为"数据异常"并说明不予采用的理由。数据异常不影响评分，但需告知下游"此处数据不可信"。
+| 输入维度 | 来源 | 控制什么 |
+|---------|------|---------|
+| 信号匹配度 (step2d) | 2a signal_audit | **基础展宽** — 信号越好, bull 概率上限越高 |
+| 分布形状 (distribution_shape) | 2a event_profile | **分布形状** — bimodal→宽双峰, unimodal→宽单峰, narrow→窄集中 |
+| 计价程度 (priced_in %) | 2a event_pricing | **偏斜方向 + upside 天花板** |
 
-## 清单项 3: 三情景因果推演
+### 3a. 事件性质→分布形状
 
-**3a. 投资命题**: 吸收清单项1+2后，写 1 句"如果-那么"命题
+**为什么事件性质改变分布形状:**
+事件的 payoff 结构由 2a 的 `distribution_shape` 决定:
 
-**3b. 因果分叉点**: 拆命题为因果环节，标注证实/证伪条件
+| distribution_shape | 分布特征 | bull上限 | bear特征 | 典型bull概率 |
+|---------|:------:|:------:|------|:------:|
+| **wide_bimodal** | 宽双峰, 两个极端都可能 | 全量事件价值 | 回到事件前估值范式 | 不可趋近0（"万一成了"） |
+| **wide_bimodal_date_anchored** | 宽双峰, 锚定在日期附近 | 全量事件价值 | 回到事件前估值范式 | 同上,但概率在日期附近集中 |
+| **wide_unimodal** | 宽单峰, 方向确定但幅度不确定 | 全量但高不确定性 | 叙事证伪+退回 | 15-30% (受step2d封顶) |
+| **narrow_concentrated** | 窄集中, base主导 | 二阶导数部分 | 趋势逆转+范式降级 | 10-20% |
+| **narrow_base_dominant** | 极窄, 几乎只有base | 必须有质变 | 趋势惯性保护 | 5-10% |
 
-**3c. 因果剧本**（先写故事，不赋参数）:
-- bear: 哪个证伪路径兑现？传导链从哪里崩塌？市场退回什么模型？
-- base: 哪些证实信号按预期兑现？估值锚如何推移？
-- bull: 哪些催化超预期？估值范式跃迁到什么模型？
-将叙事写入 scenario_narrative
+**关键**: 不要用旧的 sudden/ongoing 概念。直接根据 2a 给出的 `distribution_shape` 选择对应的行。
 
-**3d. 案例比对**: 参数锚定（同族案例统计量）+ 6维度判断（驱动强度/市场空间/卡位壁垒/范式切换/催化剂密度/失败风险）+ 折扣率。案例告诉你参数的"可行区间"——你的参数不应与同族案例的统计分布偏离过大。
+### 3b. 计价程度→upside 天花板
 
-**3e. 赋参数**: 剧本 + 案例校验 + 清单项2评分修正 → 三情景参数。
+**bull 的 upside 受"还剩下多少没计价"的硬约束:**
+
+- priced_in ≈ 0%（完全未计价）:
+  → bull upside = 事件完整兑现后的估值 - 当前估值
+  → 且 2a 的"当前价格隐含期望"和"叙事指向期望"之间的差距 = bull 的理论最大空间
+
+- priced_in ≈ 50%（部分计价）:
+  → bull upside = 剩余 50% 的事件价值 + 超预期演绎的额外价值
+  → 超预期部分: 如果执行比市场预期的好（利润率更高、增速更快、时间更早）
+
+- priced_in ≈ 100%（完全计价）:
+  → bull upside = 只有"二阶导数"变化才能产生 alpha
+  → 二阶导数: 涨价预期是 20%，结果涨了 30%；产能释放预期 Q3，结果 Q2 就投产
+  → 如果叙事没有二阶导数的空间，bull=0% 是合理的
+
+**bear 的 downside 则相反——计价越多，逆转伤害越大:**
+- not_priced: bear = 回到事件前估值范式（故事根本没开始，损失的是时间成本）
+- fully_priced: bear = 预期逆转 + 估值范式降级（故事讲了一半塌了，损失的是信仰溢价）
+
+### 3c. 投资命题 + 因果分叉点
+
+引用 2a 的 primary_anchor 和 priced_in_estimate，写 1 句"如果-那么"命题。
+拆命题为因果环节，标注证实/证伪条件。
+
+### 3d. 因果剧本（先写故事，不赋参数）
+
+- **bear**: 证伪路径必须区分两件事:
+    **已发生的事实**（认证通过、已签合同、已投产产能）→ bear 不能"反悔"这些，只能假设后续执行恶化
+    **未发生的推测**（远期订单、产能爬坡、市场份额）→ 这才是 bear 的证伪空间
+    传导链从哪里崩塌？市场退回什么模型？当前已计价程度意味着下跌空间多大？
+- **base**: 哪些证实信号按预期兑现？估值锚如何推移？当前已计价的部分是否已经在 base 中体现？
+- **bull**: 哪些催化超预期？超预期的幅度对应剩余计价空间。估值范式是否跃迁？
+
+将叙事写入 scenario_narrative。
+
+**重要: 永远不要"凑"概率**——bear 需要 N 个独立环节同时崩塌 → 联合概率自然就是小概率。
+
+### 3e. 案例比对 + 赋参数
+
+案例锚定同族案例的参数统计量（上四分位/中位/下四分位），你的参数不应偏离过大。
+赋参数时，用 3a 的分布形状约束和 3b 的 upside 天花板反向验证。
+剧本 + 案例校验 + 清单项2评分修正 → 三情景参数。
 
 当前模型是 {PRIMARY_MODEL} ({MODEL_DESC})，你必须使用的参数体系:
 {MODEL_PARAM_NAMES}
+
+**百分比格式铁律——所有带 pct 后缀的字段都使用实际百分比数值,不是小数:**
+- ROIC=15% → roic_assumed_pct: 15 (不是0.15)
+- 增速=50% → earnings_growth_pct: 50 (不是0.5)
+- PE=80x → pe_target: 80
+- 概率=30% → probability: 0.30 (概率字段例外,使用0-1小数)
+- 计算公式 IC×ROIC%/100×PE 中,ROIC%/100 是把15转为0.15——如果 roic_assumed_pct=0.08,则 IC×0.0008×PE≈0
 
 **参数的经济含义——赋参前必须逐参数过这关:**
 
@@ -205,14 +267,25 @@ CAGR/增速: 高增速必须匹配高再投资率（RR=g/ROIC）。增速和 RR 
 - [全参数] ROIC改善幅度/PS增速匹配/PB-ROE匹配/EV-EBITDA行业中枢——逐项自检
 - [概率自洽] 三情景概率之和=1.0
 
-**4b. 反向DCF→预期差**
-分析市场隐含增速与你推演的隐含增速之间的预期差及其含义。不要重复 applicable 状态（已在 reverse_dcf 字段中），聚焦"差距意味着什么"。
+**4b. 计价验证→预期差（根据估值锚选择工具）**
 
-`expectation_gap.level` 必须与 `reverse_dcf.gap_direction` 一致:
-- gap_direction="市场低估" → level="市场显著低估"或"市场中等低估"
-- gap_direction="市场高估" → level="市场高估"
-- gap_direction="基本公允" → level="基本公允"
-- gap_direction="无法计算" → level="无法计算"
+根据 2a 的 primary_anchor 选择对应的反向推算工具做预期差分析:
+
+| 锚 | 工具 | 反解的问题 |
+|----|------|-----------|
+| **earnings** | 反向 DCF (g vs WACC) | 当前市值隐含 NOPAT 需要多高永续增速？ |
+| **revenue** | 隐含收入 CAGR (PS→增速) | 当前 PS 隐含 3 年收入需要多高 CAGR？ |
+| **asset** | 隐含 ROE 改善 (PB→ROE) | 当前 PB 隐含 ROE 需要改善到多少？ |
+
+**收入锚公司禁止使用反向DCF**——NOPAT 是利润锚的工具。收入锚公司应分析: 当前 PS 隐含的收入 CAGR 与 base 情景推演的 CAGR 之间的差距。
+
+聚焦"差距意味着什么"，不重复 applicable 状态。
+
+`expectation_gap.level` 必须与你 4b 分析的结论一致（不硬绑 reverse_dcf——收入锚走隐含 CAGR，资产锚走隐含 ROE）:
+- 隐含期望远高于推演 → level="市场高估"
+- 隐含期望远低于推演 → level="市场显著低估"
+- 基本接近 → level="基本公允"
+- 工具不适用 → level="无法计算"
 
 **4c. 校验交叉验证**
 主模型 {PRIMARY_MODEL} ({MODEL_FAMILY}) vs 校验模型 {VALIDATION_MODEL} ({VALIDATION_MODEL_DESC})。
@@ -246,9 +319,9 @@ quality_flag: 亏损企业→SPECULATIVE, ROIC<8%→MODERATE_QUALITY, ROIC≥8%�
 ## 清单项 6: 输出
 
 - reasoning_trace 按清单项 1→2→3→4→5 顺序组织
-- `signal_audit` 包含 2a/2b/2c/2d 的全部输出
-- `data_gaps` 标注缺失的数据。格式: "缺少[具体数据]，导致[具体判断]置信度下降"。若所有关键数据可用则写空数组[]。例: "缺少分产品毛利率季度环比，无法精确追踪毛利率改善斜率，bull中ROIC改善幅度的置信度下降"
-- `preflight_check` 逐项自检格式: ["[OK] 清单项1素材吸收完成", "[OK] 清单项2a-2d信号审核完成", "[OK] 清单项3a-3e赋参+案例完成", "[OK] 概率和=1.00", "[OK] upside单调递增,全参数经济含义自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
+- `signal_audit`: **直接复制 2a 的 signal_audit 结论**（你不再做信号审核，只透传）
+- `data_gaps` 标注缺失的数据，引用 2a 已标注的数据异常。格式: "缺少[具体数据]，导致[具体判断]置信度下降"
+- `preflight_check` 逐项自检格式: ["[OK] 清单项1素材吸收完成", "[OK] 清单项2引用2a审核结论完成", "[OK] 清单项3a-3e赋参+案例完成", "[OK] 概率和=1.00", "[OK] upside单调递增,全参数经济含义自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
 - 输出纯 JSON，不要用 markdown 代码块包裹
 
 # 核心约束
@@ -261,7 +334,7 @@ quality_flag: 亏损企业→SPECULATIVE, ROIC<8%→MODERATE_QUALITY, ROIC≥8%�
 # 共享输出 Schema（字段顺序 = 清单项推理顺序）:
 
 {
-  "reasoning_trace": ["清单项1-素材吸收: ...", "清单项2a-信号复述: ...", "清单项2b-交叉验证: ...", "清单项2c-产品结构: ...", "清单项2d-评分: ...", "清单项3a-投资命题: ...", "清单项3d-案例比对: ...", "清单项3e-赋参数: ...", "清单项4a-一致性校验: ...", "清单项4b-反向DCF: ...", "清单项4c-校验交叉: ...", "清单项4d-非对称: ...", "清单项4e-置信度: ..."],
+  "reasoning_trace": ["清单项1-素材吸收(引用2a锚+计价+事件分类): ...", "清单项2-引用2a审核结论(step2d=X,关键交叉验证:...): ...", "清单项3a-投资命题: ...", "清单项3d-案例比对: ...", "清单项3e-赋参数: ...", "清单项4a-一致性校验: ...", "清单项4b-计价验证(按锚选工具): ...", "清单项4c-校验交叉: ...", "清单项4d-非对称: ...", "清单项4e-置信度: ..."],
   "signal_audit": {
     "step2a_restate": ["[合同负债] 当前值=0.13亿 (↑1.1σ, 历史均值=0.08亿)", "..."],
     "step2b_match": [
@@ -291,9 +364,9 @@ quality_flag: 亏损企业→SPECULATIVE, ROIC<8%→MODERATE_QUALITY, ROIC≥8%�
   },
   "reverse_dcf": {
     "applicable": true,
-    "market_implied_g_pct": "纯数字(代码预计算，不要修改)",
-    "my_implied_g_pct": "纯数字。基于中性情景的永续利润增速反推，禁止用营收CAGR代替",
-    "expectation_gap_pct": "纯数字，market_implied_g - my_implied_g",
+    "market_implied_g_pct": "代码预计算(earnings锚=反向DCF的g, revenue锚=隐含CAGR, asset锚=隐含ROE改善)",
+    "my_implied_g_pct": "基于中性情景推演的对应指标(earnings锚=利润增速, revenue锚=收入CAGR, asset锚=ROE改善)",
+    "expectation_gap_pct": "market_implied - my_implied 的差距",
     "gap_direction": "市场低估|市场高估|基本公允|无法计算",
     "gap_magnitude": "显著|中等|轻微|不适用",
     "applicable_note": "若 applicable=false，说明原因"
@@ -309,8 +382,7 @@ quality_flag: 亏损企业→SPECULATIVE, ROIC<8%→MODERATE_QUALITY, ROIC≥8%�
   },
   "expectation_gap": {
     "level": "市场显著低估|市场中等低估|基本公允|市场高估|无法计算",
-    "note": "预期差说明。level必须与reverse_dcf.gap_direction一致"
-  },
+    "note": "预期差说明。level必须与4b分析的结论一致(不硬绑reverse_dcf)",
   "confidence": {
     "overall_score": 1-10,
     "overall_label": "高|中|低",
@@ -762,7 +834,7 @@ def precompute_bs_profile(primary_model: str, data_package: dict,
             # 标注两种算法的差异
             ev_level = "低估" if ev_ebitda_real < 5 else ("正常" if ev_ebitda_real < 10 else ("溢价" if ev_ebitda_real < 20 else "极高"))
             if "折价" in bs_level and ev_level in ("溢价", "极高"):
-                secondary += " ⚠ 与反向DCF方向相反: EV/EBITDA显示溢价但DCF显示折价，差异源于NOPAT极薄而EBITDA正常——市场定价的是资源/产能价值而非当前盈利"
+                secondary += "  与反向DCF方向相反: EV/EBITDA显示溢价但DCF显示折价，差异源于NOPAT极薄而EBITDA正常——市场定价的是资源/产能价值而非当前盈利"
     elif m in ("F", "H", "J"):
         secondary = f"PB={pb_val:.1f}x (资产基线)"
 
@@ -833,24 +905,24 @@ def _build_forward_signal_panel(core: dict) -> str:
 
 数据状态: {fw.get('status','?')} | 来源: {', '.join(fw.get('sources_available',[]))}
 缺失: {', '.join(fw.get('sources_missing',[])) or '无'}
-⚠️ 注意: 本面板全部基于历史财报数据，与 Agent-0 实时信号存在时间差。偏差 = 事件窗口内已发生的基本面变化，不改变财务+故事的估值框架。"""]
+️ 注意: 本面板全部基于历史财报数据，与 Agent-0 实时信号存在时间差。偏差 = 事件窗口内已发生的基本面变化，不改变财务+故事的估值框架。"""]
 
     # ── 异常信号（最高优先级） ──
     has_quant_anomalies = bool(anomalies)
     if has_quant_anomalies:
-        lines.append(f'\n### ⚡ 定量异常信号（vs 历史8期均值±标准差）')
+        lines.append(f'\n###  定量异常信号（vs 历史8期均值±标准差）')
         for a in anomalies:
             anomaly_info = a.get('anomaly', {})
             if anomaly_info:
                 sigma = anomaly_info.get('sigma', 0)
                 direction = '↑' if anomaly_info.get('direction') == 'up' else '↓'
-                tag = '🔴' if anomaly_info.get('level') == 'extreme' else '🟡'
+                tag = '' if anomaly_info.get('level') == 'extreme' else ''
                 lines.append(
                     f"\n{tag} **{a['label']}**: {a.get('value','?')}{a.get('unit','')} "
                     f"({direction}{abs(sigma)}σ, 均值={anomaly_info.get('mean','?')})"
                 )
             else:
-                lines.append(f"\n⚡ **{a['label']}**: {a.get('value','?')}")
+                lines.append(f"\n **{a['label']}**: {a.get('value','?')}")
             if a.get('interpretation'):
                 lines.append(f"   → {a['interpretation']}")
             if a.get('story_check'):
@@ -870,8 +942,8 @@ def _build_forward_signal_panel(core: dict) -> str:
         if v is not None:
             a = data.get('anomaly', {})
             a_level = a.get('level', '') if a else ''
-            tag = {('extreme', 'up'): '🔴', ('significant', 'up'): '🟡',
-                   ('extreme', 'down'): '🔴', ('significant', 'down'): '🟡'}.get((a_level, a.get('direction', ''))) if a else ''
+            tag = {('extreme', 'up'): '', ('significant', 'up'): '',
+                   ('extreme', 'down'): '', ('significant', 'down'): ''}.get((a_level, a.get('direction', ''))) if a else ''
             return f"{tag} {label}: {v}{unit}{extra}"
         # 定性
         if isinstance(data, dict) and 'type' in data:
@@ -894,9 +966,9 @@ def _build_forward_signal_panel(core: dict) -> str:
         gm_cov = products_data.get('gm_coverage_pct',100)
         gm_note = ''
         if gm_src == 'blended':
-            gm_note = f' ⚠️ 分产品利润数据不可用(覆盖率{gm_cov}%)，所有毛利率使用合并毛利率{company_gm:.1f}%近似'
+            gm_note = f' ️ 分产品利润数据不可用(覆盖率{gm_cov}%)，所有毛利率使用合并毛利率{company_gm:.1f}%近似'
         elif gm_src == 'mixed':
-            gm_note = f' ⚠️ 部分产品利润数据缺失(覆盖率{gm_cov}%)，缺失项使用合并毛利率近似'
+            gm_note = f' ️ 部分产品利润数据缺失(覆盖率{gm_cov}%)，缺失项使用合并毛利率近似'
         lines.append(f'\n### 3. 盈利弹性 — 产品结构 (对比窗口: {data_vintage}){gm_note}')
 
         # 产品结构表（含 H2 轨迹）
@@ -1037,8 +1109,9 @@ def _call_llm_scenario(
     routing: dict,
     case_anchors: str,
     event_data: dict,
+    agent2a_output: dict | None = None,
 ) -> dict:
-    """单次 LLM 调用：完整推演裁决。"""
+    """单次 LLM 调用：完整推演裁决（V6: 信任 Agent-2a 诊断结论）。"""
 
     core = data_package.get("packages", {}).get("core", {}).get("fields", {})
     stock = core.get("stock_name", data_package.get("stock_name", ""))
@@ -1050,18 +1123,43 @@ def _call_llm_scenario(
     validation = routing.get("validation_models", [])
     validation_model = validation[0] if validation else ""
 
-    # 构建用户消息
+    # ── 根据估值锚构建 BS 画像文本 ──
+    anchor_2a = "earnings"  # default
+    pt_full = None
+    if agent2a_output:
+        anchor_2a = agent2a_output.get("market_narrative", {}).get("primary_anchor", "earnings")
+        pt_full = agent2a_output.get("_pricing_tool", {})
+
+    if anchor_2a == "earnings":
+        bs_section = f"""**方法: 反向 DCF (利润锚)**
+- 隐含永续增速 g = {bs_profile.get('implied_g_pct',0)}% (WACC={wacc_params['wacc_pct']}%)
+- g/WACC比值 = {bs_profile.get('implied_g_pct',0) / max(wacc_params['wacc_pct'], 1) * 100:.0f}%
+- EV: {bs_profile['ev_yi']}亿 NOPAT: {bs_profile['nopat_yi']}亿 ROIC: {bs_profile['roic_pct']}%
+""" + (f"- 市场溢价: {bs_profile['market_premium_pct']}%\n" if bs_profile.get('market_premium_pct', 0) < 999 else "") + (f"- 辅助指标: {bs_profile['bs_secondary']}\n" if bs_profile.get('bs_secondary') else "")
+        bs_warning = ""
+    elif anchor_2a == "revenue":
+        if pt_full and pt_full.get("applicable"):
+            bs_section = f"""**方法: 隐含收入 CAGR (收入锚)**\n- 当前 PS = {core.get('ps_ttm',0):.1f}x -> 市场隐含 3 年收入 CAGR = {pt_full.get('implied_value','?')}%\n"""
+        else:
+            bs_section = f"""**方法: 隐含收入 CAGR (收入锚)** - 工具不可用\n- 当前 PS = {core.get('ps_ttm',0):.1f}x, 营收TTM = {core.get('revenue_ttm_yi',0):.1f}亿\n"""
+        bs_warning = f"""- (注意) 以下反向DCF基于NOPAT(利润锚),对收入锚不适用仅供参考: EV={bs_profile['ev_yi']}亿 g/WACC={bs_profile.get('implied_g_pct',0)}%/{wacc_params['wacc_pct']}%\n"""
+    elif anchor_2a == "asset":
+        if pt_full and pt_full.get("applicable"):
+            bs_section = f"""**方法: 隐含 ROE 改善 (资产锚)**\n- 当前 PB = {core.get('pb',0):.1f}x -> 隐含 ROE 需改善 {pt_full.get('implied_value','?')}ppt (当前 ROE={core.get('roe_ttm_pct',0):.1f}%)\n"""
+        else:
+            bs_section = f"""**方法: 隐含 ROE 改善 (资产锚)** - 工具不可用\n"""
+        bs_warning = f"""(注意) 反向DCF基于NOPAT对资产锚仅供参考: EV={bs_profile['ev_yi']}亿 g/WACC={bs_profile.get('implied_g_pct',0)}%/{wacc_params['wacc_pct']}%\n"""
+    else:
+        bs_section = f"""**方法: 定性判断 ({anchor_2a}锚无定量反向推算工具)**\n"""
+        bs_warning = f"""EV={bs_profile['ev_yi']}亿 NOPAT={bs_profile['nopat_yi']}亿 (仅供参考)\n"""
+
+    # 构建用户消息 (一个完整的大f-string)
     user_msg = f"""# 推演裁决: {stock}({code})
 
-## 当前市值隐含假设 (Implied Story) / BS画像 — 代码预计算,不可修改
+## 当前市值隐含假设 (Implied Story) — 根据估值锚({anchor_2a})选择工具
 
-核心指标: g/WACC={bs_profile.get('implied_g_pct',0)}%/{wacc_params['wacc_pct']}%。这告诉你市场隐含的增速离DCF理论上限还有多远——比值>90%=极高溢价(增速接近上限，bull必须超越市场预期才有upside)，60-90%=高溢价，35-60%=中等，<35%=低溢价/折价。""" + (
-    f"\n- 辅助指标: {bs_profile['bs_secondary']}" if bs_profile.get('bs_secondary') else "") + (
-    f"\n- 市场溢价: {bs_profile['market_premium_pct']}%" if bs_profile.get('market_premium_pct', 0) < 999 else
-    "\n- 市场溢价: 不适用(NOPAT极薄，溢价失真，以g/WACC为准)") + f"""
-- EV: {bs_profile['ev_yi']}亿 NOPAT: {bs_profile['nopat_yi']}亿 ROIC: {bs_profile['roic_pct']}%
+{bs_section}{bs_warning}
 - PE: {bs_profile['pe_ttm']}x PB: {bs_profile['pb']}x
-- 市场叙事: {bs_profile['market_story']}
 - 警告: {json.dumps(bs_profile.get('warnings', []), ensure_ascii=False)}
 {bs_profile.get('note_to_llm', '')}
 
@@ -1085,7 +1183,8 @@ def _call_llm_scenario(
 - 异常标记: {json.dumps(core.get('caution_flags',[]), ensure_ascii=False)}
 - 数据质量: {core.get('data_quality_score',10)}/10
 
-{_build_forward_signal_panel(core)}
+## 前瞻信号（Agent-2a 已审核，不重建面板）
+参见下文"Agent-2a 叙事诊断结论"中的 signal_audit 结论。
 
 ## 路由判决
 - 主模型: {primary} ({category})
@@ -1116,7 +1215,43 @@ def _call_llm_scenario(
 
 {case_anchors}
 
-请按系统提示词的执行清单完成推演。输出纯 JSON。
+## Agent-2a 叙事诊断结论（已审核，可直接信任）
+"""
+    # V6: 注入 Agent-2a 的诊断结论，Agent-3 不再重复做信号审核
+    if agent2a_output:
+        mn = agent2a_output.get("market_narrative", {})
+        ep = agent2a_output.get("event_pricing", {})
+        sa = agent2a_output.get("signal_audit", {})
+        pa = ep.get("pricing_assessment", {})
+
+        user_msg += f"""
+- 估值锚: {mn.get('primary_anchor','?')}
+- 锚证据: {mn.get('primary_anchor_evidence','?')[:200]}
+- SOTP触发: {mn.get('sotp_triggered', False)}
+- 事件分布形状: {ep.get('event_profile',{}).get('distribution_shape','?')} — {ep.get('event_profile',{}).get('shape_rationale','?')[:150]}
+- 计价程度: {pa.get('overall_priced_in','?')} ({pa.get('priced_in_estimate','?')})
+- 剩余催化: {pa.get('residual_catalyst','?')[:200]}
+- 信号评分: {sa.get('step2d_score','?')}/10 — {sa.get('score_rationale','?')[:200]}
+- 信号审核结论: {json.dumps(sa.get('step2a_restate',[])[:3], ensure_ascii=False)}
+- 交叉验证摘要: {json.dumps([str(m)[:120] for m in sa.get('step2b_match',[])[:3]], ensure_ascii=False)}
+"""
+        # 注入计价工具的量化结果（完整细节，LLM据此做4b分析）
+        pt = agent2a_output.get("_pricing_tool", {})
+        if pt and pt.get("applicable"):
+            user_msg += f"""
+- 定价工具详情: {pt.get('method','?')}
+  隐含指标: {pt.get('implied_metric','?')} = {pt.get('implied_value','?')}
+  局限: {json.dumps(pt.get('limitations',[]), ensure_ascii=False)}
+  详情: {json.dumps({k: v for k, v in pt.get('detail',{}).items() if k not in ('wacc_pct', 'current_ps', 'current_pb', 'market_cap_yi', 'equity_yi', 'revenue_ttm_yi')}, ensure_ascii=False)}
+"""
+        elif pt and not pt.get("applicable"):
+            user_msg += f"""
+- 定价工具: {pt.get('method','?')} — 不适用
+  原因: {pt.get('limitations',['?'])[0][:120]}
+"""
+
+    user_msg += """
+请按系统提示词的执行清单完成推演。注意: Agent-2a 已完成信号审核，你不再重复做清单项2——直接引用上述结论进入情景推演。输出纯 JSON。
 """
 
     try:
@@ -1324,8 +1459,12 @@ def _compute_from_assumptions(sv: dict, model: str, core: dict) -> dict:
         if target is not None and target > 0:
             ups = round((target / current_mcap - 1) * 100, 1)
         else:
+            # 无标准公式的模型(如J: SOTP): LLM输出target_mcap,代码补算upside
             target = d.get("target_mcap_yi", 0)
-            ups = d.get("upside_pct", 0)
+            if target > 0 and current_mcap > 0:
+                ups = round((target / current_mcap - 1) * 100, 1)
+            else:
+                ups = d.get("upside_pct", 0)
 
         mcaps.append(target)
         upsides.append(ups)
@@ -1377,11 +1516,11 @@ def _fix_trade_annotation(ta: dict, weighted_upside: float, asymmetry: float,
     # 修正 "概率加权upside仅为+X%" → 实际值
     note = re.sub(r'概率加权upside仅为\+[\d.]+%',
                   f'概率加权upside为+{weighted_upside:.0f}%', note)
-    # 修正 "赔率未达到★★☆门槛（通常需...>20%...）" → 如果实际已达到
+    # 修正 "赔率未达到门槛（通常需...>20%...）" → 如果实际已达到
     if weighted_upside >= 20:
         note = re.sub(
-            r'赔率未达到★★☆门槛[^，。]*[，。]',
-            f'赔率已达到★★☆门槛(upside={weighted_upside:.0f}%>20%)，',
+            r'赔率未达到门槛[^，。]*[，。]',
+            f'赔率已达到门槛(upside={weighted_upside:.0f}%>20%)，',
             note,
         )
     # 修正 asymmetry 引用
@@ -1650,7 +1789,7 @@ def _assemble_final_output(
 
     # 交易标注（从 V5 格式转为 V4 兼容）
     ta = llm_output.get("trade_annotation", {})
-    trade_tier = ta.get("tier", "★☆☆ 低赔率机会")
+    trade_tier = ta.get("tier", " 低赔率机会")
 
     # 反向DCF: 不适用时强制清空
     rd = llm_output.get("reverse_dcf", {})
@@ -1769,7 +1908,11 @@ def _assemble_final_output(
 
 
 class ScenarioAsymmetry:
-    """推演裁决司命 — V5 Agent-3。"""
+    """推演裁决司命 — V6 Agent-3。
+
+    V6 变化: 接收 agent2a_output（叙事诊断结论），信任其信号审核和 BS 解读，
+    专注于情景推演 + 估值计算。
+    """
 
     def __init__(self, deepseek_key: str | None = None):
         self.api_key = deepseek_key or DEEPSEEK_API_KEY
@@ -1782,14 +1925,16 @@ class ScenarioAsymmetry:
         event_data: dict | None = None,
         case_anchors: str = "",
         progress_cb: Callable[[int, str], None] | None = None,
+        agent2a_output: dict | None = None,
     ) -> dict:
         """
         执行完整推演裁决。
 
         data_package: Agent-1 DataForge 输出
-        routing_decision: Agent-2 routing_decision 部分
+        routing_decision: Agent-2b routing_decision 部分
         event_data: Coze Agent0 输入
-        case_anchors: Agent-2 案例锚点文本
+        case_anchors: Agent-2a 案例锚点文本（向后兼容）
+        agent2a_output: V6 新增 — Agent-2a 叙事诊断输出（信号审核 + 计价判断）
         """
         cb = progress_cb or (lambda s, n: None)
         event_data = event_data or {}
@@ -1807,6 +1952,7 @@ class ScenarioAsymmetry:
             llm_output = _call_llm_scenario(
                 bs_profile, wacc_params, data_package,
                 routing_decision, case_anchors, event_data,
+                agent2a_output=agent2a_output,
             )
         except ScenarioError as e:
             cb(3, f"LLM故障: {e.code}")
@@ -1815,6 +1961,7 @@ class ScenarioAsymmetry:
                     llm_output = _call_llm_scenario(
                         bs_profile, wacc_params, data_package,
                         routing_decision, case_anchors, event_data,
+                        agent2a_output=agent2a_output,
                     )
                 except ScenarioError:
                     raise
@@ -1841,8 +1988,10 @@ class ScenarioAsymmetry:
         sv["_computed_by_code"] = True
 
         # ── Step 1.55: Bull 概率硬封顶（低信号评分时抑制乐观偏误）──
-        signal_audit = llm_output.get("signal_audit", {})
-        step2d = signal_audit.get("step2d_score", 10)  # 默认10=无封顶
+        # V6: 优先使用 Agent-2a 的信号评分（信源更可靠，审核更完整）
+        a2a_signal = (agent2a_output or {}).get("signal_audit", {})
+        signal_audit = llm_output.get("signal_audit", a2a_signal)
+        step2d = a2a_signal.get("step2d_score") or signal_audit.get("step2d_score", 10)
         details_raw = sv.get("scenario_details", {})
         if isinstance(details_raw, list):
             details = {item.get("scenario", ""): item for item in details_raw}

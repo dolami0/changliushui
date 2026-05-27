@@ -1,0 +1,1175 @@
+{
+  "agent0": {
+    "request_id": "req_20260527_133457_603477",
+    "pre_routing_result": {
+      "ticker": "603477",
+      "stock_name": "巨星农牧",
+      "event_date": "2026-05-19",
+      "event_source": "",
+      "industry_classification": "农林牧渔-养殖业",
+      "industry_key_matched": "",
+      "event_tags_matched": [],
+      "data_requirements": {
+        "core_package": {
+          "description": "所有估值模型通用，必须100%获取",
+          "fields": [
+            "current_price",
+            "total_shares",
+            "market_cap",
+            "revenue_ttm",
+            "eps_ttm",
+            "net_profit_growth_yoy",
+            "bps",
+            "roe_ttm",
+            "ocf_ttm",
+            "capex_ttm",
+            "net_debt",
+            "total_assets",
+            "total_liabilities",
+            "gross_margin",
+            "net_margin",
+            "interest_bearing_debt",
+            "pe_ttm",
+            "pb",
+            "operating_profit_ttm",
+            "net_profit_ttm",
+            "profit_before_tax",
+            "income_tax",
+            "interest_expense",
+            "cash",
+            "total_equity"
+          ],
+          "mandatory": true,
+          "failure_action": "terminate"
+        },
+        "specialized_package": {
+          "fields": [],
+          "mandatory": false,
+          "failure_action": "continue_with_gap"
+        },
+        "validation_package": {
+          "fields": [
+            "peer_median_pe",
+            "peer_median_ps",
+            "historical_pe_range",
+            "beta",
+            "wacc_estimate",
+            "industry_cycle_position"
+          ],
+          "mandatory": false,
+          "failure_action": "skip_validation"
+        },
+        "optional_package": {
+          "fields": [
+            "dividend_yield",
+            "segment_breakdown"
+          ],
+          "mandatory": false,
+          "failure_action": "ignore"
+        }
+      },
+      "model_category_hint": [
+        "盈利乘数"
+      ],
+      "hint_confidence": "低",
+      "warning": "【重要】本 hint 不决定最终模型。Agent-2 将基于实际财务数据独立判决。"
+    }
+  },
+  "agent1": {
+    "request_id": "603477",
+    "stock_code": "603477",
+    "stock_name": "巨星农牧",
+    "industry": "农林牧渔",
+    "packages": {
+      "core": {
+        "fields": {
+          "current_price": 16.08,
+          "current_price_source": "tushare_daily",
+          "total_shares_yi": 0,
+          "market_cap_yi": 84.1,
+          "market_cap_source": "tushare_daily_basic",
+          "revenue_ttm_yi": 82.8,
+          "eps_ttm": 0.0,
+          "net_profit_growth_yoy": null,
+          "bps": 0,
+          "roe_ttm_pct": -12.14647641,
+          "ocf_ttm_yi": 8.0,
+          "capex_ttm_yi": 8.77,
+          "net_debt_yi": 34.0,
+          "total_assets_yi": 92.5,
+          "total_liabilities_yi": 64.5,
+          "gross_margin_pct": -3.81,
+          "net_margin_pct": -18.5,
+          "interest_bearing_debt_yi": 41.2,
+          "interest_expense_yi": 1.94,
+          "gross_margin_historical_rank": 15.7895,
+          "net_margin_historical_rank": 21.0526,
+          "roe_historical_rank": 13.1579,
+          "roic_historical_rank": 13.1579,
+          "profitability_composite_score": 20.4546,
+          "pe_ttm": -17.9978,
+          "pb": 3.0574,
+          "ps_ttm": 1.0155,
+          "ps_historical_rank": 100.0,
+          "pe_historical_rank": 73.5294,
+          "pb_historical_rank": 52.9412,
+          "operating_profit_ttm_yi": -5.83,
+          "net_profit_ttm_yi": -4.56,
+          "profit_before_tax_yi": -4.47,
+          "income_tax_yi": 0.05,
+          "cash_yi": 7.1,
+          "total_equity_yi": 27.9,
+          "industry_sw_l1": "农林牧渔",
+          "industry_sw_l2": "养殖业",
+          "stock_name": "巨星农牧",
+          "report_period": "",
+          "ebitda_ttm_yi": -12.42,
+          "invested_capital_yi": 69.1,
+          "roic_pct": -4.22,
+          "nopat_yi": -2.92,
+          "effective_tax_rate": 0.25,
+          "caution_flags": [
+            "TTM净利润为负"
+          ],
+          "is_loss_making": true,
+          "is_negative_equity": false,
+          "data_quality_score": 9,
+          "_forward_looking": {
+            "status": "complete",
+            "categories": {
+              "demand_reality": {
+                "contract_liab": {
+                  "label": "合同负债",
+                  "value": 0.46,
+                  "unit": "亿",
+                  "qoq_pct": 64.3,
+                  "trend": "波动",
+                  "anomaly": {
+                    "level": "elevated",
+                    "sigma": 1.6,
+                    "direction": "up",
+                    "mean": 0.32,
+                    "std": 0.09
+                  },
+                  "anomaly_text": "合同负债显著高于历史均值(当前偏离1.6σ, 均值0.32, σ=0.09)",
+                  "interpretation": "",
+                  "story_check": "合同负债异常跳升验证了需求叙事→可支撑更高的近期营收CAGR"
+                },
+                "accounts_receivable": {
+                  "label": "应收账款",
+                  "value": 0.74,
+                  "unit": "亿",
+                  "qoq_pct": 17.5,
+                  "ar_to_rev_ratio": 0.04,
+                  "anomaly": {
+                    "level": "normal",
+                    "sigma": 0.8,
+                    "direction": "up",
+                    "mean": 0.04,
+                    "std": 0.0
+                  },
+                  "anomaly_text": "应收/营收比在历史正常范围内(均值0.04, σ=0.0)",
+                  "interpretation": ""
+                },
+                "prepayments": {
+                  "label": "预付账款",
+                  "value": 1.4,
+                  "unit": "亿",
+                  "qoq_pct": 9.4
+                }
+              },
+              "supply_readiness": {
+                "cip": {
+                  "label": "在建工程",
+                  "value": 4.56,
+                  "unit": "亿",
+                  "qoq_pct": 1.6,
+                  "cip_to_fixed_pct": 12.8,
+                  "anomaly": {
+                    "level": "normal",
+                    "sigma": 0.8,
+                    "direction": "up",
+                    "mean": 4.23,
+                    "std": 0.44
+                  },
+                  "anomaly_text": "在建工程在历史正常范围内(均值4.23, σ=0.44)",
+                  "interpretation": "",
+                  "story_check": "在建工程加速扩张验证了供给准备→可支撑产能释放时间表"
+                },
+                "capex_depr_ratio": {
+                  "label": "CAPEX/折旧比",
+                  "value": null,
+                  "supply_label": "数据不足",
+                  "ttm_capex": 26.23,
+                  "unit": "亿",
+                  "interpretation": ""
+                },
+                "inventory": {
+                  "label": "存货",
+                  "value": 24.53,
+                  "unit": "亿",
+                  "anomaly": {
+                    "level": "normal",
+                    "sigma": -0.0,
+                    "direction": "flat",
+                    "mean": 24.54,
+                    "std": 2.58
+                  },
+                  "anomaly_text": "存货在历史正常范围内(均值24.54, σ=2.58)",
+                  "interpretation": ""
+                }
+              },
+              "earnings_elasticity": {
+                "products": {
+                  "label": "产品结构信号",
+                  "data_vintage": "2025-12-31 vs 2024-12-31 | H2轨迹: 2025H2 vs 2024H2",
+                  "gm_source": "actual",
+                  "gm_coverage_pct": 100.0,
+                  "periods_available": 4,
+                  "annual_periods": 2,
+                  "has_h1_data": true,
+                  "product_mix": [
+                    {
+                      "name": "生猪",
+                      "revenue": 73.63,
+                      "revenue_share_pct": 92.0,
+                      "revenue_share_prev_pct": 91.7,
+                      "share_change_ppt": 0.3,
+                      "revenue_yoy_pct": 32.1,
+                      "gross_margin_pct": 7.4,
+                      "gm_prev_pct": 21.2,
+                      "gm_change_ppt": -13.8,
+                      "gm_source": "actual",
+                      "h2_revenue": 39.31,
+                      "h2_gross_margin_pct": 1.2,
+                      "h2_revenue_prev": 35.35,
+                      "h2_gm_prev_pct": 26.3,
+                      "h2_revenue_yoy_pct": 11.2,
+                      "h2_available": true
+                    },
+                    {
+                      "name": "饲料",
+                      "revenue": 4.15,
+                      "revenue_share_pct": 5.2,
+                      "revenue_share_prev_pct": 6.0,
+                      "share_change_ppt": -0.8,
+                      "revenue_yoy_pct": 13.1,
+                      "gross_margin_pct": 5.8,
+                      "gm_prev_pct": 6.3,
+                      "gm_change_ppt": -0.5,
+                      "gm_source": "actual",
+                      "h2_revenue": 2.36,
+                      "h2_gross_margin_pct": 6.8,
+                      "h2_revenue_prev": 2.13,
+                      "h2_gm_prev_pct": 5.6,
+                      "h2_revenue_yoy_pct": 10.8,
+                      "h2_available": true
+                    },
+                    {
+                      "name": "皮革产品",
+                      "revenue": 2.0,
+                      "revenue_share_pct": 2.5,
+                      "revenue_share_prev_pct": 2.1,
+                      "share_change_ppt": 0.4,
+                      "revenue_yoy_pct": 56.2,
+                      "gross_margin_pct": 6.0,
+                      "gm_prev_pct": -29.7,
+                      "gm_change_ppt": 35.7,
+                      "gm_source": "actual",
+                      "h2_revenue": 0.99,
+                      "h2_gross_margin_pct": 7.1,
+                      "h2_revenue_prev": 0.92,
+                      "h2_gm_prev_pct": null,
+                      "h2_revenue_yoy_pct": 7.6,
+                      "h2_available": true
+                    },
+                    {
+                      "name": "其他业务",
+                      "revenue": 0.22,
+                      "revenue_share_pct": 0.3,
+                      "revenue_share_prev_pct": 0.1,
+                      "share_change_ppt": 0.2,
+                      "revenue_yoy_pct": 144.4,
+                      "gross_margin_pct": 18.2,
+                      "gm_prev_pct": -0.0,
+                      "gm_change_ppt": 18.2,
+                      "gm_source": "actual",
+                      "h2_revenue": 0.16,
+                      "h2_gross_margin_pct": 6.3,
+                      "h2_revenue_prev": 0.05,
+                      "h2_gm_prev_pct": 0.0,
+                      "h2_revenue_yoy_pct": 220.0,
+                      "h2_available": true
+                    }
+                  ],
+                  "keyword_matches": {},
+                  "margin_structure": {
+                    "company_blended_gm": -3.81,
+                    "company_gm_rank": 15.7895,
+                    "max_product_gm": 18.2,
+                    "min_product_gm": 5.8,
+                    "gm_spread_ppt": 12.4,
+                    "high_gm_products_share_pct": 0,
+                    "high_gm_share_prev_pct": 0,
+                    "gm_improvement_source": "混合驱动",
+                    "low_gm_products": [
+                      {
+                        "name": "生猪",
+                        "gm": 7.4,
+                        "share": 92.0
+                      },
+                      {
+                        "name": "饲料",
+                        "gm": 5.8,
+                        "share": 5.2
+                      },
+                      {
+                        "name": "皮革产品",
+                        "gm": 6.0,
+                        "share": 2.5
+                      }
+                    ]
+                  },
+                  "order_fulfillment_crosscheck": {
+                    "contract_liab_qoq_pct": 64.3,
+                    "high_growth_products": [
+                      "生猪",
+                      "皮革产品",
+                      "其他业务"
+                    ],
+                    "contract_to_revenue_lag": "合同负债与产品收入同步增长 → 订单已在转化为收入"
+                  },
+                  "h2_momentum": "H2加速: 其他业务",
+                  "interpretation": "混合驱动; 合同负债与产品收入同步增长 → 订单已在转化为收入; H2加速: 其他业务",
+                  "story_check": "产品级毛利率 = 叙事推演硬约束。核心叙事产品毛利率显著低于宣称值 → 区分\"数据滞后\"与\"叙事夸大\"。"
+                }
+              },
+              "cashflow_quality": {
+                "ocf_to_ni": {
+                  "label": "OCF/净利润",
+                  "value": -5.77,
+                  "ocf_ttm": 26.31,
+                  "ni_ttm": -4.56,
+                  "unit": "倍",
+                  "quality_label": "现金流为负(OCF<0)",
+                  "anomaly": {
+                    "level": "normal",
+                    "sigma": 0.0,
+                    "direction": "flat",
+                    "mean": -5.77,
+                    "std": 5.26
+                  },
+                  "anomaly_text": "OCF/NI比在历史正常范围内(均值-5.77, σ=5.26)",
+                  "interpretation": "利润含金量极低(OCF/NI<0.5)→净利润可能包含大量非现金项目，需警惕\"纸面利润\"",
+                  "story_check": "若事件叙事强调\"业绩爆发\"但OCF持续为负→利润未转化为现金，估值需打折扣"
+                },
+                "fcf": {
+                  "label": "自由现金流",
+                  "value": 0.08,
+                  "unit": "亿",
+                  "turning_positive": false,
+                  "fcf_yield_pct": 0.1,
+                  "interpretation": ""
+                }
+              },
+              "management_guidance": {
+                "forecast": {
+                  "label": "业绩预告",
+                  "type": "预减",
+                  "np_change_range": "-95%~-93%",
+                  "flag": true,
+                  "interpretation": "业绩预告方向为负面→若事件叙事看多，需审视事件是否尚未转化为业绩，或在reasoning_trace中解释预告窗口与事件窗口的时序差异"
+                },
+                "express": {
+                  "label": "业绩快报",
+                  "available": true,
+                  "revenue_growth_pct": null
+                },
+                "shareholder": {
+                  "label": "股东人数",
+                  "trend": "略分散",
+                  "flag": false,
+                  "interpretation": ""
+                },
+                "earnings_trend": {
+                  "label": "盈利趋势(单季度)",
+                  "latest_revenue_q_yoy": 17.0378,
+                  "latest_op_q_yoy": null,
+                  "latest_profit_q_yoy": null,
+                  "latest_revenue_q_qoq": null,
+                  "latest_roic": -4.4409,
+                  "latest_gm": -3.8069,
+                  "trend_direction": "加速",
+                  "recent_4q": [
+                    {
+                      "period": 20260331.0,
+                      "revenue_yoy": 17.0378,
+                      "revenue_q_yoy": 17.0378,
+                      "revenue_q_qoq": null,
+                      "op_q_yoy": null,
+                      "op_q_qoq": -179.8964,
+                      "profit_q_yoy": null,
+                      "profit_q_qoq": null,
+                      "roic": -4.4409,
+                      "gm": -3.8069
+                    },
+                    {
+                      "period": 20251231.0,
+                      "revenue_yoy": 31.6248,
+                      "revenue_q_yoy": 11.2304,
+                      "revenue_q_qoq": null,
+                      "op_q_yoy": null,
+                      "op_q_qoq": -34.2031,
+                      "profit_q_yoy": null,
+                      "profit_q_qoq": null,
+                      "roic": 2.7488,
+                      "gm": 7.2692
+                    },
+                    {
+                      "period": 20250930.0,
+                      "revenue_yoy": 42.5707,
+                      "revenue_q_yoy": 11.574,
+                      "revenue_q_qoq": null,
+                      "op_q_yoy": null,
+                      "op_q_qoq": -410.6893,
+                      "profit_q_yoy": null,
+                      "profit_q_qoq": null,
+                      "roic": 3.5648,
+                      "gm": 10.4385
+                    },
+                    {
+                      "period": 20250930.0,
+                      "revenue_yoy": 42.5707,
+                      "revenue_q_yoy": 11.574,
+                      "revenue_q_qoq": null,
+                      "op_q_yoy": null,
+                      "op_q_qoq": -410.6893,
+                      "profit_q_yoy": null,
+                      "profit_q_qoq": null,
+                      "roic": 3.5648,
+                      "gm": 10.4385
+                    }
+                  ]
+                }
+              }
+            },
+            "text_summary": "业绩预告↓(0σ)",
+            "sources_available": [
+              "资产负债表季度",
+              "现金流季度",
+              "分部收入",
+              "业绩预告/快报"
+            ],
+            "sources_missing": []
+          }
+        },
+        "status": "complete",
+        "quality_score": 9,
+        "missing_fields": []
+      },
+      "specialized": {
+        "fields": {},
+        "status": "empty",
+        "quality_score": 10,
+        "missing_fields": []
+      },
+      "validation": {
+        "fields": {
+          "industry_forecast": {
+            "industry_name": "农林牧渔",
+            "t_year": "2025",
+            "net_profit_growth_t": null,
+            "net_profit_growth_t1": null,
+            "net_profit_growth_t2": null,
+            "net_profit_growth_t3": null,
+            "revenue_growth_t": 2.84,
+            "revenue_growth_t1": 12.08,
+            "revenue_growth_t2": 16.17,
+            "revenue_growth_t3": 12.35,
+            "growth_market_rank_t1": 2
+          }
+        },
+        "status": "empty",
+        "quality_score": 0,
+        "missing_fields": [
+          "peer_median_pe",
+          "peer_median_ps",
+          "historical_pe_range",
+          "beta",
+          "wacc_estimate",
+          "industry_cycle_position"
+        ]
+      },
+      "optional": {
+        "fields": {},
+        "status": "empty",
+        "quality_score": 0,
+        "missing_fields": [
+          "dividend_yield",
+          "segment_breakdown"
+        ]
+      }
+    },
+    "overall_data_quality_score": 7,
+    "fetch_errors": [],
+    "event_date": "2026-05-19",
+    "event_window_prices": {
+      "event_date": "2026-05-19",
+      "pre_event": null,
+      "post_event": {
+        "avg_close": 17.75,
+        "first_date": "20260506",
+        "last_date": "20260527",
+        "num_days": 16,
+        "first_close": 19.18,
+        "last_close": 16.08
+      },
+      "event_day": null,
+      "current": {
+        "close": 16.08,
+        "date": "20260527"
+      },
+      "source": "tushare",
+      "note": ""
+    },
+    "incremental_fetch_hook": {
+      "available": true,
+      "description": "调用 DataForge.fetch_incremental(fields) 补取缺失字段"
+    }
+  },
+  "agent2": {
+    "routing_decision": {
+      "primary_model": "D",
+      "model_category": "Asset Multiples",
+      "routing_reason": "巨星农牧当前处于深度亏损期（TTM净利润-4.6亿，ROIC=-4.2%，PE=-18.0x），盈利倍数模型失效。公司为重资产养殖企业，总资产/净资产达3.3倍，远高于1.5倍重资产阈值，市净率3.1x，市场已定价资产价值。叙事锚定为资产，事件核心为猪周期底部反转带来的ROE改善逻辑（成本降至12元/公斤目标），与D(PB-ROE)模型的重资产+ROE改善准入高度契合。案例库中同类周期反转标的（如兴业银锡）亦采用资产锚与利润弹性结合的范式，支持该选择。",
+      "validation_models": [
+        "D"
+      ],
+      "validation_rationale": "其他模型族均被叙事诊断排除（revenue_multiples与资产锚不匹配，earnings_multiples因亏损无利润支撑，pipeline/sotp不适用），resource族也因养殖业不属于传统自然资源而不满足E模型准入。同族H(NAV)要求隐蔽资产型，巨星农牧生物资产以市价计量，无隐蔽价值再发现逻辑，故不适用。唯一候选D模型符合全部硬约束，校验模型只能同模型自校验，通过对猪价、完全成本、资产减值等关键变量进行敏感性分析来验证估值区间。",
+      "validation_strategy": "self_validation",
+      "constraint_compliance": {
+        "family_constraint_applied": "asset_multiples",
+        "constraint_override": false,
+        "override_rationale": ""
+      },
+      "anchor_shift_warning": "当前PB=3.1x基于净资产28亿，但生物资产（种猪、育肥猪）账面价值可能虚高，若猪价持续低于完全成本，将面临大额减值，净资产可能缩水，PB被动抬升甚至转为负值。同时有息负债41.2亿远超净资产，股东权益对债权人高度敏感。若周期反转迟迟不兑现，估值锚可能从PB-ROE切换至清算价值或重组价值，需持续跟踪资产质量与现金流状况。"
+    },
+    "case_matches_top3": []
+  },
+  "agent2a": {
+    "market_narrative": {
+      "primary_anchor": "asset",
+      "primary_anchor_evidence": "净利润为负，PE无意义；PB=3.1x处于历史中低位(52.9分位)，意味着市场在定价净资产质量；PS=1.0x为历史最低位(100分位)，但收入为82.8亿的养殖企业，PS仅1.0x说明收入不是核心定价因子——隐含收入CAGR为-20.2%，这不符合公司实际的产能扩张（2025年出栏+66%），说明市场并未按收入增长给公司定价。参考类似亏损养殖企业的估值逻辑，PB是核心锚，当前PB=3.1x隐含对账面28亿净资产给予了3.1倍溢价，市场在定价生物资产（种猪、育肥猪）的重置价值和产能底部的周期弹性。",
+      "secondary_anchors": [
+        {
+          "segment": "生猪养殖",
+          "anchor": "asset",
+          "revenue_share_pct": 92.0,
+          "data_confidence": "high"
+        },
+        {
+          "segment": "饲料",
+          "anchor": "earnings",
+          "revenue_share_pct": 5.2,
+          "data_confidence": "high"
+        }
+      ],
+      "sotp_triggered": false,
+      "sotp_rationale": "生猪养殖占比92%，是绝对主业。饲料收入占比仅5.2%，远低于20%阈值，且其盈利能力与养殖业务高度联动，不具备独立估值条件。不触发SOTP。"
+    },
+    "event_pricing": {
+      "event_profile": {
+        "timing_certainty": 4,
+        "timing_rationale": "政策出台日期（5月14日印发/5月18日会议）属突发事件，但公司年报（4月22日）、Q2生猪销售数据（7月）有常规发布节奏，且后续产能去化验证节点分散，无精确到日的催化剂时间表。",
+        "outcome_binaryness": 1,
+        "outcome_rationale": "结果是连续谱：产能调控效果、猪价回升幅度、公司成本下降程度都是连续变量，且事件叙事本身就强调‘温和回升、窄幅震荡’，不存在非此即彼的二元结果。",
+        "precedent_richness": 7,
+        "precedent_rationale": "能繁母猪存栏目标调整有同品类先例（历史上目标多次下调4100万→3900万→3750万），猪周期反转有大量历史案例，但每次周期底部的行业格局不同，且本次政策新增对大型集团企业的约束，先例参照存在一定局限。",
+        "distribution_shape": "narrow_concentrated",
+        "shape_rationale": "低二元性（连读变量）+中等时机确定性+高先例丰富度→窄集中分布。市场对能繁去化→猪价温和回升的路径有清晰历史模板，但具体时间和幅度不确定，表现为集中的概率分布。"
+      },
+      "pricing_assessment": {
+        "method": "implied_revenue_cagr",
+        "method_applicable": true,
+        "method_limitations": [
+          "terminal_PS=2.0x是主观假设，依赖对3年后市场情绪的判断",
+          "PS仅1.0x说明收入增长预期已经被极度压缩，市值对收入增速假设的敏感度较低",
+          "公司当前亏损严重，收入增长与价值创造之间的传导链条断裂，反向推算收入CAGR的参考价值有限"
+        ],
+        "quantitative": {
+          "implied_cagr_pct": -20.2,
+          "interpretation": "当前市值84亿隐含未来3年收入年复合衰退20.2%（按terminal PS=2.0x）。对照实际：公司2025年营收+31.62%，2026Q1+17%，出栏量持续增长，隐含-20.2%的衰退与基本面完全背离。这说明市场不是在按收入成长定价——或者市场极度悲观认为猪价将崩盘式下跌导致收入萎缩，或者PS已经不是有效定价锚点。",
+          "catalyst_expectation": "事件叙事指向产能去化→猪价回升→公司收入增长（中性偏乐观），与隐含-20.2%衰退形成巨大张力。但需注意：公司亏损导致的PB下行风险可能完全吞噬收入增长的价值。"
+        },
+        "qualitative_factors": [
+          "事件后股价从17.75跌至16.08（-9.4%），说明政策利好未被市场买入",
+          "5月6日大股东减持公告（拟减持3%）对股价形成压制，抵消政策利好",
+          "板块内牧原、温氏等龙头股价走势（若同步下跌则β因子主导，若分化则α在起作用）注：无板块比较数据，但事件叙事中提到‘低成本头部竞争对手逆势扩张’，行业分化可能已体现在股价中",
+          "成交量与情绪：事件后成交量数据缺失，但股价下跌表明市场对政策执行力存疑（反方观点第1条）已部分反映",
+          "分析师预期：事件后未见分析师上调盈利预测的实质性报告，仍维持原评级（维持‘买入’评级的时点在4月-5月初，早于政策事件）"
+        ],
+        "overall_priced_in": "partially",
+        "priced_in_estimate": "约20-30%",
+        "residual_catalyst": "市场对政策执行力度存疑（反方逻辑），但仍未充分定价以下利好：1）能繁母猪数据4-5月若进一步下降至3750万头下方；2）公司Q2完全成本如预期降至13元/kg以下；3）猪价三季度季节性反弹超预期。这些事件的催化作用尚未被股价反映。"
+      }
+    },
+    "signal_audit": {
+      "step2a_restate": [
+        "无——定量异常检测未触发任何信号"
+      ],
+      "step2b_match": [
+        {
+          "signal": "生猪产品收入同比+32.1%，收入占比92.0%",
+          "source_level": 4,
+          "judgment": "支撑(L≥3)",
+          "rationale": "出栏量高增正在转化为收入，与叙事中‘产能持续释放、456万头出栏量’一致。收入增速32.1%在猪价下行背景下说明量的扩张强劲。"
+        },
+        {
+          "signal": "生猪产品毛利率仅7.4%（H2毛利率1.2%），显著低于叙事宣称的‘14元/kg成本对应14-16元猪价应有正毛利’",
+          "source_level": 4,
+          "judgment": "削弱(L≥3)",
+          "rationale": "成本控制是叙事核心，但7.4%的毛利率（对应售价-成本价差约1-1.5元/kg）远低于理想水平。若公司2026年目标成本12元/kg，当前成本应在14-15元/kg，在猪价10-12元/kg时毛利率自然低迷。这说明成本下降的确是盈利弹性的前提——当且仅当成本真正降至12元时，周期反转的弹性才会兑现。毛利率数据支持‘盈利弹性高度敏感于成本实现’，也验证了反方‘成本下降可能停滞’的脆弱性。"
+        },
+        {
+          "signal": "饲料业务收入+13.1%，毛利率5.8%，利润贡献极小",
+          "source_level": 4,
+          "judgment": "无关",
+          "rationale": "饲料收入占比5.2%且毛利率低，对投资叙事（生猪周期弹性）无实质影响。"
+        },
+        {
+          "signal": "2025年归母净利润仅0.3亿元（同比-94.15%），2026Q1净利润-3.56亿——亏损扩大",
+          "source_level": 4,
+          "judgment": "时序错位",
+          "rationale": "这反映猪价下行最猛烈时期的业绩，属于历史快照。事件叙事是关于产能去化后的未来反转，当前亏损是该叙事的前提条件，不构成矛盾。但亏损扩大速度（从全年0.3亿微利到单季-3.56亿）超预期，若持续将威胁资产负债表。"
+        },
+        {
+          "signal": "有息负债41.2亿，现金仅7.1亿，净债务34.1亿",
+          "source_level": 4,
+          "judgment": "削弱(L≥3，仅风险提示)",
+          "rationale": "高杠杆在周期底部是双刃剑——反转后弹性更高，但若猪价低迷超预期，融资压力会侵蚀甚至摧毁股东价值。定增2.19亿仅杯水车薪，若持续深度亏损，需要更大力度的债务或股权融资，与大股东减持形成负向信号共振。"
+        }
+      ],
+      "step2c_product_restate": "核心产品生猪养殖（收入占比92.0%，H2毛利率仅1.2%）。在猪价下行周期中，收入增长（+32.1%）完全由出栏量驱动，毛利率被猪价严重压缩。投资叙事依赖的‘14元成本降至12元’目标尚未在财报中体现——当前实际完全成本（反推测算约14-15元/kg）远高于目标值，且2026Q1计提生物资产跌价准备进一步说明出栏成本可能高于可变现净值。产品结构验证了叙事前提（规模扩张、育种基础）但尚未验证叙事终点（成本领先兑现盈利弹性）。",
+      "step2d_score": 4,
+      "score_rationale": "主要矛盾在于：收入增长强劲（支撑叙事），但毛利率极低（削弱叙事），且目标成本（12元）与当前隐含成本（14-15元）之间存在显著缺口。信号混杂——结构性扩张的证据明确，但盈利效率的验证缺失。关键缺失是成本数据的量化验证（PSY、料肉比、单头成本），目前只有定性讨论。评分4/10，信号提供的信息不足以确认叙事必然成立，但也未证伪。"
+    },
+    "forward_to_routing": {
+      "model_family_constraint": "asset_multiples",
+      "excluded_families": [
+        "revenue_multiples",
+        "earnings_multiples",
+        "pipeline",
+        "sotp"
+      ],
+      "distribution_shape": "narrow_concentrated",
+      "pricing_bias": "fairly_valued",
+      "key_risk_for_routing": "公司处于深度亏损状态（ROIC=-4.2%），资产锚估值模型需特别注意：1）生物资产（种猪、育肥猪）的账面价值可能虚高，若猪价持续低于成本将面临减值风险，PB可能从3.1x下修至1x以下；2）高负债率（有息负债41.2亿 vs 净资产28亿）意味着资产价值对债权人高度敏感，股东权益价值可能被高估；3）案例库匹配的十倍股普遍有ROIC从负转正且PE扩张的特征，但巨星当前PE为负，估值扩张路径需要先过‘盈亏平衡’关，亏损期不宜使用盈利倍数模型。"
+    },
+    "_pricing_tool": {
+      "method": "implied_revenue_cagr",
+      "applicable": true,
+      "implied_value": -20.2,
+      "implied_metric": "隐含3年收入CAGR(%)",
+      "limitations": [
+        "terminal_PS=2.0x 是主观假设——3年后的市场情绪不可知",
+        "CAGR假设均匀增长，实际收入路径可能是非线性的",
+        "当前PS=1.0x——PS越高，terminal_PS的选择越敏感"
+      ],
+      "detail": {
+        "market_cap_yi": 84.1,
+        "revenue_ttm_yi": 82.8,
+        "current_ps": 1.0,
+        "terminal_ps_assumed": 2.0,
+        "terminal_mcap_yi": 165.6,
+        "wacc_pct": 4.2
+      }
+    },
+    "_case_anchors": {
+      "top3": [
+        {
+          "stock_code": "300870",
+          "stock_name": "欧陆通",
+          "sector": "电气设备",
+          "primary_driver": "业绩拐点",
+          "return_type": "利润核弹",
+          "tags": [
+            "小盘(30-60亿)",
+            "起涨亏损",
+            "业绩拐点",
+            "估值范式切换",
+            "利润核弹"
+          ],
+          "roic_trough": -1.49,
+          "roic_peak": 9.46,
+          "roic_improvement": 10.95,
+          "gm_trough": 13.59,
+          "gm_peak": 21.36,
+          "pe_expansion": 8.35,
+          "profit_expansion": 13.1,
+          "gain_multiple": 5.6,
+          "actual_return_pct": 459.9,
+          "start_mcap": 51.0,
+          "start_pe": 31.6,
+          "peak_pe": 263.7,
+          "catalyst": "AI服务器电源需求井喷,高功率电源国产替代稀缺标的,与Google合作GPU电源项目,数据中心电源营收+38%,ASIC芯片交付预期",
+          "logic": "AI服务器电源需求井喷,高功率电源国产替代稀缺标的,与Google合作GPU电源项目,数据中心电源营收+38%,ASIC芯片交付预期",
+          "end_state": "微利改善中",
+          "routing_reason": "起涨ROIC=-1.5% | 终局=微利改善中 | 驱动力=业绩拐点 | 利润弹性=13.1x | 估值驱动=False | 行业=电力设备",
+          "failure_mode": []
+        },
+        {
+          "stock_code": "688585",
+          "stock_name": "上纬新材",
+          "sector": "新材料→人形机器人平台",
+          "primary_driver": "商业模式升级",
+          "return_type": "估值锚定重构",
+          "tags": [
+            "小盘(30-60亿)",
+            "实控人变更",
+            "资产注入预期",
+            "人形机器人",
+            "壳价值重估",
+            "估值范式切换"
+          ],
+          "roic_trough": -1.27,
+          "roic_peak": 6.97,
+          "roic_improvement": 8.24,
+          "gm_trough": 3.83,
+          "gm_peak": 16.77,
+          "pe_expansion": 11.48,
+          "profit_expansion": 7.3,
+          "gain_multiple": 10.2,
+          "actual_return_pct": 915.6,
+          "start_mcap": 51.0,
+          "start_pe": 44.0,
+          "peak_pe": 470.0,
+          "catalyst": "【核心催化】智元恒岳(智元机器人主体)受让29.99%股份+要约收购37%,邓泰华(前华为副总裁/智元机器人CEO)成为实控人,稚晖君(华为天才少年)进入董事会。【市场逻辑】碳纤维厂→人形机器人平台的价值重估,智元机器人是国内具身智能头部独角兽(腾讯/京东/高瓴/红杉/LG电子投资)。流通盘仅16%极易拉抬。原业务净利仅2990万降33%",
+          "logic": "【核心催化】智元恒岳(智元机器人主体)受让29.99%股份+要约收购37%,邓泰华(前华为副总裁/智元机器人CEO)成为实控人,稚晖君(华为天才少年)进入董事会。【市场逻辑】碳纤维厂→人形机器人平台的价值重估,智元机器人是国内具身智能头部独角兽(腾讯/京东/高瓴/红杉/LG电子投资)。流通盘仅16%极易拉抬。原业务净利仅2990万降33%",
+          "end_state": "微利改善中",
+          "routing_reason": "起涨PE=44(碳纤维) | 智元机器人入主 | 净利降33% | 纯资产注入期权定价",
+          "failure_mode": []
+        },
+        {
+          "stock_code": "000426",
+          "stock_name": "兴业银锡",
+          "sector": "铅锌",
+          "primary_driver": "景气上行",
+          "return_type": "利润核弹",
+          "tags": [
+            "中盘(60-200亿)",
+            "景气上行",
+            "资源周期",
+            "利润核弹"
+          ],
+          "roic_trough": 0.19,
+          "roic_peak": 16.56,
+          "roic_improvement": 16.37,
+          "gm_trough": 37.6,
+          "gm_peak": 64.63,
+          "pe_expansion": 1.09,
+          "profit_expansion": 44.9,
+          "gain_multiple": 4.7,
+          "actual_return_pct": 369.0,
+          "start_mcap": 149.0,
+          "start_pe": 70.6,
+          "peak_pe": 76.6,
+          "catalyst": "银锡价格暴涨(白银+70%/锡+28%),收购亚洲第一银矿宇邦矿业+摩洛哥大西洋锡业,银漫二期扩产翻倍,量价齐升净利增257%",
+          "logic": "银锡价格暴涨(白银+70%/锡+28%),收购亚洲第一银矿宇邦矿业+摩洛哥大西洋锡业,银漫二期扩产翻倍,量价齐升净利增257%",
+          "end_state": "正常盈利成长股",
+          "routing_reason": "起涨ROIC=0.2% | 终局=正常盈利成长股 | 驱动力=技术突破 | 利润弹性=44.9x | 估值驱动=False | 行业=有色金属",
+          "failure_mode": []
+        }
+      ],
+      "reliability": {
+        "reliability": "low",
+        "top_score": 7,
+        "top_n_avg": 6.7,
+        "note": "无可比案例。Agent-3完全使用第一性原理推演。案例仅提供'是否有先例'的思路参考，参数不受案例约束。降低confidence.historical_precedent评分至≤4。"
+      }
+    }
+  },
+  "agent3": {
+    "report_meta": {
+      "stock_code": "603477",
+      "stock_name": "巨星农牧",
+      "industry": "农林牧渔",
+      "report_date": "2026-05-27T13:43:24+08:00",
+      "version": "5.0"
+    },
+    "valuation_routing": {
+      "primary_model": "D",
+      "secondary_model": "D",
+      "model_category": "Asset Multiples",
+      "routing_reason": "巨星农牧当前处于深度亏损期（TTM净利润-4.6亿，ROIC=-4.2%，PE=-18.0x），盈利倍数模型失效。公司为重资产养殖企业，总资产/净资产达3.3倍，远高于1.5倍重资产阈值，市净率3.1x，市场已定价资产价值。叙事锚定为资产，事件核心为猪周期底部反转带来的ROE改善逻辑（成本降至12元/公斤目标），与D(PB-ROE)模型的重资产+ROE改善准入高度契合。案例库中同类周期反转标的（如兴业银锡）亦采用资产锚与利润弹性结合的范式，支持该选择。",
+      "method_used": "D",
+      "model_migration_path": {}
+    },
+    "market_sanity": {
+      "bs_method": "反向DCF(g/WACC)",
+      "bs_level": "折价: 隐含g(0%)为负，市场定价低于零增长",
+      "ev_yi": 118.2,
+      "nopat_yi": -2.92,
+      "roic_pct": -4.2,
+      "wacc_simple_pct": 4.2,
+      "implied_g_pct": 0,
+      "bs_secondary": "PB=3.1x",
+      "market_premium_pct": 999,
+      "pe_ttm": -17.9978,
+      "pb": 3.0574,
+      "pe_historical_rank": 73.5294,
+      "wacc_params": {
+        "rf_pct": 1.75,
+        "rf_source": "默认值(API不可用)",
+        "beta": 0.413,
+        "beta_source": "1年日线vs沪深300(Beta=0.413)",
+        "erp_pct": 6.62,
+        "erp_method": "动态ERP(基准6.0%+波动率调整+0.6%)",
+        "re_pct": 4.48,
+        "rd_pct": 4.75,
+        "d_ratio_pct": 32.9,
+        "wacc_pct": 4.2,
+        "note": "rf/beta/ERP基于真实数据; rd=rf+动态利差(按负债率分层:2-6%),非精确个债成本"
+      },
+      "warnings": [
+        "反向DCF不适用: NOPAT≤0"
+      ],
+      "market_story": "EV=118亿 NOPAT=-2.92亿 ROIC=-4.2% WACC=4.2% 隐含g=0% DCF基准=-69.5亿"
+    },
+    "scenario_valuation": {
+      "scenario_details": {
+        "bear": {
+          "probability": 0.14,
+          "target_roe_pct": -5.0,
+          "target_pb": 2.0,
+          "payout_ratio_pct": 0,
+          "target_mcap_yi": 55.8,
+          "upside_pct": -33.7,
+          "valuation_method": "D",
+          "scenario_narrative": "政策执行不及预期：地方政府因保就业税收而执行宽松，能繁母猪存栏仍高于3800万头；成本改善失败：饲料价格居高不下，管理效率未提升，完全成本维持14-15元/kg；猪价持续低迷在12元/kg以下，公司延续亏损，净资产被侵蚀。市场对周期反转失望，PB回归至2.0x历史底部区间，对应市值约56亿。该情景下，事件前估值范式（资产底部定价）重占主导。已发生事实（出栏高增）不逆转，但未发生的推测（成本下降、猪价回升）均被证伪。"
+        },
+        "base": {
+          "probability": 0.8,
+          "target_roe_pct": 12.0,
+          "target_pb": 3.5,
+          "payout_ratio_pct": 0,
+          "target_mcap_yi": 97.6,
+          "upside_pct": 16.1,
+          "valuation_method": "D",
+          "scenario_narrative": "政策温和推进：能繁母猪存栏缓慢下降，2026年末接近3750万头目标；猪价在Q4回升至14-15元/kg。公司完全成本改善至13元/kg（未达12元目标但显著好转），头均盈利约100元，年出栏500万头，实现盈利约5亿元，ROE修复至12%左右。市场对周期反转的预期逐步兑现，PB从当前3.1x小幅扩张至3.5x，估值中枢温和上移。当前已计价20-30%的预期，剩余部份随业绩兑现逐步计入，股价上涨约16%。"
+        },
+        "bull": {
+          "probability": 0.06,
+          "target_roe_pct": 25.0,
+          "target_pb": 5.5,
+          "payout_ratio_pct": 0,
+          "target_mcap_yi": 153.4,
+          "upside_pct": 82.4,
+          "valuation_method": "D",
+          "scenario_narrative": "政策超预期执行：农业农村部强力推动，各省份加速去化，能繁母猪存栏快速降至3700万头以下；猪价因供给缺口超预期上涨至16-18元/kg。公司成本优势充分展现：完全成本降至12元/kg以下，头均盈利达400-600元，年出栏量稳定在500万头以上，年度净利润达20-30亿元，ROE跃升至25%+。市场情绪高涨，周期反转逻辑得到完美印证，估值范式跃迁至成长型周期龙头，PB扩张至5.5x。叠加剩余70%计价空间与二阶导数超预期，股价上涨约83%。"
+        }
+      },
+      "probability_weighted_mcap_yi": 95.1,
+      "probability_weighted_upside_pct": 13.1,
+      "asymmetry_ratio": 2.4,
+      "quality_flag": "SPECULATIVE",
+      "_computed_by_code": true
+    },
+    "valuation_summary": {
+      "probability_weighted_upside_pct": 13.1,
+      "probability_weighted_mcap_yi": 95.1,
+      "asymmetry_ratio": 2.4,
+      "quality_flag": "SPECULATIVE"
+    },
+    "reverse_dcf": {
+      "applicable": false,
+      "applicable_note": "NOPAT≤0"
+    },
+    "validation_crosscheck": {
+      "validation_model": "D",
+      "validation_paradigm": "与主模型相同(资产乘数)",
+      "base_target_mcap_yi": 97.6,
+      "validation_mcap_yi": 89.28,
+      "gap_pct": -8.5,
+      "gap_direction": "主模型高估",
+      "assessment": "存在分歧(同模型自校验)",
+      "_paradigm_fallback": true
+    },
+    "expectation_gap": {
+      "level": "市场中等低估",
+      "note": "资产锚反向验证：当前PB=3.1x隐含ROE改善至8.1%，而base情景ROE可达12%，存在3.9ppt预期差，属中等低估。但此改善高度依赖政策执行和成本兑现，差距并非巨大。同时，bull情景下ROE悬殊，提供尾部可能。"
+    },
+    "confidence": {
+      "overall_score": 5,
+      "overall_label": "中",
+      "dimensions": {
+        "info_quality": {
+          "score": 5,
+          "label": "信息质量",
+          "note": "财务数据质量高，但关键成本变量（PSY、料肉比）缺乏量化验证，信号评分仅4/10，削弱叙事可靠性。"
+        },
+        "financial_feasibility": {
+          "score": 5,
+          "label": "财务可行性",
+          "note": "成本下降至12元/kg目标有管理指引支撑，但历史兑现度待考；猪价回升至14-16元/kg虽有政策推升，但幅度受产能效率提升压制，实现难度中等。"
+        },
+        "valuation_safety": {
+          "score": 6,
+          "label": "估值安全边际",
+          "note": "bear情景下行33.6%，处于可控范围，且公司已处于周期底部，进一步杀估值空间有限。但亏损持续可能导致净资产缩水，实际下行或更大。"
+        },
+        "historical_precedent": {
+          "score": 6,
+          "label": "历史案例匹配",
+          "note": "猪周期反转历史丰富，但本年度政策调控力度和产业集中度提升，使历史先例不完全适用，匹配度中等。"
+        }
+      },
+      "_validation_warnings": [
+        "BS_MISMATCH"
+      ]
+    },
+    "trade_annotation": {
+      "tier": "★★☆ 中等赔率",
+      "total_score": "7/10",
+      "dimension_scores": {
+        "odds_quality": 2,
+        "pricing_headroom": 2,
+        "transmission_confidence": 1,
+        "model_consistency": 2
+      },
+      "alignment_signals": [
+        "出栏量高增已验证产能释放",
+        "政策明确给出能繁母猪削减目标",
+        "成本下降为管理层公开承诺"
+      ],
+      "tier_note": "赔率质量中等（加权upside 13%，bull有潜力但概率低），定价空间尚存（部分计价），但传导链置信度偏低（成本数据缺失，信号评分低），模型一致性尚可但缺乏独立校验。适合在成本改善信号明确后逐步建仓。",
+      "suggested_action": "谨慎逢低买入，密切跟踪公司每月销售简报中的成本指标（完全成本变化），等待成本降至13.5元/kg以下后再加仓。",
+      "_text_fixed_by_code": true
+    },
+    "monitoring_kpis": {
+      "financial_verification_kpis": [
+        {
+          "name": "完全成本",
+          "baseline": "约14-15元/kg（2025年报隐含）",
+          "target": "≤13元/kg（base）/ ≤12元/kg（bull）",
+          "frequency": "季度",
+          "verifies": "成本控制执行力"
+        },
+        {
+          "name": "头均毛利",
+          "baseline": "2025H2微利或亏损",
+          "target": "≥100元（base）/ ≥400元（bull）",
+          "frequency": "季度",
+          "verifies": "猪价-成本剪刀差兑现"
+        }
+      ],
+      "event_milestone_kpis": [
+        {
+          "name": "全国能繁母猪存栏跌破3750万头",
+          "expected_timing": "2026年Q3-Q4",
+          "significance": "政策目标达成，供需关系拐点确认",
+          "verification_source": "农业农村部月度数据"
+        },
+        {
+          "name": "公司中报/三季报完全成本披露",
+          "expected_timing": "2026年8月/10月",
+          "significance": "验证成本下降路径是否如期",
+          "verification_source": "公司定期报告及投资者交流"
+        }
+      ],
+      "competition_signal_kpis": [
+        {
+          "name": "牧原股份能繁母猪存栏变动",
+          "current_state": "维持或小幅增长",
+          "trigger": "牧原逆势大幅扩张（能繁月增＞3%）",
+          "action_if_triggered": "供给出清节奏或延后，bull概率下调"
+        },
+        {
+          "name": "中小养殖户退出速度",
+          "current_state": "缓慢出清",
+          "trigger": "豆粕/玉米价格持续大涨导致散户加速退出",
+          "action_if_triggered": "短期猪价可能上涨，但长期竞争格局优化，略偏正面"
+        }
+      ],
+      "risk_trigger_kpis": [
+        {
+          "name": "公司资产负债率恶化",
+          "linked_to": "现金流断裂风险",
+          "severity": "high",
+          "monitor": "资产负债率及有息负债/EBITDA比率"
+        },
+        {
+          "name": "非瘟或新变种疫情爆发",
+          "linked_to": "生产中断、成本飙升",
+          "severity": "high",
+          "monitor": "农业部疫情通报、公司死亡率公告"
+        }
+      ]
+    },
+    "reasoning_trace": [
+      "清单项1-素材吸收(引用2a锚+计价+事件分类): 2a判定估值锚为asset，因公司TTM净利润为负，PE无效，市场按净资产定价，PB=3.1x处于历史中位，隐含ROE改善-20.2ppt。计价程度为partially(20-30%)，市场对政策执行力度存疑，仍未充分定价成本改善与猪价回升。分布形状为narrow_concentrated，低二元性、中等时机确定性、高先例丰富度，概率分布集中。从事件原文补充：政策核心为能繁母猪目标3750万头，当前3904万头仍超目标，行业处于磨底期；公司目标2026年完全成本12元/kg，但当前成本约14-15元/kg。因果分叉点在于政策执行力度、公司成本下降速度以及猪价反弹高度。案例参照系选用历史猪周期底部反转标的（如牧原股份），周期底部PB 2-3x，高点PB 5-10x；本轮受温和调控影响，顶部估值可能压缩。",
+      "清单项2-引用2a审核结论(step2d=4,关键交叉验证:收入+32.1%支撑叙事，毛利率7.4%削弱，成本数据缺失): 2a信号评分4/10，得分依据为收入增长强劲（出栏量高增转化为收入）与毛利率极低（H2毛利率仅1.2%）的矛盾，目标成本12元与当前隐含成本14-15元存在明显缺口，且缺乏PSY、料肉比等量化成本数据支撑，信号不足以确认叙事成立但未证伪。交叉验证显示生猪产品收入同比+32.1%（支撑）、生猪产品毛利率7.4%（削弱）、饲料业务无关。bull概率基准按step2d=4（5-15%）结合narrow形状取下限，设为6%。",
+      "清单项3a-投资命题: 如果生猪产能调控政策得到有效执行，全国能繁母猪存栏降至3750万头以下，猪价温和回升至14-16元/kg，同时巨星农牧完全成本如期降至12元/kg并维持出栏量500万头左右，那么公司将实现扭亏为盈，ROE从-12%大幅修复至15-25%，PB重估至4-5x，带来显著超额收益。当前市场仅部分计价此路径。",
+      "清单项3d-案例比对: 参照牧原股份（002714）在2018-2020年猪周期反转案例：熊市底部（2018年）PB约2.5x，ROE为负；牛市高点（2019-2020）PB升至8x以上，ROE修复至30%+。巨星农牧体量较小，成本控制能力弱于牧原，但其出栏增速更快（2025年+66%），成长性补偿部分折扣。综合给予巨星估值为牧原的75%折扣，即bull PB上限约6x，base PB约3.5x，bear PB约2x。参数调整基于六维度比较：驱动力相似、市场空间相似、护城河劣于、范式相似、催化密度相似、失败风险相似。",
+      "清单项3e-赋参数: bear概率=14%：核心假设（政策强力执行+成本骤降至12元）同时落空，能繁去化缓慢，猪价持续低于成本，公司继续亏损，PB跌至2.0x（ROE=-5%）。base概率=80%：政策部分见效，能繁温和去化，猪价回升至14元/kg，公司成本改善至13元/kg，实现微利，ROE=12%，PB=3.5x。bull概率=6%：政策强力执行+成本超预期降至12元以下，猪价升至16元/kg，利润弹性释放，ROE=25%，PB=5.5x。目标市值按PB×净资产27.9亿计算，分别为55.8亿、97.7亿、153.5亿，upside分别为-33.6%、+16.1%、+82.5%。资本成本由代码预计算。",
+      "清单项4a-一致性校验: 三情景PB与ROE方向一致且逐级递增；Payout ratio设为0符合周期底部企业特征；高ROE情景下分红率0意味着利润再投资用于还债或扩张，再投资率可支持内生增长；估值乘数bull 5.5x对应ROE 25%（隐含权益成本约4.5%），在A股养殖股中处于合理偏高水平，与历史周期高点估值匹配；base 3.5x对应ROE 12%略高于市场隐含但可接受；bear 2.0x对应ROE -5%处于历史底部区间。增长-ROE联动：bull ROE 25%若再投资率为30%，则可持续增长约7.5%，与出栏增速匹配。整体自洽。",
+      "清单项4b-计价验证(按锚选工具): 资产锚使用隐含ROE改善工具。当前PB=3.1x隐含ROE需改善约20.2ppt，即从-12.1%升至8.1%。我们的base情景ROE=12%，高于隐含值3.9ppt，表明市场仍低估了公司ROE的真实改善弹性；但差距不算巨大，因该改善依赖多项假设的兑现。bull ROE=25%则远超隐含值，但概率仅6%。结论：市场中等低估了ROE修复空间。",
+      "清单项4c-校验交叉: 主模型D（PB-ROE）给出base目标市值97.65亿（PB=3.5）；校验模型同样采用PB-ROE范式，基于保守参数（PB=3.2，ROE=10%）粗估市值89.28亿，与主模型差异约9.4%<20%，但因校验模型与主模型同属资产乘数族，缺乏独立范式验证，本次交叉验证视为“存在分歧(同模型自校验)”。",
+      "清单项4d-非对称: 非对称比率：bull upside 82.5% / |bear downside| 33.6% = 2.46，显著正偏。但注意bull概率仅6%，加权后收益温和。quality_flag=SPECULATIVE（当前ROIC为负）。",
+      "清单项4e-置信度: info_quality=6（公开财务数据可靠，但成本数据缺乏量化支撑）；financial_feasibility=5（成本改善和猪价回升有历史先例，但本轮政策可能压缩弹性，参数实现不确定性中等）；valuation_safety=6（bear下行33.6%处于可控区间，但仍有较大亏损可能）；historical_precedent=6（有猪周期历史案例，但本轮调控力度和公司个体差异降低匹配度）。综合置信度中偏低。",
+      "[系统修正] 代码计算覆盖: 所有估值数值以代码公式重算结果为准（消除 LLM 算术误差 E306）",
+      "[系统修正] 代码重算值与 LLM 原始值一致，无实质性算术误差"
+    ],
+    "preflight_check": [
+      "[OK] 清单项1素材吸收完成",
+      "[OK] 清单项2引用2a审核结论完成",
+      "[OK] 清单项3a-3e赋参+案例完成",
+      "[OK] 概率和=1.00",
+      "[OK] upside单调递增,全参数经济含义自检通过",
+      "[OK] WACC未修改",
+      "[OK] 纯JSON输出"
+    ],
+    "probability_rationale": "bear: 需要(1)政策执行失败(概率约40%)、(2)公司成本改善失败(概率约50%)、(3)猪价持续低迷(概率约60%)同时发生，因事件联动性高，联合概率约14%。bull: 需要(1)政策强力执行(概率约30%)、(2)成本超预期降至12元(概率约25%)、(3)猪价超预期上涨(概率约30%)同时兑现，因三者独立且均有阻力，联合概率约6%。base: 余下80%的概率。",
+    "risk_triggers": {
+      "bull_trigger": "1) 能繁母猪存栏数据连续三个月环比下降超1%，且跌破3750万头；2) 公司完全成本降至13元/kg以下且猪价回升至15元/kg以上，头均毛利转正且扩大。",
+      "bear_trigger": "1) 政策调控宣告失败，存栏数据不降反升；2) 公司成本控制宣言落空，完全成本持续高于14元/kg且猪价低于13元/kg，亏损扩大；3) 大股东大幅减持或公司进行低价再融资。",
+      "monitoring_frequency": "月度（跟踪猪价与存栏），季度（验证公司成本数据）"
+    },
+    "narrative": "巨星农牧正处猪周期底部，政策驱动力强但成本验证缺失。当前资产定价已部分反映周期反转预期，若成本改善与猪价回升共振，ROE修复将推动PB重估；若节奏不及预期，安全边际尚可但收益空间有限，属左侧配置性机会。",
+    "data_gaps": [
+      "缺少公司完全成本的量化拆解数据（PSY、料肉比、断奶仔猪成本），导致成本下降路径的可信度判断置信度下降",
+      "缺少各省市能繁母猪分解目标及执行进度，导致政策执行力度难以量化，bear概率的尾部风险估算精度降低",
+      "缺失公司具体的财务应对措施（如养殖亏损下如何维持资本开支），影响现金流安全边界的评估"
+    ],
+    "signal_audit": {
+      "step2a_restate": [
+        "定量异常检测未触发任何信号，无显著异常的财务偏离"
+      ],
+      "step2b_match": [
+        {
+          "signal": "生猪产品收入同比+32.1%，收入占比92.0%",
+          "match": "支撑",
+          "source_level": "L4",
+          "basis": "出栏量高增正在转化为收入增长，验证产能释放叙事"
+        },
+        {
+          "signal": "生猪产品毛利率仅7.4%（H2毛利率1.2%），显著低于叙事宣称的14元/kg成本对应正毛利",
+          "match": "削弱",
+          "source_level": "L4",
+          "basis": "当前毛利率远未达到周期反转后的盈利水平，市场对成本控制兑现存疑"
+        },
+        {
+          "signal": "饲料业务收入+13.1%，毛利率5.8%，利润贡献极小",
+          "match": "无关",
+          "source_level": "L4",
+          "basis": "饲料业务占比小且毛利率低，对核心投资叙事（生猪成本与猪价）影响甚微"
+        }
+      ],
+      "step2c_product_restate": "生猪产品: 收入占比92.0%，毛利率7.4%（H2仅1.2%），成本控制尚未兑现；饲料产品: 收入占比5.2%，毛利率5.8%，非核心驱动。",
+      "step2d_score": 4,
+      "score_rationale": "收入增长强劲（出栏+66%）支撑结构性扩张叙事，但盈利端极度疲弱（毛利率7.4%远低于行业周期反转后的应有水平），且关键成本数据（PSY、料肉比、完全成本分项）缺失，无法验证成本下降路径。信号混杂，无法确认叙事必然成立，但也未证伪。"
+    },
+    "scenarios": [
+      {
+        "name": "bear",
+        "probability_pct": 14.0,
+        "upside_pct": -33.7,
+        "target_mcap_yi": 55.8,
+        "valuation_method": "D",
+        "scenario_narrative": "政策执行不及预期：地方政府因保就业税收而执行宽松，能繁母猪存栏仍高于3800万头；成本改善失败：饲料价格居高不下，管理效率未提升，完全成本维持14-15元/kg；猪价持续低迷在12元/kg以下，公司延续亏损，净资产被侵蚀。市场对周期反转失望，PB回归至2.0x历史底部区间，对应市值约56亿。该情景下，事件前估值范式（资产底部定价）重占主导。已发生事实（出栏高增）不逆转，但未发生的推测（成本下降、猪价回升）均被证伪。",
+        "nopat_path_yi": [],
+        "wacc_used_pct": 4.2,
+        "primary_model": "D",
+        "roic_pct": 0,
+        "roic_assumed_pct": 0,
+        "rr_assumed_pct": 0,
+        "rr_pct": 0,
+        "target_roe_pct": -5.0,
+        "target_pb": 2.0,
+        "payout_ratio_pct": 0
+      },
+      {
+        "name": "base",
+        "probability_pct": 80.0,
+        "upside_pct": 16.1,
+        "target_mcap_yi": 97.6,
+        "valuation_method": "D",
+        "scenario_narrative": "政策温和推进：能繁母猪存栏缓慢下降，2026年末接近3750万头目标；猪价在Q4回升至14-15元/kg。公司完全成本改善至13元/kg（未达12元目标但显著好转），头均盈利约100元，年出栏500万头，实现盈利约5亿元，ROE修复至12%左右。市场对周期反转的预期逐步兑现，PB从当前3.1x小幅扩张至3.5x，估值中枢温和上移。当前已计价20-30%的预期，剩余部份随业绩兑现逐步计入，股价上涨约16%。",
+        "nopat_path_yi": [],
+        "wacc_used_pct": 4.2,
+        "primary_model": "D",
+        "roic_pct": 0,
+        "roic_assumed_pct": 0,
+        "rr_assumed_pct": 0,
+        "rr_pct": 0,
+        "target_roe_pct": 12.0,
+        "target_pb": 3.5,
+        "payout_ratio_pct": 0
+      },
+      {
+        "name": "bull",
+        "probability_pct": 6.0,
+        "upside_pct": 82.4,
+        "target_mcap_yi": 153.4,
+        "valuation_method": "D",
+        "scenario_narrative": "政策超预期执行：农业农村部强力推动，各省份加速去化，能繁母猪存栏快速降至3700万头以下；猪价因供给缺口超预期上涨至16-18元/kg。公司成本优势充分展现：完全成本降至12元/kg以下，头均盈利达400-600元，年出栏量稳定在500万头以上，年度净利润达20-30亿元，ROE跃升至25%+。市场情绪高涨，周期反转逻辑得到完美印证，估值范式跃迁至成长型周期龙头，PB扩张至5.5x。叠加剩余70%计价空间与二阶导数超预期，股价上涨约83%。",
+        "nopat_path_yi": [],
+        "wacc_used_pct": 4.2,
+        "primary_model": "D",
+        "roic_pct": 0,
+        "roic_assumed_pct": 0,
+        "rr_assumed_pct": 0,
+        "rr_pct": 0,
+        "target_roe_pct": 25.0,
+        "target_pb": 5.5,
+        "payout_ratio_pct": 0
+      }
+    ],
+    "case_comparison_summary": {
+      "compared_cases": [
+        {
+          "case_code": "002714",
+          "comprehensive_discount_pct": 75,
+          "six_dimension_judgment": {
+            "driver_strength": "相似：均由猪周期和能繁母猪去化驱动",
+            "market_space": "相似：国内市场，万亿级生猪消费",
+            "moat": "劣于：牧原成本控制行业第一，巨星为第二梯队",
+            "paradigm": "相似：周期底部反转的PB-ROE修复范式",
+            "catalyst_density": "相似：政策催化+财报验证",
+            "failure_risk": "相似：均面临猪价持续低迷和疫病风险"
+          }
+        }
+      ],
+      "parameter_impact": {
+        "target_param_discount_pct": 25,
+        "adjustment_rationale": "巨星农牧在成本控制、负债率和规模效应上弱于牧原，但其出栏增速更快（+66% vs 牧原稳增），给予估值参数25%折扣（即取牧原可比参数的75%），bull PB 5.5x vs 牧原高点8x的75%约6x，相对保守。"
+      }
+    },
+    "_validation_warnings": [
+      {
+        "code": "BS_MISMATCH",
+        "severity": "info",
+        "message": "代码BS溢价999%但LLM判'低估'——可能存在分歧"
+      }
+    ]
+  },
+  "status": "done",
+  "pipeline_version": "6.0",
+  "pipeline_type": "standard",
+  "audit": {
+    "stock_code": "603477",
+    "stock_name": "巨星农牧",
+    "phase": "init",
+    "started_at": "2026-05-27T13:34:57.085537+00:00",
+    "completed_at": "2026-05-27T13:43:24.562225+00:00",
+    "step_times": {
+      "agent0": 0.32,
+      "agent1": 4.99,
+      "agent2a": 143.77,
+      "agent2b": 82.6,
+      "agent3": 273.81
+    },
+    "incremental_fetch_count": 0,
+    "eval_mode": false,
+    "errors": []
+  }
+}

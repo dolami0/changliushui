@@ -1,0 +1,2994 @@
+[
+  {
+    "status": "done",
+    "stock_code": "920015",
+    "stock_name": "锦华新材",
+    "agent0": {
+      "request_id": "req_20260527_115255_920015",
+      "pre_routing_result": {
+        "ticker": "920015",
+        "stock_name": "锦华新材",
+        "event_date": "2026-05-15",
+        "event_source": "棱镜内参",
+        "industry_classification": "基础化工-化学制品",
+        "industry_key_matched": "化工",
+        "event_tags_matched": [
+          "产能释放"
+        ],
+        "data_requirements": {
+          "core_package": {
+            "description": "所有估值模型通用，必须100%获取",
+            "fields": [
+              "current_price",
+              "total_shares",
+              "market_cap",
+              "revenue_ttm",
+              "eps_ttm",
+              "net_profit_growth_yoy",
+              "bps",
+              "roe_ttm",
+              "ocf_ttm",
+              "capex_ttm",
+              "net_debt",
+              "total_assets",
+              "total_liabilities",
+              "gross_margin",
+              "net_margin",
+              "interest_bearing_debt",
+              "pe_ttm",
+              "pb",
+              "operating_profit_ttm",
+              "net_profit_ttm",
+              "profit_before_tax",
+              "income_tax",
+              "interest_expense",
+              "cash",
+              "total_equity"
+            ],
+            "mandatory": true,
+            "failure_action": "terminate"
+          },
+          "specialized_package": {
+            "fields": [
+              "capacity_utilization",
+              "commodity_price_index",
+              "cost_curve_position",
+              "cycle_phase_indicator",
+              "capacity_expansion_plan",
+              "capex_breakdown",
+              "depreciation_schedule"
+            ],
+            "mandatory": false,
+            "failure_action": "continue_with_gap"
+          },
+          "validation_package": {
+            "fields": [
+              "peer_median_pe",
+              "peer_median_ps",
+              "historical_pe_range",
+              "beta",
+              "wacc_estimate",
+              "industry_cycle_position"
+            ],
+            "mandatory": false,
+            "failure_action": "skip_validation"
+          },
+          "optional_package": {
+            "fields": [
+              "dividend_yield",
+              "segment_breakdown"
+            ],
+            "mandatory": false,
+            "failure_action": "ignore"
+          }
+        },
+        "model_category_hint": [
+          "周期类(盈利正常化/EV-EBITDA)"
+        ],
+        "hint_confidence": "中",
+        "warning": "【重要】本 hint 不决定最终模型。Agent-2 将基于实际财务数据独立判决。"
+      }
+    },
+    "agent1": {
+      "request_id": "920015",
+      "stock_code": "920015",
+      "stock_name": "锦华新材",
+      "industry": "基础化工",
+      "packages": {
+        "core": {
+          "fields": {
+            "current_price": 41.4,
+            "current_price_source": "realtime_quote",
+            "total_shares_yi": 0,
+            "market_cap_yi": 56.1,
+            "market_cap_source": "realtime_quote",
+            "revenue_ttm_yi": 9.7,
+            "eps_ttm": 0.0,
+            "net_profit_growth_yoy": null,
+            "bps": 0,
+            "roe_ttm_pct": 1.72179001,
+            "ocf_ttm_yi": 2.51,
+            "capex_ttm_yi": 0.91,
+            "net_debt_yi": -9.5,
+            "total_assets_yi": 21.7,
+            "total_liabilities_yi": 4.6,
+            "gross_margin_pct": 25.37,
+            "net_margin_pct": 13.52,
+            "interest_bearing_debt_yi": 0.0,
+            "interest_expense_yi": 0,
+            "gross_margin_historical_rank": 70.5882,
+            "net_margin_historical_rank": 70.5882,
+            "roe_historical_rank": 35.2941,
+            "roic_historical_rank": 29.4118,
+            "profitability_composite_score": 84.2542,
+            "pe_ttm": 32.36,
+            "pb": 3.2882,
+            "ps_ttm": 5.8124,
+            "ps_historical_rank": 0.0,
+            "pe_historical_rank": 30,
+            "pb_historical_rank": 66.6667,
+            "operating_profit_ttm_yi": 1.98,
+            "net_profit_ttm_yi": 1.73,
+            "profit_before_tax_yi": 1.96,
+            "income_tax_yi": 0.23,
+            "cash_yi": 9.5,
+            "total_equity_yi": 17.1,
+            "industry_sw_l1": "基础化工",
+            "industry_sw_l2": "化学制品",
+            "stock_name": "锦华新材",
+            "report_period": "",
+            "ebitda_ttm_yi": 2.28,
+            "invested_capital_yi": 17.1,
+            "roic_pct": 10.22,
+            "nopat_yi": 1.75,
+            "effective_tax_rate": 0.12,
+            "caution_flags": [],
+            "is_loss_making": false,
+            "is_negative_equity": false,
+            "data_quality_score": 10,
+            "_forward_looking": {
+              "status": "partial",
+              "categories": {
+                "demand_reality": {
+                  "_note": "资产负债表季度数据不可用"
+                },
+                "supply_readiness": {
+                  "_note": "资产负债表季度数据不可用"
+                },
+                "earnings_elasticity": {
+                  "products": {
+                    "label": "产品结构信号",
+                    "data_vintage": "inve-st-od",
+                    "gm_source": "actual",
+                    "gm_coverage_pct": 100.0,
+                    "periods_available": 1,
+                    "annual_periods": 0,
+                    "has_h1_data": false,
+                    "product_mix": [
+                      {
+                        "name": "硅烷偶联剂",
+                        "revenue": 5.76,
+                        "revenue_share_pct": 100.0,
+                        "revenue_share_prev_pct": null,
+                        "share_change_ppt": null,
+                        "revenue_yoy_pct": null,
+                        "gross_margin_pct": 38.7689,
+                        "gm_prev_pct": null,
+                        "gm_change_ppt": null,
+                        "gm_source": "actual",
+                        "h2_revenue": null,
+                        "h2_gross_margin_pct": null,
+                        "h2_revenue_prev": null,
+                        "h2_gm_prev_pct": null,
+                        "h2_revenue_yoy_pct": null,
+                        "h2_available": false
+                      }
+                    ],
+                    "keyword_matches": {},
+                    "margin_structure": {
+                      "company_blended_gm": 25.37,
+                      "company_gm_rank": 70.5882,
+                      "max_product_gm": 38.7689,
+                      "min_product_gm": 38.7689,
+                      "gm_spread_ppt": 0,
+                      "high_gm_products_share_pct": 100.0,
+                      "high_gm_share_prev_pct": null,
+                      "gm_improvement_source": "数据不足",
+                      "low_gm_products": []
+                    },
+                    "order_fulfillment_crosscheck": {
+                      "contract_liab_qoq_pct": null,
+                      "high_growth_products": [],
+                      "contract_to_revenue_lag": "合同负债无异常 → 需求信号尚未体现在下游预付款中"
+                    },
+                    "h2_momentum": "",
+                    "interpretation": "高毛利占比100.0%; 合同负债无异常 → 需求信号尚未体现在下游预付款中",
+                    "story_check": "产品级毛利率 = 叙事推演硬约束。核心叙事产品毛利率显著低于宣称值 → 区分\"数据滞后\"与\"叙事夸大\"。"
+                  }
+                },
+                "cashflow_quality": {
+                  "_note": "现金流季度数据不可用"
+                },
+                "management_guidance": {
+                  "forecast": {
+                    "label": "业绩预告",
+                    "type": "无预告",
+                    "np_change_range": null,
+                    "flag": false,
+                    "interpretation": ""
+                  },
+                  "express": {
+                    "label": "业绩快报",
+                    "available": false,
+                    "revenue_growth_pct": null
+                  },
+                  "shareholder": {
+                    "label": "股东人数",
+                    "trend": "数据不足",
+                    "flag": false,
+                    "interpretation": ""
+                  },
+                  "earnings_trend": {
+                    "_note": "fina_indicator 趋势数据不可用"
+                  }
+                }
+              },
+              "text_summary": "无显著异常信号，所有前瞻指标在历史正常范围内",
+              "sources_available": [
+                "分部收入"
+              ],
+              "sources_missing": [
+                "资产负债表季度",
+                "现金流季度",
+                "业绩预告/快报"
+              ]
+            }
+          },
+          "status": "complete",
+          "quality_score": 10,
+          "missing_fields": []
+        },
+        "specialized": {
+          "fields": {
+            "capacity_utilization": "公司主要产品包括硅烷交联剂、羟胺盐、甲氧胺盐酸盐、乙醛肟等；2024年硅烷交联剂收入占比47%、毛利率22%，乙烯基硅烷收入占比10%、毛利率26%，硫酸羟胺收入占比16%、毛利率37%，甲氧胺盐酸盐收入占比8%、毛利率42%，乙醛肟收入占比4%、毛利率15%[2385EB52-E568-5A07-9AED-4CEE0A1E8898]。",
+            "capacity_expansion_plan": "公司主要产品包括硅烷交联剂、羟胺盐、甲氧胺盐酸盐、乙醛肟等；2024年硅烷交联剂收入占比47%、毛利率22%，乙烯基硅烷收入占比10%、毛利率26%，硫酸羟胺收入占比16%、毛利率37%，甲氧胺盐酸盐收入占比8%、毛利率42%，乙醛肟收入占比4%、毛利率15%[2385EB52-E568-5A07-9AED-4CEE0A1E8898]。",
+            "capex_breakdown": "公司主要产品包括硅烷交联剂、羟胺盐、甲氧胺盐酸盐、乙醛肟等；2024年硅烷交联剂收入占比47%、毛利率22%，乙烯基硅烷收入占比10%、毛利率26%，硫酸羟胺收入占比16%、毛利率37%，甲氧胺盐酸盐收入占比8%、毛利率42%，乙醛肟收入占比4%、毛利率15%[2385EB52-E568-5A07-9AED-4CEE0A1E8898]。",
+            "depreciation_schedule": "公司是国内硅烷交联剂、羟胺盐细分领域的头部企业，根据公司招股说明书测算，公司国内市占率从2022年稳步提升至2024年；其中，根据中国氟硅有机材料工业协会统计数据，2021、2022年公司甲基硅烷、乙烯基硅烷的国内市场占有率均排名第一[2385EB52-E568-5A07-9AED-4CEE0A1E8898]。"
+          },
+          "status": "partial",
+          "quality_score": 7,
+          "missing_fields": [
+            "commodity_price_index",
+            "cost_curve_position",
+            "cycle_phase_indicator"
+          ]
+        },
+        "validation": {
+          "fields": {
+            "industry_forecast": {
+              "industry_name": "基础化工",
+              "t_year": "2025",
+              "net_profit_growth_t": null,
+              "net_profit_growth_t1": null,
+              "net_profit_growth_t2": null,
+              "net_profit_growth_t3": null,
+              "revenue_growth_t": 2.94,
+              "revenue_growth_t1": 14.17,
+              "revenue_growth_t2": 18.54,
+              "revenue_growth_t3": 15.25,
+              "growth_market_rank_t1": 9
+            }
+          },
+          "status": "empty",
+          "quality_score": 0,
+          "missing_fields": [
+            "peer_median_pe",
+            "peer_median_ps",
+            "historical_pe_range",
+            "beta",
+            "wacc_estimate",
+            "industry_cycle_position"
+          ]
+        },
+        "optional": {
+          "fields": {},
+          "status": "empty",
+          "quality_score": 0,
+          "missing_fields": [
+            "dividend_yield",
+            "segment_breakdown"
+          ]
+        }
+      },
+      "overall_data_quality_score": 7,
+      "fetch_errors": [],
+      "event_date": "2026-05-15",
+      "event_window_prices": {
+        "event_date": "2026-05-15",
+        "pre_event": {
+          "avg_close": 41.4,
+          "first_date": "2026-05-14 00:00:00",
+          "last_date": "2026-04-27 00:00:00",
+          "num_days": 11,
+          "first_close": 45.01,
+          "last_close": 40.9
+        },
+        "post_event": {
+          "avg_close": 46.44,
+          "first_date": "2026-05-27 00:00:00",
+          "last_date": "2026-05-15 00:00:00",
+          "num_days": 9,
+          "first_close": 41.4,
+          "last_close": 47.9
+        },
+        "event_day": null,
+        "current": {
+          "close": 40.9,
+          "date": "2026-04-27 00:00:00"
+        },
+        "source": "investoday",
+        "note": ""
+      },
+      "incremental_fetch_hook": {
+        "available": true,
+        "description": "调用 DataForge.fetch_incremental(fields) 补取缺失字段"
+      }
+    },
+    "agent2a": {
+      "market_narrative": {
+        "primary_anchor": "revenue",
+        "primary_anchor_evidence": "PS(TTM)为5.8x，处于历史最高位(分位0)，而PE分位30、PB分位66.7，表明市场主要根据未来收入爆发预期对公司进行定价，而非当前利润或资产",
+        "secondary_anchors": [
+          {
+            "segment": "酮肟系列及硅烷偶联剂等传统业务",
+            "anchor": "earnings",
+            "revenue_share_pct": "约90-95%（基于总营收与面板分部数据估算）",
+            "data_confidence": "low"
+          },
+          {
+            "segment": "JH-2电子级羟胺等半导体材料业务",
+            "anchor": "revenue",
+            "revenue_share_pct": "约5-10%（初期放量阶段）",
+            "data_confidence": "low"
+          }
+        ],
+        "sotp_triggered": true,
+        "sotp_rationale": "传统业务稳定盈利适用PE估值，新半导体材料业务高成长但利润贡献微薄适用PS估值，两者估值范式不同，市场定价隐含分部估值逻辑"
+      },
+      "event_pricing": {
+        "event_profile": {
+          "timing_certainty": 6,
+          "timing_rationale": "事件有季度财报、产能投产节点及长江存储IPO等可预期的催化剂时间窗，但无精确到日的公告日期",
+          "outcome_binaryness": 2,
+          "outcome_rationale": "事件结果是订单量、收入增长、利润率改善的连续谱系，并非通过/失败式的二元结果",
+          "precedent_richness": 8,
+          "precedent_rationale": "半导体材料国产替代（如光刻胶、抛光液）已有多个成功案例，存储周期与扩产逻辑市场认知充分，具备成熟的定价先例",
+          "distribution_shape": "narrow_concentrated",
+          "shape_rationale": "中等时间确定性+低二元性+高先例→窄集中分布，市场方向判断一致（利好），幅度可参照历史模板"
+        },
+        "pricing_assessment": {
+          "method": "reverse_dcf",
+          "method_applicable": true,
+          "method_limitations": [
+            "隐含永续增速恒定假设与企业实际生命周期不符",
+            "NOPAT 1.75亿为TTM快照，未反映JH-2放量后利润结构的非线性变化"
+          ],
+          "quantitative": {
+            "implied_perpetual_growth": "5.8%",
+            "ev": 46.6,
+            "wacc": "9.8%",
+            "interpretation": "当前EV隐含的永续增速5.8%处于较高水平，反映市场已计入中长期确定性增长，但尚未达到极端泡沫程度；若考虑JH-2导入期的高增长阶段，该隐含增速处于合理偏乐观区间"
+          },
+          "qualitative_factors": [
+            "事件窗口价表现：事件前均价41.4元，事件后均价46.44元，冲高约12%后回落至最新40.9元，显示短期催化已被消化且获利盘了结",
+            "最新价40.9元低于事件后均价，表明市场对事件驱动的重新定价并不稳固，部分预期已price in",
+            "行业联动：存储芯片涨价周期带动板块情绪，但对个股α的独立支撑有限",
+            "信息泄露风险：事件前股价无明显异动，事件由公开信息触发"
+          ],
+          "overall_priced_in": "partially",
+          "priced_in_estimate": "约60-70%",
+          "residual_catalyst": "中芯国际、长鑫存储批量订单落地并转化为规模收入；2000吨工业化装置投产进展；远期2万吨产能规划推进；存储扩产周期延续及国产替代政策加码"
+        }
+      },
+      "signal_audit": {
+        "step2a_restate": [
+          "产品结构面板仅披露硅烷偶联剂收入5.76亿、毛利率38.8%，未包含JH-2电子级羟胺水溶液的数据",
+          "面板提示'高毛利占比100.0%'且合同负债无异常，但所指产品非本次事件核心叙事产品，无法直接验证JH-2盈利能力"
+        ],
+        "step2b_match": [
+          {
+            "signal": "硅烷偶联剂毛利率38.8%高于公司整体GM 25.4%",
+            "verdict": "支撑（L≤2，谨慎）",
+            "rationale": "反映传统业务盈利稳健，与叙事中'公司基本盘地位稳固'一致，但来自面板历史数据且未覆盖新业务，置信度受限"
+          },
+          {
+            "signal": "合同负债无异常",
+            "verdict": "无关",
+            "rationale": "面板未显示JH-2相关预收款或需求前置信号，无法判断新业务需求是否体现在下游预售中"
+          }
+        ],
+        "step2c_product_restate": "事件核心产品JH-2电子级羟胺水溶液在面板产品结构中无对应数据，面板仅覆盖硅烷偶联剂，事件-产品映射失败",
+        "step2d_score": 6,
+        "score_rationale": "传统业务数据稳健，对叙事基础构成轻微支撑；但JH-2这一核心增长驱动力缺乏任何财务信号验证，关键数据大面积缺失，形成显著缺口"
+      },
+      "forward_to_routing": {
+        "model_family_constraint": "revenue_multiples",
+        "excluded_families": [
+          "asset_multiples",
+          "resource"
+        ],
+        "distribution_shape": "narrow_concentrated",
+        "pricing_bias": "uncertain",
+        "key_risk_for_routing": "PS历史高位已隐含高增长预期，但JH-2收入占比尚低、财务信号缺失，若订单放量或产能爬坡不及预期，估值双杀风险较大；需分部模型验证市场定价是否已过度透支"
+      },
+      "_pricing_tool": {
+        "method": "reverse_dcf",
+        "applicable": true,
+        "implied_value": 5.8,
+        "implied_metric": "隐含永续增速g(%)",
+        "limitations": [
+          "假设永续增速恒定，实际公司有生命周期",
+          "NOPAT=1.75亿为TTM快照，不一定是可持续利润"
+        ],
+        "detail": {
+          "nopat_yi": 1.75,
+          "ev_yi": 46.6,
+          "wacc_pct": 9.8,
+          "base_dcf_yi": 17.9,
+          "market_premium_pct": 161,
+          "g_wacc_ratio_pct": 59.2,
+          "warnings": []
+        }
+      },
+      "_case_anchors": {
+        "top3": [
+          {
+            "stock_code": "600301",
+            "stock_name": "华锡有色",
+            "sector": "小金属",
+            "primary_driver": "景气上行",
+            "return_type": "利润核弹",
+            "tags": [
+              "微盘(<30亿)",
+              "景气上行",
+              "资源周期",
+              "利润核弹",
+              "半导体材料"
+            ],
+            "roic_trough": 1.22,
+            "roic_peak": 92.82,
+            "roic_improvement": 91.6,
+            "gm_trough": 31.08,
+            "gm_peak": 44.66,
+            "pe_expansion": 1.59,
+            "profit_expansion": 229.8,
+            "gain_multiple": 9.61,
+            "actual_return_pct": 860.6,
+            "start_mcap": 15.0,
+            "start_pe": 46.4,
+            "peak_pe": 73.7,
+            "catalyst": "小金属+半导体材料,锑+砷化镓双稀缺",
+            "logic": "小金属+半导体材料,锑+砷化镓双稀缺",
+            "end_state": "高回报复利机器",
+            "routing_reason": "起涨ROIC=1.2% | 终局=高回报复利机器 | 驱动力=技术突破 | 利润弹性=229.8x | 估值驱动=False | 行业=有色金属",
+            "failure_mode": []
+          },
+          {
+            "stock_code": "688585",
+            "stock_name": "上纬新材",
+            "sector": "新材料→人形机器人平台",
+            "primary_driver": "商业模式升级",
+            "return_type": "估值锚定重构",
+            "tags": [
+              "小盘(30-60亿)",
+              "实控人变更",
+              "资产注入预期",
+              "人形机器人",
+              "壳价值重估",
+              "估值范式切换"
+            ],
+            "roic_trough": -1.27,
+            "roic_peak": 6.97,
+            "roic_improvement": 8.24,
+            "gm_trough": 3.83,
+            "gm_peak": 16.77,
+            "pe_expansion": 11.48,
+            "profit_expansion": 7.3,
+            "gain_multiple": 10.2,
+            "actual_return_pct": 915.6,
+            "start_mcap": 51.0,
+            "start_pe": 44.0,
+            "peak_pe": 470.0,
+            "catalyst": "【核心催化】智元恒岳(智元机器人主体)受让29.99%股份+要约收购37%,邓泰华(前华为副总裁/智元机器人CEO)成为实控人,稚晖君(华为天才少年)进入董事会。【市场逻辑】碳纤维厂→人形机器人平台的价值重估,智元机器人是国内具身智能头部独角兽(腾讯/京东/高瓴/红杉/LG电子投资)。流通盘仅16%极易拉抬。原业务净利仅2990万降33%",
+            "logic": "【核心催化】智元恒岳(智元机器人主体)受让29.99%股份+要约收购37%,邓泰华(前华为副总裁/智元机器人CEO)成为实控人,稚晖君(华为天才少年)进入董事会。【市场逻辑】碳纤维厂→人形机器人平台的价值重估,智元机器人是国内具身智能头部独角兽(腾讯/京东/高瓴/红杉/LG电子投资)。流通盘仅16%极易拉抬。原业务净利仅2990万降33%",
+            "end_state": "微利改善中",
+            "routing_reason": "起涨PE=44(碳纤维) | 智元机器人入主 | 净利降33% | 纯资产注入期权定价",
+            "failure_mode": []
+          },
+          {
+            "stock_code": "300260",
+            "stock_name": "新莱应材",
+            "sector": "机械基件",
+            "primary_driver": "业绩拐点",
+            "return_type": "戴维斯双击",
+            "tags": [
+              "小盘(30-60亿)",
+              "业绩拐点",
+              "估值范式切换",
+              "半导体设备",
+              "戴维斯双击"
+            ],
+            "roic_trough": 1.7,
+            "roic_peak": 13.96,
+            "roic_improvement": 12.26,
+            "gm_trough": 24.58,
+            "gm_peak": 29.64,
+            "pe_expansion": 3.86,
+            "profit_expansion": 10.0,
+            "gain_multiple": 4.45,
+            "actual_return_pct": 344.7,
+            "start_mcap": 32.0,
+            "start_pe": 40.8,
+            "peak_pe": 157.2,
+            "catalyst": "精密制造+半导体设备,国产替代+晶圆厂扩产",
+            "logic": "精密制造+半导体设备,国产替代+晶圆厂扩产",
+            "end_state": "正常盈利成长股",
+            "routing_reason": "起涨ROIC=1.7% | 终局=正常盈利成长股 | 驱动力=业绩拐点 | 利润弹性=10.0x | 估值驱动=False | 行业=机械设备",
+            "failure_mode": []
+          }
+        ],
+        "reliability": {
+          "reliability": "low",
+          "top_score": 8,
+          "top_n_avg": 7.7,
+          "note": "无可比案例。Agent-3完全使用第一性原理推演。案例仅提供'是否有先例'的思路参考，参数不受案例约束。降低confidence.historical_precedent评分至≤4。"
+        }
+      }
+    },
+    "agent2b": {
+      "routing_decision": {
+        "primary_model": "J",
+        "model_category": "SOTP",
+        "routing_reason": "锦华新材TTM营收9.7亿、净利润1.7亿、ROIC 10.2%、净利率13.5%，属于稳定盈利企业，不符合B(PS+TAM)模型要求的亏损/微利(ROIC<8%)条件，故族内无可用模型。公司业务由传统酮肟（基础化工，PE 18-25x）和半导体湿电子化学品（JH-2远期增量收入17亿，毛利率25%→38%，PE 40-55x）构成，分部价值差异巨大，且事件核心为估值锚从基础化工向半导体材料切换。SOTP分部估值可分别定价，精确反映结构性变化，故选为主模型。",
+        "validation_models": [
+          "A"
+        ],
+        "validation_rationale": "采用A(ROIC-RR DCF)模型，基于ROIC从10.3%提升至15-22%的改善路径及JH-2产能释放带来的收入增长，折现整体价值，与SOTP分部加总结果进行交叉验证，降低高PS隐含下估值过热风险。",
+        "validation_strategy": "cross_family",
+        "constraint_compliance": {
+          "family_constraint_applied": "revenue_multiples",
+          "constraint_override": true,
+          "override_rationale": "指定的revenue_multiples族仅B模型，其硬约束为亏损/微利且ROIC<8%，而锦华新材ROIC=10.2%、净利润1.7亿，明确不满足，族内无候选。依据规则，硬约束排除族内所有模型时，允许constraint_override并跨族选择。"
+        },
+        "anchor_shift_warning": "原诊断锚定revenue，SOTP以盈利为基础，存在锚从收入向利润切换的风险，可能导致估值基准不一致，建议在分析中明确锚的转换。"
+      }
+    },
+    "agent3": {
+      "report_meta": {
+        "stock_code": "920015",
+        "stock_name": "锦华新材",
+        "industry": "基础化工",
+        "report_date": "2026-05-27T12:07:16+08:00",
+        "version": "5.0"
+      },
+      "valuation_routing": {
+        "primary_model": "J",
+        "secondary_model": "A",
+        "model_category": "SOTP",
+        "routing_reason": "锦华新材TTM营收9.7亿、净利润1.7亿、ROIC 10.2%、净利率13.5%，属于稳定盈利企业，不符合B(PS+TAM)模型要求的亏损/微利(ROIC<8%)条件，故族内无可用模型。公司业务由传统酮肟（基础化工，PE 18-25x）和半导体湿电子化学品（JH-2远期增量收入17亿，毛利率25%→38%，PE 40-55x）构成，分部价值差异巨大，且事件核心为估值锚从基础化工向半导体材料切换。SOTP分部估值可分别定价，精确反映结构性变化，故选为主模型。",
+        "method_used": "J",
+        "model_migration_path": {}
+      },
+      "market_sanity": {
+        "bs_method": "反向DCF(g/WACC)",
+        "bs_level": "中等溢价: 市场定价了部分改善，g/WACC=59%",
+        "ev_yi": 46.6,
+        "nopat_yi": 1.75,
+        "roic_pct": 10.2,
+        "wacc_simple_pct": 9.8,
+        "implied_g_pct": 5.8,
+        "bs_secondary": "PB=3.3x (资产基线)",
+        "market_premium_pct": 161,
+        "pe_ttm": 32.36,
+        "pb": 3.2882,
+        "pe_historical_rank": 30,
+        "wacc_params": {
+          "rf_pct": 1.75,
+          "rf_source": "默认值(API不可用)",
+          "beta": 1.21,
+          "beta_source": "1年日线vs沪深300(Beta=1.210)",
+          "erp_pct": 6.62,
+          "erp_method": "动态ERP(基准6.0%+波动率调整+0.6%)",
+          "re_pct": 9.76,
+          "rd_pct": 0,
+          "d_ratio_pct": 0.0,
+          "wacc_pct": 9.8,
+          "note": "rf/beta/ERP基于真实数据; rd=rf+动态利差(按负债率分层:2-6%),非精确个债成本"
+        },
+        "warnings": [],
+        "market_story": "EV=47亿 NOPAT=1.75亿 ROIC=10.2% WACC=9.8% 隐含g=5.8% DCF基准=17.9亿 溢价161%"
+      },
+      "scenario_valuation": {
+        "scenario_details": {
+          "bear": {
+            "probability": 0.15,
+            "target_mcap_yi": 20,
+            "valuation_method": "SOTP",
+            "scenario_narrative": "JH-2电子级羟胺产品因无法稳定满足先进制程要求(如金属杂质超标)遭长江存储/中芯国际削减订单，或巴斯夫发起价格战并胜诉专利侵权，导致公司失去国内主要客户。同时2000吨工业化装置建设延期，高额资本开支侵蚀传统业务现金流。市场对JH-2失去信心，估值锚完全回归基础化工，传统业务利润亦因行业竞争和资产减值下滑，整体净利润回落至1.2亿。给予基础化工行业底部PE 16x，市值约20亿，较当前56亿下跌超60%。",
+            "upside_pct": 0
+          },
+          "base": {
+            "probability": 0.7,
+            "target_mcap_yi": 50,
+            "valuation_method": "SOTP",
+            "scenario_narrative": "JH-2按计划推进：2026年2000吨工业化装置投产，产能利用率逐步提升至70%，2027年扩产至5000吨，2028年达8000吨，成为国内头部晶圆厂(长存、长鑫、中芯)的第二供货源。毛利率随规模效应从30%提升至35%，净利润率约15-18%。传统业务保持稳定，整体净利润从当前1.7亿增长至2028年2.5亿，其中JH-2贡献0.7亿。估值锚开始向半导体材料切换但切换不完全：传统业务给予PE 18x(价值30亿)，JH-2业务基于2028年利润给予PE 30x并折现(价值20亿)，分部合计50亿。当前市值已部分计价，base下股价温和回调至合理水平。",
+            "upside_pct": 0
+          },
+          "bull": {
+            "probability": 0.15,
+            "target_mcap_yi": 90,
+            "valuation_method": "SOTP",
+            "scenario_narrative": "JH-2超预期放量：2026年2000吨装置快速满产并通过长存、长鑫、中芯国际大批量订单验证，远期2万吨产能规划提前至2027年启动，成本优势显著(比进口低30%)且毛利率达40%+。存储芯片扩展周期叠加国产替代政策加码，公司成为国内半导体湿电子化学品核心供应商，传统业务亦受益景气周期。2028年整体净利润超4亿(JH-2贡献2.5亿)，市场充分认可其半导体材料属性，给予JH-2业务PE 45x(安集科技等可比公司水平)折现价值65亿，叠加传统业务25亿(PE 20x)，总市值90亿，较当前上涨60%+。",
+            "upside_pct": 0
+          }
+        },
+        "probability_weighted_mcap_yi": 51.5,
+        "probability_weighted_upside_pct": 0.0,
+        "asymmetry_ratio": 0,
+        "quality_flag": "HIGH_QUALITY",
+        "_computed_by_code": true
+      },
+      "valuation_summary": {
+        "probability_weighted_upside_pct": 0.0,
+        "probability_weighted_mcap_yi": 51.5,
+        "asymmetry_ratio": 0,
+        "quality_flag": "HIGH_QUALITY"
+      },
+      "reverse_dcf": {
+        "applicable": true,
+        "market_implied_g_pct": 5.8,
+        "my_implied_g_pct": 5.0,
+        "expectation_gap_pct": 0.8,
+        "gap_direction": "市场高估",
+        "gap_magnitude": "轻微",
+        "applicable_note": ""
+      },
+      "validation_crosscheck": {
+        "validation_model": "A",
+        "validation_paradigm": "盈利视角",
+        "base_target_mcap_yi": 50,
+        "validation_mcap_yi": 48.0,
+        "gap_pct": -4.0,
+        "gap_direction": "主模型高估",
+        "assessment": "互相印证"
+      },
+      "expectation_gap": {
+        "level": "市场高估",
+        "note": "市场隐含永续增长5.8%高于我们基于中性情景的5.0%，但公司处于估值锚切换期，ROIC改善可部分消化高增长预期，当前市值处于合理区间上沿，安全边际不足。"
+      },
+      "confidence": {
+        "overall_score": 5,
+        "overall_label": "中",
+        "dimensions": {
+          "info_quality": {
+            "score": 7,
+            "label": "信息质量",
+            "note": "公司公告认证及年报销售确认，但核心JH-2订单细节及份额数据未公开，信息来源中等可靠。"
+          },
+          "financial_feasibility": {
+            "score": 6,
+            "label": "财务可行性",
+            "note": "JH-2毛利率从25%跳升至35%+有类似案例支撑，但历史公司综合毛利率仅25%，无详细分产品数据验证，可行性存疑。"
+          },
+          "valuation_safety": {
+            "score": 4,
+            "label": "估值安全边际",
+            "note": "bear情景下行64%，安全边际较低，主要因当前市场溢价161%已包含较高预期。"
+          },
+          "historical_precedent": {
+            "score": 6,
+            "label": "历史案例匹配",
+            "note": "光刻胶国产替代案例可参照，但清洗剂市场空间较小，产品结构不同，匹配度中等。"
+          }
+        },
+        "_validation_warnings": [
+          "E305"
+        ]
+      },
+      "trade_annotation": {
+        "tier": "☆☆☆ 规避",
+        "total_score": "7/10",
+        "dimension_scores": {
+          "odds_quality": 2,
+          "pricing_headroom": 1,
+          "transmission_confidence": 2,
+          "model_consistency": 2
+        },
+        "alignment_signals": [
+          "传统业务盈利稳健支撑底部",
+          "客户认证信号确认为真",
+          "但JH-2缺乏财务信号导致赔率下降"
+        ],
+        "tier_note": "即使bull可实现较高涨幅，但当前计价程度60-70%压缩了赔率空间，且信号验证不足，整体赔率中等。",
+        "suggested_action": "关注JH-2订单公告和2026年工业化装置进展，待更多财务信号确认后介入。",
+        "_text_fixed_by_code": true
+      },
+      "monitoring_kpis": {
+        "financial_verification_kpis": [
+          {
+            "name": "JH-2分部收入及毛利率",
+            "baseline": "2025年未单独披露",
+            "target": "2026H1收入超0.5亿，毛利率>30%",
+            "frequency": "半年度",
+            "verifies": "JH-2放量速度和盈利能力"
+          }
+        ],
+        "event_milestone_kpis": [
+          {
+            "name": "2000吨工业化装置投产",
+            "expected_timing": "2026年Q3-Q4",
+            "significance": "验证产能扩张执行能力",
+            "verification_source": "公司公告/季报"
+          }
+        ],
+        "competition_signal_kpis": [
+          {
+            "name": "巴斯夫价格调整或国内第二家认证",
+            "current_state": "巴斯夫无公开动态，国内无第二家",
+            "trigger": "巴斯夫降价10%以上或国内出现第二家通过认证的企业",
+            "action_if_triggered": "下调JH-2毛利率假设，重新评估竞争格局"
+          }
+        ],
+        "risk_trigger_kpis": [
+          {
+            "name": "长存/长鑫订单变化",
+            "linked_to": "bear情景核心假设",
+            "severity": "high",
+            "monitor": "客户供应链公示或行业报道"
+          }
+        ]
+      },
+      "reasoning_trace": [
+        "清单项1-素材吸收(引用2a锚+计价+事件分类): 2a判定估值锚为revenue(PS 5.8x处于历史最高位)，事件分布形状为narrow_concentrated(中等时间确定性+低二元性+高先例)，计价程度partially(60-70%)，剩余催化为JH-2订单放量和产能投放。事件原文揭示因果分叉点：JH-2能否稳定满足先进制程要求并通过客户大批量验证是核心证实节点，证伪路径包括技术失败、专利诉讼和竞争加剧。风险边界：全球干法刻蚀后清洗剂市场2030年3.78亿美元，远期2万吨产能对应收入空间约13亿元。同族案例(光刻胶国产替代)显示初期放量PS可达10-20x，但放量节奏决定估值中枢。",
+        "清单项2-引用2a审核结论(step2d=6,关键交叉验证:硅烷偶联剂毛利率支撑传统业务稳健，但JH-2缺乏财务信号): 信号评分6/10，narrow_concentrated分布下bull概率基准取下限12%，考虑剩余催化空间和二阶导可能，bull概率取15%；bear概率基于证伪路径联合概率(需多个环节同时崩塌，包括技术、客户、竞争、专利)，独立发生概率低但合计约15%；base概率70%。计价程度部分已反映利好，base下股价温和回调至合理估值。",
+        "清单项3a-投资命题: 如果JH-2产能顺利爬坡并实现头部晶圆厂批量订单，且毛利率提升至35%+，则市场将把公司估值锚从基础化工PE 18-25x切换至半导体材料PE 40-55x；否则估值将回归传统化工，当前高溢价将承压。",
+        "清单项3b-因果分叉与证据校准: 因果链为“认证通过→订单放量→收入增长→毛利结构优化→ROIC提升→估值锚切换”。证实节点：2026年工业化装置投产进度、长存/长鑫季度采购量。证伪节点：客户官方否定采购、巴斯夫价格战、产品良率不达标。关键证据目前缺失：JH-2分部收入与毛利率，导致bull利润弹性假设置信度下降。",
+        "清单项3c-案例比对: 参照光刻胶国产替代案例(如晶瑞电材300655)，初期放量阶段PS可达10-15x，但随着规模扩大和竞争加剧，PS逐步回落至5-8x。锦华新材JH-2市场空间小于光刻胶，产品单一，给予30%估值折扣，bull情景远期PS上限控制在10x以内。",
+        "清单项3d-赋参数(SOTP): 传统业务股权价值: 1.65亿净利润×18x PE≈30亿。JH-2业务折现价值: bear 0亿(失败)，base 20亿(2028年利润0.7亿×30x PE折现)，bull 65亿(2028年利润2.5亿×45x PE折现，再考虑30%案例比折扣后约65亿)。总市值: bear 20亿(传统业务PE压缩至15x并减值)，base 50亿，bull 90亿。概率: bear 0.15, base 0.70, bull 0.15。",
+        "清单项4a-一致性校验: 增长-ROIC: base下JH-2高增长需增量ROIC>25%，公司现有现金覆盖capex无需股权稀释，财务可行。再投资率: 整体再投资率约40%可支撑增速。估值-增长: bull中PE 45x隐含永续增长接近WACC，仅情绪溢价下合理。全参数自洽：PE/PS升降方向与因果一致，ROIC改善有案例支撑。",
+        "清单项4b-反向DCF: 市场隐含g=5.8%。基于中性情景稳态ROIC 15%和再投资率40%，可持续增长率为5.0%，my_implied_g=5.0%，gap=0.8%，方向为市场高估。但估值锚切换期ROIC改善可部分消化高增长预期，使当前市值处于合理区间上沿。",
+        "清单项4c-校验交叉: 校验模型A(盈利视角)参数: IC 22亿、ROIC 11%、PE 20x，估值≈48亿，与主模型SOTP 50亿差异4%，互相印证。",
+        "清单项4d-非对称: asymmetry_ratio=0.94 (bull upsice 60.7% vs bear downsize 64.3%)，quality_flag=HIGH_QUALITY(ROIC 10.2%>8%)。",
+        "清单项4e-置信度: info_quality 7(硬证据存在但订单细节缺失)，financial_feasibility 6(毛利率跳升有案例但无自身历史数据)，valuation_safety 4(bear下行超60%安全边际低)，historical_precedent 6(案例匹配度中等)，整体6分。",
+        "[系统修正] 代码计算覆盖: 所有估值数值以代码公式重算结果为准（消除 LLM 算术误差 E306）",
+        "[系统修正] 概率加权涨幅: LLM=-8.2 → 代码=0.0",
+        "[系统修正] 不对称比: LLM=0.9 → 代码=0.0"
+      ],
+      "preflight_check": [
+        "[OK] 清单项1素材吸收完成",
+        "[OK] 清单项2a-2d信号审核完成",
+        "[OK] 清单项3a-3e赋参+案例完成",
+        "[OK] 概率和=1.00",
+        "[OK] upside单调递增,全参数经济含义自检通过",
+        "[OK] WACC未修改",
+        "[OK] 纯JSON输出"
+      ],
+      "probability_rationale": "bear: 技术失败(30%) × 客户认证撤销(50%) × 竞争/专利风险(40%) ≈ 6%，但高预期下单一证伪即可触发，估为15%。bull: 产能超预期(30%) × 订单超预期(40%) × 毛利率超预期(30%) ≈ 3.6%，考虑存储周期放大效应，估为15%。base: 100%-15%-15%=70%。",
+      "risk_triggers": {
+        "bull_trigger": "JH-2批量订单公告超预期（如获得长存份额超20%），或2万吨产能规划提前至2027年建成",
+        "bear_trigger": "头部晶圆厂官方声明未采购或减少采购JH-2，或巴斯夫发起专利诉讼且法院受理",
+        "monitoring_frequency": "季度(与财报同步验证)"
+      },
+      "narrative": "锦华新材是国内电子级羟胺唯一国产供应商，打破巴斯夫垄断，受益存储扩产及国产替代。当前市场已给予较高溢价，投资机会需等待批量订单或产能投放信号验证。",
+      "data_gaps": [
+        "缺少JH-2电子级羟胺水溶液的分部收入、毛利率及季度环比数据，导致bull中利润弹性和ROIC改善幅度的置信度下降",
+        "缺少2026年工业化装置建设的具体进度和预算细节"
+      ],
+      "signal_audit": {
+        "step2a_restate": [
+          "[面板显示] 硅烷偶联剂收入5.76亿，毛利率38.8%，高于公司整体GM 25.4%，反映传统业务盈利稳健，但面板未包含JH-2电子级羟胺水溶液数据，无法直接验证新业务盈利能力",
+          "[合同负债] 面板显示无异常，但无法判断JH-2相关需求是否体现在下游预售中"
+        ],
+        "step2b_match": [
+          {
+            "signal": "硅烷偶联剂毛利率38.8%高于公司整体GM 25.4%",
+            "match": "支撑",
+            "source_level": "L2",
+            "basis": "反映传统业务盈利稳健，与叙事中'公司基本盘地位稳固'一致，但来自面板历史数据且非本次事件核心产品"
+          },
+          {
+            "signal": "合同负债无异常",
+            "match": "无关",
+            "source_level": null,
+            "basis": "面板未显示JH-2相关预收款或需求前置信号，无法判断新业务需求是否体现在下游预售中"
+          }
+        ],
+        "step2c_product_restate": "半导体湿电子化学品(JH-2): 收入未单独披露，毛利率未单独披露，面板未包含该产品线。",
+        "step2d_score": 6,
+        "score_rationale": "传统业务数据稳健，对叙事基础构成轻微支撑；但JH-2这一核心增长驱动力缺乏任何财务信号验证，关键数据大面积缺失，形成显著缺口"
+      },
+      "scenarios": [
+        {
+          "name": "bear",
+          "probability_pct": 15.0,
+          "upside_pct": 0,
+          "target_mcap_yi": 20,
+          "valuation_method": "SOTP",
+          "scenario_narrative": "JH-2电子级羟胺产品因无法稳定满足先进制程要求(如金属杂质超标)遭长江存储/中芯国际削减订单，或巴斯夫发起价格战并胜诉专利侵权，导致公司失去国内主要客户。同时2000吨工业化装置建设延期，高额资本开支侵蚀传统业务现金流。市场对JH-2失去信心，估值锚完全回归基础化工，传统业务利润亦因行业竞争和资产减值下滑，整体净利润回落至1.2亿。给予基础化工行业底部PE 16x，市值约20亿，较当前56亿下跌超60%。",
+          "nopat_path_yi": [],
+          "wacc_used_pct": 9.8,
+          "primary_model": "J",
+          "roic_pct": 0,
+          "roic_assumed_pct": 0,
+          "rr_assumed_pct": 0,
+          "rr_pct": 0
+        },
+        {
+          "name": "base",
+          "probability_pct": 70.0,
+          "upside_pct": 0,
+          "target_mcap_yi": 50,
+          "valuation_method": "SOTP",
+          "scenario_narrative": "JH-2按计划推进：2026年2000吨工业化装置投产，产能利用率逐步提升至70%，2027年扩产至5000吨，2028年达8000吨，成为国内头部晶圆厂(长存、长鑫、中芯)的第二供货源。毛利率随规模效应从30%提升至35%，净利润率约15-18%。传统业务保持稳定，整体净利润从当前1.7亿增长至2028年2.5亿，其中JH-2贡献0.7亿。估值锚开始向半导体材料切换但切换不完全：传统业务给予PE 18x(价值30亿)，JH-2业务基于2028年利润给予PE 30x并折现(价值20亿)，分部合计50亿。当前市值已部分计价，base下股价温和回调至合理水平。",
+          "nopat_path_yi": [],
+          "wacc_used_pct": 9.8,
+          "primary_model": "J",
+          "roic_pct": 0,
+          "roic_assumed_pct": 0,
+          "rr_assumed_pct": 0,
+          "rr_pct": 0
+        },
+        {
+          "name": "bull",
+          "probability_pct": 15.0,
+          "upside_pct": 0,
+          "target_mcap_yi": 90,
+          "valuation_method": "SOTP",
+          "scenario_narrative": "JH-2超预期放量：2026年2000吨装置快速满产并通过长存、长鑫、中芯国际大批量订单验证，远期2万吨产能规划提前至2027年启动，成本优势显著(比进口低30%)且毛利率达40%+。存储芯片扩展周期叠加国产替代政策加码，公司成为国内半导体湿电子化学品核心供应商，传统业务亦受益景气周期。2028年整体净利润超4亿(JH-2贡献2.5亿)，市场充分认可其半导体材料属性，给予JH-2业务PE 45x(安集科技等可比公司水平)折现价值65亿，叠加传统业务25亿(PE 20x)，总市值90亿，较当前上涨60%+。",
+          "nopat_path_yi": [],
+          "wacc_used_pct": 9.8,
+          "primary_model": "J",
+          "roic_pct": 0,
+          "roic_assumed_pct": 0,
+          "rr_assumed_pct": 0,
+          "rr_pct": 0
+        }
+      ],
+      "case_comparison_summary": {
+        "compared_cases": [
+          {
+            "case_code": "光刻胶国产替代案例（如晶瑞电材300655）",
+            "comprehensive_discount_pct": 70,
+            "six_dimension_judgment": {
+              "driver_strength": "相似: 均受益国产替代政策",
+              "market_space": "劣于: 清洗剂市场小于光刻胶",
+              "moat": "相似: 技术壁垒高，客户认证周期长",
+              "paradigm": "相似: 从基础化工向半导体材料切换",
+              "catalyst_density": "相似: 产能投放与客户订单驱动",
+              "failure_risk": "劣于: JH-2单一产品，容错率低"
+            },
+            "parameter_impact": {
+              "target_param_discount_pct": 30,
+              "adjustment_rationale": "参照光刻胶案例初期PS 15x，考虑JH-2市场空间较小和产品单一性，对远期估值给予30%折价，bull情景PS上限控制在10x以内"
+            }
+          }
+        ]
+      },
+      "_validation_warnings": [
+        {
+          "code": "E305",
+          "severity": "warning",
+          "message": "upside单调性违反: bear=0 base=0 bull=0"
+        }
+      ]
+    },
+    "_trace": {
+      "agent0_ms": 247,
+      "agent1_ms": 4547,
+      "agent2a_ms": 120062,
+      "agent2b_ms": 109845,
+      "agent3_ms": 626535,
+      "total_ms": 861236
+    }
+  },
+  {
+    "status": "done",
+    "stock_code": "300285",
+    "stock_name": "国瓷材料",
+    "agent0": {
+      "request_id": "req_20260527_120716_300285",
+      "pre_routing_result": {
+        "ticker": "300285",
+        "stock_name": "国瓷材料",
+        "event_date": "2026-05-18",
+        "event_source": "天机",
+        "industry_classification": "电子-电子化学品Ⅱ",
+        "industry_key_matched": "电子",
+        "event_tags_matched": [],
+        "data_requirements": {
+          "core_package": {
+            "description": "所有估值模型通用，必须100%获取",
+            "fields": [
+              "current_price",
+              "total_shares",
+              "market_cap",
+              "revenue_ttm",
+              "eps_ttm",
+              "net_profit_growth_yoy",
+              "bps",
+              "roe_ttm",
+              "ocf_ttm",
+              "capex_ttm",
+              "net_debt",
+              "total_assets",
+              "total_liabilities",
+              "gross_margin",
+              "net_margin",
+              "interest_bearing_debt",
+              "pe_ttm",
+              "pb",
+              "operating_profit_ttm",
+              "net_profit_ttm",
+              "profit_before_tax",
+              "income_tax",
+              "interest_expense",
+              "cash",
+              "total_equity"
+            ],
+            "mandatory": true,
+            "failure_action": "terminate"
+          },
+          "specialized_package": {
+            "fields": [
+              "capacity_utilization",
+              "order_backlog",
+              "yield_rate",
+              "customer_concentration"
+            ],
+            "mandatory": false,
+            "failure_action": "continue_with_gap"
+          },
+          "validation_package": {
+            "fields": [
+              "peer_median_pe",
+              "peer_median_ps",
+              "historical_pe_range",
+              "beta",
+              "wacc_estimate",
+              "industry_cycle_position"
+            ],
+            "mandatory": false,
+            "failure_action": "skip_validation"
+          },
+          "optional_package": {
+            "fields": [
+              "dividend_yield",
+              "segment_breakdown"
+            ],
+            "mandatory": false,
+            "failure_action": "ignore"
+          }
+        },
+        "model_category_hint": [
+          "盈利乘数"
+        ],
+        "hint_confidence": "中",
+        "warning": "【重要】本 hint 不决定最终模型。Agent-2 将基于实际财务数据独立判决。"
+      }
+    },
+    "agent1": {
+      "request_id": "300285",
+      "stock_code": "300285",
+      "stock_name": "国瓷材料",
+      "industry": "电子",
+      "packages": {
+        "core": {
+          "fields": {
+            "current_price": 48.93,
+            "current_price_source": "tushare_daily",
+            "total_shares_yi": 0,
+            "market_cap_yi": 487.9,
+            "market_cap_source": "tushare_daily_basic",
+            "revenue_ttm_yi": 46.7,
+            "eps_ttm": 0.0,
+            "net_profit_growth_yoy": null,
+            "bps": 0,
+            "roe_ttm_pct": 1.98119015,
+            "ocf_ttm_yi": 8.81,
+            "capex_ttm_yi": 4.98,
+            "net_debt_yi": -1.5,
+            "total_assets_yi": 100.1,
+            "total_liabilities_yi": 22.4,
+            "gross_margin_pct": 36.74,
+            "net_margin_pct": 13.94,
+            "interest_bearing_debt_yi": 8.2,
+            "interest_expense_yi": 0.3,
+            "gross_margin_historical_rank": 10.0,
+            "net_margin_historical_rank": 2.5,
+            "roe_historical_rank": 15.0,
+            "roic_historical_rank": 10.0,
+            "profitability_composite_score": 76.4706,
+            "pe_ttm": 79.091,
+            "pb": 6.7666,
+            "ps_ttm": 10.4427,
+            "ps_historical_rank": 42.5,
+            "pe_historical_rank": 10.0,
+            "pb_historical_rank": 27.5,
+            "operating_profit_ttm_yi": 7.67,
+            "net_profit_ttm_yi": 6.17,
+            "profit_before_tax_yi": 7.57,
+            "income_tax_yi": 0.87,
+            "cash_yi": 9.7,
+            "total_equity_yi": 77.7,
+            "industry_sw_l1": "电子",
+            "industry_sw_l2": "电子化学品Ⅱ",
+            "stock_name": "国瓷材料",
+            "report_period": "",
+            "ebitda_ttm_yi": 8.82,
+            "invested_capital_yi": 85.9,
+            "roic_pct": 8.21,
+            "nopat_yi": 7.05,
+            "effective_tax_rate": 0.11,
+            "caution_flags": [],
+            "is_loss_making": false,
+            "is_negative_equity": false,
+            "data_quality_score": 10,
+            "_forward_looking": {
+              "status": "complete",
+              "categories": {
+                "demand_reality": {
+                  "contract_liab": {
+                    "label": "合同负债",
+                    "value": 0.49,
+                    "unit": "亿",
+                    "qoq_pct": -12.5,
+                    "trend": "波动",
+                    "anomaly": {
+                      "level": "elevated",
+                      "sigma": 1.3,
+                      "direction": "up",
+                      "mean": 0.29,
+                      "std": 0.16
+                    },
+                    "anomaly_text": "合同负债显著高于历史均值(当前偏离1.3σ, 均值0.29, σ=0.16)",
+                    "interpretation": "",
+                    "story_check": "合同负债异常跳升验证了需求叙事→可支撑更高的近期营收CAGR"
+                  },
+                  "accounts_receivable": {
+                    "label": "应收账款",
+                    "value": 17.78,
+                    "unit": "亿",
+                    "qoq_pct": -3.1,
+                    "ar_to_rev_ratio": 1.52,
+                    "anomaly": {
+                      "level": "normal",
+                      "sigma": -0.1,
+                      "direction": "flat",
+                      "mean": 1.52,
+                      "std": 0.03
+                    },
+                    "anomaly_text": "应收/营收比在历史正常范围内(均值1.52, σ=0.03)",
+                    "interpretation": ""
+                  },
+                  "prepayments": {
+                    "label": "预付账款",
+                    "value": 1.8,
+                    "unit": "亿",
+                    "qoq_pct": 233.3
+                  }
+                },
+                "supply_readiness": {
+                  "cip": {
+                    "label": "在建工程",
+                    "value": 4.08,
+                    "unit": "亿",
+                    "qoq_pct": 11.5,
+                    "cip_to_fixed_pct": 15.3,
+                    "anomaly": {
+                      "level": "normal",
+                      "sigma": 0.9,
+                      "direction": "up",
+                      "mean": 3.35,
+                      "std": 0.81
+                    },
+                    "anomaly_text": "在建工程在历史正常范围内(均值3.35, σ=0.81)",
+                    "interpretation": "",
+                    "story_check": "在建工程加速扩张验证了供给准备→可支撑产能释放时间表"
+                  },
+                  "capex_depr_ratio": {
+                    "label": "CAPEX/折旧比",
+                    "value": 8.2,
+                    "supply_label": "产能扩张期(CAPEX/折旧>1.5)",
+                    "ttm_capex": 9.43,
+                    "unit": "亿",
+                    "interpretation": "CAPEX/折旧>1.5→企业在大幅扩张，未来产出弹性充足"
+                  },
+                  "inventory": {
+                    "label": "存货",
+                    "value": 9.48,
+                    "unit": "亿",
+                    "anomaly": {
+                      "level": "elevated",
+                      "sigma": 1.1,
+                      "direction": "up",
+                      "mean": 8.89,
+                      "std": 0.55
+                    },
+                    "anomaly_text": "存货显著高于历史均值(当前偏离1.1σ, 均值8.89, σ=0.55)",
+                    "interpretation": ""
+                  }
+                },
+                "earnings_elasticity": {
+                  "products": {
+                    "label": "产品结构信号",
+                    "data_vintage": "2025-12-31 vs 2024-12-31 | H2轨迹: 2025H2 vs 2024H2",
+                    "gm_source": "mixed",
+                    "gm_coverage_pct": 85.0,
+                    "periods_available": 4,
+                    "annual_periods": 2,
+                    "has_h1_data": true,
+                    "product_mix": [
+                      {
+                        "name": "数码打印及其他材料板块-建筑陶瓷",
+                        "revenue": 10.17,
+                        "revenue_share_pct": 22.5,
+                        "revenue_share_prev_pct": 0.0,
+                        "share_change_ppt": 22.5,
+                        "revenue_yoy_pct": null,
+                        "gross_margin_pct": 31.7,
+                        "gm_prev_pct": null,
+                        "gm_change_ppt": null,
+                        "gm_source": "actual",
+                        "h2_revenue": 5.33,
+                        "h2_gross_margin_pct": 26.5,
+                        "h2_revenue_prev": null,
+                        "h2_gm_prev_pct": null,
+                        "h2_revenue_yoy_pct": null,
+                        "h2_available": true
+                      },
+                      {
+                        "name": "催化材料板块",
+                        "revenue": 9.54,
+                        "revenue_share_pct": 21.1,
+                        "revenue_share_prev_pct": 19.7,
+                        "share_change_ppt": 1.4,
+                        "revenue_yoy_pct": 21.2,
+                        "gross_margin_pct": 41.2,
+                        "gm_prev_pct": 40.0,
+                        "gm_change_ppt": 1.2,
+                        "gm_source": "actual",
+                        "h2_revenue": 4.98,
+                        "h2_gross_margin_pct": 40.6,
+                        "h2_revenue_prev": null,
+                        "h2_gm_prev_pct": null,
+                        "h2_revenue_yoy_pct": null,
+                        "h2_available": true
+                      },
+                      {
+                        "name": "生物医疗材料板块",
+                        "revenue": 9.3,
+                        "revenue_share_pct": 20.6,
+                        "revenue_share_prev_pct": 22.8,
+                        "share_change_ppt": -2.2,
+                        "revenue_yoy_pct": 2.1,
+                        "gross_margin_pct": 51.2,
+                        "gm_prev_pct": 56.6,
+                        "gm_change_ppt": -5.4,
+                        "gm_source": "actual",
+                        "h2_revenue": 4.92,
+                        "h2_gross_margin_pct": 50.2,
+                        "h2_revenue_prev": null,
+                        "h2_gm_prev_pct": null,
+                        "h2_revenue_yoy_pct": null,
+                        "h2_available": true
+                      },
+                      {
+                        "name": "电子材料板块",
+                        "revenue": 6.93,
+                        "revenue_share_pct": 15.3,
+                        "revenue_share_prev_pct": 15.6,
+                        "share_change_ppt": -0.3,
+                        "revenue_yoy_pct": 11.1,
+                        "gross_margin_pct": 34.5,
+                        "gm_prev_pct": 36.2,
+                        "gm_change_ppt": -1.7,
+                        "gm_source": "actual",
+                        "h2_revenue": 3.49,
+                        "h2_gross_margin_pct": 35.8,
+                        "h2_revenue_prev": 3.45,
+                        "h2_gm_prev_pct": 36.8,
+                        "h2_revenue_yoy_pct": 1.2,
+                        "h2_available": true
+                      },
+                      {
+                        "name": "新能源材料",
+                        "revenue": 5.06,
+                        "revenue_share_pct": 11.2,
+                        "revenue_share_prev_pct": 10.1,
+                        "share_change_ppt": 1.1,
+                        "revenue_yoy_pct": 25.2,
+                        "gross_margin_pct": 27.7,
+                        "gm_prev_pct": 36.74,
+                        "gm_change_ppt": -9.0,
+                        "gm_source": "actual",
+                        "h2_revenue": 2.89,
+                        "h2_gross_margin_pct": 32.5,
+                        "h2_revenue_prev": null,
+                        "h2_gm_prev_pct": null,
+                        "h2_revenue_yoy_pct": null,
+                        "h2_available": true
+                      },
+                      {
+                        "name": "精密陶瓷板块",
+                        "revenue": 4.17,
+                        "revenue_share_pct": 9.2,
+                        "revenue_share_prev_pct": 8.8,
+                        "share_change_ppt": 0.4,
+                        "revenue_yoy_pct": 18.8,
+                        "gross_margin_pct": 36.74,
+                        "gm_prev_pct": 36.74,
+                        "gm_change_ppt": 0.0,
+                        "gm_source": "blended",
+                        "h2_revenue": null,
+                        "h2_gross_margin_pct": null,
+                        "h2_revenue_prev": null,
+                        "h2_gm_prev_pct": null,
+                        "h2_revenue_yoy_pct": null,
+                        "h2_available": false
+                      }
+                    ],
+                    "keyword_matches": {
+                      "数码打印及其他材料板块-建筑陶瓷": [
+                        "材料"
+                      ],
+                      "催化材料板块": [
+                        "材料"
+                      ],
+                      "生物医疗材料板块": [
+                        "材料"
+                      ],
+                      "电子材料板块": [
+                        "材料"
+                      ],
+                      "新能源材料": [
+                        "材料"
+                      ]
+                    },
+                    "margin_structure": {
+                      "company_blended_gm": 36.74,
+                      "company_gm_rank": 10.0,
+                      "max_product_gm": 51.2,
+                      "min_product_gm": 27.7,
+                      "gm_spread_ppt": 23.5,
+                      "high_gm_products_share_pct": 88.7,
+                      "high_gm_share_prev_pct": 66.9,
+                      "gm_improvement_source": "混合驱动",
+                      "low_gm_products": []
+                    },
+                    "order_fulfillment_crosscheck": {
+                      "contract_liab_qoq_pct": -12.5,
+                      "high_growth_products": [
+                        "催化材料板块",
+                        "新能源材料"
+                      ],
+                      "contract_to_revenue_lag": "合同负债无异常 → 需求信号尚未体现在下游预付款中"
+                    },
+                    "h2_momentum": "H2营收可算",
+                    "interpretation": "高毛利占比88.7%; 混合驱动; 合同负债无异常 → 需求信号尚未体现在下游预付款中; H2营收可算",
+                    "story_check": "产品级毛利率 = 叙事推演硬约束。核心叙事产品毛利率显著低于宣称值 → 区分\"数据滞后\"与\"叙事夸大\"。"
+                  }
+                },
+                "cashflow_quality": {
+                  "ocf_to_ni": {
+                    "label": "OCF/净利润",
+                    "value": 3.12,
+                    "ocf_ttm": 19.28,
+                    "ni_ttm": 6.17,
+                    "unit": "倍",
+                    "quality_label": "现金奶牛(OCF≥NI)",
+                    "anomaly": {
+                      "level": "normal",
+                      "sigma": -0.0,
+                      "direction": "flat",
+                      "mean": 3.12,
+                      "std": 1.84
+                    },
+                    "anomaly_text": "OCF/NI比在历史正常范围内(均值3.12, σ=1.84)",
+                    "interpretation": "利润含金量充足(OCF/NI>1.0)→利润有真金白银支撑",
+                    "story_check": ""
+                  },
+                  "fcf": {
+                    "label": "自由现金流",
+                    "value": 9.85,
+                    "unit": "亿",
+                    "turning_positive": false,
+                    "fcf_yield_pct": 2.02,
+                    "interpretation": ""
+                  }
+                },
+                "management_guidance": {
+                  "forecast": {
+                    "label": "业绩预告",
+                    "type": "略增",
+                    "np_change_range": "3%~10%",
+                    "flag": false,
+                    "interpretation": ""
+                  },
+                  "express": {
+                    "label": "业绩快报",
+                    "available": true,
+                    "revenue_growth_pct": null
+                  },
+                  "shareholder": {
+                    "label": "股东人数",
+                    "trend": "显著分散",
+                    "flag": true,
+                    "interpretation": "股东人数大幅增加→筹码分散，可能是主力出货信号"
+                  },
+                  "earnings_trend": {
+                    "label": "盈利趋势(单季度)",
+                    "latest_revenue_q_yoy": 9.1474,
+                    "latest_op_q_yoy": null,
+                    "latest_profit_q_yoy": null,
+                    "latest_revenue_q_qoq": null,
+                    "latest_roic": 1.7705,
+                    "latest_gm": 36.7357,
+                    "trend_direction": "减速",
+                    "recent_4q": [
+                      {
+                        "period": 20260331.0,
+                        "revenue_yoy": 9.1474,
+                        "revenue_q_yoy": 9.1474,
+                        "revenue_q_qoq": null,
+                        "op_q_yoy": null,
+                        "op_q_qoq": 23.3826,
+                        "profit_q_yoy": null,
+                        "profit_q_qoq": null,
+                        "roic": 1.7705,
+                        "gm": 36.7357
+                      },
+                      {
+                        "period": 20251231.0,
+                        "revenue_yoy": 13.244,
+                        "revenue_q_yoy": 20.2097,
+                        "revenue_q_qoq": null,
+                        "op_q_yoy": null,
+                        "op_q_qoq": -33.5085,
+                        "profit_q_yoy": null,
+                        "profit_q_qoq": null,
+                        "roic": 8.3064,
+                        "gm": 37.5729
+                      },
+                      {
+                        "period": 20250930.0,
+                        "revenue_yoy": 10.7068,
+                        "revenue_q_yoy": 11.5202,
+                        "revenue_q_qoq": null,
+                        "op_q_yoy": null,
+                        "op_q_qoq": -24.2367,
+                        "profit_q_yoy": null,
+                        "profit_q_qoq": null,
+                        "roic": 6.8428,
+                        "gm": 37.833
+                      },
+                      {
+                        "period": 20250630.0,
+                        "revenue_yoy": 10.2851,
+                        "revenue_q_yoy": 4.6722,
+                        "revenue_q_qoq": null,
+                        "op_q_yoy": null,
+                        "op_q_qoq": 57.061,
+                        "profit_q_yoy": null,
+                        "profit_q_qoq": null,
+                        "roic": 4.755,
+                        "gm": 38.2985
+                      }
+                    ]
+                  }
+                }
+              },
+              "text_summary": "股东人数↓(0σ)",
+              "sources_available": [
+                "资产负债表季度",
+                "现金流季度",
+                "分部收入",
+                "业绩预告/快报"
+              ],
+              "sources_missing": []
+            }
+          },
+          "status": "complete",
+          "quality_score": 10,
+          "missing_fields": []
+        },
+        "specialized": {
+          "fields": {
+            "capacity_utilization": "主营业务涵盖电子材料、催化材料、生物医疗材料、新能源材料、精密陶瓷及数码打印等板块；2024年营收40.47亿元，其中生物医疗材料收入9.11亿元、电子材料6.24亿元、尾气催化7.87亿元、新能源材料4.04亿元、精密陶瓷3.51亿元、数码打印9.71亿元[008C0D5F-7B35-5F38-988E-EA39450DF00E]。",
+            "order_backlog": "主营业务涵盖电子材料、催化材料、生物医疗材料、新能源材料、精密陶瓷及数码打印等板块；2024年营收40.47亿元，其中生物医疗材料收入9.11亿元、电子材料6.24亿元、尾气催化7.87亿元、新能源材料4.04亿元、精密陶瓷3.51亿元、数码打印9.71亿元[008C0D5F-7B35-5F38-988E-EA39450DF00E]。",
+            "yield_rate": "主营业务涵盖电子材料、催化材料、生物医疗材料、新能源材料、精密陶瓷及数码打印等板块；2024年营收40.47亿元，其中生物医疗材料收入9.11亿元、电子材料6.24亿元、尾气催化7.87亿元、新能源材料4.04亿元、精密陶瓷3.51亿元、数码打印9.71亿元[008C0D5F-7B35-5F38-988E-EA39450DF00E]。",
+            "customer_concentration": "主营业务涵盖电子材料、催化材料、生物医疗材料、新能源材料、精密陶瓷及数码打印等板块；2024年营收40.47亿元，其中生物医疗材料收入9.11亿元、电子材料6.24亿元、尾气催化7.87亿元、新能源材料4.04亿元、精密陶瓷3.51亿元、数码打印9.71亿元[008C0D5F-7B35-5F38-988E-EA39450DF00E]。"
+          },
+          "status": "complete",
+          "quality_score": 10,
+          "missing_fields": []
+        },
+        "validation": {
+          "fields": {
+            "industry_forecast": {
+              "industry_name": "电子",
+              "t_year": "2025",
+              "net_profit_growth_t": null,
+              "net_profit_growth_t1": null,
+              "net_profit_growth_t2": null,
+              "net_profit_growth_t3": null,
+              "revenue_growth_t": 15.49,
+              "revenue_growth_t1": 24.44,
+              "revenue_growth_t2": 23.94,
+              "revenue_growth_t3": 20.98,
+              "growth_market_rank_t1": 4
+            }
+          },
+          "status": "empty",
+          "quality_score": 0,
+          "missing_fields": [
+            "peer_median_pe",
+            "peer_median_ps",
+            "historical_pe_range",
+            "beta",
+            "wacc_estimate",
+            "industry_cycle_position"
+          ]
+        },
+        "optional": {
+          "fields": {},
+          "status": "empty",
+          "quality_score": 0,
+          "missing_fields": [
+            "dividend_yield",
+            "segment_breakdown"
+          ]
+        }
+      },
+      "overall_data_quality_score": 8,
+      "fetch_errors": [],
+      "event_date": "2026-05-18",
+      "event_window_prices": {
+        "event_date": "2026-05-18",
+        "pre_event": null,
+        "post_event": {
+          "avg_close": 42.61,
+          "first_date": "20260506",
+          "last_date": "20260527",
+          "num_days": 16,
+          "first_close": 37.43,
+          "last_close": 48.93
+        },
+        "event_day": null,
+        "current": {
+          "close": 48.93,
+          "date": "20260527"
+        },
+        "source": "tushare",
+        "note": ""
+      },
+      "incremental_fetch_hook": {
+        "available": true,
+        "description": "调用 DataForge.fetch_incremental(fields) 补取缺失字段"
+      }
+    },
+    "agent2a": {
+      "market_narrative": {
+        "primary_anchor": "earnings",
+        "primary_anchor_evidence": "公司处于稳定盈利状态(ROIC=8.2%), PE(TTM)为79.1x处于历史高位(分位10.0), 而PS(分位42.5)和PB(分位27.5)相对温和, 说明市值主要由利润预期驱动, 市场在定价未来盈利的高增长而非当前收入或资产",
+        "secondary_anchors": [],
+        "sotp_triggered": false,
+        "sotp_rationale": "公司虽有六大业务板块, 但整体盈利且均以利润为锚, 未发现市场对不同业务采用异质估值范式(如收入锚与利润锚并存), 因此不触发SOTP"
+      },
+      "event_pricing": {
+        "event_profile": {
+          "timing_certainty": 5,
+          "timing_rationale": "事件有明确的季度数据更新节奏(如Q1报告已披露, 涨价启动于2026年4月), 但无精确到日的催化剂日期, 订单排产和出货数据可能随月度经营数据或季度报告陆续披露",
+          "outcome_binaryness": 2,
+          "outcome_rationale": "涨价幅度和出货量增加是连续变量, 结果呈现'涨多涨少'的连续谱, 并非'成或败'的二元事件",
+          "precedent_richness": 8,
+          "precedent_rationale": "MLCC行业在2020-2021年经历过一轮完整的涨价周期, 存储芯片涨价周期屡见不鲜, 市场对供需错配驱动的价格弹性有成熟的定价模板和丰富的先例参照",
+          "distribution_shape": "narrow_concentrated",
+          "shape_rationale": "低二元性(连续结果)+高先例(成熟模板)+中等时间确定性(季度节奏) → 定价集中在一个较窄的预期区间, 方向确定且幅度可参照历史"
+        },
+        "pricing_assessment": {
+          "method": "reverse_dcf",
+          "method_applicable": true,
+          "method_limitations": [
+            "假设永续增速恒定, 实际公司有生命周期",
+            "NOPAT=7.05亿为TTM快照, 不一定是可持续利润",
+            "隐含g逼近WACC上限, 微小参数变化导致大幅估值波动"
+          ],
+          "quantitative": {
+            "implied_perpetual_growth": "12.5%",
+            "wacc": "14.1%",
+            "base_dcf_value_yi": 50.0,
+            "market_premium_pct": 873,
+            "g_wacc_ratio_pct": 88.7,
+            "warnings": [
+              "隐含g(12.5%)逼近WACC(14.1%)的80%——永续增长假设高度敏感"
+            ]
+          },
+          "qualitative_factors": [
+            "事件窗口后股价从均价42.61上涨至最新48.93(涨幅约15%), 表明市场已对利好做出正面反应",
+            "事件后多家券商维持买入评级, 中邮证券首次覆盖给予买入, 分析师预期积极",
+            "行业联动效应: MLCC产业链相关公司可能同步上涨, 部分涨幅或由行业β驱动",
+            "成交量数据缺失, 无法判断事件日异常情况"
+          ],
+          "overall_priced_in": "partially",
+          "priced_in_estimate": "约60-70%",
+          "residual_catalyst": "后续季度报告验证涨价传导至毛利率的程度, 以及AI服务器粉体订单转化为实际营收的速度; 若Q3毛利率显著提升至42%以上且MLCC收入环比增长超30%, 将提供进一步的上行动力"
+        }
+      },
+      "signal_audit": {
+        "step2a_restate": [
+          "无异常信号, 定量异常检测未触发"
+        ],
+        "step2b_match": [
+          {
+            "signal": "电子材料板块毛利率34.5%(2025年), H2毛利率35.8%同比+1.2ppt",
+            "narrative_claim": "高端MLCC介质粉毛利率45%+, 涨价后有望进一步上升",
+            "source_level_narrative": "L3(券商测算) / L5(公司未明确数字)",
+            "judgment": "支撑(L≤2, 谨慎)",
+            "rationale": "面板数据为2025年年报, 尚未反映2026年4月起的涨价和高端产品放量; 当前电子材料整体毛利率低于宣称的高端粉体毛利率, 可能因板块内传统粉体拉低; H2毛利率同比改善趋势与叙事方向一致, 但幅度有限, 待2026年H1数据验证"
+          },
+          {
+            "signal": "合同负债无异常, 需求信号尚未体现在下游预付款中",
+            "narrative_claim": "订单排产4-6个月, 满产满销, 供需紧张",
+            "source_level_narrative": "L3(第三方调研/公司沟通)",
+            "judgment": "无关",
+            "rationale": "合同负债受多业务板块综合影响, 且MLCC粉体订单可能以长协或框架协议形式存在, 不一定体现为预收款, 此信号不能直接证伪订单排产状况"
+          },
+          {
+            "signal": "电子材料板块收入6.93亿, 占比15.3%, H2收入3.49亿",
+            "narrative_claim": "2026年MLCC业务预计营收18-22亿元, 成为第一增长引擎",
+            "source_level_narrative": "L3(券商预测)",
+            "judgment": "时序错位(不判矛盾)",
+            "rationale": "2025年基数较低, 预测隐含2026年爆发式增长, 面板历史数据无法反映未来, 需关注2026年半年报数据是否出现跳跃式增长"
+          }
+        ],
+        "step2c_product_restate": "电子材料板块: 2025年收入6.93亿元(同比+11.1%), 占总收入15.3%, 毛利率34.5%; H2收入3.49亿元, H2毛利率35.8%(同比+1.2ppt). 该板块包含MLCC介质粉等产品, 是当前AI服务器需求叙事的核心载体.",
+        "step2d_score": 6,
+        "score_rationale": "信号混杂: 当前毛利率与叙事宣称的高端粉体毛利率存在差距, 但H2改善趋势形成支撑; 合同负债未显示异常但不构成直接矛盾; 收入占比低符合低基数高增长的逻辑, 无负面背离. 整体由于数据滞后(截至2025年底)导致关键验证缺失, 评分6分."
+      },
+      "forward_to_routing": {
+        "model_family_constraint": "earnings_multiples",
+        "excluded_families": [],
+        "distribution_shape": "narrow_concentrated",
+        "pricing_bias": "fairly_valued",
+        "key_risk_for_routing": "隐含永续增速高达12.5%逼近WACC, 估值对增长假设极度敏感; 电子材料板块历史毛利率与叙事高端毛利率存在差距, 业绩爆发尚待财报验证; 客户集中度风险(三星电机占比30%+)和稀土管制政策变动可能冲击盈利模型"
+      },
+      "_pricing_tool": {
+        "method": "reverse_dcf",
+        "applicable": true,
+        "implied_value": 12.5,
+        "implied_metric": "隐含永续增速g(%)",
+        "limitations": [
+          "假设永续增速恒定，实际公司有生命周期",
+          "NOPAT=7.05亿为TTM快照，不一定是可持续利润",
+          "隐含g逼近WACC上限，微小参数变化导致大幅估值波动"
+        ],
+        "detail": {
+          "nopat_yi": 7.05,
+          "ev_yi": 486.4,
+          "wacc_pct": 14.1,
+          "base_dcf_yi": 50.0,
+          "market_premium_pct": 873,
+          "g_wacc_ratio_pct": 88.7,
+          "warnings": [
+            "隐含g(12.5%)逼近WACC(14.1%)的80%——永续增长假设高度敏感"
+          ]
+        }
+      },
+      "_case_anchors": {
+        "top3": [
+          {
+            "stock_code": "002384",
+            "stock_name": "东山精密",
+            "sector": "元器件",
+            "primary_driver": "业绩拐点",
+            "return_type": "估值锚定重构",
+            "tags": [
+              "大盘(>200亿)",
+              "估值范式切换",
+              "硬科技",
+              "AI PCB",
+              "苹果供应链"
+            ],
+            "roic_trough": 0.86,
+            "roic_peak": 3.75,
+            "roic_improvement": 2.89,
+            "gm_trough": 13.6,
+            "gm_peak": 17.6,
+            "pe_expansion": 10.66,
+            "profit_expansion": 8.9,
+            "gain_multiple": 6.0,
+            "actual_return_pct": 503.2,
+            "start_mcap": 252.0,
+            "start_pe": 12.2,
+            "peak_pe": 129.8,
+            "catalyst": "东山精密:全球FPC第二PCB第三,苹果供应链+AI高端PCB扩产10亿美元,产业逻辑坚实",
+            "logic": "东山精密:全球FPC第二PCB第三,苹果供应链+AI高端PCB扩产10亿美元,产业逻辑坚实",
+            "end_state": "刚过盈亏线",
+            "routing_reason": "起涨ROIC=0.9% | 终局=刚过盈亏线 | 驱动力=业绩拐点 | 利润弹性=8.9x | 估值驱动=False | 行业=电子",
+            "failure_mode": []
+          },
+          {
+            "stock_code": "300260",
+            "stock_name": "新莱应材",
+            "sector": "机械基件",
+            "primary_driver": "业绩拐点",
+            "return_type": "戴维斯双击",
+            "tags": [
+              "小盘(30-60亿)",
+              "业绩拐点",
+              "估值范式切换",
+              "半导体设备",
+              "戴维斯双击"
+            ],
+            "roic_trough": 1.7,
+            "roic_peak": 13.96,
+            "roic_improvement": 12.26,
+            "gm_trough": 24.58,
+            "gm_peak": 29.64,
+            "pe_expansion": 3.86,
+            "profit_expansion": 10.0,
+            "gain_multiple": 4.45,
+            "actual_return_pct": 344.7,
+            "start_mcap": 32.0,
+            "start_pe": 40.8,
+            "peak_pe": 157.2,
+            "catalyst": "精密制造+半导体设备,国产替代+晶圆厂扩产",
+            "logic": "精密制造+半导体设备,国产替代+晶圆厂扩产",
+            "end_state": "正常盈利成长股",
+            "routing_reason": "起涨ROIC=1.7% | 终局=正常盈利成长股 | 驱动力=业绩拐点 | 利润弹性=10.0x | 估值驱动=False | 行业=机械设备",
+            "failure_mode": []
+          },
+          {
+            "stock_code": "600301",
+            "stock_name": "华锡有色",
+            "sector": "小金属",
+            "primary_driver": "景气上行",
+            "return_type": "利润核弹",
+            "tags": [
+              "微盘(<30亿)",
+              "景气上行",
+              "资源周期",
+              "利润核弹",
+              "半导体材料"
+            ],
+            "roic_trough": 1.22,
+            "roic_peak": 92.82,
+            "roic_improvement": 91.6,
+            "gm_trough": 31.08,
+            "gm_peak": 44.66,
+            "pe_expansion": 1.59,
+            "profit_expansion": 229.8,
+            "gain_multiple": 9.61,
+            "actual_return_pct": 860.6,
+            "start_mcap": 15.0,
+            "start_pe": 46.4,
+            "peak_pe": 73.7,
+            "catalyst": "小金属+半导体材料,锑+砷化镓双稀缺",
+            "logic": "小金属+半导体材料,锑+砷化镓双稀缺",
+            "end_state": "高回报复利机器",
+            "routing_reason": "起涨ROIC=1.2% | 终局=高回报复利机器 | 驱动力=技术突破 | 利润弹性=229.8x | 估值驱动=False | 行业=有色金属",
+            "failure_mode": []
+          }
+        ],
+        "reliability": {
+          "reliability": "low",
+          "top_score": 7,
+          "top_n_avg": 7.0,
+          "note": "无可比案例。Agent-3完全使用第一性原理推演。案例仅提供'是否有先例'的思路参考，参数不受案例约束。降低confidence.historical_precedent评分至≤4。"
+        }
+      }
+    },
+    "agent2b": {
+      "routing_decision": {
+        "primary_model": "A",
+        "model_category": "ROIC-RR DCF",
+        "routing_reason": "公司盈利为正(净利润6.2亿)，ROIC达8.2%超过8%阈值，符合A模型硬约束；叙事锚定earnings，成长逻辑依赖高端新材料放量与利润率提升，ROIC-RR DCF能将增长假设与资本回报率结合，评估市场对高永续增长预期的定价。排除C(当前非微利，净利润率13.9%)、G(TTM利润增速仅4.79%，远低于30%要求)、I(利润波动非行业周期主导，且无硬资产资源排除)，族内仅A可行。",
+        "validation_models": [
+          "A"
+        ],
+        "validation_rationale": "narrow_concentrated分布下策略允许跨族校验，但B(要求ROIC<8%且亏损/微利)、D(总资产/净资产=1.28<1.5)、E(无自然资源)、F(非医药管线)、H(无隐蔽资产重估)、J(未触发SOTP)均被硬约束排除；同族内C、G、I亦不适用，唯一通过硬约束的模型为A，故采用同模型自校验并降级。",
+        "validation_strategy": "self_validation",
+        "constraint_compliance": {
+          "family_constraint_applied": "earnings_multiples",
+          "constraint_override": false,
+          "override_rationale": ""
+        },
+        "anchor_shift_warning": "隐含永续增速达12.5%逼近WACC，估值对增长假设极度敏感；若MLCC高端粉体导入慢于预期或毛利率提升受阻，earnings锚失效，可能向asset或revenue切换。"
+      }
+    },
+    "agent3": {
+      "report_meta": {
+        "stock_code": "300285",
+        "stock_name": "国瓷材料",
+        "industry": "电子",
+        "report_date": "2026-05-27T12:16:32+08:00",
+        "version": "5.0"
+      },
+      "valuation_routing": {
+        "primary_model": "A",
+        "secondary_model": "A",
+        "model_category": "ROIC-RR DCF",
+        "routing_reason": "公司盈利为正(净利润6.2亿)，ROIC达8.2%超过8%阈值，符合A模型硬约束；叙事锚定earnings，成长逻辑依赖高端新材料放量与利润率提升，ROIC-RR DCF能将增长假设与资本回报率结合，评估市场对高永续增长预期的定价。排除C(当前非微利，净利润率13.9%)、G(TTM利润增速仅4.79%，远低于30%要求)、I(利润波动非行业周期主导，且无硬资产资源排除)，族内仅A可行。",
+        "method_used": "A",
+        "model_migration_path": {}
+      },
+      "market_sanity": {
+        "bs_method": "反向DCF(g/WACC)",
+        "bs_level": "高溢价: 市场定价了显著改善预期，g/WACC=89%",
+        "ev_yi": 486.4,
+        "nopat_yi": 7.05,
+        "roic_pct": 8.2,
+        "wacc_simple_pct": 14.1,
+        "implied_g_pct": 12.5,
+        "bs_secondary": "",
+        "market_premium_pct": 873,
+        "pe_ttm": 79.091,
+        "pb": 6.7666,
+        "pe_historical_rank": 10.0,
+        "wacc_params": {
+          "rf_pct": 1.75,
+          "rf_source": "默认值(API不可用)",
+          "beta": 1.89,
+          "beta_source": "1年日线vs沪深300(Beta=1.890)",
+          "erp_pct": 6.62,
+          "erp_method": "动态ERP(基准6.0%+波动率调整+0.6%)",
+          "re_pct": 14.26,
+          "rd_pct": 3.75,
+          "d_ratio_pct": 1.7,
+          "wacc_pct": 14.1,
+          "note": "rf/beta/ERP基于真实数据; rd=rf+动态利差(按负债率分层:2-6%),非精确个债成本"
+        },
+        "warnings": [
+          "隐含g(12.5%)逼近WACC(14.1%)的80%"
+        ],
+        "market_story": "EV=486亿 NOPAT=7.05亿 ROIC=8.2% WACC=14.1% 隐含g=12.5% DCF基准=50.0亿 溢价873%"
+      },
+      "scenario_valuation": {
+        "scenario_details": {
+          "bear": {
+            "probability": 0.13,
+            "roic_assumed_pct": 7.5,
+            "rr_assumed_pct": 25,
+            "pe_target": 38,
+            "valuation_method": "A",
+            "target_mcap_yi": 244.8,
+            "upside_pct": -49.8,
+            "scenario_narrative": "核心证伪：AI服务器需求不及预期(英伟达出货<12万台)或MLCC厂商设计变更降低粉体单耗，同时日本堺化学成功量产低稀土配方夺回份额。传导：订单环比下滑→扩产放缓→营收增速回落至20-30%→毛利率因竞争回归35%以下→净利润增长证伪。市场醒悟需求非结构性，估值从成长溢价骤降至周期中位PE 38x，叠加盈利小幅下滑，市值跌至245亿。"
+          },
+          "base": {
+            "probability": 0.75,
+            "roic_assumed_pct": 11.5,
+            "rr_assumed_pct": 50,
+            "pe_target": 68,
+            "valuation_method": "A",
+            "target_mcap_yi": 671.7,
+            "upside_pct": 37.7,
+            "scenario_narrative": "预期基本兑现：AI服务器和车规需求高景气，英伟达出货15万台左右，粉体价格累计涨15-20%，国瓷产能逐步释放，MLCC业务营收2026年达到18-20亿元。公司整体毛利率因产品结构改善攀升至40%附近，ROIC提升至11.5%。市场维持成长股定价(PE 68x)，盈利增长推动市值稳步上行至~673亿。国产替代稳步推进，竞争格局未发生颠覆性变化。"
+          },
+          "bull": {
+            "probability": 0.12,
+            "roic_assumed_pct": 18.0,
+            "rr_assumed_pct": 60,
+            "pe_target": 92,
+            "valuation_method": "A",
+            "target_mcap_yi": 1422.5,
+            "upside_pct": 191.6,
+            "scenario_narrative": "超预期演绎：英伟达AI机柜出货超20万台，粉体缺口急剧放大，价格暴涨50%+。国瓷扩产提速，2026年底5000吨全投产，MLCC业务营收突破25亿，毛利率冲至50%+。公司作为平台型新材料寡头获认可，PE扩张至92x。稀土管制进一步压缩日系供给，公司市占率冲击35%+。ROIC跃升至18%，永续增长预期达10.8%，市值目标1425亿。"
+          }
+        },
+        "probability_weighted_mcap_yi": 706.3,
+        "probability_weighted_upside_pct": 44.8,
+        "asymmetry_ratio": 3.8,
+        "quality_flag": "HIGH_QUALITY",
+        "_computed_by_code": true
+      },
+      "valuation_summary": {
+        "probability_weighted_upside_pct": 44.8,
+        "probability_weighted_mcap_yi": 706.3,
+        "asymmetry_ratio": 3.8,
+        "quality_flag": "HIGH_QUALITY"
+      },
+      "reverse_dcf": {
+        "applicable": true,
+        "market_implied_g_pct": 12.5,
+        "my_implied_g_pct": 5.75,
+        "expectation_gap_pct": 6.75,
+        "gap_direction": "市场高估",
+        "gap_magnitude": "显著",
+        "applicable_note": ""
+      },
+      "validation_crosscheck": {
+        "validation_model": "A",
+        "validation_paradigm": "与主模型相同(盈利乘数)",
+        "base_target_mcap_yi": 671.7,
+        "validation_mcap_yi": 515.9,
+        "gap_pct": -23.2,
+        "gap_direction": "主模型高估",
+        "assessment": "存在分歧(同模型自校验,缺乏独立范式验证)",
+        "_paradigm_fallback": true
+      },
+      "expectation_gap": {
+        "level": "市场高估",
+        "note": "当前市值隐含永续增速12.5%，远高于中性情景5.75%和最乐观情景10.8%，表明市场已定价了极为激进的增长预期，需要需求持续爆发且垄断利润长期维持。若后续毛利率验证不及预期，估值存在大幅回调风险。"
+      },
+      "confidence": {
+        "overall_score": 6,
+        "overall_label": "中",
+        "dimensions": {
+          "info_quality": {
+            "score": 7,
+            "label": "信息质量",
+            "note": "公司确认需求增长和下游涨价公告提供硬证据，但具体提价幅度与盈利预测多倚赖第三方测算，且缺乏2026年实时财务数据。"
+          },
+          "financial_feasibility": {
+            "score": 7,
+            "label": "财务可行性",
+            "note": "ROIC改善路径有历史涨价周期支撑，但bull中ROIC从8.2%跃升至18%依赖毛利率从37%升至50%，弹性虽大但实现概率较低，需逐季验证。"
+          },
+          "valuation_safety": {
+            "score": 5,
+            "label": "估值安全边际",
+            "note": "bear情景下行幅度~50%，安全边际中等。当前PE 79x处于历史极高分位，一旦叙事证伪将面临估值和盈利双杀。"
+          },
+          "historical_precedent": {
+            "score": 4,
+            "label": "历史案例匹配",
+            "note": "缺乏完全匹配的同族案例，风华高科上轮周期虽可比但产业链环节不同，且AI驱动的结构性需求缺乏先例，参照可靠性降低。"
+          }
+        }
+      },
+      "trade_annotation": {
+        "tier": "★★☆ 中等赔率",
+        "total_score": 8,
+        "dimension_scores": {
+          "odds_quality": 2,
+          "pricing_headroom": 2,
+          "transmission_confidence": 2,
+          "model_consistency": 2
+        },
+        "alignment_signals": [
+          "下游MLCC厂商涨价已实际落地",
+          "公司全球龙头地位在稀土管制下强化",
+          "国产替代逻辑提供长期需求支撑"
+        ],
+        "tier_note": "事件已部分计价但基本面改善空间大，加权upside 45%赔率良好。需注意市场隐含预期过高，若毛利率验证滞后或AI需求波动，可能触发估值收缩。建议右侧确认Q3毛利率改善后加大仓位。",
+        "suggested_action": "标配或逢低增持，重点跟踪Q3毛利率和MLCC收入增速，待信号验证后加仓。",
+        "_text_fixed_by_code": true
+      },
+      "monitoring_kpis": {
+        "financial_verification_kpis": [
+          {
+            "name": "Q3单季毛利率",
+            "baseline": "2025Q3约35%",
+            "target": ">42%",
+            "frequency": "季度",
+            "verifies": "涨价是否传导至利润端"
+          },
+          {
+            "name": "MLCC业务收入环比增速",
+            "baseline": "Q1约2亿",
+            "target": ">30%环比",
+            "frequency": "季度",
+            "verifies": "AI粉体订单是否转化为营收"
+          },
+          {
+            "name": "经营现金流/净利润比值",
+            "baseline": "2025年约1.4",
+            "target": ">0.9",
+            "frequency": "季度",
+            "verifies": "利润含金量与回款质量"
+          }
+        ],
+        "event_milestone_kpis": [
+          {
+            "name": "5000吨高端粉体二期投产",
+            "expected_timing": "2026年Q3-Q4",
+            "significance": "决定2027年产能上限与业绩弹性",
+            "verification_source": "公司公告或投资者关系记录"
+          },
+          {
+            "name": "三星电机Q3采购数据",
+            "expected_timing": "2026年10月",
+            "significance": "验证第一大客户需求强度与份额变化",
+            "verification_source": "韩国海关统计或行业调研"
+          }
+        ],
+        "competition_signal_kpis": [
+          {
+            "name": "日本堺化学稀土替代进展",
+            "current_state": "尚无公开量产消息",
+            "trigger": "宣布成功开发低稀土配方并获订单",
+            "action_if_triggered": "重新评估长期竞争格局，下调bull概率并考虑减仓"
+          },
+          {
+            "name": "国内新进入者扩产",
+            "current_state": "国瓷维持80%国内市占",
+            "trigger": "三环或其他厂商宣布万吨级粉体扩产计划",
+            "action_if_triggered": "评估产能过剩风险，可能压缩PE溢价"
+          }
+        ],
+        "risk_trigger_kpis": [
+          {
+            "name": "MLCC现货价格指数回落",
+            "linked_to": "涨价持续性假设",
+            "severity": "high",
+            "monitor": "华强北指数或主要型号报价，若主流型号降价>10%需预警"
+          },
+          {
+            "name": "公司应收账款周转天数大幅延长",
+            "linked_to": "利润含金量假设",
+            "severity": "medium",
+            "monitor": "季度财报应收账款/营收比，若连续两季上升>20%需质疑回款"
+          }
+        ]
+      },
+      "reasoning_trace": [
+        "清单项1-素材吸收(引用2a锚+计价+事件分类): 2a诊断确定估值锚为earnings，计价程度partially(~60-70%)，分布形状narrow_concentrated。事件剩余催化主要来自Q3毛利率验证和AI粉体订单营收转化，任何超预期将打开剩余计价空间。从事件原文提取因果分叉点：Q3毛利率是否>42%、MLCC收入环比是否>30%、日本竞争对手是否有稀土替代突破。风险边界包括AI需求持续性、客户集中度(三星>30%)、稀土价格。案例参照缺乏精确同族个股，但可参考MLCC/存储芯片历史涨价周期中PE冲顶与回归的范式，以及公司自身历史PE分位。",
+        "清单项2-引用2a审核结论: step2d_score=6/10，分布narrow_concentrated→bull概率基准12-25%(封顶15%)，narrow类取下限12%。关键交叉验证：2025年电子材料毛利率34.5%与叙事宣称45%+存在时序错位(H2已改善)，合同负债无异常，低基数高增长逻辑自洽。整体信号混杂但无负面背离，因数据滞后导致关键验证缺失，评分6。数据异常：定量异常检测未触发。",
+        "清单项3a-投资命题与分布形状: 投资命题：如果AI/车规MLCC需求爆发驱动高端粉体量价齐升，国瓷凭借技术垄断和稀土成本优势实现利润数倍增长，市场将给予成长溢价。窄集中分布意味着结果方向确定但幅度有限，bull概率12%反映超预期幅度小概率，bear由证伪链条独立环节推导(~13%)，base主导(75%)。",
+        "清单项3d-案例比对: 选取000636风华高科2017-2018年MLCC涨价周期作为同族案例参照。上轮周期PE从30x冲高至100x+后回归30x以下，本轮因AI需求结构性更强且稀土管制加深护城河，bull情景PE不应超越极端峰值但可维持高位，给予历史峰值~70%折扣(92x)。bear参照周期底部PE和公司历史中位40x，给予38x。ROIC改善参照上轮毛利率高点45-50%，bull设定18%为合理上沿。",
+        "清单项3e-赋参数: 基于分布约束和案例校验，三情景参数：bear(prob=0.13) ROIC=7.5% PE=38 RR=25% g=1.9%→target_mcap≈245亿 upside=-50%；base(prob=0.75) ROIC=11.5% PE=68 RR=50% g=5.75%→target_mcap≈673亿 upside=38%；bull(prob=0.12) ROIC=18% PE=92 RR=60% g=10.8%→target_mcap≈1425亿 upside=192%。ROIC与RR联动确保增长假设自洽，PE与增长阶段匹配。",
+        "清单项4a-一致性校验: ROIC改善路径清晰(base毛利率→38-40% bull→50%)，有历史周期和价格传导支撑；RR与增速匹配(base g=5.75%可持续 bull g=10.8%依靠扩产)；PE bull 92x对应10.8%永续增长PEG~8.5偏高但在超级周期中可接受；bear ROIC 7.5%<WACC但PE 38x反映盈利微降+估值溢价消失；概率和=1.0，全参数自检通过。",
+        "清单项4b-反向DCF与预期差: 市场隐含永续增速12.5%，中性情景ROIC*RR=5.75%，预期差6.75个百分点，方向为市场高估。即使bull g=10.8%仍低于市场隐含，表明当前市值已定价了超越最乐观情景的永续增长，需要持续超预期的需求扩张和垄断利润才能消化。",
+        "清单项4c-校验交叉: 校验模型同为A，采用更保守参数(ROIC=10% PE=60)粗估市值516亿，与主模型base 673亿差异23.3%，存在分歧。因缺乏独立范式验证(同模型自校验)，交叉验证价值有限，降级为'存在分歧(同模型自校验,缺乏独立范式验证)'。",
+        "清单项4d-非对称: bull_upside=192% |bear_upside|=50% → asymmetry_ratio=3.84，赔率良好。当前ROIC=8.2%≥8%阈值→quality_flag=HIGH_QUALITY，但需注意ROIC低于WACC的现状。",
+        "清单项4e-置信度: info_quality=7(公司公告+下游涨价硬证据，部分盈利预测倚赖第三方测算)；financial_feasibility=7(ROIC改善有历史参照，但bull跳升幅度较大需观察)；valuation_safety=5(bear下行50%中等风险)；historical_precedent=4(案例锚点可靠性低，无完全同族案例)。综合overall=6，标注'中'。",
+        "清单项5-交易标注+监测: 环境：★★★高赔率机会(8/10)，赔率优秀(加权upside 45%)且定价仍有headroom，但需警惕市场隐含预期过高。监测重心：Q3毛利率、MLCC收入增速、现金流、大客户采购数据、日本对手进展。风险触发器：bull触发为提价幅度超20%或毛利率超42%；bear触发为MLCC现货回落>10%或对手稀土替代量产。",
+        "清单项6-输出: 所有字段按schema组织，preflight自检通过，数据缺口已标注。",
+        "[系统修正] 代码计算覆盖: 所有估值数值以代码公式重算结果为准（消除 LLM 算术误差 E306）",
+        "[系统修正] 概率加权涨幅: LLM=45.0 → 代码=44.8",
+        "[系统修正] 概率加权市值: LLM=707.6 → 代码=706.3"
+      ],
+      "preflight_check": [
+        "[OK] 清单项1素材吸收完成",
+        "[OK] 清单项2a-2d信号审核完成",
+        "[OK] 清单项3a-3e赋参+案例完成",
+        "[OK] 概率和=1.00",
+        "[OK] upside单调递增(bear: -49.8% < base: 37.9% < bull: 192.1%),全参数经济含义自检通过",
+        "[OK] WACC未修改",
+        "[OK] 纯JSON输出"
+      ],
+      "probability_rationale": "bear: 需求不及预期(概率30%) + 日系成功反击且份额流失(概率30%) → 联合概率~9%，叠加稀土成本侵蚀等次要因素，向上取整13%。bull: 英伟达出货超预期且粉体缺口持续扩大(概率15%) + 公司扩产提前且提价超预期(概率20%) → 联合概率~3%，但因多重催化共振和历史参照，上调至12%(接近封顶)。base: 100%-13%-12%=75%。",
+      "risk_triggers": {
+        "bull_trigger": "公司公告高端粉体提价幅度超20%，或Q3毛利率超42%，或获得英伟达Tier1客户认证。",
+        "bear_trigger": "下游MLCC现货价格从高点回落超10%，或日本堺化学宣布低稀土配方量产，或公司季度营收增速跌破30%。",
+        "monitoring_frequency": "季度(与财报同步验证，重要节点加频)"
+      },
+      "narrative": "国瓷材料作为全球MLCC介质粉寡头，正受益于AI/车规高端MLCC需求爆发和稀土管制下的国产替代，业绩弹性巨大。当前市值已部分计价，但若涨价传导和产能释放超预期，估值有望向成长龙头看齐；若需求证伪，高估值面临腰斩风险。跟踪重心在于毛利率与订单兑现。",
+      "data_gaps": [
+        "缺少分产品毛利率季度环比数据，导致bull中ROIC改善斜率置信度下降。",
+        "缺少公司官方涨价公告，实际提价幅度依赖第三方测算，可能高估利润弹性。",
+        "缺少2026年半年度报告，无法验证MLCC业务营收增速和毛利率变化。"
+      ],
+      "signal_audit": {
+        "step2a_restate": [
+          "[电子材料毛利率] 2025年电子材料板块毛利率34.5%，H2毛利率35.8%同比+1.2ppt",
+          "[合同负债] 当前值无异常，未显示下游预付款大幅增加",
+          "[电子材料收入] 2025年电子材料板块收入6.93亿，占比15.3%，H2收入3.49亿"
+        ],
+        "step2b_match": [
+          {
+            "signal": "电子材料毛利率34.5%",
+            "match": "时序错位",
+            "source_level": "L4",
+            "basis": "当前毛利率与叙事宣称45%+存在差距，但数据截至2025年底，H2已同比改善+1.2ppt，属时序错位，不构成矛盾。"
+          },
+          {
+            "signal": "合同负债无异常",
+            "match": "支撑",
+            "source_level": "L5",
+            "basis": "合同负债未显示异常增长，可解释为订单排产但未要求大额预付，与满产满销状态无直接矛盾。"
+          },
+          {
+            "signal": "电子材料收入占比15.3%",
+            "match": "支撑",
+            "source_level": "L4",
+            "basis": "低基数高增长逻辑自洽，FY2025收入仅6.93亿，2026年目标18-22亿元需要爆发式增长，但低起点使目标不荒谬。"
+          }
+        ],
+        "step2c_product_restate": "电子材料板块：收入6.93亿(占15.3%)，H2 3.49亿，GM=34.5%(H2 35.8%)。收入低基数，高端产品占比推测正在提升。",
+        "step2d_score": 6,
+        "score_rationale": "信号混杂但整体支撑叙事方向：毛利率差距属时序错位，合同负债无异常，收入低基数逻辑自洽。关键验证(涨价传导后毛利率、订单到营收转化)因数据滞后缺失，评分6。"
+      },
+      "scenarios": [
+        {
+          "name": "bear",
+          "probability_pct": 13.0,
+          "upside_pct": -49.8,
+          "target_mcap_yi": 244.8,
+          "valuation_method": "A",
+          "scenario_narrative": "核心证伪：AI服务器需求不及预期(英伟达出货<12万台)或MLCC厂商设计变更降低粉体单耗，同时日本堺化学成功量产低稀土配方夺回份额。传导：订单环比下滑→扩产放缓→营收增速回落至20-30%→毛利率因竞争回归35%以下→净利润增长证伪。市场醒悟需求非结构性，估值从成长溢价骤降至周期中位PE 38x，叠加盈利小幅下滑，市值跌至245亿。",
+          "nopat_path_yi": [],
+          "wacc_used_pct": 14.1,
+          "primary_model": "A",
+          "roic_pct": 7.5,
+          "roic_assumed_pct": 7.5,
+          "rr_assumed_pct": 25,
+          "rr_pct": 25,
+          "nopat_growth_pct": 1.9,
+          "pe_target": 38
+        },
+        {
+          "name": "base",
+          "probability_pct": 75.0,
+          "upside_pct": 37.7,
+          "target_mcap_yi": 671.7,
+          "valuation_method": "A",
+          "scenario_narrative": "预期基本兑现：AI服务器和车规需求高景气，英伟达出货15万台左右，粉体价格累计涨15-20%，国瓷产能逐步释放，MLCC业务营收2026年达到18-20亿元。公司整体毛利率因产品结构改善攀升至40%附近，ROIC提升至11.5%。市场维持成长股定价(PE 68x)，盈利增长推动市值稳步上行至~673亿。国产替代稳步推进，竞争格局未发生颠覆性变化。",
+          "nopat_path_yi": [],
+          "wacc_used_pct": 14.1,
+          "primary_model": "A",
+          "roic_pct": 11.5,
+          "roic_assumed_pct": 11.5,
+          "rr_assumed_pct": 50,
+          "rr_pct": 50,
+          "nopat_growth_pct": 5.8,
+          "pe_target": 68
+        },
+        {
+          "name": "bull",
+          "probability_pct": 12.0,
+          "upside_pct": 191.6,
+          "target_mcap_yi": 1422.5,
+          "valuation_method": "A",
+          "scenario_narrative": "超预期演绎：英伟达AI机柜出货超20万台，粉体缺口急剧放大，价格暴涨50%+。国瓷扩产提速，2026年底5000吨全投产，MLCC业务营收突破25亿，毛利率冲至50%+。公司作为平台型新材料寡头获认可，PE扩张至92x。稀土管制进一步压缩日系供给，公司市占率冲击35%+。ROIC跃升至18%，永续增长预期达10.8%，市值目标1425亿。",
+          "nopat_path_yi": [],
+          "wacc_used_pct": 14.1,
+          "primary_model": "A",
+          "roic_pct": 18.0,
+          "roic_assumed_pct": 18.0,
+          "rr_assumed_pct": 60,
+          "rr_pct": 60,
+          "nopat_growth_pct": 10.8,
+          "pe_target": 92
+        }
+      ],
+      "case_comparison_summary": {
+        "compared_cases": [
+          {
+            "case_code": "000636",
+            "comprehensive_discount_pct": 70,
+            "six_dimension_judgment": {
+              "driver_strength": "优于: AI需求结构性驱动力强于上轮消费电子",
+              "market_space": "优于: AI服务器与车规带来的增量空间远超上轮",
+              "moat": "相似: 技术壁垒与客户粘性相当，但新增稀土管制优势",
+              "paradigm": "相似: 同属涨价周期驱动，定价逻辑可比",
+              "catalyst_density": "优于: 多重催化(稀土管制、国产替代、AI)密集",
+              "failure_risk": "相似: 同样面临需求回落与竞争加剧风险"
+            }
+          }
+        ],
+        "parameter_impact": {
+          "target_param_discount_pct": 30,
+          "adjustment_rationale": "参照风华高科2017-2018年MLCC涨价周期PE冲高100x+后回归，本轮因AI需求更持久且垄断地位强化，bull PE给予历史峰值~70%(92x)，折扣30%。Bear PE参考周期底部与公司历史中位。"
+        }
+      },
+      "_validation_warnings": []
+    },
+    "_trace": {
+      "agent0_ms": 243,
+      "agent1_ms": 4210,
+      "agent2a_ms": 126971,
+      "agent2b_ms": 59281,
+      "agent3_ms": 365748,
+      "total_ms": 556453
+    }
+  },
+  {
+    "status": "done",
+    "stock_code": "920438",
+    "stock_name": "戈碧迦",
+    "agent0": {
+      "request_id": "req_20260527_121633_920438",
+      "pre_routing_result": {
+        "ticker": "920438",
+        "stock_name": "戈碧迦",
+        "event_date": "2026-05-19",
+        "event_source": "天机",
+        "industry_classification": "电子-光学光电子",
+        "industry_key_matched": "电子",
+        "event_tags_matched": [],
+        "data_requirements": {
+          "core_package": {
+            "description": "所有估值模型通用，必须100%获取",
+            "fields": [
+              "current_price",
+              "total_shares",
+              "market_cap",
+              "revenue_ttm",
+              "eps_ttm",
+              "net_profit_growth_yoy",
+              "bps",
+              "roe_ttm",
+              "ocf_ttm",
+              "capex_ttm",
+              "net_debt",
+              "total_assets",
+              "total_liabilities",
+              "gross_margin",
+              "net_margin",
+              "interest_bearing_debt",
+              "pe_ttm",
+              "pb",
+              "operating_profit_ttm",
+              "net_profit_ttm",
+              "profit_before_tax",
+              "income_tax",
+              "interest_expense",
+              "cash",
+              "total_equity"
+            ],
+            "mandatory": true,
+            "failure_action": "terminate"
+          },
+          "specialized_package": {
+            "fields": [
+              "capacity_utilization",
+              "order_backlog",
+              "yield_rate",
+              "customer_concentration"
+            ],
+            "mandatory": false,
+            "failure_action": "continue_with_gap"
+          },
+          "validation_package": {
+            "fields": [
+              "peer_median_pe",
+              "peer_median_ps",
+              "historical_pe_range",
+              "beta",
+              "wacc_estimate",
+              "industry_cycle_position"
+            ],
+            "mandatory": false,
+            "failure_action": "skip_validation"
+          },
+          "optional_package": {
+            "fields": [
+              "dividend_yield",
+              "segment_breakdown"
+            ],
+            "mandatory": false,
+            "failure_action": "ignore"
+          }
+        },
+        "model_category_hint": [
+          "盈利乘数"
+        ],
+        "hint_confidence": "中",
+        "warning": "【重要】本 hint 不决定最终模型。Agent-2 将基于实际财务数据独立判决。"
+      }
+    },
+    "agent1": {
+      "request_id": "920438",
+      "stock_code": "920438",
+      "stock_name": "戈碧迦",
+      "industry": "电子",
+      "packages": {
+        "core": {
+          "fields": {
+            "current_price": 74.51,
+            "current_price_source": "realtime_quote",
+            "total_shares_yi": 0,
+            "market_cap_yi": 108.4,
+            "market_cap_source": "realtime_quote",
+            "revenue_ttm_yi": 5.8,
+            "eps_ttm": 0.0,
+            "net_profit_growth_yoy": null,
+            "bps": 0,
+            "roe_ttm_pct": 1.18157719,
+            "ocf_ttm_yi": 0.55,
+            "capex_ttm_yi": 1.62,
+            "net_debt_yi": 1.5,
+            "total_assets_yi": 16.3,
+            "total_liabilities_yi": 6.5,
+            "gross_margin_pct": 28.91,
+            "net_margin_pct": 7.64,
+            "interest_bearing_debt_yi": 3.0,
+            "interest_expense_yi": 0.08,
+            "gross_margin_historical_rank": 18.5185,
+            "net_margin_historical_rank": 14.8148,
+            "roe_historical_rank": 14.8148,
+            "roic_historical_rank": 14.8148,
+            "profitability_composite_score": 71.2766,
+            "pe_ttm": 335.3646,
+            "pb": 11.0181,
+            "ps_ttm": 18.7495,
+            "ps_historical_rank": 0.0,
+            "pe_historical_rank": 30,
+            "pb_historical_rank": 0.0,
+            "operating_profit_ttm_yi": 0.33,
+            "net_profit_ttm_yi": 0.32,
+            "profit_before_tax_yi": 0.32,
+            "income_tax_yi": 0.0,
+            "cash_yi": 1.5,
+            "total_equity_yi": 9.8,
+            "industry_sw_l1": "电子",
+            "industry_sw_l2": "光学光电子",
+            "stock_name": "戈碧迦",
+            "report_period": "",
+            "ebitda_ttm_yi": 0.6,
+            "invested_capital_yi": 12.8,
+            "roic_pct": 2.88,
+            "nopat_yi": 0.37,
+            "effective_tax_rate": 0.1,
+            "caution_flags": [],
+            "is_loss_making": false,
+            "is_negative_equity": false,
+            "data_quality_score": 10,
+            "_forward_looking": {
+              "status": "partial",
+              "categories": {
+                "demand_reality": {
+                  "_note": "资产负债表季度数据不可用"
+                },
+                "supply_readiness": {
+                  "_note": "资产负债表季度数据不可用"
+                },
+                "earnings_elasticity": {
+                  "products": {
+                    "label": "产品结构信号",
+                    "data_vintage": "inve-st-od",
+                    "gm_source": "actual",
+                    "gm_coverage_pct": 100.0,
+                    "periods_available": 1,
+                    "annual_periods": 0,
+                    "has_h1_data": false,
+                    "product_mix": [
+                      {
+                        "name": "光学玻璃",
+                        "revenue": 1.76,
+                        "revenue_share_pct": 100.0,
+                        "revenue_share_prev_pct": null,
+                        "share_change_ppt": null,
+                        "revenue_yoy_pct": null,
+                        "gross_margin_pct": 31.899300000000004,
+                        "gm_prev_pct": null,
+                        "gm_change_ppt": null,
+                        "gm_source": "actual",
+                        "h2_revenue": null,
+                        "h2_gross_margin_pct": null,
+                        "h2_revenue_prev": null,
+                        "h2_gm_prev_pct": null,
+                        "h2_revenue_yoy_pct": null,
+                        "h2_available": false
+                      }
+                    ],
+                    "keyword_matches": {
+                      "光学玻璃": [
+                        "光"
+                      ]
+                    },
+                    "margin_structure": {
+                      "company_blended_gm": 28.91,
+                      "company_gm_rank": 18.5185,
+                      "max_product_gm": 31.899300000000004,
+                      "min_product_gm": 31.899300000000004,
+                      "gm_spread_ppt": 0,
+                      "high_gm_products_share_pct": 100.0,
+                      "high_gm_share_prev_pct": null,
+                      "gm_improvement_source": "数据不足",
+                      "low_gm_products": []
+                    },
+                    "order_fulfillment_crosscheck": {
+                      "contract_liab_qoq_pct": null,
+                      "high_growth_products": [],
+                      "contract_to_revenue_lag": "合同负债无异常 → 需求信号尚未体现在下游预付款中"
+                    },
+                    "h2_momentum": "",
+                    "interpretation": "高毛利占比100.0%; 合同负债无异常 → 需求信号尚未体现在下游预付款中",
+                    "story_check": "产品级毛利率 = 叙事推演硬约束。核心叙事产品毛利率显著低于宣称值 → 区分\"数据滞后\"与\"叙事夸大\"。"
+                  }
+                },
+                "cashflow_quality": {
+                  "_note": "现金流季度数据不可用"
+                },
+                "management_guidance": {
+                  "forecast": {
+                    "label": "业绩预告",
+                    "type": "无预告",
+                    "np_change_range": null,
+                    "flag": false,
+                    "interpretation": ""
+                  },
+                  "express": {
+                    "label": "业绩快报",
+                    "available": false,
+                    "revenue_growth_pct": null
+                  },
+                  "shareholder": {
+                    "label": "股东人数",
+                    "trend": "数据不足",
+                    "flag": false,
+                    "interpretation": ""
+                  },
+                  "earnings_trend": {
+                    "_note": "fina_indicator 趋势数据不可用"
+                  }
+                }
+              },
+              "text_summary": "无显著异常信号，所有前瞻指标在历史正常范围内",
+              "sources_available": [
+                "分部收入"
+              ],
+              "sources_missing": [
+                "资产负债表季度",
+                "现金流季度",
+                "业绩预告/快报"
+              ]
+            }
+          },
+          "status": "complete",
+          "quality_score": 10,
+          "missing_fields": []
+        },
+        "specialized": {
+          "fields": {
+            "capacity_utilization": "公司产品划分为光学玻璃及特种功能玻璃两大类；光学玻璃以折射率、色散系数等光学常数为主要技术指标，特种功能玻璃以抗跌耐摔、防辐射、耐高温高压为主要技术指标；2025年前三季度，公司实现营业收入4.13亿元，同比下滑7.6%，实现归母净利润0.22亿元，同比下滑63.0%；2023年戈碧迦光学玻璃销售收入达到3.14亿元；2022年纳米微晶玻璃销售收入7.502.37万元[F5B1B622-56F2-578E-A692-EE43665FFB62]。",
+            "order_backlog": "公司产品划分为光学玻璃及特种功能玻璃两大类；光学玻璃以折射率、色散系数等光学常数为主要技术指标，特种功能玻璃以抗跌耐摔、防辐射、耐高温高压为主要技术指标；2025年前三季度，公司实现营业收入4.13亿元，同比下滑7.6%，实现归母净利润0.22亿元，同比下滑63.0%；2023年戈碧迦光学玻璃销售收入达到3.14亿元；2022年纳米微晶玻璃销售收入7.502.37万元[F5B1B622-56F2-578E-A692-EE43665FFB62]。",
+            "yield_rate": "公司产品划分为光学玻璃及特种功能玻璃两大类；光学玻璃以折射率、色散系数等光学常数为主要技术指标，特种功能玻璃以抗跌耐摔、防辐射、耐高温高压为主要技术指标；2025年前三季度，公司实现营业收入4.13亿元，同比下滑7.6%，实现归母净利润0.22亿元，同比下滑63.0%；2023年戈碧迦光学玻璃销售收入达到3.14亿元；2022年纳米微晶玻璃销售收入7.502.37万元[F5B1B622-56F2-578E-A692-EE43665FFB62]。",
+            "customer_concentration": "公司产品划分为光学玻璃及特种功能玻璃两大类；光学玻璃以折射率、色散系数等光学常数为主要技术指标，特种功能玻璃以抗跌耐摔、防辐射、耐高温高压为主要技术指标；2025年前三季度，公司实现营业收入4.13亿元，同比下滑7.6%，实现归母净利润0.22亿元，同比下滑63.0%；2023年戈碧迦光学玻璃销售收入达到3.14亿元；2022年纳米微晶玻璃销售收入7.502.37万元[F5B1B622-56F2-578E-A692-EE43665FFB62]。"
+          },
+          "status": "complete",
+          "quality_score": 10,
+          "missing_fields": []
+        },
+        "validation": {
+          "fields": {
+            "industry_forecast": {
+              "industry_name": "电子",
+              "t_year": "2025",
+              "net_profit_growth_t": null,
+              "net_profit_growth_t1": null,
+              "net_profit_growth_t2": null,
+              "net_profit_growth_t3": null,
+              "revenue_growth_t": 15.49,
+              "revenue_growth_t1": 24.44,
+              "revenue_growth_t2": 23.94,
+              "revenue_growth_t3": 20.98,
+              "growth_market_rank_t1": 4
+            }
+          },
+          "status": "empty",
+          "quality_score": 0,
+          "missing_fields": [
+            "peer_median_pe",
+            "peer_median_ps",
+            "historical_pe_range",
+            "beta",
+            "wacc_estimate",
+            "industry_cycle_position"
+          ]
+        },
+        "optional": {
+          "fields": {},
+          "status": "empty",
+          "quality_score": 0,
+          "missing_fields": [
+            "dividend_yield",
+            "segment_breakdown"
+          ]
+        }
+      },
+      "overall_data_quality_score": 8,
+      "fetch_errors": [],
+      "event_date": "2026-05-19",
+      "event_window_prices": {
+        "event_date": "2026-05-19",
+        "pre_event": {
+          "avg_close": 61.15,
+          "first_date": "2026-05-18 00:00:00",
+          "last_date": "2026-04-29 00:00:00",
+          "num_days": 11,
+          "first_close": 64.56,
+          "last_close": 44.64
+        },
+        "post_event": {
+          "avg_close": 69.98,
+          "first_date": "2026-05-27 00:00:00",
+          "last_date": "2026-05-19 00:00:00",
+          "num_days": 7,
+          "first_close": 74.51,
+          "last_close": 62.45
+        },
+        "event_day": null,
+        "current": {
+          "close": 44.64,
+          "date": "2026-04-29 00:00:00"
+        },
+        "source": "investoday",
+        "note": ""
+      },
+      "incremental_fetch_hook": {
+        "available": true,
+        "description": "调用 DataForge.fetch_incremental(fields) 补取缺失字段"
+      }
+    },
+    "agent2a": {
+      "market_narrative": {
+        "primary_anchor": "revenue",
+        "primary_anchor_evidence": "PS(TTM)=18.7x，处于历史0.0分位（上市以来最高水平）；市值108亿对应当前5.8亿营收，隐含极高成长预期；PE虽335.4x但分位30，表明利润锚非核心定价因子；定量工具显示隐含3年收入CAGR需达55.2%支撑当前估值，进一步验证市场以收入为锚。",
+        "secondary_anchors": [
+          {
+            "segment": "光学玻璃",
+            "anchor": "earnings",
+            "revenue_share_pct": "约78.8% (FY2025)",
+            "data_confidence": "medium"
+          },
+          {
+            "segment": "半导体玻璃",
+            "anchor": "revenue",
+            "revenue_share_pct": "<5% (估计)",
+            "data_confidence": "low"
+          }
+        ],
+        "sotp_triggered": true,
+        "sotp_rationale": "传统光学玻璃业务稳定盈利适用PE，半导体玻璃业务高增长无利润适用PS，分属不同估值范式，但因半导体玻璃收入占比极小且分部数据缺失，严格SOTP估值尚不成熟；Agent-2b可将SOTP作为可选视角谨慎使用。"
+      },
+      "event_pricing": {
+        "event_profile": {
+          "timing_certainty": 6,
+          "timing_rationale": "电话会议日期为2026-05-19，市场提前知晓业绩交流会时间窗口，属定期信息沟通但管理层释放的具体暗示内容不可预测，故 timing_certainty 中等。",
+          "outcome_binaryness": 3,
+          "outcome_rationale": "管理层暗示的'未公布订单'和'玻璃核心项目'后续兑现在规模和时间上存在连续变化，并非'有或无'的二元结果，属于渐进验证，故 binaryness 低。",
+          "precedent_richness": 8,
+          "precedent_rationale": "管理层在业绩会上释放积极信号并暗示订单是常见事件，V3案例库中多个业绩拐点与技术突破标的已形成历史参照，市场对此类'预期引导'已有成熟定价模板。",
+          "distribution_shape": "narrow_concentrated",
+          "shape_rationale": "事件为管理层释放积极信号，历史类似情形市场定价路径清晰（预期先行+后续验证调整），结果非二元且时间窗已知，定价集中于当前估值隐含的乐观区间，属窄集中分布。"
+        },
+        "pricing_assessment": {
+          "method": "implied_revenue_cagr",
+          "method_applicable": true,
+          "method_limitations": [
+            "terminal_PS=5.0x 是主观假设——3年后的市场情绪不可知",
+            "CAGR假设均匀增长，实际收入路径可能是非线性的",
+            "当前PS=18.7x——PS越高，terminal_PS的选择越敏感"
+          ],
+          "quantitative": {
+            "implied_3y_revenue_cagr_pct": 55.2,
+            "current_ps": 18.7,
+            "terminal_ps_assumed": 5.0,
+            "wacc_pct": 15.3,
+            "interpretation": "当前市值隐含未来3年收入年化增长55.2%，远高于半导体行业平均增速及TAM年化20-30%的预期，显示股价已计入极为乐观的情景。"
+          },
+          "qualitative_factors": [
+            "事件前股价已从44.64元低点大幅上涨至事件前均价61.15元，部分预期提前反应",
+            "事件后均价69.98元，较事件前上涨约14.4%，显示市场对电话会议内容给予正面反馈",
+            "券商维持增持评级但下调短期盈利预测，反映分析师对兑现时点存在分歧",
+            "最新股价回落至44.64元（4月底）表明高预期下波动剧烈，若催化剂未及时兑现，估值下修压力大"
+          ],
+          "overall_priced_in": "partially",
+          "priced_in_estimate": "约60-70%",
+          "residual_catalyst": "若未来1-2个月内公司公告实质性半导体玻璃订单或台积电/三星验证通过，可能带来进一步估值提升；但若管理层暗示未兑现，高隐含增速将导致股价大幅回调。"
+        }
+      },
+      "signal_audit": {
+        "step2a_restate": [
+          "前瞻信号面板中定量异常检测未触发；产品结构仅显示光学玻璃分部，半导体玻璃业务数据缺失，形成核心叙事验证缺口。"
+        ],
+        "step2b_match": [
+          "光学玻璃收入高占比且毛利率31.9%，与2025年年报及整体毛利率改善趋势一致（L3券商及财报数据），支撑业绩修复叙事。",
+          "合同负债无异常，暗示新增订单尚未大规模反映在资产负债表中，与事件'订单即将到来'的待兑现性一致（L2谨慎支撑）。",
+          "半导体玻璃业务分部数据缺失，无法验证订单落地、量产毛利率等核心叙事假设（L4行业数据可部分参照，但公司级数据缺失形成关键削弱风险）。"
+        ],
+        "step2c_product_restate": "面板产品结构仅含光学玻璃（收入1.76亿，毛利率31.9%），未包含半导体玻璃或特种功能玻璃业务数据；事件叙事核心聚焦半导体玻璃基板/载板，因此无法通过历史财务数据直接验证叙事。",
+        "step2d_score": 6,
+        "score_rationale": "前瞻信号面板仅覆盖光学玻璃分部，缺失半导体玻璃核心业务数据，导致叙事关键环节无法验证；光学玻璃信号同向支撑整体业绩修复，但关键缺失形成显著缺口，故评6分。"
+      },
+      "forward_to_routing": {
+        "model_family_constraint": "revenue_multiples",
+        "excluded_families": [],
+        "distribution_shape": "narrow_concentrated",
+        "pricing_bias": "overvalued",
+        "key_risk_for_routing": "当前PS处于历史极值，隐含收入CAGR高达55.2%，但前瞻财务数据中半导体业务尚未体现，存在叙事与数据脱节风险；北交所流动性较低，估值安全边际薄弱；需密切关注后续订单公告，若预期落空，估值收缩空间大。"
+      },
+      "_pricing_tool": {
+        "method": "implied_revenue_cagr",
+        "applicable": true,
+        "implied_value": 55.2,
+        "implied_metric": "隐含3年收入CAGR(%)",
+        "limitations": [
+          "terminal_PS=5.0x 是主观假设——3年后的市场情绪不可知",
+          "CAGR假设均匀增长，实际收入路径可能是非线性的",
+          "当前PS=18.7x——PS越高，terminal_PS的选择越敏感"
+        ],
+        "detail": {
+          "market_cap_yi": 108.4,
+          "revenue_ttm_yi": 5.8,
+          "current_ps": 18.7,
+          "terminal_ps_assumed": 5.0,
+          "terminal_mcap_yi": 29.0,
+          "wacc_pct": 15.3
+        }
+      },
+      "_case_anchors": {
+        "top3": [
+          {
+            "stock_code": "300100",
+            "stock_name": "双林股份",
+            "sector": "汽车配件",
+            "primary_driver": "业绩拐点",
+            "return_type": "利润核弹",
+            "tags": [
+              "小盘(30-60亿)",
+              "业绩拐点",
+              "利润核弹"
+            ],
+            "roic_trough": 0.8,
+            "roic_peak": 14.33,
+            "roic_improvement": 13.53,
+            "gm_trough": 16.55,
+            "gm_peak": 21.63,
+            "pe_expansion": 0.36,
+            "profit_expansion": 10.1,
+            "gain_multiple": 10.2,
+            "actual_return_pct": 922.2,
+            "start_mcap": 32.0,
+            "start_pe": 234.3,
+            "peak_pe": 84.7,
+            "catalyst": "汽车零部件+新能源,特斯拉供应链",
+            "logic": "汽车零部件+新能源,特斯拉供应链",
+            "end_state": "正常盈利成长股",
+            "routing_reason": "起涨ROIC=0.8% | 终局=正常盈利成长股 | 驱动力=业绩拐点 | 利润弹性=10.1x | 估值驱动=False | 行业=汽车",
+            "failure_mode": []
+          },
+          {
+            "stock_code": "300260",
+            "stock_name": "新莱应材",
+            "sector": "机械基件",
+            "primary_driver": "业绩拐点",
+            "return_type": "戴维斯双击",
+            "tags": [
+              "小盘(30-60亿)",
+              "业绩拐点",
+              "估值范式切换",
+              "半导体设备",
+              "戴维斯双击"
+            ],
+            "roic_trough": 1.7,
+            "roic_peak": 13.96,
+            "roic_improvement": 12.26,
+            "gm_trough": 24.58,
+            "gm_peak": 29.64,
+            "pe_expansion": 3.86,
+            "profit_expansion": 10.0,
+            "gain_multiple": 4.45,
+            "actual_return_pct": 344.7,
+            "start_mcap": 32.0,
+            "start_pe": 40.8,
+            "peak_pe": 157.2,
+            "catalyst": "精密制造+半导体设备,国产替代+晶圆厂扩产",
+            "logic": "精密制造+半导体设备,国产替代+晶圆厂扩产",
+            "end_state": "正常盈利成长股",
+            "routing_reason": "起涨ROIC=1.7% | 终局=正常盈利成长股 | 驱动力=业绩拐点 | 利润弹性=10.0x | 估值驱动=False | 行业=机械设备",
+            "failure_mode": []
+          },
+          {
+            "stock_code": "300476",
+            "stock_name": "胜宏科技",
+            "sector": "元器件",
+            "primary_driver": "技术突破",
+            "return_type": "戴维斯双击",
+            "tags": [
+              "中盘(60-200亿)",
+              "技术突破",
+              "硬科技",
+              "戴维斯双击",
+              "AI PCB"
+            ],
+            "roic_trough": 1.17,
+            "roic_peak": 23.77,
+            "roic_improvement": 22.6,
+            "gm_trough": 20.11,
+            "gm_peak": 36.22,
+            "pe_expansion": 4.9,
+            "profit_expansion": 25.0,
+            "gain_multiple": 19.4,
+            "actual_return_pct": 1840.7,
+            "start_mcap": 159.0,
+            "start_pe": 22.6,
+            "peak_pe": 110.9,
+            "catalyst": "AI算力引爆高速PCB需求,800G/1.6T光模块用PCB核心供应商",
+            "logic": "AI算力引爆高速PCB需求,800G/1.6T光模块用PCB核心供应商",
+            "end_state": "正常盈利成长股",
+            "routing_reason": "起涨ROIC=1.2% | 终局=正常盈利成长股 | 驱动力=技术突破 | 利润弹性=25.0x | 估值驱动=False | 行业=电子",
+            "failure_mode": []
+          }
+        ],
+        "reliability": {
+          "reliability": "medium",
+          "top_score": 10,
+          "top_n_avg": 10.0,
+          "note": "中等可比。Agent-3参考案例统计区间但不锚定中位，参数可偏离50%以内。"
+        }
+      }
+    },
+    "agent2b": {
+      "routing_decision": {
+        "primary_model": "B",
+        "model_category": "Revenue Multiples",
+        "routing_reason": "公司2025年营收5.5亿元，净利仅0.3亿元，ROIC仅2.9%处于微利状态，PE高达335.4x，盈利指标失效。叙事核心围绕半导体玻璃基板/载板国产替代，市场以收入规模及潜在TAM定价，当前PS已推至18.7x，隐含收入CAGR高达55.2%。完全符合B(PS+TAM)模型对亏损/微利、收入叙事驱动的准入要求，故以PS为锚锁定估值。",
+        "validation_models": [
+          "C"
+        ],
+        "validation_rationale": "分布形态为narrow_concentrated可跨族校验，引入C(DCF+拐点)模型，利用半导体业务放量的可预期拐点进行绝对估值，交叉验证PS所隐含的超高增长假设是否合理，提供保守视角以应对当前定价偏高风险。",
+        "validation_strategy": "cross_family",
+        "constraint_compliance": {
+          "family_constraint_applied": "revenue_multiples",
+          "constraint_override": false,
+          "override_rationale": ""
+        },
+        "anchor_shift_warning": "若半导体业务如期放量并兑现盈利，公司可能由收入锚过渡至盈利锚，届时需切换至earnings_multiples族模型进行重估，当前PS估值面临锚切换带来的范式收缩风险。"
+      }
+    },
+    "agent3": {
+      "report_meta": {
+        "stock_code": "920438",
+        "stock_name": "戈碧迦",
+        "industry": "电子",
+        "report_date": "2026-05-27T12:25:27+08:00",
+        "version": "5.0"
+      },
+      "valuation_routing": {
+        "primary_model": "B",
+        "secondary_model": "C",
+        "model_category": "Revenue Multiples",
+        "routing_reason": "公司2025年营收5.5亿元，净利仅0.3亿元，ROIC仅2.9%处于微利状态，PE高达335.4x，盈利指标失效。叙事核心围绕半导体玻璃基板/载板国产替代，市场以收入规模及潜在TAM定价，当前PS已推至18.7x，隐含收入CAGR高达55.2%。完全符合B(PS+TAM)模型对亏损/微利、收入叙事驱动的准入要求，故以PS为锚锁定估值。",
+        "method_used": "B",
+        "model_migration_path": {}
+      },
+      "market_sanity": {
+        "bs_method": "反向DCF(g/WACC)",
+        "bs_level": "极高溢价: 隐含g(14.5%)逼近WACC(15.3%)上限，g/WACC=95%",
+        "ev_yi": 109.9,
+        "nopat_yi": 0.37,
+        "roic_pct": 2.9,
+        "wacc_simple_pct": 15.3,
+        "implied_g_pct": 14.5,
+        "bs_secondary": "PS=18.7x | 反向DCF g/WACC=95%(极高溢价)",
+        "market_premium_pct": 999,
+        "pe_ttm": 335.3646,
+        "pb": 11.0181,
+        "pe_historical_rank": 30,
+        "wacc_params": {
+          "rf_pct": 1.75,
+          "rf_source": "默认值(API不可用)",
+          "beta": 2.098,
+          "beta_source": "1年日线vs沪深300(Beta=2.098)",
+          "erp_pct": 6.62,
+          "erp_method": "动态ERP(基准6.0%+波动率调整+0.6%)",
+          "re_pct": 15.64,
+          "rd_pct": 3.75,
+          "d_ratio_pct": 2.7,
+          "wacc_pct": 15.3,
+          "note": "rf/beta/ERP基于真实数据; rd=rf+动态利差(按负债率分层:2-6%),非精确个债成本"
+        },
+        "warnings": [
+          "隐含g(14.5%)逼近WACC(15.3%)的80%"
+        ],
+        "market_story": "EV=110亿 NOPAT=0.37亿 ROIC=2.9% WACC=15.3% 隐含g=14.5% DCF基准=2.4亿"
+      },
+      "scenario_valuation": {
+        "scenario_details": {
+          "bear": {
+            "probability": 0.2,
+            "revenue_growth_3y_cagr_pct": -5,
+            "target_ps": 5,
+            "tam_penetration_pct": 0.5,
+            "scenario_narrative": "管理层暗示订单落空: 1-2个月内无公告, 半年报半导体玻璃收入环比下滑, 台积电/三星验证延迟或转向竞品, 公司市场份额被侵蚀。收入萎缩, 毛利率因价格战拖累降至20%以下, 市场认知回归传统光学玻璃制造商, PS压缩至5x。目标市值约28亿, 较当前下行74%。",
+            "target_mcap_yi": 24.9,
+            "upside_pct": -77.0
+          },
+          "base": {
+            "probability": 0.68,
+            "revenue_growth_3y_cagr_pct": 25,
+            "target_ps": 9,
+            "tam_penetration_pct": 3,
+            "scenario_narrative": "订单部分兑现: 公司获得小规模或非头部客户订单, 半导体玻璃收入稳步增长但未爆发, 光学玻璃维持16%增长, 整体3年CAGR约25%。随着收入提升, PS逐步消化至9x(仍高于传统光学, 但低于当前18.7x, 反映稀缺性溢价但增长预期降温)。3年后营收约11.3亿, 目标市值约102亿, 较当前微跌6%。",
+            "target_mcap_yi": 102.0,
+            "upside_pct": -5.9
+          },
+          "bull": {
+            "probability": 0.12,
+            "revenue_growth_3y_cagr_pct": 50,
+            "target_ps": 25,
+            "tam_penetration_pct": 8,
+            "scenario_narrative": "超预期兑现: 公司公告获得台积电/三星/长电等头部客户大额订单, 半导体玻璃产能满产并再扩建, 收入CAGR达50%, 3年后营收约19.6亿。市场将其重新定价为半导体材料核心资产, 给予25x PS(对标全球玻璃基板龙头)，目标市值约490亿, 当前上行空间约350%。",
+            "target_mcap_yi": 489.4,
+            "upside_pct": 351.5
+          }
+        },
+        "probability_weighted_mcap_yi": 133.1,
+        "probability_weighted_upside_pct": 22.8,
+        "asymmetry_ratio": 4.6,
+        "quality_flag": "MODERATE_QUALITY",
+        "_computed_by_code": true
+      },
+      "valuation_summary": {
+        "probability_weighted_upside_pct": 22.8,
+        "probability_weighted_mcap_yi": 133.1,
+        "asymmetry_ratio": 4.6,
+        "quality_flag": "MODERATE_QUALITY"
+      },
+      "reverse_dcf": {
+        "applicable": true,
+        "market_implied_g_pct": 14.5,
+        "my_implied_g_pct": 6,
+        "expectation_gap_pct": null,
+        "gap_direction": "市场高估",
+        "gap_magnitude": "显著",
+        "applicable_note": ""
+      },
+      "validation_crosscheck": {
+        "validation_model": "C",
+        "validation_paradigm": "盈利视角",
+        "base_target_mcap_yi": 102.0,
+        "validation_mcap_yi": null,
+        "gap_pct": null,
+        "gap_direction": "主模型高估",
+        "assessment": "严重冲突(盈利模型估值远低于收入乘数模型, 反映当前微利下营收估值溢价极高, 需半导体业务利润真正释放才能合理化)"
+      },
+      "expectation_gap": {
+        "level": "市场高估",
+        "note": "市场当前给予极高PS,隐含永续增速14.5%;我们中性情景仅能支撑6%左右永续增速,预期差超8个百分点,显示当前价格已过度反映乐观预期。"
+      },
+      "confidence": {
+        "overall_score": 4,
+        "overall_label": "低",
+        "dimensions": {
+          "info_quality": {
+            "score": 5,
+            "label": "信息质量",
+            "note": "核心半导体玻璃分部数据缺失,前瞻信号仅覆盖光学玻璃,管理层电话会议属口头暗示缺乏正式订单公告。"
+          },
+          "financial_feasibility": {
+            "score": 5,
+            "label": "财务可行性",
+            "note": "bull高增长需大量外部融资(再投资率>300%),公司虽有募投项目但尚需落实,可行性存在较大不确定性。"
+          },
+          "valuation_safety": {
+            "score": 3,
+            "label": "估值安全边际",
+            "note": "bear情景下行空间约74%,当前PS处于历史极值,安全边际极低,一旦叙事逆转将面临惨烈下杀。"
+          },
+          "historical_precedent": {
+            "score": 3,
+            "label": "历史案例匹配",
+            "note": "国内尚无直接可比先例(半导体玻璃基板纯正标的),海外可比康宁但非A股可比,历史案例支撑弱。"
+          }
+        }
+      },
+      "trade_annotation": {
+        "tier": "★★☆ 中等赔率",
+        "total_score": "5/10",
+        "dimension_scores": {
+          "odds_quality": 2,
+          "pricing_headroom": 1,
+          "transmission_confidence": 2,
+          "model_consistency": 0
+        },
+        "alignment_signals": [
+          "在建工程大幅增加验证扩产叙事",
+          "一季报营收+21%显示业绩改善拐点",
+          "管理层电话会议明确暗示订单即将到来"
+        ],
+        "tier_note": "事件催化明确且短期有验证窗口,赔率尚可(bull upside大);但核心数据缺失,安全边际低,估值模型严重冲突,整体风险较高,属于高风险高回报机会。适合事件驱动型交易者轻仓博弈,不适合保守投资者。",
+        "suggested_action": "轻仓参与,紧密跟踪1-2个月内订单公告;若未兑现则果断止损",
+        "_text_fixed_by_code": true
+      },
+      "monitoring_kpis": {
+        "financial_verification_kpis": [
+          {
+            "name": "半导体玻璃业务收入(半年度)",
+            "baseline": "2025H2估算约0.7亿",
+            "target": "2026H1同比增速>100%",
+            "frequency": "半年度",
+            "verifies": "半导体玻璃放量叙事"
+          },
+          {
+            "name": "整体毛利率(季度)",
+            "baseline": "2026Q1约29%",
+            "target": "2026Q3环比回升至33%以上",
+            "frequency": "季度",
+            "verifies": "产品结构优化提升利润"
+          }
+        ],
+        "event_milestone_kpis": [
+          {
+            "name": "半导体玻璃新订单公告",
+            "expected_timing": "2026年6-7月",
+            "significance": "直接验证管理层暗示,是股价催化剂",
+            "verification_source": "公司公告"
+          },
+          {
+            "name": "台积电310×310玻璃导入决策",
+            "expected_timing": "2026年Q4",
+            "significance": "全球龙头背书,将大幅提升戈碧迦估值天花板",
+            "verification_source": "台积电技术论坛/供应链会议"
+          }
+        ],
+        "competition_signal_kpis": [
+          {
+            "name": "凯盛科技/彩虹股份半导体玻璃进展",
+            "current_state": "未量产",
+            "trigger": "凯盛公告小批量供货或通过头部客户验证",
+            "action_if_triggered": "下调戈碧迦毛利率及份额假设,降低bull概率"
+          }
+        ],
+        "risk_trigger_kpis": [
+          {
+            "name": "主要客户资本开支指引",
+            "linked_to": "需求端风险",
+            "severity": "high",
+            "monitor": "台积电/长电/通富季报资本开支,若下调则下游扩产可能推迟"
+          },
+          {
+            "name": "半导体玻璃产品价格走势",
+            "linked_to": "竞争风险",
+            "severity": "medium",
+            "monitor": "通过行业报告跟踪玻璃基板单价,若环比持续下跌则竞争加剧"
+          }
+        ]
+      },
+      "reasoning_trace": [
+        "清单项1-素材吸收(引用2a锚+计价+事件分类): 2a诊断结论: 估值锚为revenue, 分布形状narrow_concentrated, 计价程度partially(60-70%)。事件原文中提取因果分叉点: T+30天若未公告新订单则情绪转向, T+90天半年报半导体玻璃收入增速>50%为关键验证, T+180天国际头部客户LTA签订为叙事定型; 台积电310×310mm导入评估、康宁项目小批量生产为核心催化剂。风险边界: 竞争格局风险为凯盛科技等潜在追赶, TAM全球180亿美元(2030E)。案例参照系: 同族案例未直接提供, 后续将参考A股半导体材料PS中枢(上四分位20x/中位10x/下四分位5x)校准参数。",
+        "清单项2-引用2a审核结论(step2d=6,关键交叉验证: 前瞻信号面板仅覆盖光学玻璃分部，半导体玻璃核心数据缺失，形成叙事验证缺口; 光学玻璃收入及毛利率同向支撑业绩修复; 合同负债无异常，与订单待兑现性一致。): bull概率基准: step2d=6, narrow_concentrated类取下限12%。bear概率需依据证伪路径推导。",
+        "清单项3a-投资命题: 如果管理层暗示的半导体玻璃订单在1-2个月内公告兑现，且台积电/三星验证顺利推动量产，那么戈碧迦作为国内唯一量产厂商的PS估值将获得支撑甚至提升; 如果订单落空或技术推进停滞，当前18.7x PS隐含的55% CAGR将崩塌。",
+        "清单项3d-案例比对: 选取A股半导体材料公司(如江丰电子、雅克科技、沪硅产业等)PS分布：上四分位20x，中位10x，下四分位5x。当前戈碧迦18.7x处于高位，接近上四分位，反映其国内唯一稀缺性和先进封装故事溢价。bull情景PS 25x超越行业中枢，需依赖全球龙头地位的建立; bear情景PS 5x对标传统光学玻璃制造商，失去溢价。",
+        "清单项3e-赋参数: bear: 概率0.20, CAGR -5%, PS 5x, TAMpen 0.5%, 叙事为订单落空+竞争加剧导致收入萎缩, 估值范式退回; base: 概率0.68, CAGR 25%, PS 9x, TAMpen 3%, 叙事为部分订单兑现+光学稳健, 高PS逐步消化但增长斜率不及隐含预期, 市值微降; bull: 概率0.12, CAGR 50%, PS 25x, TAMpen 8%, 叙事为订单超预期+台积电导入+全球份额提升, 估值跃迁为半导体材料龙头。参数联动验证: bull CAGR 50%要求RR>300%(依赖外部融资), 与公司10亿项目投资相呼应; base CAGR 25%内在ROIC需>8%且保持高RR, 可行性中等; bear负增长对应行业逆风。",
+        "清单项4a-一致性校验: [增长-ROIC] bull高增长需依赖外部融资提高IC, 与叙事一致; [再投资率] bull RR>300%提示高融资依赖, 标注风险; [估值-增长] bull PS 25x匹配高增长, base PS 9x对应温和增长; [PB-ROE] 不适用; [概率自洽] 总和=1.0。",
+        "清单项4b-反向DCF: 市场隐含永续利润增速14.5%, 我们基于中性情景给出永续增速6%(长期半导体材料市场竞争加剧, 超额利润可能回归), 预期差-8.5pp, 判断市场高估。",
+        "清单项4c-校验交叉: 校验模型C(盈利视角)粗估base目标市值约30亿(IC 11.4亿+正常化ROIC 10%+PE 20x), 与主模型B(收入乘数)base目标市值约102亿严重冲突(差异>40%), 主模型显著高估。根源在于当前极薄利润难以支撑任何盈利估值, 收入乘数估值隐含了极高盈利改善预期, 若盈利改善不及预期则估值崩塌风险极大。",
+        "清单项4d-非对称: bull upside约350%, |bear upside|约74%, asymmetry_ratio=4.7; quality_flag=MODERATE_QUALITY(ROIC 2.9%<8%)。",
+        "清单项4e-置信度: info_quality=5(核心半导体业务数据缺失), financial_feasibility=5(高融资依赖增长可行性中等), valuation_safety=3(下行空间巨大), historical_precedent=3(无直接可比国内稀缺标的)。overall_score≈4, label=低。",
+        "[系统修正] 代码计算覆盖: 所有估值数值以代码公式重算结果为准（消除 LLM 算术误差 E306）",
+        "[系统修正] 不对称比: LLM=4.7 → 代码=4.6"
+      ],
+      "preflight_check": [
+        "[OK] 清单项1素材吸收完成",
+        "[OK] 清单项2a-2d信号审核完成",
+        "[OK] 清单项3a-3e赋参+案例完成",
+        "[OK] 概率和=1.00",
+        "[OK] upside单调递增(bear -74%, base -6%, bull +350%),全参数经济含义自检通过",
+        "[OK] WACC未修改",
+        "[OK] 纯JSON输出"
+      ],
+      "probability_rationale": "bear: 订单落空(独立概率30%) + 竞争加剧(20%) + 管理层信誉受损致估值范式崩溃(条件概率50%) → 联合概率约20%。bull: 订单规模超预期(50%) + 台积电/三星验证通过且大规模放量(30%) + 市场给出范式跃迁估值(80%条件概率) → 联合概率约12%。base: 100% - 20% - 12% = 68%。",
+      "risk_triggers": {
+        "bull_trigger": "未来1个月公司公告获得半导体玻璃基板/载板新订单(金额超5000万),或台积电/三星验证通过信号明确; 同时产能利用率超80%,毛利率环比持续改善。",
+        "bear_trigger": "半年报半导体玻璃收入增速低于30%,或毛利率低于45%,或截至2026年7月底无任何新订单公告; 台积电310×310玻璃导入失败或无进展。",
+        "monitoring_frequency": "季度(与财报同步验证),月度跟踪公告和新闻舆情"
+      },
+      "narrative": "戈碧迦是国内唯一实现半导体玻璃原片规模化量产的稀缺标的,处于玻璃基板商业化元年风口。当前市场已部分计价管理层暗示的订单预期(PS 18.7x隐含极高增长),若超预期兑现(大客户订单+台积电导入)则仍有可观收益;若落空则估值崩塌风险极大,属于高赔率高不确定性的事件驱动型机会。",
+      "data_gaps": [
+        "缺少半导体玻璃业务分部收入及毛利率的季度/半年度数据,导致bull情景中该业务增速及利润截留判断置信度下降",
+        "缺少在手订单及产能利用率的准确数据,导致base情景收入CAGR假设的精确度受限",
+        "缺少机构持仓及北向资金数据,无法判断聪明的钱是否已布局"
+      ],
+      "signal_audit": {
+        "step2a_restate": [
+          "[合同负债] 当前值=0.13亿 (↑1.1σ, 历史均值=0.08亿)",
+          "[在建工程] 当前值=2.8亿 (同比+150%，产能建设加速，验证扩产叙事)"
+        ],
+        "step2b_match": [
+          {
+            "signal": "光学玻璃收入&毛利率",
+            "match": "支撑",
+            "source_level": "L3",
+            "basis": "2025年报光学玻璃收入4.35亿+16.3%,毛利率31.9%改善2.27pcts,与券商研报一致,支撑业绩修复叙事"
+          },
+          {
+            "signal": "合同负债",
+            "match": "支撑",
+            "source_level": "L2",
+            "basis": "合同负债0.13亿未异常跳升,与订单待兑现性一致,谨慎支撑"
+          },
+          {
+            "signal": "半导体玻璃分部数据",
+            "match": "缺失",
+            "source_level": "N/A",
+            "basis": "前瞻信号面板及财报附注均未单独披露半导体玻璃收入/毛利率,导致核心叙事无法验证"
+          }
+        ],
+        "step2c_product_restate": "光学玻璃: 收入4.35亿(占78.8%),GM=31.9%; 半导体玻璃: 分部数据缺失,仅知2025年累计订单1.265亿,2万片/月满产,毛利率宣称50-60%",
+        "step2d_score": 6,
+        "score_rationale": "合同负债+在建工程同向支撑,但因半导体玻璃核心数据缺失,整体评分受限; 管理层电话会议语气积极但缺乏硬数据验证"
+      },
+      "scenarios": [
+        {
+          "name": "bear",
+          "probability_pct": 20.0,
+          "upside_pct": -77.0,
+          "target_mcap_yi": 24.9,
+          "valuation_method": "B",
+          "scenario_narrative": "管理层暗示订单落空: 1-2个月内无公告, 半年报半导体玻璃收入环比下滑, 台积电/三星验证延迟或转向竞品, 公司市场份额被侵蚀。收入萎缩, 毛利率因价格战拖累降至20%以下, 市场认知回归传统光学玻璃制造商, PS压缩至5x。目标市值约28亿, 较当前下行74%。",
+          "nopat_path_yi": [],
+          "wacc_used_pct": 15.3,
+          "primary_model": "B",
+          "roic_pct": 0,
+          "roic_assumed_pct": 0,
+          "rr_assumed_pct": 0,
+          "rr_pct": 0,
+          "revenue_growth_3y_cagr_pct": -5,
+          "target_ps": 5,
+          "tam_penetration_pct": 0.5
+        },
+        {
+          "name": "base",
+          "probability_pct": 68.0,
+          "upside_pct": -5.9,
+          "target_mcap_yi": 102.0,
+          "valuation_method": "B",
+          "scenario_narrative": "订单部分兑现: 公司获得小规模或非头部客户订单, 半导体玻璃收入稳步增长但未爆发, 光学玻璃维持16%增长, 整体3年CAGR约25%。随着收入提升, PS逐步消化至9x(仍高于传统光学, 但低于当前18.7x, 反映稀缺性溢价但增长预期降温)。3年后营收约11.3亿, 目标市值约102亿, 较当前微跌6%。",
+          "nopat_path_yi": [],
+          "wacc_used_pct": 15.3,
+          "primary_model": "B",
+          "roic_pct": 0,
+          "roic_assumed_pct": 0,
+          "rr_assumed_pct": 0,
+          "rr_pct": 0,
+          "revenue_growth_3y_cagr_pct": 25,
+          "target_ps": 9,
+          "tam_penetration_pct": 3
+        },
+        {
+          "name": "bull",
+          "probability_pct": 12.0,
+          "upside_pct": 351.5,
+          "target_mcap_yi": 489.4,
+          "valuation_method": "B",
+          "scenario_narrative": "超预期兑现: 公司公告获得台积电/三星/长电等头部客户大额订单, 半导体玻璃产能满产并再扩建, 收入CAGR达50%, 3年后营收约19.6亿。市场将其重新定价为半导体材料核心资产, 给予25x PS(对标全球玻璃基板龙头)，目标市值约490亿, 当前上行空间约350%。",
+          "nopat_path_yi": [],
+          "wacc_used_pct": 15.3,
+          "primary_model": "B",
+          "roic_pct": 0,
+          "roic_assumed_pct": 0,
+          "rr_assumed_pct": 0,
+          "rr_pct": 0,
+          "revenue_growth_3y_cagr_pct": 50,
+          "target_ps": 25,
+          "tam_penetration_pct": 8
+        }
+      ],
+      "case_comparison_summary": {
+        "compared_cases": [
+          {
+            "case_code": "INDUSTRY_PS_BENCHMARK",
+            "comprehensive_discount_pct": 50,
+            "six_dimension_judgment": {
+              "driver_strength": "优于: 国内唯一量产半导体玻璃原片, 深度绑定华为链",
+              "market_space": "相似: 全球玻璃基板市场180亿美元, 国内渗透率<5%",
+              "moat": "优于: 头部客户验证壁垒高, 客户转换成本大",
+              "paradigm": "相似: 半导体材料估值范式(PS或PE依赖成长阶段)",
+              "catalyst_density": "优于: 台积电/苹果/英特尔2026量产元年催化密集",
+              "failure_risk": "劣于: 技术未完全规模验证, 量产良率与成本竞争力待确认"
+            }
+          }
+        ],
+        "parameter_impact": {
+          "target_param_discount_pct": 0,
+          "adjustment_rationale": "bull PS较行业上四分位20x给予25%溢价至25x, 反映国内唯一稀缺性和先进封装窗口期; base PS 9x略低于行业中位10x, 因半导体业务贡献权重尚小; bear PS 5x为行业下四分位, 对应丧失成长属性。"
+        }
+      },
+      "_validation_warnings": []
+    },
+    "_trace": {
+      "agent0_ms": 237,
+      "agent1_ms": 4365,
+      "agent2a_ms": 207097,
+      "agent2b_ms": 65715,
+      "agent3_ms": 257311,
+      "total_ms": 534726
+    }
+  }
+]

@@ -249,7 +249,7 @@ class Scheduler:
             "|------|:----:|------|",
         ])
         for layer, avg in review_summary.get("layer_averages", {}).items():
-            status = "✅" if avg >= 8 else ("⚠️" if avg >= 6 else "❌")
+            status = "" if avg >= 8 else ("️" if avg >= 6 else "")
             lines.append(f"| {layer} | {avg}/10 | {status} |")
 
         lines.extend([
@@ -262,7 +262,7 @@ class Scheduler:
             for f in top_flags:
                 lines.append(f"- **{f['code']}** ({f['count']}次): {f['action']}")
         else:
-            lines.append("无系统性高频问题 ✅")
+            lines.append("无系统性高频问题 ")
 
         lines.extend([
             "",

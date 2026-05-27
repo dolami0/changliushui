@@ -54,7 +54,7 @@ def test_agent1(pre_routing: dict):
     try:
         data = forge.run(pre_routing)
     except DataForgeError as e:
-        print(f"  ✗ E101: {e}")
+        print(f"   E101: {e}")
         return None
 
     packages = data["packages"]
@@ -151,7 +151,7 @@ def main():
     fail = [r for r in results if r["status"] != "OK"]
     print(f"结果: {len(ok)} OK, {len(fail)} FAIL")
     for r in fail:
-        print(f"  ✗ {r['code']} {r['name']}")
+        print(f"   {r['code']} {r['name']}")
 
     print("\n[OK] Agent-0 + Agent-1 联合测试完成")
 
