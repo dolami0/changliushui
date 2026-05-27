@@ -115,7 +115,7 @@ class PipelineRunner:
                 "knowledge_supplement": record.get("knowledge_supplement", ""),
                 "industry_expert_research": record.get("industry_expert_research", ""),
                 "future": record.get("future", ""),
-                "event_date": (record.get("bstudio_create_time", "") or record.get("event_date", ""))[:10],
+                "event_date": record.get("bstudio_create_time", ""),
                 "event_source": record.get("event_source", ""),
                 "stock_name": stock_name,
             }

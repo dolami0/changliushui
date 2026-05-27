@@ -445,13 +445,13 @@ class Scheduler:
 
         # 生成 Markdown 报告（时间戳文件名，每次唯一）
         ts = datetime.now().strftime("%Y%m%d_%H%M")
-        md = build_markdown_report(agent0_record, a1_out, a2_out, a3_out)
+        md = build_markdown_report(agent0_record, a1_out, a2_out, a3_out, a2a_raw)
         report_path = save_report(md, stock_code, ts=ts)
 
         row = {
             "stock_code": stock_code,
             "stock_name": stock_name,
-            "event_date": agent0_record.get("event_date", ""),
+            "event_date": agent0_record.get("bstudio_create_time", ""),
             "event_source": agent0_record.get("event_source", ""),
             "primary_model": vr.get("primary_model", ""),
             "prob_weighted_upside_pct": str(vs.get("probability_weighted_upside_pct", "")),
@@ -477,12 +477,18 @@ class Scheduler:
         data_dir = Path(__file__).resolve().parent.parent / "reports" / "data"
         data_dir.mkdir(parents=True, exist_ok=True)
         json_path = data_dir / f"{stock_code}_{ts}.json"
+        a2a_raw = result.get("agent2a", {})
+        # 从原始结果中提取 routing_decision (V6 agent2b 输出，compat层会丢失)
+        raw_agent2 = result.get("agent2", {})
+        raw_routing = raw_agent2.get("routing_decision", {})
         payload = {
             "agent0": agent0_record,
             "agent1": self._serialize_agent_output(a1_out),
             "agent2": self._serialize_agent_output(a2_out),
+            "agent2a": self._serialize_agent_output(a2a_raw) if a2a_raw else {},
             "agent3": self._serialize_agent_output(a3_out),
-            "_pipeline_version": "5.0",
+            "routing_decision": raw_routing,  # V6: 保留原始路由判决
+            "_pipeline_version": "6.0",
         }
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2, default=str)

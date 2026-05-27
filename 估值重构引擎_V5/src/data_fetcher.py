@@ -438,10 +438,14 @@ class DataFetcher:
         """
         from datetime import datetime as dt, timedelta
 
+        # 兼容两种格式: "2026-05-15 03:28:55 +0800 CST" (bstudio) 或 "2026-05-13" (旧)
         try:
-            ed = dt.strptime(event_date[:10], "%Y-%m-%d")
+            ed = dt.strptime(event_date[:19], "%Y-%m-%d %H:%M:%S")
         except (ValueError, TypeError):
-            ed = dt.now()
+            try:
+                ed = dt.strptime(event_date[:10], "%Y-%m-%d")
+            except (ValueError, TypeError):
+                ed = dt.now()
 
         pre_start = (ed - timedelta(days=15)).strftime("%Y-%m-%d")
         pre_end = (ed - timedelta(days=1)).strftime("%Y-%m-%d")

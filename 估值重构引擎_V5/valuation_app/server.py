@@ -226,7 +226,8 @@ async def view_report(filename: str):
     a1 = payload.get("agent1", {})
     a2 = payload.get("agent2", {})
     a3 = payload.get("agent3", {})
-    html = build_html_report(agent0, a1, a2, a3)
+    a2a = payload.get("agent2a", {})
+    html = build_html_report(agent0, a1, a2, a3, a2a)
     return HTMLResponse(html)
 
 @app.get("/api/status")

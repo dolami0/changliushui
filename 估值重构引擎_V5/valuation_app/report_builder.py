@@ -242,8 +242,8 @@ def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict) -> str:
 # ═══════════════════════════════════════════════
 
 
-def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict) -> str:
-    """V5 完整估值报告 — 覆盖全部 JSON 字段，赛博仙门主题，大字体"""
+def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict, agent2a: dict | None = None) -> str:
+    """V6 完整估值报告 — 覆盖全部 JSON 字段，赛博仙门主题，大字体"""
     now = __import__('datetime').datetime.now().strftime("%Y-%m-%d %H:%M")
     cf = a1.get("clean_financials", {})
     va = a1.get("valuation_anchor", {})
@@ -255,6 +255,15 @@ def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict) -> str:
     stock_name = agent0_record.get("stock_name", cf.get("stock_name", "?"))
     primary = vr.get("primary_model", "?")
     industry = cf.get("industry_sw_l1", "") + " / " + cf.get("industry_sw_l2", "")
+
+    # Agent-2a V6 narrative diagnosis
+    a2a = agent2a or {}
+    a2a_mn = a2a.get("market_narrative", {})
+    a2a_ep = a2a.get("event_pricing", {})
+    a2a_pr = a2a_ep.get("event_profile", {})
+    a2a_pa = a2a_ep.get("pricing_assessment", {})
+    a2a_sa = a2a.get("signal_audit", {})
+    a2a_pt = a2a.get("_pricing_tool", {})
 
     # Agent-3 data
     vs = a3.get("valuation_summary", {})
@@ -269,7 +278,7 @@ def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict) -> str:
     kpis = a3.get("monitoring_kpis", {})
     triggers = a3.get("risk_triggers", {})
     rt = a3.get("reasoning_trace", [])
-    sa = a3.get("signal_audit", {})
+    sa = a2a_sa or a3.get("signal_audit", {})  # V6: 2a audit is primary source
     narrative = a3.get("narrative", "")
     dg = a3.get("data_gaps", [])
     pr = a3.get("probability_rationale", "")
@@ -282,9 +291,10 @@ def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict) -> str:
 
     body = (
         _sec_header(stock_code, stock_name, now, primary, vr, industry, upside, asym, quality)
+        + _sec_narrative_diagnosis(a2a_mn, a2a_ep, a2a_pr, a2a_pa, a2a_pt, sanity, cf)  # V6: 叙事诊断
         + _sec_routing(vr)
         + _sec_financials(cf, va, wacc)
-        + _sec_bs_profile(sanity, cf)
+        + _sec_bs_profile(sanity, cf, a2a_mn.get("primary_anchor","earnings"))
         + _sec_forward_signals(sa, fw, cf)
         + _sec_scenarios(scenarios, primary, pr)
         + _sec_case_comparison(cc, a2)
@@ -395,19 +405,80 @@ def _sec_financials(cf, va, wacc):
     )
 
 
-def _sec_bs_profile(sanity, cf):
+def _sec_narrative_diagnosis(mn, ep, pr, pa, pt, sanity, cf):
+    """V6: 叙事诊断 — Agent-2a 估值锚 + 三维光谱 + 计价判断"""
+    if not mn:
+        return ""
+    anchor = mn.get("primary_anchor", "?")
+    anchor_labels = {"earnings": "利润锚 (PE/DCF)", "revenue": "收入锚 (PS/TAM)",
+                     "asset": "资产锚 (PB/ROE)", "pipeline": "管线锚 (rNPV)", "sotp": "SOTP 分部"}
+    shape = pr.get("distribution_shape", "?")
+    shape_labels = {"wide_bimodal": "宽双峰(高二元性)", "wide_bimodal_date_anchored": "宽双峰(日期锚定)",
+                    "wide_unimodal": "宽单峰(方向确定幅度不确定)", "narrow_concentrated": "窄集中(成熟周期)",
+                    "narrow_base_dominant": "极窄(趋势延续)"}
+
+    # 估值锚
+    body = _card("估值锚", _kv_table([
+        ("主锚", anchor_labels.get(anchor, anchor)),
+        ("证据", mn.get("primary_anchor_evidence", "?")[:200]),
+        ("SOTP触发", "是" if mn.get("sotp_triggered") else "否"),
+    ]))
+
+    # 三维光谱
+    body += _card("三维事件光谱", _kv_table([
+        ("分布形状", shape_labels.get(shape, shape)),
+        ("时机可预见性", f"{pr.get('timing_certainty','?')}/10 — {pr.get('timing_rationale','?')[:80]}"),
+        ("结果二元性", f"{pr.get('outcome_binaryness','?')}/10 — {pr.get('outcome_rationale','?')[:80]}"),
+        ("先例丰富度", f"{pr.get('precedent_richness','?')}/10 — {pr.get('precedent_rationale','?')[:80]}"),
+    ]))
+
+    # 计价判断
+    body += _card("事件计价判断", _kv_table([
+        ("计价程度", f"{pa.get('overall_priced_in','?')} ({pa.get('priced_in_estimate','?')})"),
+        ("剩余催化", pa.get("residual_catalyst","?")[:150]),
+    ]))
+
+    # 定价工具结果 (anchor-aware)
+    if pt and pt.get("applicable"):
+        method = pt.get("method", "?")
+        metric = pt.get("implied_metric", "?")
+        value = pt.get("implied_value", "?")
+        body += _card(f"定价工具: {method}", _kv_table([
+            (metric, f"<strong>{value}</strong>"),
+        ]))
+
+    return _section("02.5", "叙事诊断 (Agent-2a)", body)
+
+
+def _sec_bs_profile(sanity, cf, anchor="earnings"):
     bs = sanity.get("bs_level", "?")
     secondary = sanity.get("bs_secondary", "")
     premium = sanity.get("market_premium_pct", 0) or 0
     prem_str = f'{premium:.1f}%' if premium < 999 else "不适用(NOPAT极薄)"
+
+    # V6: 根据估值锚调整 BS 画像展示
+    implied_g = sanity.get("implied_g_pct", 0)
+    if anchor == "revenue":
+        bs_method = "隐含收入CAGR (收入锚)"
+        g_label = "隐含3y CAGR"
+        g_warning = " (注: 以下反向DCF基于NOPAT,对收入锚仅供参考)"
+    elif anchor == "asset":
+        bs_method = "隐含ROE改善 (资产锚)"
+        g_label = "隐含ROE改善"
+        g_warning = " (注: 反向DCF基于NOPAT,对资产锚仅供参考)"
+    else:
+        bs_method = sanity.get("bs_method", "反向DCF(g/WACC)")
+        g_label = "隐含g"
+        g_warning = ""
+
     body = f'<div class="prose"><strong>{bs}</strong></div>'
     body += _kv_table([
-        ("BS方法", sanity.get("bs_method","?")),
+        ("BS方法", bs_method),
         ("EV", _fmt_yi(sanity.get("ev_yi"))),
         ("NOPAT", _fmt_yi(sanity.get("nopat_yi"))),
         ("ROIC", f'{_n(sanity.get("roic_pct"))}%'),
         ("WACC", f'{_n(sanity.get("wacc_simple_pct"))}%'),
-        ("隐含g", f'{_n(sanity.get("implied_g_pct"))}%'),
+        (g_label, f'{_n(implied_g)}%{g_warning}'),
         ("市场溢价", prem_str),
         ("PE(TTM)", f'{_n(sanity.get("pe_ttm"))}x (分位{_n(sanity.get("pe_historical_rank"))})'),
         ("PB", f'{_n(sanity.get("pb"))}x'),
@@ -436,10 +507,24 @@ def _sec_forward_signals(sa, fw, cf):
         parts.append(_card("产品结构数据", _md(prod)))
     matches = sa.get("step2b_match", [])
     if matches:
+        # 兼容 dict 和 string 两种格式
+        def _sig(m):
+            if isinstance(m, dict):
+                return m.get("signal", "?")
+            return str(m)[:60]
+        def _match(m):
+            if isinstance(m, dict): return m.get("match", "?")
+            return "?"
+        def _lvl(m):
+            if isinstance(m, dict): return f'L{m.get("source_level","?")}'
+            return ""
+        def _basis(m):
+            if isinstance(m, dict): return _md(m.get("basis",""))
+            return str(m)[:120]
         rows = "".join(
-            f'<tr><td>{m.get("signal","?")}</td>'
-            f'<td><span class="tag tag-{"up" if m.get("match")=="支撑" else "down" if m.get("match")=="削弱" else "warn"}">{m.get("match","?")}</span> <span class="tag tag-info">L{m.get("source_level","?")}</span></td>'
-            f'<td style="font-size:13px">{_md(m.get("basis",""))}</td></tr>'
+            f'<tr><td>{_sig(m)}</td>'
+            f'<td><span class="tag tag-{"up" if _match(m)=="支撑" else "down" if _match(m)=="削弱" else "warn"}">{_match(m)}</span> {_lvl(m)}</td>'
+            f'<td style="font-size:13px">{_basis(m)}</td></tr>'
             for m in matches
         )
         parts.append(_card("信号交叉验证", f'<table class="data"><tr><th>信号</th><th>判定</th><th>依据</th></tr>{rows}</table>'))
@@ -649,7 +734,7 @@ def _sec_appendix(pf, warnings):
 
 
 
-def build_markdown_report(agent0_record: dict, a1: dict, a2: dict, a3: dict) -> str:
+def build_markdown_report(agent0_record: dict, a1: dict, a2: dict, a3: dict, agent2a: dict | None = None) -> str:
     cf = a1.get("clean_financials", {})
     vr = a1.get("valuation_routing", {})
     sanity = a1.get("market_sanity", {})
