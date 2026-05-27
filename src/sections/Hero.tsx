@@ -54,7 +54,7 @@ function SpiritLamp() {
   const [countdown, setCountdown] = useState('--:--');
   const [processing, setProcessing] = useState(false);
   const [currentStock, setCurrentStock] = useState({ code: '', name: '' });
-  const [queuedJobs, setQueuedJobs] = useState<Array<{ code: string; name: string }>>([]);
+  const [queuedJobs, setQueuedJobs] = useState<Array<{ code: string; name: string; status: string }>>([]);
   const [recentDone, setRecentDone] = useState<Array<{ code: string; name: string; time: string }>>([]);
   const [totalCompleted, setTotalCompleted] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
@@ -72,7 +72,7 @@ function SpiritLamp() {
         const wasRunning = nextPollRef.current !== null;
         setRunning(s.scheduler_running);
         nextPollRef.current = s.next_poll_at;
-        setQueuedJobs((s.active_jobs || []).map((j: { stock_code: string; stock_name: string }) => ({ code: j.stock_code, name: j.stock_name })));
+        setQueuedJobs((s.active_jobs || []).map((j: { stock_code: string; stock_name: string; status: string }) => ({ code: j.stock_code, name: j.stock_name, status: j.status })));
         const done2 = (s.completed_jobs || []).slice(-1).map((j: { stock_code: string; stock_name: string; completed_at: string }) => ({
           code: j.stock_code, name: j.stock_name,
           time: j.completed_at ? new Date(j.completed_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' }) : '',
@@ -86,6 +86,7 @@ function SpiritLamp() {
           setCurrentStock({ code: '', name: '' });
         }
         if (!s.scheduler_running) { setProgress(0); setProcessing(false); setCurrentStock({ code: '', name: '' }); }
+        // running 但 SSE 还没连接时保持旧进度，不重置
       }).catch(() => {});
     };
     tick();
@@ -170,22 +171,25 @@ function SpiritLamp() {
         </span>
         {running && (
           <span style={{ fontFamily: "'Geist Pixel', monospace", fontSize: '22px', color: '#ADFF00', textShadow: '0 0 12px rgba(173,255,0,0.35)', marginLeft: 'auto' }}>
-            {processing ? `${progress}%` : '...'}
+            {progress > 0 ? `${progress}%` : '...'}
           </span>
         )}
       </div>
       {/* 处理中 + 排队 + 已完成列表 */}
       <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-        {processing && currentStock.code && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', color: '#ADFF00', border: '1px solid rgba(173,255,0,0.25)', padding: '0px 4px', flexShrink: 0 }}>处理中</span>
-            <span style={{ fontFamily: "'IBM Plex Mono', 'Noto Sans SC', monospace", fontSize: '14px', fontWeight: 600, color: '#F2F4F3' }}>{currentStock.name || currentStock.code}</span>
-            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '12px', color: '#888' }}>{currentStock.code}</span>
-            <span style={{ flex: 1 }} />
-            <span style={{ fontFamily: "'Geist Pixel', monospace", fontSize: '13px', color: '#ADFF00' }}>{progress}%</span>
-          </div>
-        )}
-        {queuedJobs.filter(q => q.code !== currentStock.code && !recentDone.some(d => d.code === q.code)).slice(0, 3).map((q, i) => {
+        {queuedJobs.filter(q => q.status === 'running').map((q, i) => {
+          const isSSE = processing && currentStock.code === q.code;
+          return (
+            <div key={`run-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', color: '#ADFF00', border: '1px solid rgba(173,255,0,0.25)', padding: '0px 4px', flexShrink: 0 }}>处理中</span>
+              <span style={{ fontFamily: "'IBM Plex Mono', 'Noto Sans SC', monospace", fontSize: '14px', fontWeight: 600, color: '#F2F4F3' }}>{q.name}</span>
+              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '12px', color: '#888' }}>{q.code}</span>
+              <span style={{ flex: 1 }} />
+              <span style={{ fontFamily: "'Geist Pixel', monospace", fontSize: '13px', color: '#ADFF00' }}>{isSSE ? `${progress}%` : '启动中'}</span>
+            </div>
+          );
+        })}
+        {queuedJobs.filter(q => q.status !== 'running' && !recentDone.some(d => d.code === q.code)).slice(0, 3).map((q, i) => {
           const res = jobResultsRef.current[q.code];
           return (
             <div key={`q-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '2px 0' }}>
