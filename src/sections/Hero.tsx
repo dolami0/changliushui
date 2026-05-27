@@ -91,18 +91,16 @@ function SpiritLamp() {
     };
     tick();
     fetchDingshuluCount().then(setTotalCompleted).catch(() => {});
-    Promise.all([
-      fetchStatus(),
-      fetchAll<{ stock_code: string; stock_name: string }>('7639784337973477386', 10, {
-        conditions: [{ left: 'is_complete', operation: 'equal', right: 'false' }],
-      }),
-    ]).then(([status, items]) => {
-      const activeCodes = new Set((status.active_jobs || []).map((j: { stock_code: string }) => j.stock_code));
-      const doneCodes = new Set((status.completed_jobs || []).map((j: { stock_code: string }) => j.stock_code));
-      setPendingStocks(
-        items.filter(r => !activeCodes.has(r.stock_code) && !doneCodes.has(r.stock_code))
-          .map(r => ({ code: r.stock_code, name: r.stock_name }))
-      );
+    fetchAll<{ stock_code: string; stock_name: string }>('7639784337973477386', 10, {
+      conditions: [{ left: 'is_complete', operation: 'equal', right: 'false' }],
+    }).then(items => {
+      fetchStatus().then(s => {
+        const activeCodes = new Set((s.active_jobs || []).map((j: { stock_code: string }) => j.stock_code));
+        setPendingStocks(
+          items.filter(r => !activeCodes.has(r.stock_code))
+            .map(r => ({ code: r.stock_code, name: r.stock_name }))
+        );
+      }).catch(() => {});
     }).catch(() => {});
     const id = setInterval(tick, 15_000);
     return () => clearInterval(id);
