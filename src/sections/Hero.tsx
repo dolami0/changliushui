@@ -1,5 +1,5 @@
 import AsciiCanvas from '../components/AsciiCanvas';
-import { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { useMobile } from '../hooks/useMobile';
@@ -322,9 +322,17 @@ const QUALITY_LABEL: Record<string, { text: string; color: string }> = {
 function TodayReports() {
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const [reports, setReports] = useState<Array<DingshuluRecord & { newsTitle?: string }>>([]);
+  const [rawReports, setRawReports] = useState<Array<DingshuluRecord & { newsTitle?: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [sortMode, setSortMode] = useState<'upside' | 'time'>('upside');
+
+  const reports = React.useMemo(() => {
+    if (sortMode === 'time') {
+      return [...rawReports].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+    }
+    return [...rawReports].sort((a, b) => parseFloat(b.base_upside_pct || '0') - parseFloat(a.base_upside_pct || '0'));
+  }, [rawReports, sortMode]);
 
   useEffect(() => {
     Promise.all([fetchDingshulu(), fetchTianjijuan()])
@@ -335,10 +343,6 @@ function TodayReports() {
             (tj) => tj.uuid === ds.uuid && tj.stock_name === ds.stock_name
           );
           return { ...ds, newsTitle: match ? extractNewsTitle(match.news_content, 50) : undefined };
-        }).sort((a, b) => {
-          const au = parseFloat(a.base_upside_pct || '0');
-          const bu = parseFloat(b.base_upside_pct || '0');
-          return bu - au;  // 降序: base涨幅高→低
         });
         // 批量补全 disk 摘要（天机卷匹配失败时回退）
         const needSummary = enriched.filter((r) => !r.newsTitle && r.stock_code);
@@ -352,11 +356,11 @@ function TodayReports() {
                   r.news_summary = summaries[r.stock_code];
                 }
               }
-              setReports([...enriched]);
+              setRawReports([...enriched]);
             })
-            .catch(() => setReports(enriched));
+            .catch(() => setRawReports(enriched));
         } else {
-          setReports(enriched);
+          setRawReports(enriched);
         }
         setLoading(false);
       })
@@ -392,10 +396,21 @@ function TodayReports() {
           共 {reports.length} 份
         </span>
         <span
+          onClick={() => setSortMode(s => s === 'upside' ? 'time' : 'upside')}
+          style={{
+            fontFamily: "'Space Mono', monospace", fontSize: '11px', color: '#888',
+            letterSpacing: '0.08em', cursor: 'pointer', marginLeft: '10px',
+            border: '1px solid #333', padding: '3px 10px', borderRadius: '3px',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#ADFF0080'; e.currentTarget.style.color = '#ADFF00'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#888'; }}
+        >{sortMode === 'upside' ? '按涨幅' : '按时间'}</span>
+        <span
           onClick={(e) => { e.stopPropagation(); navigate('/cangjingyun?table=dingshulu'); }}
           style={{
-            fontFamily: "'Space Mono', monospace", fontSize: '13px', color: '#ADFF00',
-            letterSpacing: '0.1em', cursor: 'pointer', marginLeft: '14px',
+            fontFamily: "'Space Mono", monospace', fontSize: '13px', color: '#ADFF00',
+            letterSpacing: '0.1em', cursor: 'pointer', marginLeft: '10px',
             border: '1px solid rgba(173,255,0,0.3)', padding: '5px 16px',
             transition: 'all 0.2s',
           }}
