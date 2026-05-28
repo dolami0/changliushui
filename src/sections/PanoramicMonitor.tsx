@@ -356,7 +356,11 @@ export function DingshuluPanel() {
 
   useEffect(() => {
     fetchDingshulu()
-      .then((ds) => { setReports(ds.slice(0, 15)); setLoading(false); })
+      .then((ds) => {
+        const sorted = [...ds].sort((a, b) => parseFloat(b.base_upside_pct || '0') - parseFloat(a.base_upside_pct || '0'));
+        setReports(sorted.slice(0, 15));
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, []);
 
@@ -384,7 +388,7 @@ export function DingshuluPanel() {
 
       {/* 今日产出 */}
       <div style={{ padding: '6px 14px', borderBottom: '1px solid rgba(255,255,255,0.04)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#ADFF00' }}>近期产出 {reports.length} 份估值报告</span>
+        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#ADFF00' }}>按base潜在涨幅排序</span>
       </div>
 
       {/* 报告列表 */}
