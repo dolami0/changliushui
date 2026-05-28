@@ -211,6 +211,24 @@ base = 100% - bull - bear。
 - **base**: 哪些证实信号按预期兑现？估值锚如何推移？当前已计价的部分是否已经在 base 中体现？
 - **bull**: 哪些催化超预期？超预期的幅度对应剩余计价空间。估值范式是否跃迁？
 
+**bull 涨幅拆解——范式切换 vs 基本面**:
+
+起涨初期的大部分涨幅往往来自估值范式的切换，而非基本面改善。在 bull scenario_narrative 中必须显式拆解:
+
+1. 如果 2a 的 `anchor_shift_potential.shift_possible=true`:
+   - 范式切换溢价 = 旧范式合理估值 → 新范式合理估值之间的差距
+   - 例: "从传统电力设备 PE 15x → 出海AI数据中心 PS 7x, 仅范式切换就贡献 +80%"
+   - 基本面增长 = 新范式内的增长空间（订单增长→收入爆发→PS进一步扩张）
+   - scenario_narrative 格式: "范式切换(PE→PS,+80%) + 订单超预期(+50%,→合计+170%)"
+
+2. 如果 2a 的 `anchor_shift_potential.shift_possible=false`:
+   - 范式内倍数扩张: 当前锚不变但倍数提升（如 PE 从 30x→50x）
+   - scenario_narrative 格式: "倍数扩张(+30%) + 利润超预期(+40%,→合计+82%)"
+
+3. 如果范式切换已发生(`shift_timing=切换已发生`):
+   - 新范式已在 base 中体现, bull 只看新范式内的超预期幅度
+   - base 的估值倍数已经是新范式的水平
+
 将叙事写入 scenario_narrative。
 
 **重要: 永远不要"凑"概率**——bear 需要 N 个独立环节同时崩塌 → 联合概率自然就是小概率。
@@ -1298,6 +1316,17 @@ def _call_llm_scenario(
 - 信号评分: {sa.get('step2d_score','?')}/10 — {sa.get('score_rationale','?')[:200]}
 - 信号审核结论: {json.dumps(sa.get('step2a_restate',[])[:3], ensure_ascii=False)}
 - 交叉验证摘要: {json.dumps([str(m)[:120] for m in sa.get('step2b_match',[])[:3]], ensure_ascii=False)}
+"""
+        # 注入范式切换潜力
+        asp = mn.get("anchor_shift_potential", {}) or {}
+        if asp.get("shift_possible"):
+            user_msg += f"""
+- 范式切换潜力: 是
+  从 {asp.get('from_anchor','?')} → {asp.get('to_anchor','?')}
+  触发条件: {asp.get('shift_trigger','?')}
+  理由: {asp.get('shift_rationale','?')[:200]}
+  时机: {asp.get('shift_timing','?')}
+  先例: {asp.get('precedent','?')[:150]}
 """
         # 注入计价工具的量化结果（完整细节，LLM据此做4b分析）
         pt = agent2a_output.get("_pricing_tool", {})

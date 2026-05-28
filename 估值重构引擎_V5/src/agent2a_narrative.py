@@ -55,7 +55,16 @@ NARRATIVE_DIAGNOSIS_PROMPT = """你是估值叙事诊断师。你的职责不是
     "anchor_conflict": "若叙事锚与估值指标矛盾，解释原因；无矛盾则留空字符串",
     "secondary_anchors": [...],
     "sotp_triggered": false,
-    "sotp_rationale": ""
+    "sotp_rationale": "",
+    "anchor_shift_potential": {
+      "shift_possible": false,
+      "from_anchor": "earnings",
+      "to_anchor": "revenue",
+      "shift_trigger": "什么事件会触发市场切换估值范式",
+      "shift_rationale": "为什么这种切换是合理的",
+      "shift_timing": "切换已发生 | 切换进行中 | 切换尚未开始",
+      "precedent": "同类范式切换的市场先例"
+    }
   },
   "event_pricing": {
     "event_profile": {
@@ -197,6 +206,37 @@ NARRATIVE_DIAGNOSIS_PROMPT = """你是估值叙事诊断师。你的职责不是
 **不满足条件1时的替代方案**: 如果两个业务锚类型相同但参数差异大（如 PE 10x vs 40x），不触发 SOTP——而是建议 Agent-2b 选择能分段赋参的模型（如 K 两阶段 DCF，比 A 更灵活）。在 `sotp_rationale` 中说明"同锚不同参，建议用K而非SOTP"。
 
 **不满足条件3时的 fallback**: 仅当完全无分部收入拆分时，设置 sotp_triggered=false，说明"无分部收入数据,以主锚为准"。
+
+## 1h. 范式切换潜力判断
+
+SOTP 解决的是"同一时刻不同业务锚不同"的问题。范式切换解决的是"同一公司不同时刻锚变化"的问题。
+
+**核心问题: 这个事件有没有可能让市场换一种方式给公司估值？**
+
+这是起涨初期最重要的涨幅来源——不是基本面改善，而是估值范式的切换（如 PE 15x 的化工股→PS 8x 的新材料股）。
+
+**三个判断信号:**
+
+1. **赛道跃迁**: 事件是否让公司进入了一个锚类型不同的新赛道？
+   - 制造业切入 AI/半导体 → earnings→revenue/pipeline
+   - 化工切入新能源材料 → earnings→revenue
+   - 传统电力设备切入出海/AI 数据中心 → earnings→revenue
+   - 纯医药切入创新药/biotech → earnings→pipeline
+
+2. **叙事语言切换**: Agent-0 的"投资主题"和"行业研究"中，新旧业务的叙事语言是否不同？
+   - 旧业务叙事用"利润率/降本增效/ROIC" → earnings 锚
+   - 新业务叙事用"TAM/渗透率/市占率/订单/国产替代" → revenue 锚
+   - 两种语言同时出现→范式切换正在发生
+
+3. **先行者参照**: 同赛道是否已有公司享受了范式切换溢价？
+   - 行业研究或知识补充中提到的对标公司，是否已经被市场用新范式定价？
+   - 如有，切换的概率和合理性更高
+
+**判定**:
+- `shift_possible=true`: 事件指向的赛道与当前锚不同 + 先行者已有范式切换先例
+- `shift_timing`: 切换已发生（新业务收入已开始放量）/ 切换进行中（市场在重新定价但新业务尚未兑现）/ 切换尚未开始（催化剂未到）
+- `from_anchor→to_anchor`: 明确标注可能从哪个锚切换到哪个锚
+- 若无范式切换可能: shift_possible=false, 其余字段留空
 
 # 清单项 2: 事件计价判断
 
