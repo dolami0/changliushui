@@ -207,12 +207,6 @@ function WanyepuCard({ record }: { record: WanyepuRecord }) {
 function DingshuluCard({ record }: { record: DingshuluRecord }) {
   const navigate = useNavigate();
   const probWtd = parseFloat(record.prob_weighted_upside_pct || '0');
-  const qlMap: Record<string, { text: string; color: string }> = {
-    'HIGH_QUALITY': { text: '优', color: '#ADFF00' },
-    'SPECULATIVE': { text: '投机', color: '#FF8C00' },
-    'LOW_QUALITY': { text: '低质', color: '#666' },
-  };
-  const ql = qlMap[record.quality_flag] || qlMap['LOW_QUALITY'];
   return (
     <div style={{
       padding: '24px 28px', background: 'rgba(255,255,255,0.02)',
@@ -228,10 +222,6 @@ function DingshuluCard({ record }: { record: DingshuluRecord }) {
           <span style={{ fontFamily: "'Geist Pixel', monospace", fontSize: '14px', color: '#ADFF00' }}>
             {record.trade_tier || '—'}
           </span>
-          <span style={{
-            fontFamily: "'Space Mono', 'Noto Sans SC', monospace", fontSize: '13px', color: ql.color,
-            border: `1px solid ${ql.color}40`, padding: '1px 8px', letterSpacing: '0.1em',
-          }}>{ql.text}</span>
         </div>
         <span style={{ fontFamily: "'Geist Pixel', monospace", fontSize: '20px', color: probWtd >= 0 ? '#ADFF00' : '#FF5C00' }}>
           {probWtd >= 0 ? '+' : ''}{record.prob_weighted_upside_pct || '—'}%
