@@ -493,7 +493,7 @@ def _sec_bs_profile(sanity, cf, anchor="earnings"):
     warnings = sanity.get("warnings", [])
     if warnings:
         body += "<p style='font-size:13px;color:var(--gold)'> " + "; ".join(str(w) for w in warnings) + "</p>"
-    return _section("03", "市场定价检测 (BS画像)", body)
+    return _section("03", "反向定价检测 (BS画像)", body)
 
 
 def _sec_forward_signals(sa, fw, cf):
@@ -761,7 +761,7 @@ def build_markdown_report(agent0_record: dict, a1: dict, a2: dict, a3: dict, age
 | 校验模型 | {vr.get('secondary_model', vr.get('validation_models', [''])[0] if vr.get('validation_models') else '?')} |
 | 路由理由 | {vr.get('routing_reason','?')} |
 
-## 二、市场定价检测
+## 二、反向定价检测
 
 **{sanity.get('bs_level','?')}**
 {sanity.get('bs_secondary','') and chr(42)+sanity['bs_secondary']+chr(42) or ""}
