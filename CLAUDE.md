@@ -38,7 +38,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 npm run dev          # 启动 Vite dev server（端口 5173）
-npm run build        # TypeScript 类型检查 + Vite 生产构建
+npm run build        # tsc -b 类型检查 + Vite 生产构建
+npm run typecheck    # 纯类型检查（tsc -b），比 build 快，不打包
 npm run lint         # ESLint 9 flat config 检查
 npm run preview      # 预览生产构建
 ```
@@ -62,9 +63,11 @@ npm run preview      # 预览生产构建
 ### TypeScript 配置要点
 
 - 三层 tsconfig：`tsconfig.json`（引用文件）→ `tsconfig.app.json`（应用代码）+ `tsconfig.node.json`（Vite/构建工具）
+- 根 `tsconfig.json` 的 `paths: {"@/*": ["./src/*"]}` 是为 IDE 解析服务的 — `tsc -b` 模式下根配置不参与编译。`tsconfig.app.json` 中重复定义了相同的 paths，这是实际编译时生效的。两处都需保持一致
 - `verbatimModuleSyntax: true` — 类型导入必须使用 `import type`，值导入和类型导入不可混用
 - `erasableSyntaxOnly: true` — 只允许可擦除的类型语法（禁用 enum、带值的 namespace 等）
 - `noUnusedLocals` / `noUnusedParameters` 开启，未使用变量会导致编译失败
+- `noUncheckedSideEffectImports: true` — 禁止未检查的副作用导入（TS 5.6+）
 
 ### ESLint
 
@@ -136,7 +139,20 @@ src/
 
 ### 视觉系统
 - **色板**：底色 `#050401`（近黑）、主文字 `#F2F4F3`（白）、主强调 `#ADFF00`（霓虹绿）、辅助强调 `#FF5C00`（橙）、金色 `#C88D3A`
-- **主题系统**：采用 shadcn/ui 的 HSL CSS 变量模式。`index.css` 的 `:root` 定义亮色主题变量，`.dark` 类覆写为暗色。Tailwind 的 `color` 配置全部映射到 CSS 变量（如 `primary: "hsl(var(--primary))"`），因此修改主题色只需改 CSS 变量，无需改 Tailwind 配置
+- **主题系统**：采用 shadcn/ui 的 HSL CSS 变量模式。`index.css` 的 `:root` 定义变量，`.dark` 类覆写。Tailwind 的 `color` 配置全部映射到 CSS 变量（如 `primary: "hsl(var(--primary))"`），因此修改主题色只需改 CSS 变量，无需改 Tailwind 配置。关键 HSL 映射：
+
+| CSS 变量 | HSL 值 | 等价 hex | 语义 |
+|---------|--------|---------|------|
+| `--primary` | `78 100% 50%` | `#ADFF00` | 霓虹绿强调 |
+| `--accent` | `24 100% 50%` | `#FF5C00` | 橙色辅助 |
+| `--background` | `0 0% 2%` | `#050401` | 底色 |
+| `--foreground` | `140 6% 95%` | `#F2F4F3` | 主文字 |
+| `--ring` | `78 100% 50%` | `#ADFF00` | 聚焦环 |
+| `--border` | `0 0% 16%` | `#292929` | 边框 |
+| `--muted` | `0 0% 7%` | `#121212` | 次级底色 |
+| `--muted-foreground` | `0 0% 65%` | `#A6A6A6` | 次级文字 |
+
+- **Tailwind 配置**：`tailwind.config.js`（CommonJS，非 ESM/TS）。颜色 token 全部通过 HSL 变量引用，fontFamily 仅扩展了 `mono`，keyframes 只定义 `accordion-down/up`，插件为 `tailwindcss-animate`。
 - **字体**：Geist Pixel → 标题/数字；IBM Plex Mono + Noto Sans SC → UI/正文；Space Mono → 表格/代码；Fragment Mono → ASCII
 - **动画**：GSAP 处理复杂过渡，CSS `@keyframes` 处理呼吸/流光/符文循环动画
 - **光标**：全局自定义十字光标（`CustomCursor`），移动端（<768px）自动回退系统光标
@@ -150,13 +166,31 @@ src/
 |---------|------|------|
 | `/api/*`（除 `/api/tracking`） | Vite proxy | `localhost:8080`（Python FastAPI 估值引擎） |
 | `/review/*` | Vite proxy | `localhost:8080` |
-| `/api/tracking` | Vite 内置插件 `trackingApiPlugin` | 本地文件系统 `.agents/agents/shenwaihuashen/memory/tracking/*.json` |
+| `/investoday-market/*` | Vite proxy（rewrite → `/data/market/*`） | `data-api.investoday.net`（第三方 A 股行情数据） |
+| `/api/tracking` | Vite 内置插件 `trackingApiPlugin` | 本地文件系统 `.agents/agents/shenwaihuashen/memory/tracking/*.json`（Python 后端写入，前端只读） |
 | Coze API | 直连 | `api.coze.cn`（Bearer token，不走 Vite proxy） |
 
 SSE 端点 `/api/progress/stream` 用于实时进度推送。生产环境需反向代理或同源部署。
 
 ### 状态管理
 无全局状态库。页面间通过 URL params 和 `useParams` 传递数据，页面内用 `useState` + `useEffect` 管理本地状态。
+
+### App.tsx 的 Shell 组件
+
+三个关键 Shell 组件直接定义在 `App.tsx` 内（不在 `components/` 目录），构成所有页面的外框：
+
+- **`NavigationGlow`** — 路由切换时触发 600px 径向渐变辉光扩散动画，`z-index: 9998`，`position: fixed`，与页面内容完全解耦
+- **`PageTransition`** — GSAP `opacity: 0→1` + `y: 12→0`（0.35s），包裹每个 `<Route>` 的 `element`。`key` 设为路由路径，确保路由切换时重新挂载触发动画
+- **`TopNav`** — sticky 导航栏，毛玻璃背景 (`backdrop-filter: blur(12px)`)。监听 `window.scrollY > 40` 自动紧凑化（缩小 padding、字号、品牌图标）。首页锚点链接（`#facilities`）用原生 `<a>` 标签，非首页用 `<Link>` 组件
+
+### 样式策略
+
+同时使用 Tailwind class 和行内 `style={{}}`，选择依据是**值是否动态**：
+
+- **静态值** → Tailwind class（如 `flex`、`items-center`、固定色值）
+- **动态值**（状态驱动、配置驱动、transition 数值）→ 行内 `style={{}}`（如 `fontSize: scrolled ? '14px' : '16px'`）
+
+这不是迁移中的中间状态，而是有意的混合策略。不要强行统一为单一方案。
 
 ### 移动端适配
 `useMobile()` hook 检测 768px 断点。网格布局通过 CSS 媒体查询切换为单列。自定义光标在移动端自动禁用。

@@ -11,6 +11,7 @@ const DB_TIANJIJUAN = '7479116110479048754'; // 天机卷
 const DB_WANYEPU   = '7639784337973477386'; // 万业谱
 const DB_DINGSHULU  = '7640094415800860724'; // 定数录
 const DB_YINGUOBU   = '7640928034144698374'; // 因果簿
+const DB_REPORTS_V6 = '7644911309938589711'; // 估值报告V6（按Agent拆分存储）
 
 // ====== 通用 Coze 客户端 ======
 interface ApiResponse<T> {
@@ -292,4 +293,70 @@ export async function fetchYinguobu(pageSize = 500): Promise<YinguobuRecord[]> {
     order_by: [{ direction: 'desc', field_name: 'bstudio_create_time' }],
   });
   return result.data?.items || [];
+}
+
+// ====== 估值报告 V6（按 Agent 拆分存储，从 Coze 直读） ======
+
+export interface ReportV6Record {
+  id: string;
+  stock_code: string;
+  stock_name: string;
+  json_filename: string;
+  agent0_json: string;
+  agent1_json: string;
+  agent2_json: string;
+  agent2a_json: string;
+  agent3_json: string;
+  routing_json: string;
+  processed_at: string;
+}
+
+/**
+ * 按股票代码从 Coze 查询完整估值报告（取最新一条）。
+ * 替代原来的 fetch(`/api/report/${code}/data`)。
+ */
+export async function fetchReportFromCoze(stockCode: string): Promise<Record<string, unknown> | null> {
+  const result = await cozeQuery<ReportV6Record>(DB_REPORTS_V6, {
+    page_size: 1,
+    filter: {
+      logic: 'and',
+      conditions: [
+        { left: 'stock_code', operation: 'equal', right: stockCode },
+      ],
+    },
+    order_by: [{ direction: 'desc', field_name: 'bstudio_create_time' }],
+  });
+  const items = result.data?.items || [];
+  if (items.length === 0) return null;
+  return reassembleReport(items[0]);
+}
+
+/**
+ * 按 json_filename 查询报告（如 300726_20260522_1505）。
+ * 替代原来的 fetch(`/api/report/data/${filename}`)。
+ */
+export async function fetchReportByFilename(filename: string): Promise<Record<string, unknown> | null> {
+  const result = await cozeQuery<ReportV6Record>(DB_REPORTS_V6, {
+    page_size: 1,
+    filter: {
+      logic: 'and',
+      conditions: [
+        { left: 'json_filename', operation: 'equal', right: filename },
+      ],
+    },
+  });
+  const items = result.data?.items || [];
+  if (items.length === 0) return null;
+  return reassembleReport(items[0]);
+}
+
+function reassembleReport(r: ReportV6Record): Record<string, unknown> {
+  const report: Record<string, unknown> = {};
+  if (r.agent0_json) try { report.agent0 = JSON.parse(r.agent0_json); } catch { /* ignore */ }
+  if (r.agent1_json) try { report.agent1 = JSON.parse(r.agent1_json); } catch { /* ignore */ }
+  if (r.agent2_json) try { report.agent2 = JSON.parse(r.agent2_json); } catch { /* ignore */ }
+  if (r.agent2a_json) try { report.agent2a = JSON.parse(r.agent2a_json); } catch { /* ignore */ }
+  if (r.agent3_json) try { report.agent3 = JSON.parse(r.agent3_json); } catch { /* ignore */ }
+  if (r.routing_json) try { report.routing_decision = JSON.parse(r.routing_json); } catch { /* ignore */ }
+  return report;
 }
