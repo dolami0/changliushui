@@ -165,17 +165,20 @@ def _extract_core_fields(raw_bundle: dict, stock_code: str) -> dict[str, Any]:
     ts_eps = ts_fi.get("eps")               # Tushare EPS (最近单期)
     ts_bps = ts_fi.get("bps")               # Tushare BPS
 
-    io_gm = fd.get("gross_margin")           # investoday 毛利率 (TTM)
-    io_nm = fd.get("net_margin")             # investoday 净利率 (TTM)
-    io_roe = dup.get("roe")                  # investoday ROE (TTM, dupont端点)
+    io_gm = fd.get("gross_margin")           # investoday 毛利率 (单季)
+    io_nm = fd.get("net_margin")             # investoday 净利率 (单季)
     io_eps = inc.get("eps")                  # investoday EPS (TTM)
 
-    # 交叉验证: 两边都有时比对差异
+    # 交叉验证
     _warn_divergence(stock_code, "gross_margin", ts_gm, io_gm)
     _warn_divergence(stock_code, "net_margin", ts_nm, io_nm)
     _warn_divergence(stock_code, "eps", ts_eps, io_eps)
-    # ROE 差异很常见(Tushare单期 vs investoday TTM)，仅当差异>50%才告警
-    _warn_divergence(stock_code, "roe", ts_roe, io_roe, threshold=0.50)
+
+    # ROE: investoday dupont/fin_der 给的是单季数据, 不能直接用
+    # 从 TTM 净利润 / 最新净资产 自己算 (这是真正的 TTM ROE)
+    np_roe = _num(inc.get("net_profit_ttm"))  # TTM 净利润 (元)
+    eq_roe = _num(bal.get("total_equity"))    # 最新净资产 (元)
+    calc_roe = round(np_roe / eq_roe * 100, 2) if eq_roe > 0 else 0.0
 
     fields: dict[str, Any] = {
         # [TS] 行情 — Tushare 主源
@@ -192,7 +195,8 @@ def _extract_core_fields(raw_bundle: dict, stock_code: str) -> dict[str, Any]:
         "eps_ttm": io_eps or ts_eps or 0,
         "net_profit_growth_yoy": _calc_yoy_growth(r, stock_code),
         "bps": round(_num(bal.get("total_equity")) / 1e8 / total_shares, 2) if total_shares > 0 else ts_bps or 0,
-        "roe_ttm_pct": io_roe or ts_roe or 0,
+        "roe_ttm_pct": calc_roe,  # 代码计算: TTM净利润/最新净资产 (investoday dupont给的是单季数据,不可用)
+        "roe_ttm_source": "computed_from_ttm",
 
         # [IO] 现金流/资产负债表绝对值
         "ocf_ttm_yi": round(_num(cf.get("operating_cash_flow")) / 1e8, 2),
