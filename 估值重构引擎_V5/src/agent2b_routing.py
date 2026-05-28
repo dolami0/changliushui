@@ -29,16 +29,26 @@ from valuation_utils import call_deepseek
 # System Prompt — 精简版（叙事诊断已由 2a 完成）
 # ═══════════════════════════════════════
 
-ROUTING_V6_PROMPT = """你是估值路由判官。叙事诊断师已经确定了市场在为什么定价——你只需要在指定模型族内做技术选择。
+ROUTING_V6_PROMPT = """你是估值路由判官。叙事诊断师(Agent-2a)已完成市场叙事诊断——你需要在指定模型族内做技术选择。
 
-# 输入约束
+# 输入解读
 
-叙事诊断师的结论:
-- 估值锚 = {PRIMARY_ANCHOR}
-- 模型族约束 = {FAMILY_CONSTRAINT}（不可跨族）
-- 排除族 = {EXCLUDED_FAMILIES}
-- 分布形状 = {DISTRIBUTION_SHAPE}
-- 定价偏向 = {PRICING_BIAS}
+用户消息中包含 Agent-2a 的完整叙事诊断结论。在开始硬约束筛选之前，先理解叙事：
+
+**1. 理解市场在赌什么 (core_bet + narrative_lifecycle)**
+- 导入期/成长期公司 → 模型应更宽松(允许亏损,允许高PS),因为财务指标滞后于叙事
+- 成熟期公司 → 模型应更严格(要求盈利,要求ROIC),因为财务指标应已兑现叙事
+- 转型期公司 → 注意 anchor_conflict: 旧业务盈利不代表新业务锚。若 SOTP 触发,直接用 J
+
+**2. 理解锚冲突 (anchor_conflict)**
+- 若 2a 标注了锚冲突(如"PE中位但PS极端高位"),说明估值指标与叙事方向不一致
+- 这种情况下,模型选择应偏向叙事方向而非财务指标方向
+- 例如: ROIC>8% 但叙事是 revenue → 应考虑 B 的转型例外,而非机械选 A
+
+**3. 理解事件性质 (3D光谱 + 分布形状 + 计价程度)**
+- 高二元性(wide_bimodal): 结果可能是0或1,模型应对极端情景敏感
+- 高先例丰富度(narrow_concentrated): 历史模板清晰,可用更精确的模型(如K两阶段DCF)
+- 已充分计价(fully priced): 上行空间有限,校验模型应保守
 
 # 执行流程
 
@@ -48,13 +58,19 @@ ROUTING_V6_PROMPT = """你是估值路由判官。叙事诊断师已经确定了
 {FAMILY_MODELS}
 
 对族内每个模型,按准入条件逐条检查。硬约束不通过的排除。
+**叙事优先原则**: 硬约束是必要条件,不是充分条件。通过硬约束≠模型合适——还需Step 2的叙事契合度判断。
 
 ## Step 2: 从剩余候选中选最优主模型
 
-按以下优先级:
-- 优先级1: 估值锚匹配度 — 模型的锚是否与叙事诊断一致
-- 优先级2: 事件-模型契合度 — 模型是否适合事件驱动的估值场景
-- 优先级3: 案例支持度 — 同族案例的模型选择是否一致
+按以下优先级,综合叙事和财务数据:
+- 优先级1: **叙事契合度** — 模型是否匹配 2a 判断的"市场在赌什么"?
+  例: 叙事说"押注CPO供应链导入+国产替代"(→未来收入爆发),公司当前盈利但锚是revenue→B比A更契合叙事
+  例: 叙事说"盈利拐点+ROIC改善"(→利润兑现期),ROIC>8%且增长曲线可预见→K比A更精准
+- 优先级2: **财务数据匹配度** — 模型的参数假设是否与当前财务数据兼容?
+- 优先级3: **事件光谱匹配度** — 分布形状是否支持该模型的假设?
+  例: narrow_concentrated(高先例)→K两阶段DCF可预见性强; wide_unimodal→G PEG的灵活性更合适
+
+routing_reason 必须引用: (1) 2a的叙事线索 (2) 具体财务数据。≥80字。
 
 ## Step 3: 选择校验模型
 
@@ -70,6 +86,7 @@ ROUTING_V6_PROMPT = """你是估值路由判官。叙事诊断师已经确定了
 - 主模型是否在 {FAMILY_CONSTRAINT} 族内 → constraint_compliance
 - 若发现不得不跨族（如硬约束排除了族内所有模型），设置 constraint_override=true
   ——这是极端情况，必须在 override_rationale 中详细说明
+- 若使用了B的转型例外,constraint_override=true, override_rationale 说明原因
 
 # 模型族-模型映射
 
@@ -102,7 +119,7 @@ ROUTING_V6_PROMPT = """你是估值路由判官。叙事诊断师已经确定了
   - K vs G: G用PEG封顶PE,K用折现反映增长价值→K对高增长标的更友好,不会被PEG压制
   选择K的场景: 公司当前高增长(>25%)但行业终局清晰(5年后增速必然回落)
   不选K的场景: 增速已放缓到行业水平→选A;增速波动大难以预测→选G
-  无硬约束——LLM根据增长曲线的可预见性自主判断。 2a已验证: 估值范式冲突 + 副锚占比≥20% + 数据可支撑SOTP。若sotp_triggered=false,跳过J,按主锚选模型。
+**J (SOTP)**: 2a已验证: 估值范式冲突 + 副锚占比≥20% + 数据可支撑SOTP。若sotp_triggered=false,跳过J,按主锚选模型。
   **SOTP的本质**: 防止用主锚去估"另一类业务"时产生系统性偏差。
   **SOTP估值方法**: 分部独立估(各用正确的倍数锚),加总。行业倍数参照来自knowledge_supplement。不要求分部利润精确。
   **数据不足时**: 2a会设置sotp_triggered=false,此时以主锚为准——宁可单锚近似,也不在无数据时强行SOTP。
@@ -112,11 +129,11 @@ ROUTING_V6_PROMPT = """你是估值路由判官。叙事诊断师已经确定了
 ```json
 {
   "routing_decision": {
-    "primary_model": "B",
-    "model_category": "Revenue Multiples",
-    "routing_reason": "引用财务数据+叙事诊断结论,≥80字",
+    "primary_model": "K",
+    "model_category": "Earnings Multiples",
+    "routing_reason": "引用叙事线索+财务数据,≥80字。必须说明为什么这个模型最适合2a判断的叙事方向",
     "validation_models": ["A"],
-    "validation_rationale": "延续事件→跨族校验: 用A(DCF)验证B(PS+TAM)的估值区间",
+    "validation_rationale": "延续事件→跨族校验: 用A(DCF)验证K(两阶段DCF)的估值区间",
     "validation_strategy": "cross_family | conservative_same_family | self_validation",
     "constraint_compliance": {
       "family_constraint_applied": "revenue_multiples",
@@ -130,8 +147,9 @@ ROUTING_V6_PROMPT = """你是估值路由判官。叙事诊断师已经确定了
 
 # 核心约束
 1. 不可跨族选主模型（除非族内全部被硬约束排除）
-2. routing_reason 必须引用具体财务数据
-3. 输出纯 JSON
+2. routing_reason 必须引用: (1) 2a的叙事线索 (2) 具体财务数据
+3. 叙事理解优先于硬约束——先读懂市场在赌什么,再做技术筛选
+4. 输出纯 JSON
 """
 
 
@@ -173,6 +191,10 @@ def _build_routing_user_message(
     stock = core.get("stock_name", data_package.get("stock_name", ""))
     code = data_package.get("stock_code", "")
     fwd = agent2a_output.get("forward_to_routing", {})
+    mn = agent2a_output.get("market_narrative", {})
+    ep = agent2a_output.get("event_pricing", {})
+    epr = ep.get("event_profile", {})
+    pa = ep.get("pricing_assessment", {})
 
     roic = core.get("roic_pct", 0)
     mcap = core.get("market_cap_yi", 0)
@@ -190,17 +212,32 @@ def _build_routing_user_message(
 
     family = fwd.get("model_family_constraint", "earnings_multiples")
     family_models = FAMILY_MODELS.get(family, "A/C/G/I")
+    sas = mn.get("secondary_anchors", [])
 
     msg = f"""# 路由任务: {stock}({code})
 
-## 叙事诊断约束 (Agent-2a 结论)
-- 主锚: {agent2a_output.get('market_narrative',{}).get('primary_anchor','?')}
-- 模型族约束: **{family}** → 可选: {family_models}
+## 叙事诊断 (Agent-2a 完整结论)
+
+**市场在赌什么**: {mn.get('core_bet','?')}
+**叙事生命周期**: {mn.get('narrative_lifecycle','?')}
+
+**估值锚**: {mn.get('primary_anchor','?')}
+**锚判断依据**: {mn.get('primary_anchor_evidence','?')[:300]}
+
+**锚冲突**: {mn.get('anchor_conflict','') or '无'}
+**SOTP触发**: {mn.get('sotp_triggered',False)}
+**SOTP理由**: {mn.get('sotp_rationale','') or '—'}
+
+**事件分布**: {epr.get('distribution_shape','?')} — {epr.get('shape_rationale','?')[:150]}
+**3D光谱**: 时点确定性{epr.get('timing_certainty','?')}/10 | 结果二元性{epr.get('outcome_binaryness','?')}/10 | 先例丰富度{epr.get('precedent_richness','?')}/10
+**事件计价**: {pa.get('overall_priced_in','?')} ({pa.get('priced_in_estimate','?')}) | 剩余催化: {pa.get('residual_catalyst','?')[:150]}
+
+**路由约束**:
+- 模型族: **{family}** → 可选模型: {family_models}
 - 排除族: {fwd.get('excluded_families',[])}
-- 事件性质: {fwd.get('distribution_shape','?')}
 - 定价偏向: {fwd.get('pricing_bias','?')}
-- 路由风险: {fwd.get('key_risk_for_routing','')}
-- SOTP触发: {agent2a_output.get('market_narrative',{}).get('sotp_triggered',False)}
+- 路由风险: {fwd.get('key_risk_for_routing','') or '无'}
+{chr(10).join(f'- 副锚: {sa.get("segment")} → {sa.get("anchor")} ({sa.get("revenue_share_pct")}%收入)' for sa in sas) if sas else ''}
 
 ## 核心财务数据
 | 指标 | 数值 |
@@ -217,7 +254,7 @@ def _build_routing_user_message(
 | 异常标记 | {json.dumps(core.get('caution_flags',[]), ensure_ascii=False)} |
 
 ## 事件背景
-{event_data.get('investment_theme','')}
+{event_data.get('investment_theme','')[:500]}
 {event_data.get('event_deduction','')[:500]}
 
 请在指定模型族内完成路由判决。输出纯 JSON。
