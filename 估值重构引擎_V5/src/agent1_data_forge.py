@@ -370,13 +370,15 @@ class DataForge:
         core_pkg = PackageResult(name="core")
         core_pkg.fields = _extract_core_fields(self._raw_bundle, ticker)
 
-        # 检查 core 关键字段是否全部存在
+        # 检查 core 关键字段是否全部存在且非零
         core_required = [
             "market_cap_yi", "revenue_ttm_yi", "net_profit_ttm_yi",
             "total_assets_yi", "total_equity_yi", "pe_ttm", "pb",
         ]
+        # 市值/营收/净资产/PE 为零或 None 均视为数据拉取失败
         for k in core_required:
-            if not core_pkg.fields.get(k) and core_pkg.fields.get(k) != 0:
+            v = core_pkg.fields.get(k)
+            if v is None or v == 0:
                 core_pkg.missing_fields.append(k)
 
         if core_pkg.missing_fields:

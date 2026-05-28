@@ -151,6 +151,20 @@ class Orchestrator:
                 quality = state.agent1_output.get("overall_data_quality_score", "?")
                 cb("agent1", 1, 1, "done", f"quality={quality}")
 
+            # ── Agent-1 数据完整性检查 (防止全零数据通过) ──
+            core = (state.agent1_output or {}).get("packages", {}).get("core", {}).get("fields", {})
+            if not core:
+                core = (state.agent1_output or {}).get("clean_financials", {})
+            critical_missing = [
+                k for k in ["market_cap_yi", "revenue_ttm_yi", "total_assets_yi"]
+                if not core.get(k)
+            ]
+            if critical_missing:
+                raise DataForgeError(
+                    "E101", f"Agent-1 关键字段为零或缺失: {critical_missing}",
+                    {"missing": critical_missing, "stock_code": stock_code},
+                )
+
             # ── WACC 预计算 (Agent-2a 定价工具需要) ──
             fetcher = DataFetcher()
             wacc_params = precompute_wacc(fetcher, stock_code, state.agent1_output)
