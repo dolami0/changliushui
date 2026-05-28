@@ -631,7 +631,7 @@ class IndustryChainWorkflow:
             else:
                 enriched[c]['_data_quality'] = 'missing'
 
-        # ── B. Volc Agent 每只个股并行搜索投资地图 ──
+        # ── B. Volc Agent 每只个股并行搜索投资地图（仅搜索市值<=300亿的）───
         def fetch_intel(code: str) -> tuple:
             name = code_to_name.get(code, '')
             node = code_to_node.get(code, '')
@@ -641,14 +641,21 @@ class IndustryChainWorkflow:
             except Exception:
                 return code, ""
 
-        with ThreadPoolExecutor(max_workers=3) as ex:
-            futures = [ex.submit(fetch_intel, c) for c in codes]
-            for f in as_completed(futures):
-                try:
-                    code, intel = f.result(timeout=75)
-                    enriched[code]['_volc_intel'] = intel
-                except Exception:
-                    pass
+        small_codes = [c for c in codes
+                       if (enriched[c].get('market_cap') or 0) <= 300]
+        skipped = len(codes) - len(small_codes)
+        if skipped > 0:
+            print(f'[Volc] 跳过{skipped}只大盘股(市值>300亿), 仅搜索{len(small_codes)}只', flush=True)
+
+        if small_codes:
+            with ThreadPoolExecutor(max_workers=3) as ex:
+                futures = [ex.submit(fetch_intel, c) for c in small_codes]
+                for f in as_completed(futures):
+                    try:
+                        code, intel = f.result(timeout=75)
+                        enriched[code]['_volc_intel'] = intel
+                    except Exception:
+                        pass
 
         # ── C. 兜底：名称用提名数据补 ──
         for n in nominations:
