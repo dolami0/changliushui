@@ -350,18 +350,61 @@ base = 100% - bull - bear。
 
 ### 3e. 分部赋参
 
-**叙事主锚分部** (is_primary=true): bear/base/bull 三组参数，按锚类型选参数:
-- revenue锚: revenue_growth_3y_cagr_pct, target_ps
-- earnings锚: pe_target, segment_margin_pct
-- asset锚: target_pb
-- pipeline锚: pos_pct, peak_sales_yi, discount_rate_pct
+**叙事主锚分部** (is_primary=true): bear/base/bull 三组参数，按 2b 选定的 sotp_primary_segment_model 使用 Agent-3 标准参数体系。以下参数规则与原 Agent-3 完全相同:
 
-**其他业务** (is_primary=false): 只赋 base 一组参数。引用产品结构数据中的实际毛利率；PE/PS/PB取保守值(非叙事驱动业务不给高倍数)。
+赋参数时，用 3a 的分布形状约束和 3b 的 upside 天花板反向验证。
+剧本 + 清单项2评分修正 -> 三情景参数。
+参数锚定行业估值中枢（来自 knowledge_supplement 或行业常识），不锚定具体个股案例。
 
-参数单调递增: 叙事主锚 bear < base < bull。其他业务三情景用同一组 base 参数。
-Bull 自检: 叙事主锚 bull_mcap/base_mcap <= 3x
+当前模型是 {PRIMARY_MODEL} ({MODEL_DESC})，你必须使用的参数体系:
+{MODEL_PARAM_NAMES}
 
-### 禁止事项
+**百分比格式铁律——所有带 pct 后缀的字段都使用实际百分比数值,不是小数:**
+- ROIC=15% -> roic_assumed_pct: 15 (不是0.15)
+- 增速=50% -> earnings_growth_pct: 50 (不是0.5)
+- PE=80x -> pe_target: 80
+- 概率=30% -> probability: 0.30 (概率字段例外,使用0-1小数)
+
+**参数的经济含义——赋参前必须逐参数过这关:**
+
+PE: 不是抽象数字。PE=600x 需要极高增速支撑。bear（事件失败）的 PE 必须回到行业周期底部（通常 10-30x，不是 600x）。
+
+PS: 当前 PS 是市场讲的故事。base PS = 当前PS x f(priced_in):
+  - priced_in=not_priced: f=1.0-1.2 (故事刚开始,PS可扩张)
+  - priced_in=partially: f=0.85-1.0 (部分计价,PS大体维持)
+  - priced_in=fully: f=0.7-0.85 (已充分计价,PS应部分回归)
+  再结合增长可持续性微调: 增长加速->取上限,增长放缓->取下限。
+  禁止"因为PS很高所以base给低PS"的均值回归,也禁止"因为PS高所以维持高PS"的惯性。
+
+PB: 与 ROE 匹配。ROE<5% 不应 >2x PB（除非隐蔽资产重估）。
+
+ROIC: 故事里的事件节点驱动 ROIC 改善幅度。从叙事推演 ROIC 路径——毛利率修复到多少？规模效应何时释放？——而非从当前低基数线性外推。
+
+CAGR/增速: 高增速必须匹配高再投资率（RR=g/ROIC）。增速和 RR 不能脱节。
+
+参数联动规则:
+- 三情景参数必须逐级递增: bear < base < bull，禁止相同数值
+- PE/PS/PB 的升降方向必须与因果剧本一致
+- 概率不由模板决定——由因果链条环节数推导
+
+**注意: 你只输出参数假设。所有估值数字由代码统一计算:**
+
+| 模型 | 代码公式 | 你控制的参数 |
+|------|----------|-------------|
+| A | IC x ROIC% x PE | ROIC、RR(->g)、PE |
+| B | revenue x (1+cagr)^3 x PS | 3y CAGR、PS |
+| C | IC x ROIC% x PE x 拐点折扣 | ROIC、PE、距拐点 |
+| D | equity x PB | PB |
+| G | IC x ROIC% x min(PE, PEGx增速) | ROIC、PE、PEG、增速 |
+| K | sigma[FCFF_t/(1+WACC)^t] + NOPAT_NxPE/(1+WACC)^N | stage1_growth, stage1_years, ROIC, terminal_PE |
+
+**赋参数时反向验证: 用上表公式心算一遍，你的参数产出的数字和你因果剧本应得的估值是否匹配？**
+
+**SOTP 特殊规则:**
+
+**其他业务** (is_primary=false): 不参与上述推演。只赋 base 一组保守参数。引用产品结构数据中的实际毛利率；PE/PS/PB取保守值(非叙事驱动业务不给高倍数)。
+
+Bull 自检: 叙事主锚分部 bull_mcap/base_mcap <= 3x### 禁止事项
 - 禁止三个情景共用同一套假设数字微调
 - 禁止 bear 使用"宏观经济衰退"作为触发条件（除非传导链明确依赖宏观）
 - 禁止对所有标的使用相同概率分布模板
