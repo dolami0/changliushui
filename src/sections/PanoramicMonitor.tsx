@@ -495,12 +495,19 @@ interface TrackingSummary {
   stockName: string;
   direction: 'long' | 'short';
   conviction: number;
+  convictionDelta: string;
   thesisStatus: string;
   thesis: string;
+  narrativeTension: string;
+  latestTrigger: string;
   entryCondition: string;
   returnPct: number;
-  nextCatalyst?: { date: string; event: string; impact: string };
+  price: number;
+  pe: number;
+  nextCatalyst?: { date: string; event: string; impact: string; status?: string };
   atRiskCount: number;
+  verifiedCount: number;
+  onTrackCount: number;
 }
 
 export function TrackingPanel() {
@@ -516,24 +523,40 @@ export function TrackingPanel() {
       .then((data: Array<Record<string, unknown>>) => {
         const summaries: TrackingSummary[] = (data as any[]).map((d: any) => {
           const lastPrice = d.priceLog?.[d.priceLog.length - 1];
+          const tl = d.thesisLog || [];
+          const latestTl = tl.length > 0 ? tl[tl.length - 1] : null;
           const atRiskPillars = (d.pillars || []).filter((p: any) => p.status === 'at_risk');
+          const verifiedPillars = (d.pillars || []).filter((p: any) => p.status === 'verified');
+          const onTrackPillars = (d.pillars || []).filter((p: any) => p.status === 'on_track');
           const upcomingCatalysts = (d.catalystCalendar || [])
-            .filter((c: any) => new Date(c.date) >= new Date())
-            .sort((a: any, b: any) => a.date.localeCompare(b.date));
+            .filter((c: any) => c.status !== 'missed')
+            .sort((a: any, b: any) => {
+              const aTriggered = a.status === 'triggered' ? 1 : 0;
+              const bTriggered = b.status === 'triggered' ? 1 : 0;
+              if (aTriggered !== bTriggered) return bTriggered - aTriggered;
+              return (a.date || '9999').localeCompare(b.date || '9999');
+            });
           return {
             stockCode: d.stockCode,
             stockName: d.stockName,
             direction: d.direction || 'long',
             conviction: d.conviction || 0,
+            convictionDelta: latestTl?.delta || '0',
             thesisStatus: (d.pillars || []).some((p: any) => p.status === 'at_risk')
               ? 'at_risk' : (d.pillars || []).every((p: any) => p.status === 'verified')
               ? 'verified' : (d.pillars || []).every((p: any) => p.status === 'on_track' || p.status === 'verified')
               ? 'on_track' : 'pending',
             thesis: d.thesis || '',
+            narrativeTension: latestTl?.narrativeTension || 'stable',
+            latestTrigger: latestTl?.trigger || '',
             entryCondition: d.entryCondition || '',
             returnPct: lastPrice?.return_pct || 0,
+            price: lastPrice?.price || 0,
+            pe: lastPrice?.pe || 0,
             nextCatalyst: upcomingCatalysts[0] || undefined,
             atRiskCount: atRiskPillars.length,
+            verifiedCount: verifiedPillars.length,
+            onTrackCount: onTrackPillars.length,
           };
         });
         summaries.sort((a, b) => {
@@ -553,6 +576,12 @@ export function TrackingPanel() {
   };
   const thesisLabel: Record<string, string> = {
     on_track: '运转', at_risk: '警告', pending: '待验', verified: '已验',
+  };
+  const tensionIcon: Record<string, string> = {
+    rising: '▲', stable: '▶', easing: '▼', breaking: '✕',
+  };
+  const tensionColor: Record<string, string> = {
+    rising: '#ADFF00', stable: '#C88D3A', easing: '#FF8C00', breaking: '#FF5C00',
   };
 
   const toggle = (code: string) => {
@@ -596,78 +625,115 @@ export function TrackingPanel() {
           const tc = thesisColor[s.thesisStatus] || '#555';
           const stockKey = s.stockCode || `s-${i}`;
           const isOpen = expanded.has(stockKey);
-          const isLong = s.direction === 'long';
+          const hasDelta = s.convictionDelta !== '0' && s.convictionDelta !== '';
           return (
             <div key={stockKey} style={{
               marginBottom: '6px',
               background: isOpen ? 'rgba(255,255,255,0.03)' : 'rgba(255,255,255,0.015)',
               border: `1px solid ${isOpen ? tc + '30' : 'rgba(255,255,255,0.04)'}`,
-              borderLeft: `3px solid ${tc}60`,
+              borderLeft: `3px solid ${tensionColor[s.narrativeTension]}80`,
               transition: 'all 0.2s',
               cursor: 'pointer',
             }}>
-              {/* 摘要行 — 始终可见 */}
+              {/* ====== 摘要行 ====== */}
               <div
                 onClick={() => toggle(stockKey)}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: '8px',
+                  display: 'flex', alignItems: 'center', gap: '6px',
                   padding: '8px 10px',
                 }}
               >
+                {/* 叙事张力图标 */}
+                <span style={{
+                  fontFamily: "'Space Mono', monospace", fontSize: '18px',
+                  color: tensionColor[s.narrativeTension],
+                  width: '14px', textAlign: 'center', flexShrink: 0,
+                }} title={s.narrativeTension === 'rising' ? '叙事强化' : s.narrativeTension === 'stable' ? '叙事稳定' : s.narrativeTension === 'easing' ? '叙事弱化' : '叙事破裂'}>
+                  {tensionIcon[s.narrativeTension]}
+                </span>
+                {/* 股票名 + 代码 */}
                 <span style={{
                   fontFamily: "'IBM Plex Mono', 'Noto Sans SC', monospace",
                   fontSize: '20px', fontWeight: 600, color: '#F2F4F3',
                 }}>{s.stockName}</span>
-                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '17px', color: '#666' }}>{s.stockCode}</span>
-                <span style={{
-                  fontSize: '17px', color: isLong ? '#ADFF00' : '#FF5C00',
-                }}>{isLong ? '多' : '空'}</span>
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '15px', color: '#666' }}>{s.stockCode}</span>
                 <span style={{ flex: 1 }} />
+                {/* Conviction + delta */}
                 <span style={{
-                  fontFamily: "'Space Mono', monospace", fontSize: '17px', color: tc,
-                  border: `1px solid ${tc}40`, padding: '0px 4px',
-                }}>{thesisLabel[s.thesisStatus]}</span>
+                  fontFamily: "'Space Mono', monospace", fontSize: '15px', color: '#888',
+                }}>
+                  信<span style={{ color: s.conviction >= 70 ? '#ADFF00' : s.conviction >= 40 ? '#C88D3A' : '#FF5C00' }}>{s.conviction}</span>
+                  {hasDelta && (
+                    <span style={{ fontSize: '14px', color: s.convictionDelta.startsWith('+') ? '#ADFF00' : '#FF5C00', marginLeft: '1px' }}>
+                      {s.convictionDelta}
+                    </span>
+                  )}
+                </span>
+                {/* 涨跌幅 */}
                 <span style={{
                   fontFamily: "'Geist Pixel', monospace", fontSize: '20px',
                   color: s.returnPct >= 0 ? '#ADFF00' : '#FF5C00',
                 }}>
                   {s.returnPct >= 0 ? '+' : ''}{s.returnPct.toFixed(1)}%
                 </span>
-                <span style={{ color: '#444', fontSize: '17px', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none' }}>▼</span>
+                <span style={{ color: '#444', fontSize: '16px', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none' }}>▼</span>
               </div>
 
-              {/* 展开详情 */}
+              {/* ====== 展开详情 ====== */}
               {isOpen && (
                 <div style={{ padding: '0 10px 10px 14px', borderTop: '1px solid rgba(255,255,255,0.03)' }}>
-                  {/* 论点状态 + 置信度 */}
-                  <div style={{ display: 'flex', gap: '10px', margin: '6px 0' }}>
-                    <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '17px', color: '#888' }}>
-                      信心 <span style={{ color: s.conviction >= 70 ? '#ADFF00' : s.conviction >= 40 ? '#C88D3A' : '#FF5C00' }}>{s.conviction}</span>
-                    </span>
-                    {s.atRiskCount > 0 && (
-                      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '17px', color: '#FF5C00' }}>
-                        异常支柱 {s.atRiskCount}
-                      </span>
-                    )}
+                  {/* 论点（一句） */}
+                  <div style={{ margin: '6px 0', padding: '6px 8px', background: 'rgba(200,141,58,0.05)', border: '1px solid rgba(200,141,58,0.12)', borderRadius: '2px' }}>
+                    <div style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '15px', color: '#BBB', lineHeight: 1.5 }}>
+                      {s.thesis}
+                    </div>
                   </div>
-                  {/* 投资论点 + 入场条件 */}
-                  {(s.thesis || s.entryCondition) && (
-                    <div style={{ marginBottom: '4px', fontSize: '15px', lineHeight: 1.4 }}>
-                      {s.thesis && <div style={{ fontFamily: "'Noto Sans SC', sans-serif", color: '#AAA', marginBottom: '2px' }}><span style={{ color: '#ADFF00', fontSize: '14px' }}>论点 </span>{s.thesis}</div>}
-                      {s.entryCondition && <div style={{ fontFamily: "'Noto Sans SC', sans-serif", color: '#888' }}><span style={{ color: '#C88D3A', fontSize: '14px' }}>入场 </span>{s.entryCondition}</div>}
+
+                  {/* 最新变动 */}
+                  {s.latestTrigger && (
+                    <div style={{ margin: '4px 0', padding: '4px 8px', borderLeft: `2px solid ${tensionColor[s.narrativeTension]}60` }}>
+                      <div style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '14px', color: '#888', lineHeight: 1.4 }}>
+                        <span style={{ color: tensionColor[s.narrativeTension], fontSize: '13px', marginRight: '4px' }}>⌁</span>
+                        {s.latestTrigger.length > 80 ? s.latestTrigger.slice(0, 80) + '…' : s.latestTrigger}
+                      </div>
                     </div>
                   )}
+
+                  {/* 支柱概览 + 价格 */}
+                  <div style={{ display: 'flex', gap: '8px', margin: '4px 0', flexWrap: 'wrap' }}>
+                    <span style={{
+                      fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#666',
+                    }}>
+                      支柱
+                      <span style={{ color: '#888', marginLeft: '2px' }}>{s.verifiedCount}</span>
+                      <span style={{ color: '#ADFF00', marginLeft: '2px' }}>{s.onTrackCount}</span>
+                      {s.atRiskCount > 0 && <span style={{ color: '#FF5C00', marginLeft: '2px' }}>{s.atRiskCount}</span>}
+                    </span>
+                    <span style={{ color: '#555', fontSize: '14px' }}>|</span>
+                    <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#666' }}>
+                      价 <span style={{ color: '#AAA' }}>{s.price.toFixed(2)}</span>
+                    </span>
+                    <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#666' }}>
+                      PE <span style={{ color: '#AAA' }}>{s.pe.toFixed(1)}</span>
+                    </span>
+                  </div>
+
                   {/* 下一个催化剂 */}
                   {s.nextCatalyst && (
                     <div style={{
-                      padding: '6px 8px', background: 'rgba(255,255,255,0.02)',
-                      border: '1px solid rgba(255,255,255,0.04)', marginBottom: '6px',
+                      padding: '5px 8px', background: 'rgba(255,255,255,0.02)',
+                      border: '1px solid rgba(255,255,255,0.04)',
                     }}>
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                         <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#ADFF00' }}>⌖</span>
-                        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#AAA' }}>{s.nextCatalyst.date}</span>
+                        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: s.nextCatalyst.status === 'triggered' ? '#ADFF00' : '#AAA' }}>
+                          {s.nextCatalyst.date}
+                        </span>
+                        {s.nextCatalyst.status === 'triggered' && (
+                          <span style={{ fontSize: '12px', color: '#ADFF00', background: 'rgba(173,255,0,0.1)', padding: '0 3px' }}>已触发</span>
+                        )}
                         <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: s.nextCatalyst.impact === 'H' ? '#FF5C00' : '#888' }}>
-                          {s.nextCatalyst.impact === 'H' ? '高' : s.nextCatalyst.impact === 'M' ? '中' : '低'}影响
+                          {s.nextCatalyst.impact === 'H' ? '重大' : s.nextCatalyst.impact === 'M' ? '中等' : '轻微'}
                         </span>
                       </div>
                       <div style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '14px', color: '#777', marginTop: '2px', lineHeight: 1.4 }}>
@@ -675,14 +741,20 @@ export function TrackingPanel() {
                       </div>
                     </div>
                   )}
-                  {/* 跳转链接 */}
-                  <div style={{ textAlign: 'right', marginTop: '4px' }}>
+
+                  {/* 入场条件 + 跳转 */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                    {s.entryCondition ? (
+                      <span style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '13px', color: '#C88D3A', flex: 1 }}>
+                        {s.entryCondition.length > 40 ? s.entryCondition.slice(0, 40) + '…' : s.entryCondition}
+                      </span>
+                    ) : <span />}
                     <span
                       onClick={(e) => { e.stopPropagation(); navigate(`/tracking?code=${s.stockCode}`); }}
                       style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#ADFF00', letterSpacing: '0.06em', cursor: 'pointer', opacity: 0.6 }}
                       onMouseEnter={(e2) => { e2.currentTarget.style.opacity = '1'; }}
                       onMouseLeave={(e2) => { e2.currentTarget.style.opacity = '0.6'; }}
-                    >→ 查看追踪令</span>
+                    >→ 追踪司</span>
                   </div>
                 </div>
               )}

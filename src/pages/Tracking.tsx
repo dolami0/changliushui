@@ -19,6 +19,7 @@ import {
 interface Pillar {
   name: string
   expectation: string
+  quantifiedTarget?: string
   status: 'pending' | 'on_track' | 'at_risk' | 'verified'
   verificationDate: string
   lastChecked: string
@@ -39,6 +40,10 @@ interface CatalystEvent {
   impact: 'H' | 'M' | 'L'
   bull: string
   bear: string
+  sourceLevel?: 'L5' | 'L4' | 'L3' | 'L2' | 'L1'
+  sourceDetail?: string
+  sourceNote?: string
+  status?: 'pending' | 'triggered' | 'missed' | 'verified'
 }
 
 interface PriceLogEntry {
@@ -57,6 +62,20 @@ interface AShareChecks {
   unlockCheck: { lastChecked: string; result: string }
   marginCheck: { lastChecked: string; result: string }
   insiderTrading: { lastChecked: string; result: string }
+}
+
+interface ThesisVersion {
+  version: number
+  date: string
+  thesis: string
+  conviction: number
+  delta: string
+  trigger: string
+  narrative: string
+  verifiedAssumptions: string[]
+  invalidatedAssumptions: string[]
+  newUnknowns: string[]
+  narrativeTension: 'rising' | 'stable' | 'easing' | 'breaking'
 }
 
 interface TrackingData {
@@ -80,11 +99,13 @@ interface TrackingData {
   baseDate: string
   priceLog: PriceLogEntry[]
   positionLog: unknown[]
+  thesisLog?: ThesisVersion[]
   aShareTracking: AShareChecks
   reviewSchedule: {
     nextFullReview: string
     nextQuickCheck: string
     lastCheck: string
+    patrolFrequency?: string
   }
 }
 
@@ -103,6 +124,13 @@ const impactColors: Record<string, string> = {
   H: 'text-[#FF5C00] border-[#FF5C00]/40',
   M: 'text-amber-400 border-amber-400/30',
   L: 'text-muted-foreground border-white/10',
+}
+
+const tensionMeta: Record<string, { label: string; color: string; icon: string }> = {
+  rising:    { label: '叙事强化', color: 'text-[#ADFF00]',   icon: '▲' },
+  stable:    { label: '叙事稳定', color: 'text-amber-400',    icon: '▶' },
+  easing:    { label: '叙事弱化', color: 'text-orange-400',   icon: '▼' },
+  breaking:  { label: '叙事破裂', color: 'text-red-400',      icon: '✕' },
 }
 
 function fmtDate(d: string) {
@@ -307,6 +335,113 @@ function PriceChartPanel({ priceLog, basePrice, baseDate, baseMarketCap }: {
 }
 
 /* ================================================================== */
+/*  Thesis timeline (叙事演进)                                          */
+/* ================================================================== */
+
+function ThesisTimeline({ thesisLog }: { thesisLog: ThesisVersion[] }) {
+  const [expanded, setExpanded] = useState(false)
+  const latest = thesisLog[thesisLog.length - 1]
+  const hasHistory = thesisLog.length > 1
+
+  return (
+    <Card className="border-white/5 bg-[#050401]">
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-base font-semibold flex items-center gap-2">
+            <Target size={14} className="text-[#C88D3A]" />
+            投资论点
+          </CardTitle>
+          {hasHistory && (
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="text-xs text-muted-foreground hover:text-[#ADFF00] transition-colors"
+            >
+              {expanded ? '收起演进史' : `展开演进史 (${thesisLog.length}版)`}
+            </button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        {/* ---- 当前版本 ---- */}
+        <div className="mb-3">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#ADFF00]/10 text-[#ADFF00] font-mono">v{latest.version}</span>
+            <span className={cn('text-xs flex items-center gap-1', tensionMeta[latest.narrativeTension]?.color)}>
+              {tensionMeta[latest.narrativeTension]?.icon} {tensionMeta[latest.narrativeTension]?.label}
+            </span>
+            {latest.delta !== '0' && (
+              <span className={cn('text-xs font-mono', latest.delta.startsWith('+') ? 'text-[#ADFF00]' : 'text-red-400')}>
+                Conviction {latest.delta}
+              </span>
+            )}
+          </div>
+          <p className="text-base leading-relaxed text-muted-foreground">{latest.thesis}</p>
+        </div>
+
+        {/* ---- 最新原委 ---- */}
+        {latest.narrative && (
+          <div className="p-3 rounded-lg border border-white/5 bg-white/[0.02] mb-3">
+            <div className="text-xs text-muted-foreground mb-1">触发事件</div>
+            <p className="text-sm mb-2">{latest.trigger}</p>
+            <div className="text-xs text-muted-foreground mb-1">原委</div>
+            <p className="text-sm text-muted-foreground/80 leading-relaxed">{latest.narrative}</p>
+          </div>
+        )}
+
+        {/* ---- 假设追踪 ---- */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-3">
+          {latest.verifiedAssumptions.length > 0 && (
+            <div className="p-2 rounded bg-emerald-400/5 border border-emerald-400/15">
+              <div className="text-[11px] text-emerald-400/70 mb-1">✓ 已验证假设</div>
+              {latest.verifiedAssumptions.map((a, i) => (
+                <div key={i} className="text-xs text-emerald-400/80">· {a}</div>
+              ))}
+            </div>
+          )}
+          {latest.invalidatedAssumptions.length > 0 && (
+            <div className="p-2 rounded bg-red-400/5 border border-red-400/15">
+              <div className="text-[11px] text-red-400/70 mb-1">✕ 被推翻假设</div>
+              {latest.invalidatedAssumptions.map((a, i) => (
+                <div key={i} className="text-xs text-red-400/80">· {a}</div>
+              ))}
+            </div>
+          )}
+          {latest.newUnknowns.length > 0 && (
+            <div className="p-2 rounded bg-amber-400/5 border border-amber-400/15">
+              <div className="text-[11px] text-amber-400/70 mb-1">? 新未知数</div>
+              {latest.newUnknowns.map((a, i) => (
+                <div key={i} className="text-xs text-amber-400/80">· {a}</div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* ---- 演进历史 ---- */}
+        {expanded && hasHistory && (
+          <div className="relative pl-5 border-l border-white/10 space-y-4 mt-4 pt-2">
+            {thesisLog.slice().reverse().map((v, i) => (
+              <div key={v.version} className="relative">
+                <div className="absolute -left-[21px] top-1 w-2 h-2 rounded-full border border-[#C88D3A]/50 bg-[#C88D3A]/20" />
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-xs font-mono text-[#C88D3A]">v{v.version}</span>
+                  <span className="text-xs text-muted-foreground">{v.date}</span>
+                  <span className="text-xs font-mono text-muted-foreground">Conviction: {v.conviction}</span>
+                  <span className={cn('text-xs', tensionMeta[v.narrativeTension]?.color)}>
+                    {tensionMeta[v.narrativeTension]?.icon}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground/80 mb-1">{v.thesis}</p>
+                {v.trigger && <p className="text-xs text-muted-foreground/60">触发: {v.trigger}</p>}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+/* ================================================================== */
 /*  Catalyst timeline                                                  */
 /* ================================================================== */
 
@@ -337,7 +472,34 @@ function CatalystTimeline({ events }: { events: CatalystEvent[] }) {
                 <Badge variant="outline" className={cn('text-[11px] px-1.5 py-0 h-4', impactColors[ev.impact])}>
                   {ev.impact === 'H' ? '重大' : ev.impact === 'M' ? '中等' : '轻微'}
                 </Badge>
+                {ev.sourceLevel && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className={cn(
+                        'text-[10px] px-1 py-0 rounded cursor-help',
+                        ev.sourceLevel === 'L5' ? 'bg-emerald-400/15 text-emerald-400' :
+                        ev.sourceLevel === 'L4' ? 'bg-amber-400/15 text-amber-400' :
+                        ev.sourceLevel === 'L3' ? 'bg-orange-400/15 text-orange-400' :
+                        'bg-red-400/15 text-red-400'
+                      )}>{ev.sourceLevel}</span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="max-w-[260px] text-xs">
+                      {ev.sourceDetail && <p className="text-muted-foreground">{ev.sourceDetail}</p>}
+                      {ev.sourceNote && <p className="text-amber-400/80 mt-0.5">{ev.sourceNote}</p>}
+                    </TooltipContent>
+                  </Tooltip>
+                )}
                 <span className="text-[11px] text-muted-foreground">{ev.type}</span>
+                {ev.status && (
+                  <span className={cn(
+                    'text-[10px]',
+                    ev.status === 'triggered' ? 'text-[#ADFF00]' :
+                    ev.status === 'missed' ? 'text-red-400' :
+                    ev.status === 'verified' ? 'text-emerald-400' : 'text-muted-foreground'
+                  )}>
+                    {ev.status === 'triggered' ? '▶已触发' : ev.status === 'missed' ? '✗已错过' : ev.status === 'verified' ? '✓已验证' : ''}
+                  </span>
+                )}
               </div>
               <p className="text-base font-medium">{ev.event}</p>
               <div className="flex gap-3 mt-1 text-xs">
@@ -529,18 +691,20 @@ export default function Tracking() {
                 </div>
               )}
 
-              {/* ---- 核心论点 ---- */}
-              <Card className="border-white/5 bg-[#050401]">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base font-semibold flex items-center gap-2">
-                    <Target size={14} className="text-[#C88D3A]" />
-                    投资论点
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-base leading-relaxed text-muted-foreground">{selectedStock.thesis}</p>
-                </CardContent>
-              </Card>
+              {/* ---- 核心论点 (叙事演进) ---- */}
+              <ThesisTimeline thesisLog={selectedStock.thesisLog || [{
+                version: 1,
+                date: selectedStock.decisionDate,
+                thesis: selectedStock.thesis,
+                conviction: selectedStock.conviction,
+                delta: '0',
+                trigger: '建档',
+                narrative: '',
+                verifiedAssumptions: [],
+                invalidatedAssumptions: [],
+                newUnknowns: [],
+                narrativeTension: 'stable' as const
+              }]} />
 
               {/* ---- 四大支柱 ---- */}
               <div>
@@ -635,21 +799,26 @@ export default function Tracking() {
                   <CardTitle className="text-base font-semibold flex items-center gap-2">
                     <Calendar size={14} className="text-muted-foreground" />
                     审查周期
+                    {selectedStock.reviewSchedule.patrolFrequency && (
+                      <span className="text-xs text-[#ADFF00]/70 font-normal ml-auto">
+                        {selectedStock.reviewSchedule.patrolFrequency}
+                      </span>
+                    )}
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
                       <div className="text-xs text-muted-foreground">上次检查</div>
-                      <div className="text-base font-mono">{selectedStock.reviewSchedule.lastCheck}</div>
+                      <div className="text-sm font-mono">{selectedStock.reviewSchedule.lastCheck}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground">快速检查</div>
-                      <div className="text-base font-mono text-amber-400">{selectedStock.reviewSchedule.nextQuickCheck}</div>
+                      <div className="text-xs text-muted-foreground">下次检查</div>
+                      <div className="text-sm font-mono text-amber-400">{selectedStock.reviewSchedule.nextQuickCheck}</div>
                     </div>
                     <div>
                       <div className="text-xs text-muted-foreground">全面复审</div>
-                      <div className="text-base font-mono text-[#ADFF00]">{selectedStock.reviewSchedule.nextFullReview}</div>
+                      <div className="text-sm font-mono text-[#ADFF00]">{selectedStock.reviewSchedule.nextFullReview}</div>
                     </div>
                   </div>
                 </CardContent>

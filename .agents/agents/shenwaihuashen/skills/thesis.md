@@ -51,25 +51,28 @@ python data_helper.py daily <code> <决策日前一交易日> <决策日>
 
 ```json
 {
-  "stockCode": "300964",
-  "stockName": "本川智能",
+  "stockCode": "300617",
+  "stockName": "安靠智电",
   "direction": "long",
-  "thesis": "一句话核心投资逻辑",
-  "conviction": 68,
-  "decisionDate": "2026-05-23",
-  "basePrice": 63.2,
-  "baseMarketCap": 260.4,
-  "baseDate": "2026-05-22",
-  "recommendedPosition": 10,
-  "entryPriceTarget": 50.0,
-  "actualEntry": null,
+  "thesis": "一句话核心投资逻辑（可证伪）",
+  "conviction": 45,
+  "decisionDate": "2026-05-28",
+  "decision": "有条件通过",
+  "recommendedPosition": 8,
+  "actualPosition": 0,
+  "entryCondition": "进入条件描述",
+  "entryPriceTarget": 66.53,
   "pillars": [
     {
       "name": "支柱名称",
       "expectation": "期望发生什么（可量化）",
+      "quantifiedTarget": "量化目标（如「H1营收>5亿」）",
       "status": "pending",
-      "lastChecked": "2026-05-23",
-      "history": []
+      "verificationDate": "2026-08-31",
+      "lastChecked": "2026-05-28",
+      "history": [
+        {"date": "2026-05-28", "actual": "当前实际数据", "trend": "up"}
+      ]
     }
   ],
   "risks": [
@@ -84,15 +87,56 @@ python data_helper.py daily <code> <决策日前一交易日> <决策日>
     "条件1 → 行动",
     "条件2 → 行动"
   ],
-  "catalystCalendar": [],
-  "priceLog": [],
+  "catalystCalendar": [
+    {
+      "date": "2026-09",
+      "event": "事件名称",
+      "type": "公司/财报/行业/政策/市场",
+      "impact": "H",
+      "bull": "看多触发条件",
+      "bear": "看空触发条件",
+      "sourceLevel": "L4",
+      "sourceDetail": "2026-05 机构调研纪要",
+      "sourceNote": "口头指引，待公告确认",
+      "status": "pending"
+    }
+  ],
+  "basePrice": 66.53,
+  "baseMarketCap": 110.25,
+  "baseDate": "2026-05-27",
+  "priceLog": [
+    {"date": "2026-05-27", "price": 66.53, "pe": 149.8, "mv_yi": 110.25, "return_pct": 0.0, "mv_change_pct": 0.0, "note": "建档基准价"}
+  ],
   "positionLog": [],
+  "aShareTracking": {
+    "pledgeCheck": {"lastChecked": "2026-05-28", "result": "质押率0.88%"},
+    "unlockCheck": {"lastChecked": "2026-05-28", "result": "无近期大额解禁"},
+    "marginCheck": {"lastChecked": "2026-05-28", "result": "待首次月度专检"},
+    "insiderTrading": {"lastChecked": "2026-05-28", "result": "待首次月度专检"}
+  },
   "reviewSchedule": {
-    "nextFullReview": "2026-08-30",
-    "nextQuickCheck": "2026-06-15"
+    "nextFullReview": "2026-08-31(半年报)",
+    "nextQuickCheck": "2026-05-29(明日巡检)",
+    "lastCheck": "2026-05-28(建档)",
+    "patrolFrequency": "每个工作日 9:07"
   }
 }
 ```
+
+**字段对齐 Tracking.tsx `TrackingData` 接口。** 所有字段名、类型、嵌套结构与前端严格一致。
+
+### 关键字段说明
+
+| 字段 | 说明 | 示例 |
+|------|------|------|
+| `pillars[].quantifiedTarget` | 可量化验证目标 | `"H1营收>5亿"` |
+| `pillars[].verificationDate` | 验证截止日 | `"2026-08-31"` |
+| `pillars[].status` | `pending` / `on_track` / `at_risk` / `verified` | — |
+| `catalystCalendar[].impact` | `H`(重大) / `M`(中等) / `L`(轻微) | — |
+| `catalystCalendar[].sourceLevel` | `L5`(公告) / `L4`(纪要) / `L3`(研报) / `L2`(媒体) / `L1`(传闻) | 来自 catalyst skill §1 信源审计 |
+| `catalystCalendar[].status` | `pending` / `triggered`(已触发) / `missed`(已错过) / `verified`(已验证) | — |
+| `aShareTracking` | A股专检嵌套对象，每项含 `lastChecked` + `result` | — |
+| `reviewSchedule.lastCheck` | 最近一次审查日期 | `"2026-05-28"` |
 
 ### 2. 支柱设计规则
 

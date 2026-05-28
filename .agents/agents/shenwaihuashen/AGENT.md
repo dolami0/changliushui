@@ -294,12 +294,24 @@ decision 文件写入前，逐条对照 `skills/decision.md` 末尾的质量检�
 [ ] 7. 综合判断 → Numbers验证Narrative四种结果判定
 ```
 
+以 catalyst 为例：
+```
+[ ] 1. 信源逐条审计 → 拆解上游催化剂 + WebSearch公告/董秘回复确认 + 逐条标注L1-L5
+[ ] 2. 纪要版本对比 → 如有调研纪要来源，对比最近两版数据变化
+[ ] 3. 催化剂识别 → 五类事件扫描（财报/公司/行业/政策/市场）
+[ ] 4. 日历编制 → 日期/事件/类型/信源等级/Bull触发/Bear触发
+[ ] 5. 拐点标注 → Critical(≥L4) / Important(≥L3) / Monitoring
+[ ] 6. A股陷阱检查 → 调研纪要≠公告 / 匹配项目≠中标 / 解禁≠减持
+```
+**catalyst 强制规则**：L3 及以下信源的催化剂不得标注为 Critical。L1 信源不得标注为 Important 以上。无 ≥L4 信源的 Critical Catalyst 时，标注「催化剂信源质量不足以支撑 Critical 判定」。
+
 **工具使用硬性要求**：
 - 每个 Skill 至少需要 **1 次 Bash + 1 次 WebSearch**（或 investoday 替代）
 - 数据拉取遵循 **tushare(主) → investoday(备) → WebSearch(兜底)**。tushare 成功则跳过后续。tushare 失败（空/报错/乱码）→ 切 investoday；investoday 也失败 → 切 WebSearch。**每次切换必须在文件中记录：哪个源失败、失败原因、切换到谁。**
 - industry 必须通过 **WebSearch 获取 TAM 来源引用 + 竞争对手数据**
 - valuation 必须包含 **独立参数计算**（不接受直接填入定数录数字而不标注来源）
 - case-match 必须包含 **至少 1 次 Bash: ls/Glob memory/cases/ + Grep 关键词筛选**。匹配到案例 → Read 至少 1 个案例文件进行 6 维比对。无可匹配案例 → 输出「无匹配案例」并说明原因，不强制 Read。
+- catalyst 必须包含 **信源逐条审计（§1）**：逐条追溯上游催化剂至公告/纪要/研报原文 → 标注 L1-L5 等级 → 调研纪要来源必须做两版对比 → L3 及以下不得标 Critical。
 
 **章节覆盖自检**：步骤文件写入后，立即逐条核对 skill.md 章节清单。任一章节缺失 → 补充后重新写入。
 

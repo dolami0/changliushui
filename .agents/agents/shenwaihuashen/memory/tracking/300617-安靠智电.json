@@ -1,0 +1,139 @@
+{
+  "stockCode": "300617",
+  "stockName": "安靠智电",
+  "direction": "long",
+  "thesis": "国内GIL龙头凭借北美UL/CSA全认证+8个月快速交付能力切入AIDC变压器蓝海，若2026年9月首批100台主变如期发货，则从国内设备商向全球高端电力装备供应商的估值范式切换成立。",
+  "conviction": 45,
+  "decisionDate": "2026-05-28",
+  "decision": "有条件通过",
+  "recommendedPosition": 8,
+  "actualPosition": 0,
+  "entryCondition": "北卡审厂通过+半年报验证后分批建仓",
+  "entryPriceTarget": 66.53,
+  "pillars": [
+    {
+      "name": "北美AIDC订单交付",
+      "expectation": "2026年9-10月首批100台AIDC主变如期发货，单月>4000万美元，客户验收无重大质量问题",
+      "status": "pending",
+      "verificationDate": "2026-10-31",
+      "lastChecked": "2026-05-28",
+      "history": [
+        {"date": "2026-05-28", "actual": "已公告1亿美元订单指引，5000万已落地，等待9月发货验证", "trend": "stable"}
+      ]
+    },
+    {
+      "name": "海外收入占比突破5%",
+      "expectation": "2026年海外收入>0.5亿，变压器收入占比从0.02%提升至>2%",
+      "status": "pending",
+      "verificationDate": "2027-04-30",
+      "lastChecked": "2026-05-28",
+      "history": [
+        {"date": "2026-05-28", "actual": "FY2025海外收入仅4.3%，变压器仅204万", "trend": "stable"}
+      ]
+    },
+    {
+      "name": "毛利率持续改善",
+      "expectation": "综合GM维持38%+，变压器GM>40%，不再出现变电站GM崩溃式下滑",
+      "status": "on_track",
+      "verificationDate": "2026-08-31",
+      "lastChecked": "2026-05-28",
+      "history": [
+        {"date": "2026-05-28", "actual": "2026Q1 GM=38.8%，改善来自砍低毛利业务而非新业务放量", "trend": "up"}
+      ]
+    },
+    {
+      "name": "扣非利润恢复增长",
+      "expectation": "2026年扣非>1.2亿(+240% YoY)，非经常性占比从52%降至<20%",
+      "status": "pending",
+      "verificationDate": "2027-04-30",
+      "lastChecked": "2026-05-28",
+      "history": [
+        {"date": "2026-05-28", "actual": "FY2025扣非仅0.35亿(-77%)，非经常性占52%", "trend": "down"}
+      ]
+    },
+    {
+      "name": "应收/营收比率改善",
+      "expectation": "应收/营收从86.5%降至<70%，回款质量明显改善",
+      "status": "pending",
+      "verificationDate": "2026-08-31",
+      "lastChecked": "2026-05-28",
+      "history": [
+        {"date": "2026-05-28", "actual": "FY2025应收7.15亿/营收8.27亿=86.5%", "trend": "stable"}
+      ]
+    }
+  ],
+  "risks": [
+    {"name": "北美订单交付延迟/质量问题", "probability": "中", "impact": "叙事被证伪，PS从12.6x压缩至5-8x", "monitoring": "9-10月发货公告+海关出口数据"},
+    {"name": "PE估值压缩(起涨估值红灯)", "probability": "高", "impact": "PE从150x向60x回归，股价横盘或下跌", "monitoring": "每季PE变化+Forward PE"},
+    {"name": "中美贸易限制升级", "probability": "中", "impact": "认证失效或加征>25%关税", "monitoring": "USTR公告/301调查"},
+    {"name": "国内竞争跟进", "probability": "中", "impact": "特变/思源加速北美认证，溢价消失", "monitoring": "每季搜索同行认证进展"},
+    {"name": "短期借款暴增+现金流压力", "probability": "低", "impact": "短期借款+477%至3.29亿", "monitoring": "每季短期借款/货币资金变化"},
+    {"name": "转型阵痛持续超预期", "probability": "中", "impact": "旧业务继续萎缩，新业务放量不及预期", "monitoring": "2026H1营收是否恢复同比增长"}
+  ],
+  "exitConditions": [
+    "首批AIDC主变发货延迟超过2个月 → 清仓",
+    "2026H1营收<4亿或毛利率<35% → 减至3%",
+    "扣非连续两年无改善(2026扣非<0.5亿) → 清仓",
+    "微软6000万订单明确被拒/取消 → 减半仓",
+    "中美贸易限制致认证失效或加征>25%关税 → 清仓",
+    "跌破58元(~95亿,PS 10.8x) → 清仓",
+    "大股东质押率突升至>30% → 立即减仓评估"
+  ],
+  "catalystCalendar": [
+    {"date": "2026-06", "event": "北卡电力设计院审厂", "type": "公司", "impact": "H", "bull": "审厂通过+获电力公司准入", "bear": "失败/负面反馈"},
+    {"date": "2026-08", "event": "2026半年报", "type": "财报", "impact": "H", "bull": "营收>5亿+合同负债>2亿+GM>38%", "bear": "营收<3.5亿+合同负债持平"},
+    {"date": "2026-09", "event": "首批100台AIDC主变发货", "type": "公司", "impact": "H", "bull": "如期发货+客户验收", "bear": "延迟>2个月/质量问题"},
+    {"date": "2026-Q4", "event": "微软6000万美元订单落地", "type": "公司", "impact": "M", "bull": "正式签约公告", "bear": "谈判破裂"},
+    {"date": "2026-Q4", "event": "2026三季报", "type": "财报", "impact": "M", "bull": "营收累计>7亿+海外占比>5%", "bear": "营收累计<6亿"},
+    {"date": "2026-H2", "event": "沙特/拉美/欧洲新订单", "type": "公司", "impact": "M", "bull": "新增>2000万美元", "bear": "无新增公告"},
+    {"date": "2027-04", "event": "2026年报(海外分拆披露)", "type": "财报", "impact": "M", "bull": "变压器收入占比>5%+GM>40%", "bear": "变压器占比<2%"}
+  ],
+  "basePrice": 66.53,
+  "baseMarketCap": 110.25,
+  "baseDate": "2026-05-27",
+  "priceLog": [
+    {"date": "2026-05-27", "price": 66.53, "pe": 149.8, "mv_yi": 110.25, "return_pct": 0.0, "mv_change_pct": 0.0, "note": "建档基准价"},
+    {"date": "2026-05-28", "price": 72.88, "pe": 164.1, "mv_yi": 120.77, "return_pct": 9.5, "mv_change_pct": 9.5, "pct_chg_daily": 9.5, "note": "首日巡检"}
+  ],
+  "positionLog": [],
+  "thesisLog": [
+    {
+      "version": 1,
+      "date": "2026-05-28T09:00:00",
+      "thesis": "国内GIL龙头凭借北美UL/CSA全认证+8个月快速交付能力切入AIDC变压器蓝海，若2026年9月首批100台主变如期发货，则从国内设备商向全球高端电力装备供应商的估值范式切换成立。",
+      "conviction": 45,
+      "delta": "0",
+      "trigger": "身外化身 7-Skill 流水线建档",
+      "narrative": "安靠智电是国内GIL(气体绝缘输电线路)龙头，正凭借北美UL/CSA全认证壁垒切入AI数据中心变压器市场。核心逻辑：北美变压器交付周期127周而安靠仅需8个月→供需缺口带来订单爆发→估值从国内设备商向全球高端装备切换。但风险同样显著：FY2025营收-24%/扣非-77%处于转型谷底，变压器收入仅204万(叙事严重超前)，PE 150x触发起涨估值红灯，应收/营收86.5%。首批100台AIDC主变能否在9月如期发货是论点成立的核心验证点。",
+      "verifiedAssumptions": ["北美认证已完成(董秘5/26确认)", "首单898万美元已交付"],
+      "invalidatedAssumptions": [],
+      "newUnknowns": ["9月首批发货能否准时", "微软6000万订单能否落地", "北卡电力设计院审厂是否通过", "陈晓凌减持计划是否继续"],
+      "narrativeTension": "stable"
+    },
+    {
+      "version": 2,
+      "date": "2026-05-28T16:00:00",
+      "thesis": "国内GIL龙头凭借北美全认证切入AIDC变压器蓝海，若9月首批主变如期发货则范式切换成立。新增积极信号：签订SST固态变压器协议布局下一代技术，GIL已服务腾讯数据中心验证AIDC场景。负面信号：董事长陈晓凌5月减持1%(计划2%尚未完成)，需警惕管理层信心。",
+      "conviction": 45,
+      "delta": "0",
+      "trigger": "巡检WebSearch：陈晓凌减持1%公告(5/26) + 签订SST固态变压器委托研发协议(5/12) + GIL产品已服务腾讯数据中心",
+      "narrative": "5月出现了两个方向相反的信号。积极面：公司与星辰瀑布签订SST固态变压器研发协议(3000万/36个月)，布局下一代AI数据中心电力技术；GIL+变电站已服务腾讯仪征数据中心和青海海东绿算产业园项目，验证了国内AIDC场景落地能力。消极面：董事长陈晓凌5月14-25日减持1%股份(计划减持2%)，虽然比例不大且不会导致控制权变更，但在9月发货验证的关键窗口期，管理层减持无论如何都是信心折扣。综合评估Conviction维持45不变——正面技术信号被管理层减持信号抵消。",
+      "verifiedAssumptions": ["国内AIDC场景落地(腾讯/青海项目)"],
+      "invalidatedAssumptions": [],
+      "newUnknowns": ["陈晓凌减持计划剩余1%何时执行", "SST研发是否影响短期现金流(3000万投入)"],
+      "narrativeTension": "stable"
+    }
+  ],
+  "aShareTracking": {
+    "pledgeCheck": {"lastChecked": "2026-05-28", "result": "仅陈晓凌0.88%在押，大股东陈晓晖1500万股已全部解押"},
+    "unlockCheck": {"lastChecked": "2026-05-28", "result": "无近期大额解禁"},
+    "marginCheck": {"lastChecked": "2026-05-28", "result": "待首次月度专检"},
+    "insiderTrading": {"lastChecked": "2026-05-28", "result": "待首次月度专检"}
+  },
+  "reviewSchedule": {
+    "nextFullReview": "2026-08-31(半年报)",
+    "nextQuickCheck": "2026-05-29(明日巡检)",
+    "lastCheck": "2026-05-28(巡检+thesis v2)",
+    "patrolFrequency": "每个工作日 9:07"
+  }
+}

@@ -70,9 +70,25 @@
   "baseDate": "2026-05-22",
   "priceLog": [
     {"date": "2026-05-22", "price": 63.2, "pe": 64.9, "mv_yi": 260.4, "return_pct": 0.0, "mv_change_pct": 0.0, "note": "建档基准价"},
-    {"date": "2026-05-23", "price": 63.2, "pe": 64.9, "mv_yi": 260.4, "return_pct": 0.0, "mv_change_pct": 0.0, "pct_chg_daily": 11.1, "note": "追踪审查-AVX涨价催化"}
+    {"date": "2026-05-23", "price": 63.2, "pe": 64.9, "mv_yi": 260.4, "return_pct": 0.0, "mv_change_pct": 0.0, "pct_chg_daily": 11.1, "note": "追踪审查-AVX涨价催化"},
+    {"date": "2026-05-28", "price": 64.25, "pe": 66.0, "mv_yi": 264.61, "return_pct": 1.7, "mv_change_pct": 1.6, "pct_chg_daily": 6.7, "note": "每日巡检"}
   ],
   "positionLog": [],
+  "thesisLog": [
+    {
+      "version": 1,
+      "date": "2026-05-23T09:00:00",
+      "thesis": "军工钽电容龙头，松下/基美涨价+产能缺口驱动国产替代，AI服务器+光通信打开第二增长曲线。核心验证点：2026Q2民品增速能否>50%且毛利率>58%。",
+      "conviction": 58,
+      "delta": "0",
+      "trigger": "身外化身 7-Skill 流水线建档",
+      "narrative": "宏达电子是国内军工钽电容龙头，核心逻辑是供给端涨价(松下/基美/AVX相继提价12-20%)与需求端AI服务器MLCC/光通信爆发形成的双重驱动。Q1净利润+70.77%已验证改善趋势。但需警惕：民品放量节奏存在不确定性，涨价能否传导至公司产品尚未得到董秘确认(5/20董秘回复未直接承认)，主力资金5月下旬持续净流出。",
+      "verifiedAssumptions": ["AVX 5月宣布TAJ/TLJ钽电容涨价12-20%已生效", "Q1净利润+70.77%验证盈利改善"],
+      "invalidatedAssumptions": [],
+      "newUnknowns": ["公司自身产品是否跟涨(AVX涨价≠公司涨价)", "Q2民品增速能否>50%", "主力资金流出是否持续"],
+      "narrativeTension": "stable"
+    }
+  ],
   "aShareTracking": {
     "pledgeCheck": {"lastChecked": "2026-05-23", "result": "零质押"},
     "unlockCheck": {"lastChecked": "2026-05-23", "result": "无未来解禁"},
@@ -80,8 +96,9 @@
     "insiderTrading": {"lastChecked": "2026-05-23", "result": "实控人零减持记录"}
   },
   "reviewSchedule": {
-    "nextFullReview": "2026-08-31",
-    "nextQuickCheck": "2026-06-15",
-    "lastCheck": "2026-05-23"
+    "nextFullReview": "2026-08-31(半年报)",
+    "nextQuickCheck": "2026-05-29(明日巡检)",
+    "lastCheck": "2026-05-28(巡检)",
+    "patrolFrequency": "每个工作日 9:07"
   }
 }
