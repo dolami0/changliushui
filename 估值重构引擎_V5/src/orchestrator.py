@@ -160,11 +160,6 @@ class Orchestrator:
                     {"missing": critical_missing, "stock_code": stock_code},
                 )
 
-            # ── rNPV 分叉 (Agent-1 已完成 + 完整性已验证) ──
-            if self._is_rnpv_candidate(pr) and _RNPV_AVAILABLE:
-                state.pipeline_type = "rnpv"
-                return self._run_rnpv_pipeline(state, event_data, cb)
-
             # ── WACC 预计算 (Agent-2a 定价工具需要) ──
             fetcher = DataFetcher()
             wacc_params = precompute_wacc(fetcher, stock_code, state.agent1_output)
@@ -183,6 +178,11 @@ class Orchestrator:
                f"锚:{a2a_mn.get('primary_anchor','?')} "
                f"光谱:{a2a_pr.get('distribution_shape','?')} "
                f"计价:{a2a_ep.get('pricing_assessment',{}).get('overall_priced_in','?')}")
+
+            # ── rNPV 分叉: Agent-2a 判锚为 pipeline → 走 rNPV 专用管线 ──
+            if a2a_mn.get("primary_anchor") == "pipeline" and _RNPV_AVAILABLE:
+                state.pipeline_type = "rnpv"
+                return self._run_rnpv_pipeline(state, event_data, cb)
 
             # ── Agent-2b: 路由判决 ──
             cb("agent2b", 2, 2, "running", "路由判决(受2a约束)")
@@ -297,15 +297,6 @@ class Orchestrator:
                 except ScenarioError:
                     pass
             raise
-
-    # ── rNPV 检测 ──
-
-    @staticmethod
-    def _is_rnpv_candidate(pre_routing: dict) -> bool:
-        """检测是否为 rNPV 候选 (医药生物-创新药)。"""
-        ic = pre_routing.get("industry_classification", "")
-        ik = pre_routing.get("industry_key_matched", "")
-        return "创新药" in ic or "医药生物" in ik
 
     # ── rNPV 管线 ──
 
