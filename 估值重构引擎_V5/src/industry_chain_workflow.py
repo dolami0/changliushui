@@ -210,7 +210,7 @@ V3速查表是历史经验的参考，不是必须匹配的模板：
 # 输出JSON
 {
   "scored_stocks": [
-    {"stock_code":"","stock_name":"","node_name":"所属节点","market_cap_billion":0,"impact_score":0,"v3match_score":0,"narrative_score":0,"scarcity_score":0,"total_score":0,"rationale":"","key_risk":""}
+    {"stock_code":"","stock_name":"","node_name":"所属节点","impact_score":0,"v3match_score":0,"narrative_score":0,"scarcity_score":0,"total_score":0,"rationale":"","key_risk":""}
   ],
   "top_pick":{"stock_code":"","stock_name":"","node_name":"","investment_thesis":""},
   "runner_up":{"stock_code":"","stock_name":"","node_name":"","investment_thesis":""}
@@ -811,6 +811,16 @@ class IndustryChainWorkflow:
         # 处理"无高赔率标的" — 检查 name 和 code 两个字段
         is_no_pick = _is_no_pick(tp)
         is_no_runner = _is_no_pick(ru)
+
+        # 注入 tushare 真实市值 (LLM 不输出市值, 由代码填入)
+        for s in ss:
+            code = s.get("stock_code", "")
+            if code and code in enriched:
+                real_mcap = enriched[code].get("market_cap")
+                if real_mcap is not None:
+                    s["market_cap_billion"] = round(real_mcap, 1)
+            # 确保代码是纯6位数字
+            s["stock_code"] = _clean_stock_code(s.get("stock_code", ""))
 
         return {
             "status": "done",
