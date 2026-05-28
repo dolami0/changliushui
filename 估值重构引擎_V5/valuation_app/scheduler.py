@@ -145,21 +145,23 @@ class Scheduler:
                     stock_code = rec.get("stock_code", "")
                     stock_name = rec.get("stock_name", "")
 
-                    # Report 阶段: step 1 写入 Coze（先写输出，再标 complete——防中途重启丢数据）
+                    # Report 阶段: 写入 Coze + 保存报告
                     self._emit_report_progress(stock_code, stock_name, 1, 2,
                                                "写入Coze输出表", "running")
-                    write_ok = False
                     ts = datetime.now().strftime("%Y%m%d_%H%M")
                     if self.output_db_id:
                         try:
                             ts = self._write_result_to_coze_v5(rec, result, deepseek_key)
-                            write_ok = True
                         except Exception as e:
                             ts = datetime.now().strftime("%Y%m%d_%H%M")
                             logger.error(f"写入输出表失败: {e}")
+                    # 无论 Coze 写入是否成功，都标记 agent0 记录为完成
                     record_id = rec.get("id", "")
-                    if record_id and write_ok:
-                        self.coze.mark_record_complete(self.agent0_db_id, record_id)
+                    if record_id:
+                        try:
+                            self.coze.mark_record_complete(self.agent0_db_id, record_id)
+                        except Exception as e:
+                            logger.error(f"标记记录完成失败: {e}")
                     self._emit_report_progress(stock_code, stock_name, 1, 2,
                                                "写入Coze输出表", "done")
 
@@ -315,25 +317,27 @@ class Scheduler:
     @staticmethod
     def _v5_to_v4_compat(result: dict) -> tuple[dict, dict, dict]:
         """将 V5 输出转换为 V4 兼容格式，供 report_builder 和 Coze 表消费。"""
-        a1_raw = result.get("agent1", {})
-        a2_raw = result.get("agent2", {})
-        a3_raw = result.get("agent3", {})
+        # 防御: 确保顶层值是 dict
+        a1_raw = result.get("agent1", {}) if isinstance(result.get("agent1"), dict) else {}
+        a2_raw = result.get("agent2", {}) if isinstance(result.get("agent2"), dict) else {}
+        a3_raw = result.get("agent3", {}) if isinstance(result.get("agent3"), dict) else {}
 
         # 提取核心字段（兼容 packages.core.fields 和 flat clean_financials）
-        core = a1_raw.get("packages", {}).get("core", {}).get("fields", {})
+        pkgs = a1_raw.get("packages", {}) if isinstance(a1_raw.get("packages"), dict) else {}
+        core = pkgs.get("core", {}).get("fields", {}) if isinstance(pkgs.get("core"), dict) else {}
         if not core:
-            core = a1_raw.get("clean_financials", {})  # eval mode frozen data
+            core = a1_raw.get("clean_financials", {}) if isinstance(a1_raw.get("clean_financials"), dict) else {}
 
         # 字段名兼容：旧版 frozen 数据用 operating_cf_ttm_yi，新版用 ocf_ttm_yi
         if "ocf_ttm_yi" not in core and "operating_cf_ttm_yi" in core:
             core["ocf_ttm_yi"] = core["operating_cf_ttm_yi"]
 
         # Agent3 的子结构
-        ms = a3_raw.get("market_sanity", {})
+        ms = a3_raw.get("market_sanity", {}) if isinstance(a3_raw.get("market_sanity"), dict) else {}
         # valuation_routing: Agent-2 产出 routing_decision，Agent-3 可能输出空壳 {primary_model:""}
         # 优先用 Agent-2 的真实数据，仅当 Agent-3 有实质内容时才用 Agent-3 的
-        vr_a3 = a3_raw.get("valuation_routing", {})
-        vr_a2 = a2_raw.get("routing_decision", {})
+        vr_a3 = a3_raw.get("valuation_routing", {}) if isinstance(a3_raw.get("valuation_routing"), dict) else {}
+        vr_a2 = a2_raw.get("routing_decision", {}) if isinstance(a2_raw.get("routing_decision"), dict) else {}
         vr = vr_a2 if vr_a2.get("primary_model") and not vr_a3.get("primary_model") else (vr_a3 if vr_a3.get("primary_model") else vr_a2)
         sv = a3_raw.get("scenario_valuation", {})
         rd = a3_raw.get("reverse_dcf", {})
@@ -425,12 +429,27 @@ class Scheduler:
         """V5 版本：将管线结果写入 Coze 输出表 + 生成 HTML 报告 + 保存 JSON。"""
         from valuation_app.report_builder import build_markdown_report, save_report
 
-        # V5→V4 兼容转换
-        a1_out, a2_out, a3_out = self._v5_to_v4_compat(result)
-        a2a_raw = result.get("agent2a", {})  # V6: 叙事诊断数据，提前提取供报告和保存使用
-
         stock_code = agent0_record.get("stock_code", "")
         stock_name = agent0_record.get("stock_name", "")
+        ts = datetime.now().strftime("%Y%m%d_%H%M")
+
+        # ── Step 1: 先保存原始 JSON（不依赖 V4 compat，确保数据不丢失）──
+        data_dir = Path(__file__).resolve().parent.parent / "reports" / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        json_path = data_dir / f"{stock_code}_{ts}.json"
+        raw_agent2 = result.get("agent2", {}) if isinstance(result.get("agent2"), dict) else {}
+        raw_routing = raw_agent2.get("routing_decision", {}) if isinstance(raw_agent2.get("routing_decision"), dict) else {}
+        a2a_raw = result.get("agent2a", {}) if isinstance(result.get("agent2a"), dict) else {}
+
+        # ── Step 2: V5→V4 兼容转换（可能失败，但不影响 JSON 保存）──
+        try:
+            a1_out, a2_out, a3_out = self._v5_to_v4_compat(result)
+        except Exception as e:
+            logger.error(f"V5→V4 compat 转换失败: {e}")
+            # 用空结构兜底，JSON 已在上一步保存
+            a1_out = {"clean_financials": {}, "valuation_anchor": {}, "valuation_routing": {}, "market_sanity": {}}
+            a2_out = {}
+            a3_out = {"valuation_summary": {}, "scenarios": [], "confidence": {}, "trade_annotation": {}}
 
         cf = a1_out.get("clean_financials", {})
         vr = a1_out.get("valuation_routing", {})
@@ -440,15 +459,19 @@ class Scheduler:
         scenarios = a3_out.get("scenarios", [])
 
         # 解析三情景
-        bear = next((s for s in scenarios if "bear" in s.get("name", "").lower()), {})
-        base = next((s for s in scenarios if "base" in s.get("name", "").lower()), {})
-        bull = next((s for s in scenarios if "bull" in s.get("name", "").lower()), {})
+        bear = next((s for s in scenarios if isinstance(s, dict) and "bear" in str(s.get("name", "")).lower()), {})
+        base = next((s for s in scenarios if isinstance(s, dict) and "base" in str(s.get("name", "")).lower()), {})
+        bull = next((s for s in scenarios if isinstance(s, dict) and "bull" in str(s.get("name", "")).lower()), {})
 
-        # 生成 Markdown 报告（时间戳文件名，每次唯一）
-        ts = datetime.now().strftime("%Y%m%d_%H%M")
-        md = build_markdown_report(agent0_record, a1_out, a2_out, a3_out, a2a_raw)
-        report_path = save_report(md, stock_code, ts=ts)
+        # 生成 Markdown 报告
+        try:
+            md = build_markdown_report(agent0_record, a1_out, a2_out, a3_out, a2a_raw)
+            report_path = save_report(md, stock_code, ts=ts)
+        except Exception as e:
+            logger.error(f"报告生成失败: {e}")
+            report_path = ""
 
+        # ── Step 3: 写入 Coze 输出表 ──
         row = {
             "stock_code": stock_code,
             "stock_name": stock_name,
@@ -471,16 +494,12 @@ class Scheduler:
             "report_html_url": f"http://localhost:{self.server_port}/report/{stock_code}_{ts}",
             "processed_at": datetime.now(timezone.utc).isoformat(),
         }
+        try:
+            self.coze.insert_records(self.output_db_id, [row])
+        except Exception as e:
+            logger.error(f"写入Coze输出表失败: {e}")
 
-        self.coze.insert_records(self.output_db_id, [row])
-
-        # 保存结构化 JSON（时间戳文件名，每次唯一）
-        data_dir = Path(__file__).resolve().parent.parent / "reports" / "data"
-        data_dir.mkdir(parents=True, exist_ok=True)
-        json_path = data_dir / f"{stock_code}_{ts}.json"
-        # 从原始结果中提取 routing_decision (V6 agent2b 输出，compat层会丢失)
-        raw_agent2 = result.get("agent2", {})
-        raw_routing = raw_agent2.get("routing_decision", {})
+        # ── Step 4: 保存完整结构化 JSON ──
         payload = {
             "agent0": agent0_record,
             "agent1": self._serialize_agent_output(a1_out),
