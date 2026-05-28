@@ -431,11 +431,7 @@ class Scheduler:
             "report_html_url": f"http://localhost:{self.server_port}/report/{stock_code}_{ts}",
             "processed_at": datetime.now(timezone.utc).isoformat(),
         }
-        try:
-            self.coze.insert_records(self.output_db_id, [row])
-        except Exception as e:
-            logger.error(f"Coze写入失败: {e}")
-            raise  # 让上层知道写入失败，不标记完成
+        self.coze.insert_records(self.output_db_id, [row])
 
         # ── 评测记录（可选，失败不影响主流程）──
         try:
