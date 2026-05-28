@@ -189,9 +189,10 @@ export default function ValuationReport() {
 
   useEffect(() => {
     if (!code) { setError('无效股票代码'); setLoading(false); return; }
-    fetch(`/api/report/${code}/data`)
-      .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
-      .then(setData)
+    fetch(`/api/report/${code}/data`).then(r => r.ok ? r.json() : null).then(data => {
+        if (data) { setData(data); }
+        else { setError('报告未找到'); }
+      })
       .catch((e: Error) => setError(`加载失败: ${e.message}`))
       .finally(() => setLoading(false));
   }, [code]);
