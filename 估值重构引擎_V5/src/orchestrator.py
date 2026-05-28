@@ -130,12 +130,7 @@ class Orchestrator:
             industry = pr.get("industry_classification", "?")
             cb("agent0", 1, 1, "done", f"行业:{industry}")
 
-            # ── rNPV 分叉 ──
-            if self._is_rnpv_candidate(pr) and _RNPV_AVAILABLE:
-                state.pipeline_type = "rnpv"
-                return self._run_rnpv_pipeline(state, event_data, cb)
-
-            # ── Agent-1: 数据炼器 ──
+            # ── Agent-1: 数据炼器 (必须在 rNPV 分叉前——rNPV 管线也需要财务数据) ──
             if self._eval_mode and self._frozen_data:
                 cb("agent1", 1, 1, "running", "注入frozen数据(评测模式)")
                 state.agent1_output = self._normalize_frozen(
@@ -151,7 +146,7 @@ class Orchestrator:
                 quality = state.agent1_output.get("overall_data_quality_score", "?")
                 cb("agent1", 1, 1, "done", f"quality={quality}")
 
-            # ── Agent-1 数据完整性检查 (防止全零数据通过) ──
+            # ── Agent-1 数据完整性检查 (防止全零数据通过; 对标准/rNPV两条管线均生效) ──
             core = (state.agent1_output or {}).get("packages", {}).get("core", {}).get("fields", {})
             if not core:
                 core = (state.agent1_output or {}).get("clean_financials", {})
@@ -164,6 +159,11 @@ class Orchestrator:
                     "E101", f"Agent-1 关键字段为零或缺失: {critical_missing}",
                     {"missing": critical_missing, "stock_code": stock_code},
                 )
+
+            # ── rNPV 分叉 (Agent-1 已完成 + 完整性已验证) ──
+            if self._is_rnpv_candidate(pr) and _RNPV_AVAILABLE:
+                state.pipeline_type = "rnpv"
+                return self._run_rnpv_pipeline(state, event_data, cb)
 
             # ── WACC 预计算 (Agent-2a 定价工具需要) ──
             fetcher = DataFetcher()
