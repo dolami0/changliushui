@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import AsciiCanvas from '../components/AsciiCanvas';
@@ -332,11 +332,19 @@ const TIER_STYLE: Record<string, { color: string }> = {
 export function DingshuluPanel() {
   const navigate = useNavigate();
   const [hover, setHover] = useState(false);
-  const [reports, setReports] = useState<DingshuluRecord[]>([]);
+  const [rawReports, setRawReports] = useState<DingshuluRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [narratives, setNarratives] = useState<Record<string, string>>({});
+  const [sortMode, setSortMode] = useState<'upside' | 'time'>('upside');
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const reports = React.useMemo(() => {
+    const sorted = sortMode === 'time'
+      ? [...rawReports].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+      : [...rawReports].sort((a, b) => parseFloat(b.base_upside_pct || '0') - parseFloat(a.base_upside_pct || '0'));
+    return sorted.slice(0, 15);
+  }, [rawReports, sortMode]);
 
   // 展开时拉取报告 narrative
   useEffect(() => {
@@ -357,8 +365,7 @@ export function DingshuluPanel() {
   useEffect(() => {
     fetchDingshulu()
       .then((ds) => {
-        const sorted = [...ds].sort((a, b) => parseFloat(b.base_upside_pct || '0') - parseFloat(a.base_upside_pct || '0'));
-        setReports(sorted.slice(0, 15));
+        setRawReports(ds);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -388,7 +395,14 @@ export function DingshuluPanel() {
 
       {/* 今日产出 */}
       <div style={{ padding: '6px 14px', borderBottom: '1px solid rgba(255,255,255,0.04)', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-        <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#ADFF00' }}>按base潜在涨幅排序</span>
+        <span
+          onClick={() => setSortMode(s => s === 'upside' ? 'time' : 'upside')}
+          style={{
+            fontFamily: "'Space Mono', monospace", fontSize: '13px', color: '#ADFF00',
+            cursor: 'pointer', letterSpacing: '0.1em',
+            borderBottom: '1px dashed rgba(173,255,0,0.3)',
+          }}
+        >{sortMode === 'upside' ? '↓ 按base潜在涨幅排序' : '↓ 按报告生成时间排序'}</span>
       </div>
 
       {/* 报告列表 */}
