@@ -398,14 +398,12 @@ function TodayReports() {
         <span
           onClick={() => setSortMode(s => s === 'upside' ? 'time' : 'upside')}
           style={{
-            fontFamily: "'Space Mono', monospace", fontSize: '11px', color: '#888',
+            fontFamily: "'Space Mono', monospace", fontSize: '11px', color: '#ADFF00',
             letterSpacing: '0.08em', cursor: 'pointer', marginLeft: '10px',
-            border: '1px solid #333', padding: '3px 10px', borderRadius: '3px',
+            border: '1px solid rgba(173,255,0,0.3)', padding: '3px 10px', borderRadius: '3px',
             transition: 'all 0.2s',
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.borderColor = '#ADFF0080'; e.currentTarget.style.color = '#ADFF00'; }}
-          onMouseLeave={(e) => { e.currentTarget.style.borderColor = '#333'; e.currentTarget.style.color = '#888'; }}
-        >{sortMode === 'upside' ? '按涨幅' : '按时间'}</span>
+        >{sortMode === 'upside' ? '↓ 按涨幅' : '↓ 按时间'}</span>
         <span
           onClick={(e) => { e.stopPropagation(); navigate('/cangjingyun?table=dingshulu'); }}
           style={{
