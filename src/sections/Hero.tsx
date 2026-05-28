@@ -409,7 +409,7 @@ function TodayReports() {
         <span
           onClick={(e) => { e.stopPropagation(); navigate('/cangjingyun?table=dingshulu'); }}
           style={{
-            fontFamily: "'Space Mono", monospace', fontSize: '13px', color: '#ADFF00',
+            fontFamily: "'Space Mono', monospace", fontSize: '13px', color: '#ADFF00',
             letterSpacing: '0.1em', cursor: 'pointer', marginLeft: '10px',
             border: '1px solid rgba(173,255,0,0.3)', padding: '5px 16px',
             transition: 'all 0.2s',
