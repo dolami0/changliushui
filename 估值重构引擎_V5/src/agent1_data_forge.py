@@ -138,31 +138,63 @@ def _extract_core_fields(raw_bundle: dict, stock_code: str) -> dict[str, Any]:
     ts_db = r.get("ts_daily_basic", {}) or {}
     ts_fi = r.get("ts_fina_ind", {}) or {}
 
-    # 原始值提取 — 优先 Tushare，回退 investoday
+    # ── 数据源策略 ──
+    # Tushare 做主源 (行情+比率数据更稳定)，investoday 补充 Tushare 没有的 (历史分位/行业/绝对值TTM)
+    # 字段注释标注来源: [TS] = Tushare主源, [IO] = investoday主源, [TS→IO] = Tushare优先回退investoday
+
+    # 原始值提取 — Tushare 优先
     current_price = ts_d.get("close") or _num(q.get("current_price"))
     total_shares = _num(basic.get("sharesTotal")) / 1e8 if _num(basic.get("sharesTotal")) else 0
-    # Tushare total_mv 单位=万元, investoday market_cap 单位=元
     ts_mcap = ts_db.get("total_mv") or ts_d.get("total_mv")
     if ts_mcap:
         market_cap = ts_mcap / 1e4  # 万元 → 亿
     else:
         mcap_raw = _num(q.get("market_cap"))
         market_cap = mcap_raw / 1e8 if mcap_raw else 0
+
+    # investoday 绝对值 (TTM直出, Tushare需季度聚合→保留investoday做主源)
     revenue_ttm = _num(inc.get("revenue_ttm")) / 1e8 if _num(inc.get("revenue_ttm")) else 0
 
+    # ── 比率字段 ──
+    # 注意: Tushare fina_indicator 的 ROE/margin 是最近单期(如Q1)，investoday 是 TTM。
+    # 两者周期不同——不能直接用 Tushare 替代。investoday 做主源，Tushare 做 fallback。
+    ts_gm = ts_fi.get("gross_margin")       # Tushare 毛利率 (最近单期)
+    ts_nm = ts_fi.get("net_margin")          # Tushare 净利率 (最近单期)
+    ts_roe = ts_fi.get("roe")                # Tushare ROE (最近单期)
+    ts_roic = ts_fi.get("roic")             # Tushare ROIC (最近单期)
+    ts_eps = ts_fi.get("eps")               # Tushare EPS (最近单期)
+    ts_bps = ts_fi.get("bps")               # Tushare BPS
+
+    io_gm = fd.get("gross_margin")           # investoday 毛利率 (TTM)
+    io_nm = fd.get("net_margin")             # investoday 净利率 (TTM)
+    io_roe = dup.get("roe")                  # investoday ROE (TTM, dupont端点)
+    io_eps = inc.get("eps")                  # investoday EPS (TTM)
+
+    # 交叉验证: 两边都有时比对差异
+    _warn_divergence(stock_code, "gross_margin", ts_gm, io_gm)
+    _warn_divergence(stock_code, "net_margin", ts_nm, io_nm)
+    _warn_divergence(stock_code, "eps", ts_eps, io_eps)
+    # ROE 差异很常见(Tushare单期 vs investoday TTM)，仅当差异>50%才告警
+    _warn_divergence(stock_code, "roe", ts_roe, io_roe, threshold=0.50)
+
     fields: dict[str, Any] = {
+        # [TS] 行情 — Tushare 主源
         "current_price": current_price,
         "current_price_source": "tushare_daily" if ts_d else "realtime_quote",
         "total_shares_yi": round(total_shares, 2),
         "market_cap_yi": round(market_cap, 1),
         "market_cap_source": "tushare_daily_basic" if ts_db else "realtime_quote",
 
+        # [IO] 绝对值 — investoday TTM主源
         "revenue_ttm_yi": round(revenue_ttm, 1),
-        "eps_ttm": _num(inc.get("eps")),
-        "net_profit_growth_yoy": _calc_yoy_growth(r, stock_code),
-        "bps": round(_num(bal.get("total_equity")) / 1e8 / total_shares, 2) if total_shares > 0 else 0,
-        "roe_ttm_pct": _pct(dup.get("roe")),
 
+        # [IO→TS] 比率 — investoday TTM主源, Tushare fallback
+        "eps_ttm": io_eps or ts_eps or 0,
+        "net_profit_growth_yoy": _calc_yoy_growth(r, stock_code),
+        "bps": round(_num(bal.get("total_equity")) / 1e8 / total_shares, 2) if total_shares > 0 else ts_bps or 0,
+        "roe_ttm_pct": io_roe or ts_roe or 0,
+
+        # [IO] 现金流/资产负债表绝对值
         "ocf_ttm_yi": round(_num(cf.get("operating_cash_flow")) / 1e8, 2),
         "capex_ttm_yi": round(_num(cf.get("capex_payments")) / 1e8, 2),
         "net_debt_yi": round(
@@ -171,26 +203,31 @@ def _extract_core_fields(raw_bundle: dict, stock_code: str) -> dict[str, Any]:
         "total_assets_yi": round(_num(bal.get("total_assets")) / 1e8, 1),
         "total_liabilities_yi": round(_num(bal.get("total_liabilities")) / 1e8, 1),
 
-        "gross_margin_pct": fd.get("gross_margin") or 0,
-        "net_margin_pct": fd.get("net_margin") or 0,
+        # [IO→TS] 盈利比率 — investoday TTM主源, Tushare fallback
+        "gross_margin_pct": io_gm or ts_gm or 0,
+        "net_margin_pct": io_nm or ts_nm or 0,
+
         "interest_bearing_debt_yi": round(_num(fd.get("interest_bearing_debt")) / 1e8, 1),
         "interest_expense_yi": round(_calc_interest_expense(inc), 2),
 
-        # 盈利能力历史排名 (stock/finance/profit-ability — investoday独有)
+        # [IO] investoday 独有: 历史排名
         "gross_margin_historical_rank": pa.get("gross_margin_historical_rank"),
         "net_margin_historical_rank": pa.get("net_margin_historical_rank"),
         "roe_historical_rank": pa.get("roe_historical_rank"),
         "roic_historical_rank": pa.get("roic_historical_rank"),
         "profitability_composite_score": pa.get("profitability_composite_score"),
 
-        # 估值指标 — 优先 Tushare daily_basic, 回退 investoday valuation
+        # [TS→IO] 估值倍数 — Tushare daily_basic优先 (无周期问题)
         "pe_ttm": ts_db.get("pe_ttm") or v.get("pe_ttm") or 0,
         "pb": ts_db.get("pb") or v.get("pb") or 0,
         "ps_ttm": ts_db.get("ps_ttm") or v.get("ps_ttm") or 0,
+
+        # [IO] investoday 独有: 历史分位
         "ps_historical_rank": v.get("ps_historical_rank"),
         "pe_historical_rank": v.get("pe_ttm_historical_rank") or 30,
         "pb_historical_rank": v.get("pb_historical_rank"),
 
+        # [IO] 绝对值 (investoday TTM)
         "operating_profit_ttm_yi": round(_num(inc.get("operating_profit")) / 1e8, 2),
         "net_profit_ttm_yi": round(_num(inc.get("net_profit_ttm")) / 1e8, 2),
         "profit_before_tax_yi": round(_num(inc.get("profit_before_tax")) / 1e8, 2),
@@ -198,10 +235,16 @@ def _extract_core_fields(raw_bundle: dict, stock_code: str) -> dict[str, Any]:
         "cash_yi": round(_num(bal.get("cash_equivalents")) / 1e8, 1),
         "total_equity_yi": round(_num(bal.get("total_equity")) / 1e8, 1),
 
+        # [IO] investoday 独有: 行业分类
         "industry_sw_l1": ind.get("sw_l1_name", ""),
         "industry_sw_l2": ind.get("sw_l2_name", ""),
         "stock_name": q.get("stock_name", ""),
         "report_period": inc.get("report_date", ""),
+
+        # [TS] Tushare 补充
+        "roic_pct": _pct(fd.get("roic")) or ts_roic or 0,  # investoday ROIC优先
+        "roa_pct": ts_fi.get("roa"),
+        "debt_to_assets_pct": ts_fi.get("debt_to_assets"),
     }
 
     # 衍生计算
@@ -649,6 +692,20 @@ def _pct(v: Any) -> float:
         return val if abs(val) < 10 else val
     except (ValueError, TypeError):
         return 0.0
+
+
+def _warn_divergence(stock_code: str, field: str,
+                     ts_val: float | None, io_val: float | None,
+                     threshold: float = 0.15):
+    """交叉验证: Tushare vs investoday 数据差异超过阈值时打印警告。"""
+    if ts_val is None or io_val is None:
+        return
+    if ts_val == 0 or io_val == 0:
+        return  # 一边为0不算差异(可能是数据不可用)
+    diff = abs(ts_val - io_val) / max(abs(ts_val), abs(io_val))
+    if diff > threshold:
+        print(f"  [数据差异] {stock_code} {field}: Tushare={ts_val:.2f} investoday={io_val:.2f} "
+              f"差异={diff:.1%}", flush=True)
 
 
 def _median(values: list) -> float:
