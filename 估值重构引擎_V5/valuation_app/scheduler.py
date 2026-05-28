@@ -356,6 +356,8 @@ class Scheduler:
         core = self._get_core_v6(result)
         routing = self._get_routing_v6(result)
         a3 = result.get("agent3", {}) if isinstance(result.get("agent3"), dict) else {}
+        a1_raw = result.get("agent1", {}) if isinstance(result.get("agent1"), dict) else {}
+        fw = a1_raw.get("forward_looking", {}) if isinstance(a1_raw.get("forward_looking"), dict) else {}
         vs = a3.get("valuation_summary", {}) if isinstance(a3.get("valuation_summary"), dict) else {}
         conf = a3.get("confidence", {}) if isinstance(a3.get("confidence"), dict) else {}
         ta = a3.get("trade_annotation", {}) if isinstance(a3.get("trade_annotation"), dict) else {}
@@ -365,30 +367,51 @@ class Scheduler:
         base = next((s for s in scenarios if isinstance(s, dict) and "base" in str(s.get("name", "")).lower()), {})
         bull = next((s for s in scenarios if isinstance(s, dict) and "bull" in str(s.get("name", "")).lower()), {})
 
-        # ── 尝试生成 Markdown 报告（兼容旧 report_builder）──
+        # ── 保存完整结构化 JSON（最优先，不依赖任何额外处理）──
+        data_dir = Path(__file__).resolve().parent.parent / "reports" / "data"
+        data_dir.mkdir(parents=True, exist_ok=True)
+        json_path = data_dir / f"{stock_code}_{ts}.json"
+        a2_raw = result.get("agent2", {}) if isinstance(result.get("agent2"), dict) else {}
+        rd_raw_val = a2_raw.get("routing_decision", {}) if isinstance(a2_raw.get("routing_decision"), dict) else {}
+        a2a_raw = result.get("agent2a", {}) if isinstance(result.get("agent2a"), dict) else {}
+
+        payload = {
+            "agent0": agent0_record,
+            "agent1": self._serialize_agent_output(a1_raw),
+            "agent2": self._serialize_agent_output(a2_raw),
+            "agent2a": self._serialize_agent_output(a2a_raw) if a2a_raw else {},
+            "agent3": self._serialize_agent_output(a3),
+            "routing_decision": rd_raw_val,
+            "pipeline_version": result.get("pipeline_version", "6.0"),
+            "pipeline_type": result.get("pipeline_type", "standard"),
+            "audit": result.get("audit", {}),
+        }
+        with open(json_path, "w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False, indent=2, default=str)
+
+        # ── 生成 Markdown 报告（可选，失败不影响主流程）──
         report_path = ""
         try:
-            a1_v4 = {
+            a1_for_report = {
                 "clean_financials": core,
-                "valuation_anchor": {
-                    "pe_ttm": core.get("pe_ttm", 0), "pb": core.get("pb", 0),
-                    "valuation_model": routing.get("primary_model", ""),
-                },
+                "valuation_anchor": {"pe_ttm": core.get("pe_ttm", 0), "pb": core.get("pb", 0),
+                                     "valuation_model": routing.get("primary_model", "")},
                 "valuation_routing": routing,
                 "market_sanity": a3.get("market_sanity", {}),
+                "forward_looking": fw,
             }
-            a2_v4 = {"dcf_results": {"valuation_approach": routing.get("primary_model", ""),
-                                      "scenario_details": a3.get("scenario_valuation", {}).get("scenario_details", {})}}
-            a2a_raw = result.get("agent2a", {}) if isinstance(result.get("agent2a"), dict) else {}
-            md = build_markdown_report(agent0_record, a1_v4, a2_v4, a3, a2a_raw)
+            a2_for_report = {
+                "dcf_results": {"valuation_approach": routing.get("primary_model", ""),
+                                "scenario_details": a3.get("scenario_valuation", {}).get("scenario_details", {})}
+            }
+            md = build_markdown_report(agent0_record, a1_for_report, a2_for_report, a3, a2a_raw)
             report_path = save_report(md, stock_code, ts=ts) or ""
         except Exception as e:
-            logger.warning(f"Markdown报告生成跳过: {e}")
+            logger.warning(f"Markdown报告跳过: {e}")
 
         # ── 写入 Coze 输出表 ──
         row = {
-            "stock_code": stock_code,
-            "stock_name": stock_name,
+            "stock_code": stock_code, "stock_name": stock_name,
             "event_date": agent0_record.get("bstudio_create_time", ""),
             "event_source": agent0_record.get("event_source", ""),
             "primary_model": routing.get("primary_model", ""),
@@ -408,39 +431,21 @@ class Scheduler:
             "report_html_url": f"http://localhost:{self.server_port}/report/{stock_code}_{ts}",
             "processed_at": datetime.now(timezone.utc).isoformat(),
         }
-        self.coze.insert_records(self.output_db_id, [row])
+        try:
+            self.coze.insert_records(self.output_db_id, [row])
+        except Exception as e:
+            logger.error(f"Coze写入失败: {e}")
+            raise  # 让上层知道写入失败，不标记完成
 
-        # ── 保存完整结构化 JSON ──
-        data_dir = Path(__file__).resolve().parent.parent / "reports" / "data"
-        data_dir.mkdir(parents=True, exist_ok=True)
-        json_path = data_dir / f"{stock_code}_{ts}.json"
-        a2_raw = result.get("agent2", {}) if isinstance(result.get("agent2"), dict) else {}
-        rd_raw = a2_raw.get("routing_decision", {}) if isinstance(a2_raw.get("routing_decision"), dict) else {}
-        a2a_raw = result.get("agent2a", {}) if isinstance(result.get("agent2a"), dict) else {}
-
-        payload = {
-            "agent0": agent0_record,
-            "agent1": self._serialize_agent_output(result.get("agent1", {})),
-            "agent2": self._serialize_agent_output(a2_raw),
-            "agent2a": self._serialize_agent_output(a2a_raw) if a2a_raw else {},
-            "agent3": self._serialize_agent_output(a3),
-            "routing_decision": rd_raw,
-            "pipeline_version": result.get("pipeline_version", "6.0"),
-            "pipeline_type": result.get("pipeline_type", "standard"),
-            "audit": result.get("audit", {}),
-        }
-        with open(json_path, "w", encoding="utf-8") as f:
-            json.dump(payload, f, ensure_ascii=False, indent=2, default=str)
-
-        # V6: 自动构建评测记录
+        # ── 评测记录（可选，失败不影响主流程）──
         try:
             from evals.eval_builder import build_eval_record
-            eval_id = build_eval_record(agent0_record, result, a1_v4 if 'a1_v4' in dir() else {"clean_financials": core})
+            eval_id = build_eval_record(agent0_record, result, {"clean_financials": core})
             logger.info(f"[Eval] 评测记录已保存: {eval_id}")
         except Exception as e:
-            logger.warning(f"[Eval] 评测记录保存失败: {e}")
+            logger.warning(f"[Eval] 评测记录跳过: {e}")
 
-        logger.info(f"[V6] 结果已写入: {stock_code} ts={ts}")
+        logger.info(f"[V6] 写入完成: {stock_code} ts={ts}")
         return ts
 
     @staticmethod
