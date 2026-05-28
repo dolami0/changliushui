@@ -13,6 +13,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from datetime import datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
@@ -75,11 +76,10 @@ class DataFetcher:
         if cache_key in self._cache:
             return self._cache[cache_key]
 
-        # 注入环境变量：优先用 INVESTODAY_API_KEY，否则从 config.json 读取，最后 CLI 从凭证文件读取
+        # 注入环境变量
         env = os.environ.copy()
         api_key = os.environ.get("INVESTODAY_API_KEY", "")
         if not api_key:
-            # 尝试从 valuation_app/config.json 读取
             config_json = self.project_root / "valuation_app" / "config.json"
             if config_json.exists():
                 try:
@@ -91,31 +91,58 @@ class DataFetcher:
         if api_key:
             env["INVESTODAY_API_KEY"] = api_key
 
-        result = subprocess.run(
-            args,
-            cwd=str(self.project_root),
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            timeout=30,
-            env=env,
-        )
+        # ── 带指数退避的重试逻辑 ──
+        max_retries = 3
+        last_error = None
+        for attempt in range(max_retries + 1):
+            try:
+                result = subprocess.run(
+                    args,
+                    cwd=str(self.project_root),
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    timeout=30,
+                    env=env,
+                )
+            except subprocess.TimeoutExpired as e:
+                last_error = e
+                if attempt < max_retries:
+                    wait = 2 ** attempt
+                    print(f"  [investoday] 超时重试 {attempt+1}/{max_retries}, 等待{wait}s: {path}", flush=True)
+                    time.sleep(wait)
+                    continue
+                raise RuntimeError(f"investoday-api 超时(重试{max_retries}次后): {path}") from e
 
-        if result.returncode != 0:
-            error_msg = result.stderr.strip() or result.stdout.strip()
-            raise RuntimeError(
-                f"investoday-api 调用失败: {' '.join(args)}\n{error_msg}"
-            )
+            if result.returncode != 0:
+                error_msg = result.stderr.strip() or result.stdout.strip()
+                # 限流/服务端错误 → 可重试
+                if any(kw in error_msg.lower() for kw in
+                       ['rate', 'limit', '429', '503', '502', 'timeout', 'too many', 'throttle']):
+                    if attempt < max_retries:
+                        wait = 2 ** attempt
+                        print(f"  [investoday] 限流重试 {attempt+1}/{max_retries}, 等待{wait}s: {path}", flush=True)
+                        time.sleep(wait)
+                        continue
+                raise RuntimeError(
+                    f"investoday-api 调用失败: {' '.join(args)}\n{error_msg}"
+                )
 
-        try:
-            data = json.loads(result.stdout)
-        except json.JSONDecodeError:
-            raise RuntimeError(
-                f"investoday-api 返回非 JSON: {result.stdout[:500]}"
-            )
+            try:
+                data = json.loads(result.stdout)
+            except json.JSONDecodeError:
+                last_error = RuntimeError(f"investoday-api 返回非 JSON: {result.stdout[:200]}")
+                if attempt < max_retries:
+                    wait = 2 ** attempt
+                    print(f"  [investoday] 解析失败重试 {attempt+1}/{max_retries}, 等待{wait}s: {path}", flush=True)
+                    time.sleep(wait)
+                    continue
+                raise last_error
 
-        self._cache[cache_key] = data
-        return data
+            self._cache[cache_key] = data
+            return data
+
+        raise last_error or RuntimeError(f"investoday-api 重试耗尽: {path}")
 
     # ── 第 1 层：公司基本面快照 ─────────────────────
 

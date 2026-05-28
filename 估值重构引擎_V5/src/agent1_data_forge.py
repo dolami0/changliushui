@@ -96,7 +96,7 @@ def _fetch_core_bundle(fetcher: DataFetcher, stock_code: str) -> dict:
         except Exception:
             pass  # Tushare 不可用不阻塞
 
-    with ThreadPoolExecutor(max_workers=16) as pool:
+    with ThreadPoolExecutor(max_workers=5) as pool:
         wraps = [(name, fn, *(args if args else ())) for name, fn, *args in tasks]
         futures = {pool.submit(_safe_fetch, name, fn, *args): name
                    for name, fn, *args in wraps}
