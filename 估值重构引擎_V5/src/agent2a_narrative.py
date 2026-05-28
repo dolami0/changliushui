@@ -175,9 +175,15 @@ NARRATIVE_DIAGNOSIS_PROMPT = """你是估值叙事诊断师。你的职责不是
 
 ## 1g. SOTP 触发判定
 
+**SOTP 解决的是"范式不同"问题，不是"参数不同"问题。** 如果两个业务都用 PE 估值——即使一个 PE=10x 另一个 PE=40x——也不需要 SOTP，只需要正确赋参数。SOTP 仅在业务之间需要完全不同的估值范式时才触发（如一个看 PS、一个看 PE）。
+
 **触发条件——满足以下全部三条才设置 sotp_triggered=true:**
 
-1. **估值范式冲突**: primary_anchor 和至少一个 secondary_anchor 分属不同锚类型（如 earnings vs revenue）。
+1. **估值范式冲突**: primary_anchor 和至少一个 secondary_anchor 分属**不同锚类型**。
+   - 算冲突: earnings vs revenue, earnings vs pipeline, revenue vs asset 等
+   - **不算冲突**: 两个业务都是 earnings（只是 PE 倍数不同），两个业务都是 revenue（只是 PS 倍数不同）
+   - **反例**: 传统专用车 PE=12x，储能消防 PE=40x——锚都是 earnings，无范式冲突→不触发 SOTP
+   - **正例**: GIL 产品利润锚(PE) vs 变压器收入锚(PS)——锚类型不同→触发条件1成立
 
 2. **副锚收入占比显著**: 该 secondary_anchor 的业务 `revenue_share_pct ≥ 20%`。
 
@@ -187,6 +193,8 @@ NARRATIVE_DIAGNOSIS_PROMPT = """你是估值叙事诊断师。你的职责不是
    - **不要求分部利润数据**——SOTP 用收入×行业毛利率推算利润，或用行业PE/PB直接乘
    - **data_confidence=low 不构成阻碍**——数据不准仍比混在一起用单一锚强
    - 唯一不触发场景: **完全无分部收入数据**（revenue_share_pct 无来源）
+
+**不满足条件1时的替代方案**: 如果两个业务锚类型相同但参数差异大（如 PE 10x vs 40x），不触发 SOTP——而是建议 Agent-2b 选择能分段赋参的模型（如 K 两阶段 DCF，比 A 更灵活）。在 `sotp_rationale` 中说明"同锚不同参，建议用K而非SOTP"。
 
 **不满足条件3时的 fallback**: 仅当完全无分部收入拆分时，设置 sotp_triggered=false，说明"无分部收入数据,以主锚为准"。
 
