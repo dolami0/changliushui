@@ -322,7 +322,6 @@ CAGR/增速: 高增速必须匹配高再投资率（RR=g/ROIC）。增速和 RR 
 
 **4d. 非对称评分**
 asymmetry_ratio = bull_upside / |bear_upside|
-quality_flag: 亏损企业→SPECULATIVE, ROIC<8%→MODERATE_QUALITY, ROIC≥8%→HIGH_QUALITY
 
 **4e. 置信度(4维, 每维1-10)**
 - info_quality: 信息来源可靠性。硬证据≥2环(订单/产能/专利/政策)→≥7; 纯主题无锚点→1-3。**强制降级: 清单项2c标注"事件-产品映射失败"→info_quality≤5**
@@ -370,8 +369,7 @@ quality_flag: 亏损企业→SPECULATIVE, ROIC<8%→MODERATE_QUALITY, ROIC≥8%�
     "scenario_details": {SCENARIO_PARAMS_EXAMPLE},
     "probability_weighted_mcap_yi": XX,
     "probability_weighted_upside_pct": XX,
-    "asymmetry_ratio": X.X,
-    "quality_flag": "HIGH_QUALITY|MODERATE_QUALITY|SPECULATIVE"
+    "asymmetry_ratio": X.X
   },
   "reverse_dcf": {
     "applicable": true,
@@ -1968,7 +1966,6 @@ def _assemble_final_output(
             "probability_weighted_upside_pct": sv.get("probability_weighted_upside_pct", 0),
             "probability_weighted_mcap_yi": sv.get("probability_weighted_mcap_yi", 0),
             "asymmetry_ratio": sv.get("asymmetry_ratio", 0),
-            "quality_flag": sv.get("quality_flag", "MODERATE_QUALITY"),
         },
         "reverse_dcf": rd,
         "validation_crosscheck": vx,
