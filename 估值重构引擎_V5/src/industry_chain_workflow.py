@@ -1,22 +1,25 @@
 """
 产业链利润流分析器 — 双Pass LLM架构
 
-Step 1: 联网搜索1 — 产业事件全局
-Step 2: LLM #1 — 产业链推理 → 前2节点
-Step 3: 联网搜索2 — 每节点1个query (并行)
+Step 1: Volc联网搜索1 — 产业事件全局
+Step 2: DeepSeek LLM #1 — 产业链推理 → 前2节点
+Step 3: Volc联网搜索2 — 每节点1个query (并行)
 Pass 1:
-  Step 4: LLM #2 — 提名节点1候选股
-  Step 5: tushare + investoday 数据富化
-  Step 6: LLM #2 — 评分节点1
+  Step 4: LLM #2 — 提名节点1候选股(仅名称,无代码)
+  Step 4.5: tushare 按名称校验真实代码
+  Step 5: tushare市值+PE(3次重试) + Volc并行个股投资地图
+  Step 6: LLM #2 — 四维评分(impact/v3match/narrative/scarcity)
   ├─ best >= 6.5 → 输出
   └─ best < 6.5 → Pass 2:
       Step 7: 提名节点2候选股
+      Step 7.5: tushare 代码校验
       Step 8: 数据富化
       Step 9: 混合评分 → 输出
 """
 
 import json, re, time, requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 from typing import Any, Callable
 
 from data_fetcher import DataFetcher
@@ -82,13 +85,13 @@ LLM2_NOMINATE_PROMPT = """你是十倍股猎手。给定产业链节点分析和
 - 赔率优先：市值偏小、卡位稀缺、盈利弹性大的优先
 - 优先从联网搜索结果中提取被提及的公司
 - 如果搜索结果未覆盖好的标的，用你对A股上市公司的了解补充
-- 必须输出真实存在的A股公司（代码为6位数字）
 - 每个节点提名2-3只，两节点合计不超过5只
+- 不需要填股票代码，只需输出公司全称（代码由系统自动校验）
 
 # 输出JSON
 {
   "nominations": [
-    {"stock_code":"6位代码","stock_name":"公司简称","node_name":"所属节点名","reason":"提名理由"}
+    {"stock_name":"公司全称","node_name":"所属节点名","reason":"提名理由"}
   ]
 }"""
 
@@ -158,7 +161,7 @@ V3速查表是历史经验的参考，不是必须匹配的模板：
 # 评分维度(1-10分)
 
 1. 事件冲击比(45%)：暴露度 × 赔率杠杆
-   暴露度 = 公司收入中事件品类的占比。用investoday的operating_data/business_status/main_business_conclusion三字段交叉判断。
+   暴露度 = 公司收入中事件品类的占比。用个股投资地图中的主营匹配度、收入占比交叉判断。
    10=暴露>70% + 市值<50亿  (事件砸中小微盘,冲击极大)
    7 =暴露50-70% + 市值50-100亿
    4 =暴露30-50% + 市值100-200亿
@@ -171,9 +174,18 @@ V3速查表是历史经验的参考，不是必须匹配的模板：
    1 =周期β型 (协创型): 低壁垒蹭热度,涨幅来自市场情绪而非基本面质变
    未匹配到V3模式 → 给4分(中性),不扣分也不加分
 
-3. 空间弹性(20%)：市值越小向上空间越大(已过滤>300亿)
-   10=<30亿  8=30-50亿  6=50-100亿  4=100-200亿  2=200-300亿
-   按腾讯财经市值数据直接阶梯打分。
+	3. 叙事亮点(20%)：该股票的投资故事有多大的想象空间和传播力？
+
+	   评估时综合判断以下四个维度，不要机械对照分数：
+	   a) 独特性和稀缺性 — 是不是"第一次""唯一""最大"？故事有没有破圈传播潜力？
+	   b) 催化剂的具体性 — 有公告数字、时间节点、订单金额，还是模糊的"有望受益"？
+	   c) 预期差 — 市场是否已经充分定价了这个故事？还有没有被忽视的增量信息？
+	   d) 验证路径 — 未来3-6个月有没有可观测的验证节点（财报、产能数据、客户公告）？
+
+	   10分 = 四维度全满足：稀缺强叙事+具体数字和时间+市场未充分定价+短期有验证事件
+	   7分 = 满足2-3个维度：有明确拐点故事和具体数字支撑，但验证节点较远或预期差一般
+	   4分 = 仅满足1个维度：宏观景气受益或模糊利好，缺乏个股层面独特性和具体催化剂
+	   1分 = 四个维度均不满足：无清晰叙事，纯概念炒作
 
 4. 唯一性溢价(10%)：A股还有没有第二个纯正标的？
    10=该节点在A股唯一纯正标的
@@ -190,7 +202,7 @@ V3速查表是历史经验的参考，不是必须匹配的模板：
 # 数据校验规则
 - 主营与节点明显无关-> impact_score不超过3分，rationale标注"主营不匹配"
 - 主营为X却被市场炒作Y概念-> 可给中等分，标注矛盾，impact_score扣1-2分
-- investoday硬数据与雪球舆论冲突-> 以investoday为准，标注冲突
+- 数据缺失的股票 impact_score 和 narrative_score 不超过3分
 
 # 亏损不作惩罚
 亏损是弹射起点。*ST退市风险在rationale中标注即可。
@@ -198,16 +210,18 @@ V3速查表是历史经验的参考，不是必须匹配的模板：
 # 输出JSON
 {
   "scored_stocks": [
-    {"stock_code":"","stock_name":"","node_name":"所属节点","market_cap_billion":0,"impact_score":0,"v3match_score":0,"space_score":0,"scarcity_score":0,"total_score":0,"rationale":"","key_risk":""}
+    {"stock_code":"","stock_name":"","node_name":"所属节点","market_cap_billion":0,"impact_score":0,"v3match_score":0,"narrative_score":0,"scarcity_score":0,"total_score":0,"rationale":"","key_risk":""}
   ],
   "top_pick":{"stock_code":"","stock_name":"","node_name":"","investment_thesis":""},
   "runner_up":{"stock_code":"","stock_name":"","node_name":"","investment_thesis":""}
 }
 scored_stocks按total_score降序。top_pick = 总分最高者（优先第一节点），runner_up = 总分第二高者。
-总分 = impact*0.45 + v3match*0.25 + space*0.20 + scarcity*0.10
+总分 = impact*0.45 + v3match*0.25 + narrative*0.20 + scarcity*0.10
 
 # 阈值硬规则（不可违反）
-- 所有候选股total_score均 < 6.5 -> top_pick和runner_up都填"无高赔率标的"
+- 所有候选股total_score均 < 6.5 -> 必须严格按以下格式输出, 不得填入其他字段:
+  "top_pick": {"stock_code": "", "stock_name": "无高赔率标的", "node_name": "", "investment_thesis": "所有候选股均未达到6.5分阈值"}
+  "runner_up": {"stock_code": "", "stock_name": "无高赔率标的", "node_name": "", "investment_thesis": ""}
 - 禁止虚高打分凑数。宁缺毋滥。"""
 # ═══════════════════════════════════════
 # 核心类
@@ -269,9 +283,11 @@ class IndustryChainWorkflow:
             self._p(progress_cb, 4, "Pass1-提名节点1候选股")
             node1 = chain.get("top_two_nodes", [{}])[0]
             noms1 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node1, chain, web1, web2))
+            # 股票代码校验 — LLM 可能编造代码，用 tushare 按名称查真实代码
+            noms1["nominations"] = self._resolve_stock_codes(noms1.get("nominations", []))
 
             self._p(progress_cb, 5, "Pass1-批量查询实时数据")
-            enriched1 = self._enrich(noms1)
+            enriched1 = self._enrich(noms1, chain)
 
             self._p(progress_cb, 6, "Pass1-评分排序")
             msg1 = self._msg_score_single(node1, chain, enriched1, web2)
@@ -296,9 +312,11 @@ class IndustryChainWorkflow:
                 self._p(progress_cb, 7, "Pass2-提名节点2候选股")
                 node2 = chain.get("top_two_nodes", [{}, {}])[1]
                 noms2 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node2, chain, web1, web2))
+                # 股票代码校验 — LLM 可能编造代码，用 tushare 按名称查真实代码
+                noms2["nominations"] = self._resolve_stock_codes(noms2.get("nominations", []))
 
                 self._p(progress_cb, 8, "Pass2-批量查询实时数据")
-                enriched2 = self._enrich(noms2)
+                enriched2 = self._enrich(noms2, chain)
 
                 # 合并两节点数据
                 all_enriched = {**enriched1, **enriched2}
@@ -422,10 +440,117 @@ class IndustryChainWorkflow:
         parts.append(f"\n请只为「{node_name}」这一个节点提名2-5只赔率最高的A股候选个股。不要提名其他节点的公司。")
         return "\n".join(parts)
 
-    # ── Step 5: investoday 批量查询 ────
+    # ── Step 4.5: 股票代码校验 ────────────
 
-    def _enrich(self, noms: dict) -> dict:
-        """A.tushare批量市值+PE+财务  B.investoday主营业务(仅保留评分有用的6字段)"""
+    def _resolve_stock_codes(self, nominations: list[dict]) -> list[dict]:
+        """用 tushare 按名称查找真实股票代码，修正 LLM 可能编造的代码"""
+        if not nominations:
+            return nominations
+
+        try:
+            import tushare as ts
+            config_path = Path(__file__).parent.parent / 'valuation_app' / 'config.json'
+            with open(config_path) as f:
+                cfg = json.load(f)
+            pro = ts.pro_api(cfg.get('tushare_token', ''))
+
+            # 全量 A 股名称索引
+            df = pro.stock_basic(
+                fields='ts_code,name,list_status')
+            df = df[df['list_status'] == 'L']  # 仅上市中
+            df['clean_code'] = df['ts_code'].str[:6]
+
+            resolved = []
+            for nom in nominations:
+                name = str(nom.get('stock_name', '')).strip()
+                if not name:
+                    resolved.append({**nom, 'stock_code': '', '_code_source': 'empty_name'})
+                    continue
+
+                # 1) 精确名称匹配
+                exact = df[df['name'] == name]
+                if not exact.empty:
+                    code = exact.iloc[0]['clean_code']
+                    resolved.append({**nom, 'stock_code': code, '_code_source': 'exact_match'})
+                    continue
+
+                # 2) 名称包含匹配（公司全称包含简称关键词）
+                contains = df[df['name'].str.contains(name.replace('(', '\\(').replace(')', '\\)'), na=False)]
+                if not contains.empty:
+                    # 优先取最短名称（最可能是简称对应的全称）
+                    contains = contains.copy()
+                    contains['name_len'] = contains['name'].str.len()
+                    contains = contains.sort_values('name_len')
+                    code = contains.iloc[0]['clean_code']
+                    matched_name = contains.iloc[0]['name']
+                    resolved.append({**nom, 'stock_code': code, 'stock_name': matched_name,
+                                     '_code_source': 'fuzzy_match'})
+                    continue
+
+                # 3) 反向：全称里查简称（LLM 输出了全称但包含多余后缀）
+                # 用 name 关键词在 df['name'] 中搜索
+                keywords = name.replace('*', '').replace('ST', '').strip()
+                if len(keywords) >= 3:
+                    fuzzy = df[df['name'].str.contains(keywords, na=False)]
+                    if not fuzzy.empty:
+                        fuzzy = fuzzy.copy()
+                        fuzzy['name_len'] = fuzzy['name'].str.len()
+                        fuzzy = fuzzy.sort_values('name_len')
+                        code = fuzzy.iloc[0]['clean_code']
+                        matched_name = fuzzy.iloc[0]['name']
+                        resolved.append({**nom, 'stock_code': code, 'stock_name': matched_name,
+                                         '_code_source': 'keyword_match'})
+                        continue
+
+                # 4) 找不到
+                print(f'[CODE-UNMATCHED] 无法匹配: \"{name}\"', flush=True)
+                resolved.append({**nom, 'stock_code': '', '_code_source': 'unmatched'})
+
+            # 日志
+            matched = sum(1 for r in resolved if r.get('stock_code'))
+            print(f'[CODE-RESOLVE] {matched}/{len(resolved)} 只代码校验通过', flush=True)
+            for r in resolved:
+                src = r.get('_code_source', '?')
+                print(f'  {r.get("stock_name","?")} -> {r.get("stock_code","?")} [{src}]', flush=True)
+
+            return resolved
+
+        except Exception as e:
+            print(f'[CODE-RESOLVE] tushare校验失败: {e}, 使用 LLM 原始代码', flush=True)
+            return nominations
+
+    # ── Step 4.6: Volc 个股投资地图 ──────
+
+    def _fetch_stock_intel(self, stock_code: str, stock_name: str,
+                           node_name: str, industry: str = "") -> str:
+        """单只个股的 Volc Agent 联网搜索 — 获取实时投资地图"""
+        query = (
+            f"搜索{stock_name}({stock_code})在「{industry}」产业链「{node_name}」节点的投资地图。按以下结构输出关键字段：\n"
+            f"【主营匹配】主营产品线与{node_name}的对应关系、收入占比（引用最新财报）\n"
+            f"【竞争壁垒】技术独特性、认证资质、客户绑定深度、产能规模（引用公告/研报）\n"
+            f"【近期催化】近6个月的产能扩张/客户突破/大额订单/政策利好（注明具体数字和时间）\n"
+            f"【差异化】相比同节点竞对的独特优势（引用可比公司数据）\n"
+            f"【市值估值】最新市值、PE/PB、盈利趋势\n"
+            f"区分硬事实（公告/财报/研报）与市场观点。不限制字数，信息密度优先。"
+        )
+        try:
+            r = requests.post(VOLC_URL, json={
+                "bot_id": VOLC_BOT_ID, "stream": False,
+                "messages": [{"role": "user", "content": query}],
+            }, headers={"Authorization": f"Bearer {VOLC_AGENT_KEY}",
+                        "Content-Type": "application/json"}, timeout=60)
+            if r.status_code == 200:
+                choices = r.json().get("choices", [])
+                if choices:
+                    return choices[0].get("message", {}).get("content", "")
+        except Exception:
+            pass
+        return ""
+
+    # ── Step 5: tushare 富化 + Volc 个股搜索 ────
+
+    def _enrich(self, noms: dict, chain: dict | None = None) -> dict:
+        """A.tushare批量市值+PE(3次重试)  B.Volc Agent 每只个股并行搜索投资地图"""
         nominations = noms.get("nominations", [])
         codes = [n.get("stock_code", "") for n in nominations if n.get("stock_code")]
         if not codes:
@@ -433,56 +558,95 @@ class IndustryChainWorkflow:
 
         enriched = {c: {} for c in codes}
 
-        # ── A. tushare 批量市值+PE+流通盘+换手率 ──
-        try:
-            import tushare as ts
-            with open('valuation_app/config.json') as f:
-                cfg = json.load(f)
-            pro = ts.pro_api(cfg.get('tushare_token', ''))
+        # 个股→节点映射 (用于 Volc 查询)
+        code_to_node = {}
+        code_to_name = {}
+        for n in nominations:
+            c = n.get("stock_code", "")
+            if c:
+                code_to_node[c] = n.get("node_name", "")
+                code_to_name[c] = n.get("stock_name", "")
 
-            for c in codes:
-                ts_code = f'{c}.SH' if c.startswith(('60','68')) else f'{c}.SZ'
-                try:
-                    # 基础信息
-                    df_basic = pro.stock_basic(ts_code=ts_code, fields='ts_code,name,industry')
-                    if not df_basic.empty:
-                        enriched[c]['stock_name'] = df_basic.iloc[0]['name']
-                        enriched[c]['industry'] = df_basic.iloc[0]['industry']
+        industry = ""
+        if chain:
+            industry = chain.get("chain_overview", {}).get("industry", "")
 
-                    # 日线指标: 市值/PE/PB/流通盘/换手率
-                    df_daily = pro.daily_basic(ts_code=ts_code,
-                        fields='ts_code,total_mv,pe_ttm,pb,total_share,float_share,turnover_rate')
-                    if not df_daily.empty:
-                        row = df_daily.iloc[0]
-                        enriched[c]['market_cap'] = float(row['total_mv']) / 1e4  # 万元→亿
-                        enriched[c]['pe_ttm'] = float(row['pe_ttm']) if row['pe_ttm'] else 0
-                        enriched[c]['pb'] = float(row['pb']) if row['pb'] else 0
-                        enriched[c]['total_share'] = float(row['total_share']) / 1e4  # 万股→亿股
-                        enriched[c]['float_share'] = float(row['float_share']) / 1e4 if row['float_share'] else 0
-                        enriched[c]['turnover_rate'] = float(row['turnover_rate']) if row['turnover_rate'] else 0
-                except Exception:
-                    pass
-        except Exception as e:
-            print(f'[tushare] error: {e}', flush=True)
-
-        # ── B. investoday 主营业务（仅保留评分需要的6字段，砍brand_channel/tech_path_rd） ──
-        KEEP_FIELDS = ['business_status','industry_chain_capacity','investment_theme',
-                       'operating_data','development_prospect','main_business_conclusion']
-
-        def fetch_business(code: str) -> tuple:
+        # ── A. tushare 批量市值+PE+流通盘+换手率（3次重试）───
+        tushare_ok = False
+        for attempt in range(3):
             try:
-                biz = self.fetcher.fetch_business_themes(code)
-                return code, {k: biz.get(k, '') or '' for k in KEEP_FIELDS}
-            except Exception:
-                return code, {}
+                import tushare as ts
+                config_path = Path(__file__).parent.parent / 'valuation_app' / 'config.json'
+                with open(config_path) as f:
+                    cfg = json.load(f)
+                pro = ts.pro_api(cfg.get('tushare_token', ''))
 
-        with ThreadPoolExecutor(max_workers=5) as ex:
-            futures = [ex.submit(fetch_business, c) for c in codes]
+                fetched_count = 0
+                for c in codes:
+                    ts_code = f'{c}.SH' if c.startswith(('60','68')) else f'{c}.SZ'
+                    try:
+                        # 基础信息
+                        df_basic = pro.stock_basic(ts_code=ts_code, fields='ts_code,name,industry')
+                        if not df_basic.empty:
+                            enriched[c]['stock_name'] = df_basic.iloc[0]['name']
+                            enriched[c]['industry'] = df_basic.iloc[0]['industry']
+
+                        # 日线指标: 市值/PE/PB/流通盘/换手率
+                        df_daily = pro.daily_basic(ts_code=ts_code,
+                            fields='ts_code,total_mv,pe_ttm,pb,total_share,float_share,turnover_rate')
+                        if not df_daily.empty:
+                            row = df_daily.iloc[0]
+                            enriched[c]['market_cap'] = float(row['total_mv']) / 1e4  # 万元->亿
+                            enriched[c]['pe_ttm'] = float(row['pe_ttm']) if row['pe_ttm'] else 0
+                            enriched[c]['pb'] = float(row['pb']) if row['pb'] else 0
+                            enriched[c]['total_share'] = float(row['total_share']) / 1e4
+                            enriched[c]['float_share'] = float(row['float_share']) / 1e4 if row['float_share'] else 0
+                            enriched[c]['turnover_rate'] = float(row['turnover_rate']) if row['turnover_rate'] else 0
+                            fetched_count += 1
+                    except Exception:
+                        pass
+
+                if fetched_count > 0:
+                    tushare_ok = True
+                    break
+                elif attempt < 2:
+                    print(f'[tushare] 第{attempt+1}次全空, {3}s后重试...', flush=True)
+                    time.sleep(3)
+            except Exception as e:
+                print(f'[tushare] 第{attempt+1}次异常: {e}', flush=True)
+                if attempt < 2:
+                    time.sleep(5 * (attempt + 1))
+
+        if not tushare_ok:
+            print(f'[tushare] 3次重试后仍无数据, 市值/PE将缺失', flush=True)
+
+        # ── 标记数据质量 ──
+        for c in codes:
+            has_mcap = enriched[c].get('market_cap') is not None
+            has_pe = enriched[c].get('pe_ttm', 0) != 0
+            if has_mcap and has_pe:
+                enriched[c]['_data_quality'] = 'full'
+            elif has_mcap:
+                enriched[c]['_data_quality'] = 'partial'
+            else:
+                enriched[c]['_data_quality'] = 'missing'
+
+        # ── B. Volc Agent 每只个股并行搜索投资地图 ──
+        def fetch_intel(code: str) -> tuple:
+            name = code_to_name.get(code, '')
+            node = code_to_node.get(code, '')
+            try:
+                intel = self._fetch_stock_intel(code, name, node, industry)
+                return code, intel
+            except Exception:
+                return code, ""
+
+        with ThreadPoolExecutor(max_workers=3) as ex:
+            futures = [ex.submit(fetch_intel, c) for c in codes]
             for f in as_completed(futures):
                 try:
-                    code, biz = f.result(timeout=30)
-                    for k, v in biz.items():
-                        enriched[code][k] = v
+                    code, intel = f.result(timeout=75)
+                    enriched[code]['_volc_intel'] = intel
                 except Exception:
                     pass
 
@@ -508,8 +672,10 @@ class IndustryChainWorkflow:
             f"\n# 候选个股实时数据",
         ]
 
+        has_missing = False
         for code, data in enriched.items():
             mcap = data.get('market_cap', 0) or 0
+            data_qual = data.get('_data_quality', 'full')
             if mcap > 300:
                 continue  # 硬过滤：市值>300亿直接跳过，不送入LLM
 
@@ -519,34 +685,33 @@ class IndustryChainWorkflow:
             ts = data.get('total_share', 0) or 0
             fs = data.get('float_share', 0) or 0
             tr = data.get('turnover_rate', 0) or 0
-            bs = data.get('business_status', '') or ''
-            icc = data.get('industry_chain_capacity', '') or ''
-            it = data.get('investment_theme', '') or ''
-            od = data.get('operating_data', '') or ''
-            dp = data.get('development_prospect', '') or ''
-            mc = data.get('main_business_conclusion', '') or ''
+            volc_intel = data.get('_volc_intel', '') or ''
 
-            name = data.get('stock_name', '') or ''
-            if not name:
-                for n in (noms.get("nominations", []) or []):
-                    if n.get("stock_code") == code:
-                        name = n.get("stock_name", '')
-                        break
-            if not name:
-                name = f'({code})'
+            name = data.get('stock_name', '') or f'({code})'
+
+            if data_qual == 'missing':
+                has_missing = True
+                mcap_str = "[数据缺失-禁止臆测]"
+            else:
+                mcap_str = f"{mcap:.0f}亿"
+
+            intel_block = f"\n[个股投资地图-Volc实时搜索]\n{volc_intel}" if volc_intel else "\n[个股投资地图: 未获取到]"
 
             card = (
                 f"\n### {name}({code})\n"
-                f"市值{mcap:.0f}亿 | PE={pe:.1f} | PB={pb:.1f} | 换手率{tr:.1f}%\n"
-                f"行业: {ind} | 总股本{ts:.1f}亿 | 流通{fs:.1f}亿\n"
-                f"主营业务: {bs}\n"
-                f"投资主题: {it}\n"
-                f"产业链能力: {icc}\n"
-                f"经营数据: {od}\n"
-                f"发展前景: {dp}\n"
-                f"主营结论: {mc}"
+                f"市值{mcap_str} | PE={pe:.1f} | PB={pb:.1f} | 换手率{tr:.1f}%\n"
+                f"行业: {ind} | 总股本{ts:.1f}亿 | 流通{fs:.1f}亿"
+                f"{intel_block}"
             )
             lines.append(card)
+
+        if has_missing:
+            lines.append(
+                f"\n# [严重警告] 以上标记为'数据缺失'的股票,"
+                f"说明 tushare 3次重试后仍无法获取实时市值/PE。"
+                f"严禁使用训练数据臆测。"
+                f"数据缺失的股票 impact_score 和 narrative_score 不得超过 3 分。"
+            )
 
         if web2:
             lines.append(f"\n# 节点联网搜索结果\n{web2}")
@@ -566,41 +731,67 @@ class IndustryChainWorkflow:
             f"\n# 候选个股实时数据",
         ]
 
+        has_missing = False
         for code, data in enriched.items():
             mcap = data.get('market_cap', 0) or 0
+            data_qual = data.get('_data_quality', 'full')
             if mcap > 300:
                 continue  # 硬过滤
             pe = data.get('pe_ttm', 0) or 0
             name = data.get('stock_name', code) or code
             ind = data.get('industry', '') or ''
-            bs = data.get('business_status', '') or ''
-            icc = data.get('industry_chain_capacity', '') or ''
-            it = data.get('investment_theme', '') or ''
-            od = data.get('operating_data', '') or ''
-            mc = data.get('main_business_conclusion', '') or ''
+            volc_intel = data.get('_volc_intel', '') or ''
+
+            if data_qual == 'missing':
+                has_missing = True
+                mcap_str = "[数据缺失-禁止臆测]"
+            else:
+                mcap_str = f"{mcap:.0f}亿"
+
+            intel_block = f"\n[个股投资地图-Volc实时搜索]\n{volc_intel}" if volc_intel else "\n[个股投资地图: 未获取到]"
 
             card = (
                 f"\n### {name}({code})\n"
-                f"市值{mcap:.0f}亿 | PE={pe:.1f} | 行业: {ind}\n"
-                f"主营: {bs}\n"
-                f"投资主题: {it}\n"
-                f"产业链能力: {icc}\n"
-                f"经营数据: {od}\n"
-                f"主营结论: {mc}"
+                f"市值{mcap_str} | PE={pe:.1f} | 行业: {ind}"
+                f"{intel_block}"
             )
             lines.append(card)
+
+        if has_missing:
+            lines.append(
+                f"\n# [严重警告] 以下股票市值标记为'数据缺失',"
+                f"说明 tushare 3次重试后仍无法获取实时数据。"
+                f"严禁使用训练数据臆测市值/PE。"
+                f"数据缺失的股票 impact_score 和 narrative_score 不得超过 3 分。"
+            )
 
         if web2:
             lines.append(f"\n# 联网搜索结果\n{web2}")
 
-        lines.append(f"\n请对以上「{node_name}」节点的候选股评分排序。每只打出impact/v3match/space/scarcity四个分，选出top_pick和runner_up。")
+        lines.append(f"\n请对以上「{node_name}」节点的候选股评分排序。每只打出impact/v3match/narrative/scarcity四个分，选出top_pick和runner_up。")
         return "\n".join(lines)
 
     def _validate_and_retry_score(self, scores: dict, msg: str) -> dict:
         """校验 LLM #2 输出：空则用同一份prompt重试一次"""
         ss = scores.get("scored_stocks", [])
         tp = scores.get("top_pick", {})
-        if (not ss or (not tp.get("stock_code", "") and tp.get("stock_name") != "无高赔率标的")) and not scores.get("error", "").startswith("API "):
+
+        # 评分日志 — 输出每只候选股的四维得分，方便监控管线健康度
+        if ss:
+            lines = ["[SCORES] 候选股评分:"]
+            for s in ss:
+                lines.append(
+                    f"  {s.get('stock_name','?')}({s.get('stock_code','?')}) | "
+                    f"impact={s.get('impact_score',0)} v3match={s.get('v3match_score',0)} "
+                    f"narrative={s.get('narrative_score',0)} scarcity={s.get('scarcity_score',0)} "
+                    f"→ 总分={s.get('total_score',0):.1f}"
+                )
+            lines.append(f"  top_pick={tp.get('stock_name','?')}({tp.get('stock_code','?')})")
+            print("\n".join(lines), flush=True)
+        else:
+            print("[SCORES] scored_stocks为空，无可评分候选股", flush=True)
+
+        if (not ss or (not tp.get("stock_code", "") and not _is_no_pick(tp))) and not scores.get("error", "").startswith("API "):
             print(f"[LLM2-EMPTY] scored_stocks={len(ss)} top_pick_code='{tp.get('stock_code','')}', retrying...", flush=True)
             scores = self._llm(LLM2_SCORE_PROMPT,
                 msg + "\n\n上次输出缺少有效的scored_stocks或top_pick。请确保输出完整，top_pick和runner_up必须有stock_code。")
@@ -617,11 +808,9 @@ class IndustryChainWorkflow:
         tp = _normalize_pick(tp, "top_pick")
         ru = _normalize_pick(ru, "runner_up")
 
-        # 处理"无高赔率标的"
-        tp_name = tp.get("stock_name", "")
-        ru_name = ru.get("stock_name", "")
-        is_no_pick = (tp_name == "无高赔率标的")
-        is_no_runner = (ru_name == "无高赔率标的")
+        # 处理"无高赔率标的" — 检查 name 和 code 两个字段
+        is_no_pick = _is_no_pick(tp)
+        is_no_runner = _is_no_pick(ru)
 
         return {
             "status": "done",
@@ -638,16 +827,16 @@ class IndustryChainWorkflow:
             "industry_chain": chain.get("chain_overview", {}).get("industry", ""),
             "event_summary": chain.get("chain_overview", {}).get("event_summary", ""),
             "top_nodes_json": json.dumps(chain.get("top_two_nodes", []), ensure_ascii=False),
-            "top5_json": json.dumps(ss[:5], ensure_ascii=False),
+            "scored_stocks_json": json.dumps(ss, ensure_ascii=False),
             "chain_analysis_json": json.dumps(chain, ensure_ascii=False),
             "stock_analysis_json": json.dumps(scores, ensure_ascii=False),
             "top_pick_code": "" if is_no_pick else tp.get("stock_code", ""),
-            "top_pick_name": tp_name,
+            "top_pick_name": "" if is_no_pick else tp.get("stock_name", ""),
             "top_pick_node": "" if is_no_pick else tp.get("node_name", ""),
             "top_pick_score": "" if is_no_pick else (str(ss[0].get("total_score", "")) if ss else ""),
             "top_pick_thesis": "" if is_no_pick else tp.get("investment_thesis", ""),
             "runner_up_code": "" if is_no_runner else ru.get("stock_code", ""),
-            "runner_up_name": ru_name,
+            "runner_up_name": "" if is_no_runner else ru.get("stock_name", ""),
             "runner_up_node": "" if is_no_runner else ru.get("node_name", ""),
             "runner_up_score": "" if is_no_runner else (str(ss[1].get("total_score", "")) if len(ss) > 1 else ""),
             "runner_up_thesis": "" if is_no_runner else ru.get("investment_thesis", ""),
@@ -745,9 +934,42 @@ def _safe_int(val) -> int:
         return 0
 
 
+def _clean_stock_code(code: str) -> str:
+    """清洗股票代码：去 .SH/.SZ 后缀，非6位数字返回空"""
+    if not code:
+        return ""
+    code = str(code).strip().upper()
+    # 去 tushare 后缀
+    for suffix in (".SH", ".SZ", ".BJ"):
+        if code.endswith(suffix):
+            code = code[:-3]
+            break
+    # 必须恰好 6 位数字
+    if len(code) == 6 and code.isdigit():
+        return code
+    return ""
+
+
+def _is_no_pick(pick: dict) -> bool:
+    """判断 top_pick/runner_up 是否为「无高赔率标的」
+    LLM 可能把关键词填在 name/code/thesis/node 任意字段，全量检查。"""
+    if not isinstance(pick, dict):
+        return False
+    keyword = "无高赔率标的"
+    # 检查所有可能是 LLM 填入关键词的字段
+    check_fields = ["stock_name", "stock_code", "investment_thesis", "node_name"]
+    for field in check_fields:
+        if keyword in str(pick.get(field, "")).strip():
+            return True
+    return False
+
+
 def _normalize_pick(pick, label: str = "") -> dict:
     """归一化 top_pick/runner_up：LLM 有时返回纯字符串 "无高赔率标的" 而非 {"stock_name":"..."}"""
     if isinstance(pick, dict):
+        # 清洗 stock_code：去后缀、验证6位数字
+        raw_code = str(pick.get("stock_code", ""))
+        pick["stock_code"] = _clean_stock_code(raw_code)
         return pick
     if isinstance(pick, str):
         return {"stock_name": pick, "stock_code": "", "node_name": "", "investment_thesis": ""}

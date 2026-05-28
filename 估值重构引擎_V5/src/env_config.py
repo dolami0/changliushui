@@ -33,5 +33,5 @@ if not DEEPSEEK_API_KEY:
 
 COZE_SAT_TOKEN = os.environ.get("COZE_SAT_TOKEN") or _cfg.get("coze_sat_token", "")
 INVESTODAY_API_KEY = os.environ.get("INVESTODAY_API_KEY") or _cfg.get("investoday_api_key", "")
-VOLC_AGENT_KEY = os.environ.get("VOLC_AGENT_KEY", "")
+VOLC_AGENT_KEY = os.environ.get("VOLC_AGENT_KEY") or _cfg.get("volc_agent_key", "")
 TUSHARE_TOKEN = os.environ.get("TUSHARE_TOKEN") or _cfg.get("tushare_token", "")
