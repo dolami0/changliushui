@@ -505,6 +505,50 @@ def _get_core_fields(data_package: dict) -> dict:
     }
 
 
+def _build_bs_section(data_package: dict, agent2a_output: dict, wacc_params: dict) -> tuple:
+    """构建 BS 画像文本，与 Agent-3 对齐。"""
+    from agent3_scenario_asymmetry import precompute_bs_profile, precompute_wacc
+    core = _get_core_fields(data_package)
+    anchor = agent2a_output.get("market_narrative", {}).get("primary_anchor", "earnings")
+    pt = agent2a_output.get("_pricing_tool", {}) or {}
+
+    mcap = core.get("market_cap_yi", 50)
+    if anchor == "earnings":
+        nopat = core.get("nopat_yi", 0.01)
+        wacc = wacc_params.get("wacc_pct", 10)
+        ev = mcap + core.get("interest_bearing_debt_yi", 0) - core.get("cash_yi", 0)
+        implied_g = round((ev * wacc / 100 - nopat) / nopat * 100, 1) if nopat > 0 else 0
+        lines = [
+            "**方法: 反向 DCF (利润锚)**",
+            "- EV: {:.0f}亿 NOPAT: {:.2f}亿 ROIC: {:.1f}%".format(ev, nopat, core.get('roic_pct',0)),
+            "- 隐含永续增速 g ≈ {}% (WACC={}%)".format(implied_g, wacc),
+            "- PE: {:.1f}x PB: {:.1f}x".format(core.get('pe_ttm',0), core.get('pb',0)),
+        ]
+        section = "\n".join(lines)
+        warning = ""
+    elif anchor == "revenue":
+        ps = core.get("ps_ttm", 0)
+        rev = core.get("revenue_ttm_yi", 1)
+        section = f"""**方法: 隐含收入 CAGR (收入锚)**
+- 当前 PS = {ps:.1f}x 营收TTM = {rev:.1f}亿 市值 = {mcap:.0f}亿"""
+        if pt.get("applicable"):
+            section += "\\n- 隐含3年收入CAGR = " + str(pt.get('implied_value','?')) + "%"
+        warning = f"- PE: {core.get('pe_ttm',0):.1f}x PB: {core.get('pb',0):.1f}x (利润锚仅供参考)\\n"
+    elif anchor == "asset":
+        pb = core.get("pb", 0)
+        roe = core.get("roe_ttm_pct", 0)
+        section = f"""**方法: 隐含 ROE 改善 (资产锚)**
+- 当前 PB = {pb:.1f}x ROE = {roe:.1f}%"""
+        if pt.get("applicable"):
+            section += "\\n- 隐含ROE需改善 " + str(pt.get('implied_value','?')) + "ppt"
+        warning = f"- PE: {core.get('pe_ttm',0):.1f}x (利润锚仅供参考)\\n"
+    else:
+        section = f"**方法: {anchor}锚 (定性判断)**"
+        warning = ""
+
+    return section, warning
+
+
 # ═══════════════════════════════════════
 # 用户消息构建
 # ═══════════════════════════════════════
@@ -611,6 +655,47 @@ def _build_volc_section(volc_data: dict | None) -> str:
     return "\n\n".join(lines)
 
 
+def _format_signal_audit(sa: dict) -> str:
+    """格式化信号审核摘要。"""
+    if not sa:
+        return "无"
+    items = []
+    matches = sa.get("step2b_match", [])
+    if matches:
+        items.append("交叉验证: " + "; ".join(
+            f"{m.get('signal','?')}={m.get('match','?')}" for m in matches[:3]
+        ))
+    return " | ".join(items) if items else "无异常信号"
+
+
+def _format_anchor_shift(mn: dict) -> str:
+    """格式化范式切换潜力。"""
+    asp = mn.get("anchor_shift_potential", {}) or {}
+    if not asp.get("shift_possible"):
+        return "- 范式切换潜力: 否"
+    lines = [
+        "- 范式切换潜力: 是",
+        "  从 {} -> {}".format(asp.get('from_anchor','?'), asp.get('to_anchor','?')),
+        "  触发条件: {}".format(asp.get('shift_trigger','?')),
+        "  理由: {}".format(str(asp.get('shift_rationale','?'))[:200]),
+        "  时机: {}".format(asp.get('shift_timing','?')),
+    ]
+    return "\\n".join(lines)
+
+
+def _format_pricing_tool(agent2a_output: dict) -> str:
+    """格式化定价工具详情。"""
+    pt = agent2a_output.get("_pricing_tool", {}) or {}
+    if not pt or not pt.get("applicable"):
+        return "- 定价工具: 不适用"
+    lines = [
+        "- 定价工具: " + str(pt.get('method','?')),
+        "  隐含指标: " + str(pt.get('implied_metric','?')) + " = " + str(pt.get('implied_value','?')),
+        "  局限: " + str(pt.get('limitations',[])),
+    ]
+    return "\n".join(lines)
+
+
 def _get_2b_info(agent2b_output: dict | None) -> str:
     """从 Agent-2b 输出提取主锚模型信息。"""
     if not agent2b_output:
@@ -640,6 +725,13 @@ def _build_sotp_user_message(
     pa = ep.get("pricing_assessment", {})
     primary = mn.get("primary_anchor", "earnings")
     sas = mn.get("secondary_anchors", [])
+
+    # 路由理由
+    rd_2b = (agent2b_output or {}).get("routing_decision", {}) if isinstance(agent2b_output, dict) else {}
+    routing_reason = rd_2b.get("routing_reason", "SOTP分部估值")
+
+    # BS画像 (与 Agent-3 对齐)
+    bs_section, bs_warning = _build_bs_section(data_package, agent2a_output, wacc_params)
 
     # ── 核心财务 ──
     mcap = core.get("market_cap_yi", 0)
@@ -710,29 +802,58 @@ def _build_sotp_user_message(
 
 {ew_text}
 
+## 当前市值隐含假设 (Implied Story)
+
+{bs_section}{bs_warning}
+
+## 路由判决 (Agent-2b)
+- 主模型: {_get_2b_info(agent2b_output)}
+- 路由理由: {routing_reason}
+
 ## 事件背景 (Agent-0 预研)
 
 ### 投资主题
-{event_data.get('investment_theme', '')[:1000]}
+{event_data.get('investment_theme', '')}
 
 ### 事件推演
-{event_data.get('event_deduction', '')[:800]}
+传导链: {event_data.get('event_deduction', '')}
+催化节点: {event_data.get('future', '')}
 
-### 行业研究
-{event_data.get('industry_expert_research', '')[:800]}
+### 压力测试
+{event_data.get('adversarial_thinking', '')}
 
-### 知识补充
-{event_data.get('knowledge_supplement', '')[:800]}
+### 赛道标尺
+知识补充: {event_data.get('knowledge_supplement', '')}
+行业研究: {event_data.get('industry_expert_research', '')}
 
-### 空头审查
-{event_data.get('adversarial_thinking', '')[:500]}
+### 深度预研
+响应等级: L{event_data.get('response_level','?')}
+事件原文: {event_data.get('raw_event_text', '')}
+预研推理: {event_data.get('preliminary_reasoning', '')}
+
+## Agent-2a 叙事诊断结论（已审核，可直接信任）
+
+- 估值锚: {mn.get('primary_anchor','?')}
+- 锚证据: {mn.get('primary_anchor_evidence','?')[:200]}
+- 核心赌注: {mn.get('core_bet','?')}
+- 叙事总结: {mn.get('narrative_summary','?')[:300]}
+- SOTP触发理由: {mn.get('sotp_rationale','?')}
+- 锚冲突: {mn.get('anchor_conflict','') or '无'}
+- 事件分布形状: {ep.get('event_profile',{}).get('distribution_shape','?')}
+- 计价程度: {pa.get('overall_priced_in','?')} ({pa.get('priced_in_estimate','?')})
+- 剩余催化: {pa.get('residual_catalyst','?')[:200]}
+- 信号评分: {sa.get('step2d_score','?')}/10 — {sa.get('score_rationale','?')[:200]}
+- 信号审核: {_format_signal_audit(sa)}
+
+{_format_anchor_shift(mn)}
+{_format_pricing_tool(agent2a_output)}
 
 {signal_panel}
 
 ## 火山搜索补充数据
 {_build_volc_section(volc_data)}
 
-请只推演叙事主锚分部的 bear/base/bull 参数。如有火山搜索补充的毛利率数据，优先引用。输出纯 JSON。
+请按分部独立推演 bear/base/bull 参数。输出纯 JSON。
 """
     return msg
 
