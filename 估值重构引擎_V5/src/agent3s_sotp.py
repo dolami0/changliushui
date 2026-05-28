@@ -203,7 +203,7 @@ SOTP_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 # SOTP 两段式估值参数体系
 
 | 锚 | 参数 | 代码公式 |
-|----|------|---------|
+|----|------|----------|
 | earnings | pe_target, segment_margin_pct | 分部收入 x 毛利率 x PE |
 | revenue | revenue_growth_3y_cagr_pct, target_ps | 分部收入 x (1+CAGR)³ x PS |
 | asset | target_pb | 净资产 x PB |
@@ -350,19 +350,16 @@ base = 100% - bull - bear。
 
 ### 3e. 分部赋参
 
-**叙事主锚分部** (is_primary=true): bear/base/bull 三组参数，按该分部的锚类型选择对应参数:
+**叙事主锚分部** (is_primary=true): bear/base/bull 三组参数，按锚类型选参数:
 - revenue锚: revenue_growth_3y_cagr_pct, target_ps
 - earnings锚: pe_target, segment_margin_pct
 - asset锚: target_pb
 - pipeline锚: pos_pct, peak_sales_yi, discount_rate_pct
 
-**其他业务** (is_primary=false): 只赋 base 一组参数。为副锚分部判断合理保守估值:
-- 引用产品结构数据中的实际毛利率作为 segment_margin_pct
-- PE/PS/PB 取保守值(非叙事驱动业务不给高倍数)
+**其他业务** (is_primary=false): 只赋 base 一组参数。引用产品结构数据中的实际毛利率；PE/PS/PB取保守值(非叙事驱动业务不给高倍数)。
 
 参数单调递增: 叙事主锚 bear < base < bull。其他业务三情景用同一组 base 参数。
-
-Bull 自检: 叙事主锚分部 bull_mcap / base_mcap <= 3x
+Bull 自检: 叙事主锚 bull_mcap/base_mcap <= 3x
 
 ### 禁止事项
 - 禁止三个情景共用同一套假设数字微调
@@ -459,9 +456,7 @@ asymmetry_ratio = bull_upside / |bear_upside|
   "segments": [
     {
       "segment": "叙事主锚分部",
-      "anchor": "revenue",
-      "revenue_share_pct": 74.4,
-      "is_primary": true,
+      "anchor": "revenue", "revenue_share_pct": 74.4, "is_primary": true,
       "segment_rationale": "<=60字",
       "bear": {"revenue_growth_3y_cagr_pct": 10, "target_ps": 5},
       "base": {"revenue_growth_3y_cagr_pct": 30, "target_ps": 10},
@@ -469,9 +464,7 @@ asymmetry_ratio = bull_upside / |bear_upside|
     },
     {
       "segment": "其他业务(副锚合并)",
-      "anchor": "earnings",
-      "revenue_share_pct": 25.6,
-      "is_primary": false,
+      "anchor": "earnings", "revenue_share_pct": 25.6, "is_primary": false,
       "segment_rationale": "<=60字",
       "base": {"pe_target": 15, "segment_margin_pct": 20}
     }
@@ -490,6 +483,15 @@ asymmetry_ratio = bull_upside / |bear_upside|
     "gap_direction": "市场低估|市场高估|基本公允|无法计算",
     "gap_magnitude": "显著|中等|轻微|不适用",
     "applicable_note": "若 applicable=false，说明原因"
+  },
+  "validation_crosscheck": {
+    "validation_model": "{VALIDATION_MODEL}",
+    "validation_paradigm": "盈利视角|收入视角|资产视角|资源视角|管线视角|分拆视角|与主模型相同",
+    "base_target_mcap_yi": "代码填充",
+    "validation_mcap_yi": "校验模型粗估市值(亿元人民币)",
+    "gap_pct": "代码填充",
+    "gap_direction": "主模型高估|主模型低估|基本一致",
+    "assessment": "互相印证|存在分歧|严重冲突"
   },
   "expectation_gap": {
     "level": "市场显著低估|市场中等低估|基本公允|市场高估|无法计算",
@@ -527,6 +529,791 @@ asymmetry_ratio = bull_upside / |bear_upside|
   "data_gaps": ["无缺口则写空数组[]。有缺口格式: 缺少[具体数据]，导致[具体判断]置信度下降"],
   "probability_rationale": "bear: [环节1(概率X%) + 环节2(概率Y%) + ... → 联合概率Z%]. bull: [超预期事件1(概率X%) + 超预期事件2(概率Y%) + ... → 联合概率Z%]. base: 100% - bear - bull = Z%",
   "preflight_check": ["[OK] 清单项1完成", "[OK] 清单项2a-2d完成", "[OK] 清单项3a-3e完成", "[OK] 概率和=1.00", "[OK] upside单调递增,全参数自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
-}
+}"""
+
+
+# ═══════════════════════════════════════
+# 数据格式兼容层
+# ═══════════════════════════════════════
+
+def _get_core_fields(data_package: dict) -> dict:
+    """从 data_package 提取核心财务字段，兼容两种格式：
+    - 新格式: packages.core.fields (Agent-1 标准输出)
+    - 旧格式: clean_financials (历史缓存/快照)
+    """
+    # 新格式
+    pkgs = data_package.get("packages", {}) or {}
+    core = pkgs.get("core", {}) or {}
+    fields = core.get("fields", {}) or {}
+    if fields:
+        return fields
+
+    # 旧格式 (clean_financials 平坦结构)
+    cf = data_package.get("clean_financials", {}) or {}
+    if cf:
+        return cf
+
+    # 兜底：从 data_package 顶层直接取
+    return {
+        k: data_package.get(k, 0)
+        for k in ["market_cap_yi", "revenue_ttm_yi", "net_profit_ttm_yi",
+                   "total_equity_yi", "total_assets_yi", "cash_yi",
+                   "interest_bearing_debt_yi", "pe_ttm", "pb", "ps_ttm",
+                   "roic_pct", "gross_margin_pct", "net_margin_pct",
+                   "stock_name", "data_quality_score"]
+    }
+
+
+def _build_bs_section(data_package: dict, agent2a_output: dict, wacc_params: dict) -> tuple:
+    """构建 BS 画像文本，与 Agent-3 对齐。"""
+    from agent3_scenario_asymmetry import precompute_bs_profile, precompute_wacc
+    core = _get_core_fields(data_package)
+    anchor = agent2a_output.get("market_narrative", {}).get("primary_anchor", "earnings")
+    pt = agent2a_output.get("_pricing_tool", {}) or {}
+
+    mcap = core.get("market_cap_yi", 50)
+    if anchor == "earnings":
+        nopat = core.get("nopat_yi", 0.01)
+        wacc = wacc_params.get("wacc_pct", 10)
+        ev = mcap + core.get("interest_bearing_debt_yi", 0) - core.get("cash_yi", 0)
+        implied_g = round((ev * wacc / 100 - nopat) / nopat * 100, 1) if nopat > 0 else 0
+        lines = [
+            "**方法: 反向 DCF (利润锚)**",
+            "- EV: {:.0f}亿 NOPAT: {:.2f}亿 ROIC: {:.1f}%".format(ev, nopat, core.get('roic_pct',0)),
+            "- 隐含永续增速 g ≈ {}% (WACC={}%)".format(implied_g, wacc),
+            "- PE: {:.1f}x PB: {:.1f}x".format(core.get('pe_ttm',0), core.get('pb',0)),
+        ]
+        section = "\n".join(lines)
+        warning = ""
+    elif anchor == "revenue":
+        ps = core.get("ps_ttm", 0)
+        rev = core.get("revenue_ttm_yi", 1)
+        section = f"""**方法: 隐含收入 CAGR (收入锚)**
+- 当前 PS = {ps:.1f}x 营收TTM = {rev:.1f}亿 市值 = {mcap:.0f}亿"""
+        if pt.get("applicable"):
+            section += "\\n- 隐含3年收入CAGR = " + str(pt.get('implied_value','?')) + "%"
+        warning = f"- PE: {core.get('pe_ttm',0):.1f}x PB: {core.get('pb',0):.1f}x (利润锚仅供参考)\\n"
+    elif anchor == "asset":
+        pb = core.get("pb", 0)
+        roe = core.get("roe_ttm_pct", 0)
+        section = f"""**方法: 隐含 ROE 改善 (资产锚)**
+- 当前 PB = {pb:.1f}x ROE = {roe:.1f}%"""
+        if pt.get("applicable"):
+            section += "\\n- 隐含ROE需改善 " + str(pt.get('implied_value','?')) + "ppt"
+        warning = f"- PE: {core.get('pe_ttm',0):.1f}x (利润锚仅供参考)\\n"
+    else:
+        section = f"**方法: {anchor}锚 (定性判断)**"
+        warning = ""
+
+    return section, warning
+
+
+# ═══════════════════════════════════════
+# 用户消息构建
+# ═══════════════════════════════════════
+
+def _build_segments_section(
+    secondary_anchors: list[dict],
+    primary_anchor: str,
+    market_narrative: dict,
+    core: dict,
+) -> str:
+    """构建两段式分部信息——叙事主锚 + 其他业务（合并所有副锚）。"""
+    total_rev = core.get("revenue_ttm_yi", 1)
+    secondary_total = sum(sa.get("revenue_share_pct", 0) for sa in secondary_anchors)
+    primary_share = max(0, 100 - secondary_total)
+
+    lines = ["| 分部 | 角色 | 锚 | 收入占比 | 估算收入(亿) |",
+             "|------|------|-----|---------|-------------|"]
+
+    # 叙事主锚分部（事件驱动，三情景变参）
+    primary_label = market_narrative.get("core_bet", "叙事主线")[:20]
+    primary_rev = total_rev * primary_share / 100
+    lines.append(f"| {primary_label} | 叙事主锚(变参) | {primary_anchor} | {primary_share:.1f}% | {primary_rev:.1f} |")
+
+    # 其他业务（合并所有副锚，基准不变）
+    other_share = secondary_total
+    if other_share > 0:
+        other_rev = total_rev * other_share / 100
+        # 副锚中可能有不同锚类型，取第一个作为"其他业务"的代表锚；若无副锚，用 earnings
+        other_anchor = secondary_anchors[0].get("anchor", "earnings") if secondary_anchors else "earnings"
+        other_names = " + ".join(sa.get("segment", "?") for sa in secondary_anchors)
+        lines.append(f"| {other_names} | 其他业务(不变) | {other_anchor} | {other_share:.1f}% | {other_rev:.1f} |")
+
+    # 如果没有任何副锚（100% 主锚），标注特殊处理
+    if not secondary_anchors:
+        lines.append("| （无其他业务，100%为叙事主锚分部） | — | — | — | — |")
+
+    return "\n".join(lines)
+
+
+def _build_product_mix_section(data_package: dict) -> str:
+    """从 Agent-1 的 forward_looking 提取分产品收入/毛利率数据。"""
+    # forward_looking 在 data_package 顶层（与 clean_financials 同级）或嵌套在 packages.core.fields._forward_looking 中
+    fw = data_package.get("forward_looking", {}) or data_package.get("_forward_looking", {}) or {}
+    core = _get_core_fields(data_package)
+    # 也检查 core fields 内部是否有 _forward_looking
+    if not fw:
+        fw = core.get("_forward_looking", {}) or {}
+    products = fw.get("categories", {}).get("earnings_elasticity", {}).get("products", {}) or {}
+    mix = products.get("product_mix", []) or []
+
+    if not mix:
+        return "（无分产品数据）\n\n注: 分部毛利率请基于行业知识和公司整体毛利率估算，并在 segment_rationale 中标注[估算]。"
+
+    lines = ["| 产品 | 收入(亿) | 占比 | 毛利率 | 同比 |",
+             "|------|---------|------|--------|------|"]
+    for p in mix:
+        rev = p.get("revenue", 0)
+        share = p.get("revenue_share_pct", 0)
+        gm = p.get("gross_margin_pct")
+        gm_str = f"{gm:.1f}%" if gm is not None else "?"
+        yoy = p.get("revenue_yoy_pct")
+        yoy_str = f"{yoy:+.1f}%" if yoy is not None else "?"
+        lines.append(f"| {p['name']} | {rev:.2f} | {share:.1f}% | {gm_str} | {yoy_str} |")
+
+    # 毛利率数据质量标注
+    gm_src = products.get("gm_source", "actual")
+    gm_cov = products.get("gm_coverage_pct", 100)
+    notes = []
+    if gm_src != "actual":
+        notes.append(f"毛利率来源={gm_src}(覆盖率{gm_cov}%)——非实际分产品数据")
+    if products.get("has_h1_data"):
+        notes.append("含H2半年轨迹数据（年报-半年报推算下半年趋势）")
+    if notes:
+        lines.append(f"\n数据质量: {'; '.join(notes)}")
+
+    # 毛利率结构分析
+    margin = products.get("margin_structure", {}) or {}
+    if margin:
+        gm_spread = margin.get("gm_spread_ppt", 0)
+        imp_src = margin.get("gm_improvement_source", "?")
+        lines.append(f"毛利率极差: {gm_spread}ppt | 改善来源: {imp_src}")
+
+    return "\n".join(lines)
+
+
+def _build_volc_section(volc_data: dict | None) -> str:
+    """构建火山搜索补充数据段落。"""
+    if not volc_data or not volc_data.get("_volc_used"):
+        return "（未触发火山搜索——分部数据充分）"
+    
+    lines = []
+    margins = volc_data.get("segment_margins_text", "")
+    multiples = volc_data.get("industry_multiples_text", "")
+    
+    if margins:
+        lines.append(f"**分部毛利率参考**: {margins[:500]}")
+    if multiples:
+        lines.append(f"**行业估值倍数参考**: {multiples[:500]}")
+    
+    if not lines:
+        return "（火山搜索未返回有效数据）"
+    
+    lines.insert(0, "以下数据来自火山引擎知识搜索，作为产品结构数据缺失时的补充参考：")
+    return "\n\n".join(lines)
+
+
+def _format_signal_audit(sa: dict) -> str:
+    """格式化信号审核摘要。"""
+    if not sa:
+        return "无"
+    items = []
+    matches = sa.get("step2b_match", [])
+    if matches:
+        items.append("交叉验证: " + "; ".join(
+            f"{m.get('signal','?')}={m.get('match','?')}" for m in matches[:3]
+        ))
+    return " | ".join(items) if items else "无异常信号"
+
+
+def _format_anchor_shift(mn: dict) -> str:
+    """格式化范式切换潜力。"""
+    asp = mn.get("anchor_shift_potential", {}) or {}
+    if not asp.get("shift_possible"):
+        return "- 范式切换潜力: 否"
+    lines = [
+        "- 范式切换潜力: 是",
+        "  从 {} -> {}".format(asp.get('from_anchor','?'), asp.get('to_anchor','?')),
+        "  触发条件: {}".format(asp.get('shift_trigger','?')),
+        "  理由: {}".format(str(asp.get('shift_rationale','?'))[:200]),
+        "  时机: {}".format(asp.get('shift_timing','?')),
+    ]
+    return "\\n".join(lines)
+
+
+def _format_pricing_tool(agent2a_output: dict) -> str:
+    """格式化定价工具详情。"""
+    pt = agent2a_output.get("_pricing_tool", {}) or {}
+    if not pt or not pt.get("applicable"):
+        return "- 定价工具: 不适用"
+    lines = [
+        "- 定价工具: " + str(pt.get('method','?')),
+        "  隐含指标: " + str(pt.get('implied_metric','?')) + " = " + str(pt.get('implied_value','?')),
+        "  局限: " + str(pt.get('limitations',[])),
+    ]
+    return "\n".join(lines)
+
+
+def _get_2b_info(agent2b_output: dict | None) -> str:
+    """从 Agent-2b 输出提取主锚模型信息。"""
+    if not agent2b_output:
+        return "未提供(2b未运行)"
+    rd = agent2b_output.get("routing_decision", {})
+    model = rd.get("primary_model", "?")
+    cat = rd.get("model_category", "?")
+    return f"{model} ({cat})"
+
+
+def _build_sotp_user_message(
+    data_package: dict,
+    agent2a_output: dict,
+    agent2b_output: dict | None,
+    event_data: dict,
+    wacc_params: dict,
+    volc_data: dict | None = None,
+) -> str:
+    """构建 SOTP Agent 用户消息——注入分部数据、财务数据、叙事诊断、事件背景、2b路由。"""
+    core = _get_core_fields(data_package)
+    stock = core.get("stock_name", data_package.get("stock_name", ""))
+    code = data_package.get("stock_code", "")
+
+    mn = agent2a_output.get("market_narrative", {})
+    ep = agent2a_output.get("event_pricing", {})
+    sa = agent2a_output.get("signal_audit", {})
+    pa = ep.get("pricing_assessment", {})
+    primary = mn.get("primary_anchor", "earnings")
+    sas = mn.get("secondary_anchors", [])
+
+    # 路由理由
+    rd_2b = (agent2b_output or {}).get("routing_decision", {}) if isinstance(agent2b_output, dict) else {}
+    routing_reason = rd_2b.get("routing_reason", "SOTP分部估值")
+
+    # BS画像 (与 Agent-3 对齐)
+    bs_section, bs_warning = _build_bs_section(data_package, agent2a_output, wacc_params)
+
+    # ── 核心财务 ──
+    mcap = core.get("market_cap_yi", 0)
+    rev = core.get("revenue_ttm_yi", 0)
+    np = core.get("net_profit_ttm_yi", 0)
+    equity = core.get("total_equity_yi", 0)
+    cash = core.get("cash_yi", 0)
+    debt = core.get("interest_bearing_debt_yi", 0)
+    gm = core.get("gross_margin_pct", 0)
+    nm = core.get("net_margin_pct", 0)
+    roic = core.get("roic_pct", 0)
+    pe = core.get("pe_ttm", 0)
+    pb = core.get("pb", 0)
+    ps = core.get("ps_ttm", 0)
+    net_cash = cash - debt
+
+    # ── 事件窗口价格 ──
+    ew = data_package.get("event_window_prices", {}) or {}
+    ew_text = ""
+    if ew and ew.get("source") not in ("none", None):
+        pre = ew.get("pre_event") or {}
+        post = ew.get("post_event") or {}
+        cur = ew.get("current") or {}
+        ew_text = f"""
+## 事件窗口价格
+| 窗口 | 均价 |
+|------|------|
+| 事件前({pre.get('num_days','?')}日) | {pre.get('avg_close','?')} |
+| 事件后({post.get('num_days','?')}日) | {post.get('avg_close','?')} |
+| 最新({cur.get('date','?')}) | {cur.get('close','?')} |
 """
 
+    # ── 前瞻信号面板 ──
+    signal_panel = build_forward_signal_panel(core)
+
+    msg = f"""# SOTP 分部估值: {stock}({code})
+
+## Agent-2a 叙事诊断
+- 主锚: {primary}
+- 核心赌注: {mn.get('core_bet', '?')}
+- 生命周期: {mn.get('narrative_lifecycle', '?')}
+- 锚冲突: {mn.get('anchor_conflict', '') or '无'}
+- SOTP触发理由: {mn.get('sotp_rationale', '?')}
+- Agent-2b 主锚模型: {_get_2b_info(agent2b_output)}
+- 计价程度: {pa.get('overall_priced_in', '?')}（{pa.get('priced_in_estimate', '?')}）
+- 事件分布形状: {ep.get('event_profile', {}).get('distribution_shape', '?')}
+- 信号评分: {sa.get('step2d_score', '?')}/10 — {sa.get('score_rationale', '?')[:200]}
+
+## 分部定义 (Agent-2a 判定)
+{_build_segments_section(sas, primary, mn, core)}
+
+## 产品结构数据 (Agent-1 财报提取)
+{_build_product_mix_section(data_package)}
+
+## 核心财务数据
+| 指标 | 数值 | 指标 | 数值 |
+|------|------|------|------|
+| 市值 | {mcap:.0f}亿 | PE(TTM) | {pe:.1f}x |
+| TTM营收 | {rev:.1f}亿 | PB | {pb:.1f}x |
+| TTM净利润 | {np:.1f}亿 | PS(TTM) | {ps:.1f}x |
+| ROIC | {roic:.1f}% | 毛利率 | {gm:.1f}% |
+| 净资产 | {equity:.0f}亿 | 净利率 | {nm:.1f}% |
+| 现金 | {cash:.1f}亿 | 有息负债 | {debt:.1f}亿 |
+| 净现金 | {net_cash:.1f}亿 | 数据质量 | {core.get('data_quality_score', '?')}/10 |
+
+## WACC (代码预计算, 不可修改)
+{wacc_params.get('wacc_pct', 10)}% (rf={wacc_params.get('rf_pct', '?')}% beta={wacc_params.get('beta', '?')} ERP={wacc_params.get('erp_pct', '?')}%)
+
+{ew_text}
+
+## 当前市值隐含假设 (Implied Story)
+
+{bs_section}{bs_warning}
+
+## 路由判决 (Agent-2b)
+- 主模型: {_get_2b_info(agent2b_output)}
+- 路由理由: {routing_reason}
+
+## 事件背景 (Agent-0 预研)
+
+### 投资主题
+{event_data.get('investment_theme', '')}
+
+### 事件推演
+传导链: {event_data.get('event_deduction', '')}
+催化节点: {event_data.get('future', '')}
+
+### 压力测试
+{event_data.get('adversarial_thinking', '')}
+
+### 赛道标尺
+知识补充: {event_data.get('knowledge_supplement', '')}
+行业研究: {event_data.get('industry_expert_research', '')}
+
+### 深度预研
+响应等级: L{event_data.get('response_level','?')}
+事件原文: {event_data.get('raw_event_text', '')}
+预研推理: {event_data.get('preliminary_reasoning', '')}
+
+## Agent-2a 叙事诊断结论（已审核，可直接信任）
+
+- 估值锚: {mn.get('primary_anchor','?')}
+- 锚证据: {mn.get('primary_anchor_evidence','?')[:200]}
+- 核心赌注: {mn.get('core_bet','?')}
+- 叙事总结: {mn.get('narrative_summary','?')[:300]}
+- SOTP触发理由: {mn.get('sotp_rationale','?')}
+- 锚冲突: {mn.get('anchor_conflict','') or '无'}
+- 事件分布形状: {ep.get('event_profile',{}).get('distribution_shape','?')}
+- 计价程度: {pa.get('overall_priced_in','?')} ({pa.get('priced_in_estimate','?')})
+- 剩余催化: {pa.get('residual_catalyst','?')[:200]}
+- 信号评分: {sa.get('step2d_score','?')}/10 — {sa.get('score_rationale','?')[:200]}
+- 信号审核: {_format_signal_audit(sa)}
+
+{_format_anchor_shift(mn)}
+{_format_pricing_tool(agent2a_output)}
+
+{signal_panel}
+
+## 火山搜索补充数据
+{_build_volc_section(volc_data)}
+
+请按分部独立推演 bear/base/bull 参数。输出纯 JSON。
+"""
+    return msg
+
+
+# ═══════════════════════════════════════
+# 核心计算函数 — SOTP 分部加总
+# ═══════════════════════════════════════
+
+# _compute_other_value removed — LLM handles other business params now
+
+
+def _compute_segment_value(
+    anchor: str,
+    params: dict,
+    segment_revenue: float,
+    core: dict,
+) -> float | None:
+    """计算单个分部的目标市值。
+
+    Args:
+        anchor: 该分部的估值锚 (earnings | revenue | asset | pipeline)
+        params: LLM 输出的该分部该情景参数
+        segment_revenue: 该分部的估算收入（亿元）
+        core: 公司整体财务数据字典
+
+    Returns:
+        分部目标市值（亿元），None 表示参数不足无法计算
+    """
+    if anchor == "earnings":
+        pe = params.get("pe_target", 0)
+        margin = params.get("segment_margin_pct")
+        if margin is None:
+            margin = core.get("gross_margin_pct", 0)
+        if pe > 0 and segment_revenue > 0 and margin > 0:
+            segment_nopat = segment_revenue * margin / 100
+            return round(segment_nopat * pe, 1)
+        return None
+
+    elif anchor == "revenue":
+        cagr = params.get("revenue_growth_3y_cagr_pct", 0)
+        ps = params.get("target_ps", 0)
+        if segment_revenue > 0 and ps > 0:
+            future_revenue = segment_revenue * (1 + cagr / 100) ** 3
+            return round(future_revenue * ps, 1)
+        return None
+
+    elif anchor == "asset":
+        pb = params.get("target_pb", 0)
+        total_equity = core.get("total_equity_yi", 1)
+        total_revenue = core.get("revenue_ttm_yi", 1)
+        if pb > 0 and total_revenue > 0:
+            # 分部净资产按收入占比估算
+            segment_equity = total_equity * (segment_revenue / total_revenue)
+            return round(segment_equity * pb, 1)
+        return None
+
+    elif anchor == "pipeline":
+        pos = params.get("pos_pct", 0)
+        peak = params.get("peak_sales_yi", 0)
+        rate = params.get("discount_rate_pct", 15)
+        if peak > 0 and pos > 0 and rate > 0:
+            return round(peak * (pos / 100) / (1 + rate / 100), 1)
+        return None
+
+    return None
+
+
+def _compute_sotp_total(
+    segments: list[dict],
+    scenario_name: str,
+    core: dict,
+) -> dict:
+    """计算单个情景的 SOTP 加总价值。
+
+    SOTP = Σ各分部(LLM参数) + 净现金
+    叙事主锚分部用 scenario 对应参数(bear/base/bull)；
+    其他业务用 base 参数(三情景不变)。
+
+    Args:
+        segments: LLM 输出的分部列表(含 is_primary 标志)
+        scenario_name: "bear" | "base" | "bull"
+        core: 公司整体财务数据
+    """
+    total_revenue = core.get("revenue_ttm_yi", 1)
+    cash = core.get("cash_yi", 0)
+    debt = core.get("interest_bearing_debt_yi", 0)
+    net_cash = cash - debt
+
+    total_value = net_cash
+    segment_values = []
+    primary_val = None
+    other_val = 0.0
+
+    for seg in segments:
+        seg_name = seg.get("segment", "?")
+        anchor = seg.get("anchor", "earnings")
+        share = seg.get("revenue_share_pct", 0)
+        is_primary = seg.get("is_primary", True)
+
+        # 非主锚分部：始终使用 base 参数（不受事件驱动）
+        if not is_primary:
+            params = seg.get("base", {})
+        else:
+            params = seg.get(scenario_name, {})
+
+        seg_revenue = total_revenue * share / 100
+        seg_val = _compute_segment_value(anchor, params, seg_revenue, core)
+
+        if seg_val is not None:
+            total_value += seg_val
+            segment_values.append({
+                "segment": seg_name,
+                "anchor": anchor,
+                "revenue_share_pct": share,
+                "segment_revenue_yi": round(seg_revenue, 2),
+                "segment_value_yi": seg_val,
+                "source": "LLM(变参)" if is_primary else "LLM(base)",
+            })
+            if is_primary:
+                primary_val = seg_val
+            else:
+                other_val += seg_val
+
+    return {
+        "total_mcap_yi": round(total_value, 1),
+        "net_cash_yi": round(net_cash, 1),
+        "primary_value_yi": primary_val,
+        "other_value_yi": round(other_val, 1) if other_val > 0 else 0,
+        "segment_values": segment_values,
+        "skipped_segments": [],
+    }
+
+
+def _compute_sotp_from_llm(
+    llm_output: dict,
+    core: dict,
+) -> dict:
+    """从 LLM 输出计算 SOTP 三情景加权结果。
+
+    所有分部均由 LLM 输出参数，代码计算各分部价值后加总。
+    回写计算结果到 llm_output，使其与 _assemble_final_output 兼容。
+    """
+    segments = llm_output.get("segments", [])
+    # 兼容旧格式: primary_segment
+    if not segments:
+        ps = llm_output.get("primary_segment", {})
+        if ps:
+            segments = [ps]
+            print(f"  [SOTP] LLM used old 'primary_segment' format", flush=True)
+    sv = llm_output.get("scenario_valuation", {})
+    details_raw = sv.get("scenario_details", {})
+
+    # 容错: LLM 可能输出数组格式
+    if isinstance(details_raw, list):
+        details = {}
+        for item in details_raw:
+            name = item.get("scenario", "")
+            if name in ("bear", "base", "bull"):
+                details[name] = item
+    else:
+        details = details_raw
+
+    current_mcap = core.get("market_cap_yi", 50)
+    probs, upsides, mcaps = [], [], []
+
+    for scenario_name in ("bear", "base", "bull"):
+        sotp = _compute_sotp_total(segments, scenario_name, core)
+        target_mcap = sotp["total_mcap_yi"]
+
+        prob = details.get(scenario_name, {}).get("probability", 0)
+        probs.append(prob)
+
+        if target_mcap > 0 and current_mcap > 0:
+            ups = round((target_mcap / current_mcap - 1) * 100, 1)
+        else:
+            ups = 0
+
+        mcaps.append(target_mcap)
+        upsides.append(ups)
+
+        # 回写计算结果到 details
+        if scenario_name not in details:
+            details[scenario_name] = {}
+        details[scenario_name]["target_mcap_yi"] = target_mcap
+        details[scenario_name]["upside_pct"] = ups
+        details[scenario_name]["_segment_breakdown"] = sotp["segment_values"]
+        details[scenario_name]["_net_cash_yi"] = sotp["net_cash_yi"]
+        details[scenario_name]["_primary_value_yi"] = sotp["primary_value_yi"]
+        details[scenario_name]["_other_value_yi"] = sotp["other_value_yi"]
+
+    # 概率加权计算
+    weighted_upside = sum(p * u for p, u in zip(probs, upsides))
+    weighted_mcap = sum(p * m for p, m in zip(probs, mcaps))
+    bear_u = upsides[0]
+    bull_u = upsides[2]
+    asym = abs(bull_u / bear_u) if bear_u != 0 and abs(bull_u) > 0 else 0
+
+    # 回写 scenario_valuation
+    sv["scenario_details"] = details
+    sv["probability_weighted_upside_pct"] = round(weighted_upside, 1)
+    sv["probability_weighted_mcap_yi"] = round(weighted_mcap, 1)
+    sv["asymmetry_ratio"] = round(asym, 1)
+    sv["_computed_by_code"] = True
+
+    llm_output["scenario_valuation"] = sv
+
+    return {
+        "weighted_upside_pct": round(weighted_upside, 1),
+        "weighted_mcap_yi": round(weighted_mcap, 1),
+        "asymmetry_ratio": round(asym, 1),
+    }
+
+
+# ═══════════════════════════════════════
+# SOTPScenarioAsymmetry 主类
+# ═══════════════════════════════════════
+
+class SOTPScenarioAsymmetry:
+    """SOTP 分部估值 — Agent-3s (V6.1)。
+
+    复用 Agent-3 的校验、组装框架，将估值计算替换为分部加总逻辑。
+    单次 LLM 调用完成分部参数推演 + 情景判断。
+    """
+
+    def __init__(self, deepseek_key: str | None = None):
+        self.api_key = deepseek_key
+
+    def run(
+        self,
+        data_package: dict,
+        agent2a_output: dict,
+        agent2b_output: dict | None = None,
+        event_data: dict | None = None,
+        wacc_params: dict | None = None,
+        progress_cb=None,
+    ) -> dict:
+        """执行 SOTP 分部估值。
+
+        Args:
+            data_package: Agent-1 输出（含 product_mix 和财务数据）
+            agent2a_output: Agent-2a 输出（含 secondary_anchors + sotp_triggered）
+            event_data: Coze Agent0 预研
+            wacc_params: WACC 预计算参数
+            progress_cb: 进度回调 (step, msg)
+
+        Returns:
+            与标准 Agent-3 格式兼容的输出 dict
+        """
+        cb = progress_cb or (lambda s, n: None)
+        event_data = event_data or {}
+        wacc_params = wacc_params or {}
+        core = _get_core_fields(data_package)
+
+        # ── Step 0: 数据充分性检查 ──
+        secondary_anchors_pre = agent2a_output.get("market_narrative", {}).get("secondary_anchors", [])
+        is_adequate, adequacy_reason = _check_data_adequacy(data_package, secondary_anchors_pre)
+        volc_data = {}
+        if not is_adequate:
+            print(f"  [SOTP] 分部数据不足: {adequacy_reason}", flush=True)
+            cb(0.5, "火山搜索分部数据")
+            volc_data = _search_segment_data(
+                core.get("stock_name", ""), data_package.get("stock_code", ""),
+                secondary_anchors_pre,
+            )
+            if not volc_data:
+                print(f"  [SOTP] 火山搜索失败, 回退标准管线", flush=True)
+                return {"_fallback_to_standard": True, "_fallback_reason": adequacy_reason}
+
+        # ── Step 1: LLM 推演分部参数 ──
+        cb(1, "SOTP LLM分部推演")
+        user_msg = _build_sotp_user_message(
+            data_package, agent2a_output, agent2b_output, event_data, wacc_params,
+            volc_data=volc_data,
+        )
+
+        try:
+            result = call_deepseek(
+                SOTP_SYSTEM_PROMPT, user_msg,
+                max_tokens=30720, temperature=0.1,
+                api_key=self.api_key,
+            )
+        except Exception as e:
+            raise ScenarioError("E303", f"SOTP LLM调用失败: {e}")
+
+        if "_parse_error" in result:
+            # 重试一次
+            try:
+                result = call_deepseek(
+                    SOTP_SYSTEM_PROMPT, user_msg,
+                    max_tokens=30720, temperature=0.1,
+                    api_key=self.api_key,
+                )
+            except Exception:
+                pass
+
+        if "_parse_error" in result:
+            raise ScenarioError(
+                "E301", "SOTP LLM JSON解析失败",
+                {"raw": str(result.get("_parse_error", ""))[:300]},
+            )
+
+        # ── Step 2: 代码计算 SOTP 加总 ──
+        cb(2, "SOTP代码加总")
+        sotp_computed = _compute_sotp_from_llm(result, core)
+
+        # ── Step 3: 修正交易标注（复用 Agent-3）──
+        cb(3, "修正交易标注")
+        ta = result.get("trade_annotation", {})
+        sv = result.get("scenario_valuation", {})
+        details = sv.get("scenario_details", {})
+        if isinstance(details, list):
+            details_dict = {}
+            for item in details:
+                name = item.get("scenario", "")
+                if name in ("bear", "base", "bull"):
+                    details_dict[name] = item
+            details = details_dict
+        bear_u = details.get("bear", {}).get("upside_pct", 0)
+        bull_u = details.get("bull", {}).get("upside_pct", 0)
+        result["trade_annotation"] = _fix_trade_annotation(
+            ta,
+            sotp_computed["weighted_upside_pct"],
+            sotp_computed["asymmetry_ratio"],
+            bear_u, bull_u,
+        )
+
+        # ── Step 4: 校验（复用 Agent-3）──
+        cb(4, "一致性校验")
+        bs_profile = {
+            "bs_method": "SOTP 分部加总 (2段: 叙事主锚 + 其他)",
+            "bs_level": f"分部独立估值后加总净现金{core.get('cash_yi',0)-core.get('interest_bearing_debt_yi',0):+.1f}亿 → 总市值{sotp_computed['weighted_mcap_yi']:.0f}亿",
+            "ev_yi": 0,
+            "nopat_yi": 0,
+            "roic_pct": 0,
+            "wacc_simple_pct": wacc_params.get("wacc_pct", 10),
+            "market_premium_pct": 0,
+            "implied_g_pct": 0,
+            "pe_ttm": core.get("pe_ttm", 0),
+            "pb": core.get("pb", 0),
+            "market_story": "SOTP: 叙事主锚(LLM推演) + 其他业务(代码自动) + 净现金",
+            "warnings": [],
+            "wacc_params": wacc_params,
+            "bs_secondary": "",
+            "note_to_llm": "",
+            "reverse_dcf_applicable": False,
+            "reverse_dcf_applicable_note": "SOTP 不使用反向DCF——分部加总本身就是定价验证",
+            "valuation_anchor_used": "sotp",
+        }
+
+        validation_warnings = _validate_output(
+            result, bs_profile, wacc_params,
+        )
+        # 过滤 E306 类（代码已重算，数值差异是预期内的）
+        validation_warnings = [
+            w for w in validation_warnings
+            if not w.get("code", "").startswith("E306")
+        ]
+        if validation_warnings:
+            codes = [w["code"] for w in validation_warnings]
+            print(f"  [SOTP validation] warnings: {codes}", flush=True)
+
+        # ── Step 5: 组装输出（复用 Agent-3 的 _assemble_final_output）──
+        cb(5, "组装输出")
+        routing = {
+            "primary_model": "J",
+            "model_category": "SOTP",
+            "routing_reason": (
+                "Agent-2a 触发 SOTP: 2段式(叙事主锚+其他), "
+                "范式冲突需分部独立估值"
+            ),
+            "validation_models": [],
+            "model_migration_path": {},
+        }
+
+        output = _assemble_final_output(
+            result, bs_profile, data_package, routing, validation_warnings,
+            llm_original_values={
+                "upside": sotp_computed["weighted_upside_pct"],
+                "asymmetry": sotp_computed["asymmetry_ratio"],
+                "mcap": sotp_computed["weighted_mcap_yi"],
+            },
+        )
+
+        # ── Step 6: 注入 SOTP 特有字段 ──
+        output["_sotp_breakdown"] = {
+            "segments": result.get("segments", []),
+            "scenario_details": sv.get("scenario_details", {}),
+        }
+
+        cb(6, "SOTP估值完成")
+        return output
+
+
+# ── 便捷函数 ──
+
+def run_sotp_scenario(
+    data_package: dict,
+    agent2a_output: dict,
+    event_data: dict | None = None,
+    wacc_params: dict | None = None,
+) -> dict:
+    """便捷入口：运行 SOTP 分部估值。"""
+    agent = SOTPScenarioAsymmetry()
+    return agent.run(data_package, agent2a_output, event_data, wacc_params)
