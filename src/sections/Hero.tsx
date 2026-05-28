@@ -335,6 +335,10 @@ function TodayReports() {
             (tj) => tj.uuid === ds.uuid && tj.stock_name === ds.stock_name
           );
           return { ...ds, newsTitle: match ? extractNewsTitle(match.news_content, 50) : undefined };
+        }).sort((a, b) => {
+          const au = parseFloat(a.base_upside_pct || '0');
+          const bu = parseFloat(b.base_upside_pct || '0');
+          return bu - au;  // 降序: base涨幅高→低
         });
         // 批量补全 disk 摘要（天机卷匹配失败时回退）
         const needSummary = enriched.filter((r) => !r.newsTitle && r.stock_code);
