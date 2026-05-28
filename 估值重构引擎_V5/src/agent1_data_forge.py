@@ -169,7 +169,7 @@ def _extract_core_fields(raw_bundle: dict, stock_code: str) -> dict[str, Any]:
     io_nm = fd.get("net_margin")             # investoday 净利率
     io_roe_raw = dup.get("roe")              # investoday ROE (dupont端点, 单位异常: Q1数据且值偏大)
     io_roe = io_roe_raw / 100 if io_roe_raw and io_roe_raw > 10 else io_roe_raw
-    io_eps = inc.get("eps")                  # investoday EPS (TTM)
+    io_eps = inc.get("eps") or ts_eps        # investoday income端点不返回EPS→Tushare fallback
 
     # 交叉验证
     _warn_divergence(stock_code, "gross_margin", ts_gm, io_gm)
