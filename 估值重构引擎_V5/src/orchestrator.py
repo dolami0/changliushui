@@ -45,6 +45,13 @@ try:
 except ImportError:
     _RNPV_AVAILABLE = False
 
+# SOTP 管线 (V6.1: 分部估值分叉)
+try:
+    from agent3s_sotp import SOTPScenarioAsymmetry
+    _SOTP_AVAILABLE = True
+except ImportError:
+    _SOTP_AVAILABLE = False
+
 
 # ═══════════════════════════════════════
 # 管线状态
@@ -197,6 +204,30 @@ class Orchestrator:
             cb("agent2b", 2, 2, "done",
                f"主:{rd.get('primary_model','?')} 校验:{rd.get('validation_models',[])} {override_str}")
 
+            # ── SOTP 分叉 (V6.1): Agent-2a 判 sotp_triggered → 走 SOTP 分部估值 ──
+            if a2a_mn.get("sotp_triggered") and _SOTP_AVAILABLE:
+                state.pipeline_type = "sotp"
+                sotp_result = self._run_sotp_pipeline(state, event_data, cb, wacc_params)
+                if not sotp_result.get("_fallback_to_standard"):
+                    return sotp_result
+                # 回退: 分部数据不足 → 标记 SOTP 失败, 走标准管线
+                print("  [Orchestrator] SOTP回退标准管线", flush=True)
+                a2a_mn["sotp_triggered"] = False
+                a2a_mn["sotp_rationale"] = (
+                    f"{a2a_mn.get('sotp_rationale','')} | "
+                    f"V6.1回退: {sotp_result.get('_fallback_reason','分部数据不足')}"
+                )
+                # 重新运行 Agent-2b（用修正后的 agent2a）
+                cb("agent2b", 2, 2, "running", "路由判决(回退重判)")
+                t0 = time.time()
+                state.agent2b_output = self._run_agent2b(
+                    state.agent1_output, state.agent2a_output, event_data,
+                )
+                state.step_times["agent2b"] = round(state.step_times.get("agent2b", 0) + time.time() - t0, 2)
+                rd = state.agent2b_output.get("routing_decision", {})
+                cb("agent2b", 2, 2, "done",
+                   f"回退重判→主:{rd.get('primary_model','?')} 校验:{rd.get('validation_models',[])}")
+
             # ── Agent-3: 推演裁决 ──
             cb("agent3", 1, 1, "running", "推演裁决(三情景)")
             t0 = time.time()
@@ -348,6 +379,60 @@ class Orchestrator:
             "status": "done",
             "pipeline_version": "6.0-rnpv",
             "pipeline_type": "rnpv",
+            "audit": {
+                "stock_code": stock_code,
+                "stock_name": stock_name,
+                "started_at": state.started_at,
+                "completed_at": state.completed_at,
+                "step_times": state.step_times,
+                "errors": state.errors,
+            },
+        }
+
+    # ── SOTP 管线 (V6.1) ──
+
+    def _run_sotp_pipeline(
+        self, state: PipelineState, event_data: dict, cb, wacc_params: dict,
+    ) -> dict:
+        """执行 SOTP 专用管线: Agent-3s（单次 LLM 调用完成分部估值+情景推演）。"""
+        stock_code = state.stock_code
+        stock_name = state.stock_name
+
+        # Agent-3s: SOTP 分部估值 + 情景推演（单次LLM调用）
+        cb("agent3s", 1, 1, "running", "SOTP分部估值+情景推演")
+        t0 = time.time()
+        a3s = SOTPScenarioAsymmetry(deepseek_key=self.api_key)
+
+        sotp_output = a3s.run(
+            data_package=state.agent1_output,
+            agent2a_output=state.agent2a_output,
+            agent2b_output=state.agent2b_output,
+            event_data=event_data,
+            wacc_params=wacc_params,
+            progress_cb=lambda step, msg: cb("agent3s", 1, 1, "running", msg),
+        )
+
+        state.agent3_output = sotp_output  # 复用 agent3_output 字段保存
+        state.step_times["agent3s"] = round(time.time() - t0, 2)
+
+        vs = sotp_output.get("valuation_summary", {})
+        cb("agent3s", 1, 1, "done",
+           f"upside={vs.get('probability_weighted_upside_pct',0):+.1f}% "
+           f"asym={vs.get('asymmetry_ratio',0):.1f}x")
+
+        state.status = "done"
+        state.completed_at = datetime.now(timezone.utc).isoformat()
+
+        # 组装结果（复用标准管线格式，兼容前端）
+        return {
+            "agent0": state.agent0_output or {},
+            "agent1": state.agent1_output or {},
+            "agent2": state.agent2b_output or {},   # 2b 路由决策, scheduler 提取 routing_decision
+            "agent2a": state.agent2a_output or {},
+            "agent3": sotp_output,
+            "status": "done",
+            "pipeline_version": "6.1-sotp",
+            "pipeline_type": "sotp",
             "audit": {
                 "stock_code": stock_code,
                 "stock_name": stock_name,
