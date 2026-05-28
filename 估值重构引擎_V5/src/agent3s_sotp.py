@@ -755,6 +755,16 @@ def _format_pricing_tool(agent2a_output: dict) -> str:
     return "\n".join(lines)
 
 
+def _get_sotp_primary_model(agent2b_output: dict | None) -> str:
+    """从 Agent-2b 输出提取叙事主锚分部的模型。"""
+    if not agent2b_output:
+        return "?"
+    rd = agent2b_output.get("routing_decision", {})
+    if isinstance(rd, dict):
+        return rd.get("sotp_primary_segment_model", "?")
+    return "?"
+
+
 def _get_2b_info(agent2b_output: dict | None) -> str:
     """从 Agent-2b 输出提取主锚模型信息。"""
     if not agent2b_output:
@@ -834,7 +844,7 @@ def _build_sotp_user_message(
 - 生命周期: {mn.get('narrative_lifecycle', '?')}
 - 锚冲突: {mn.get('anchor_conflict', '') or '无'}
 - SOTP触发理由: {mn.get('sotp_rationale', '?')}
-- Agent-2b 主锚模型: {_get_2b_info(agent2b_output)}
+- Agent-2b 路由: 主模型={_get_2b_info(agent2b_output)}, 叙事主锚分部模型={_get_sotp_primary_model(agent2b_output)}
 - 计价程度: {pa.get('overall_priced_in', '?')}（{pa.get('priced_in_estimate', '?')}）
 - 事件分布形状: {ep.get('event_profile', {}).get('distribution_shape', '?')}
 - 信号评分: {sa.get('step2d_score', '?')}/10 — {sa.get('score_rationale', '?')[:200]}
@@ -864,10 +874,6 @@ def _build_sotp_user_message(
 ## 当前市值隐含假设 (Implied Story)
 
 {bs_section}{bs_warning}
-
-## 路由判决 (Agent-2b)
-- 主模型: {_get_2b_info(agent2b_output)}
-- 路由理由: {routing_reason}
 
 ## 事件背景 (Agent-0 预研)
 

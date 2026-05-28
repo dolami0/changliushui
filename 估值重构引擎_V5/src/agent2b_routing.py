@@ -123,6 +123,7 @@ routing_reason 必须引用: (1) 2a的叙事线索 (2) 具体财务数据。≥8
   **SOTP的本质**: 防止用主锚去估"另一类业务"时产生系统性偏差。
   **SOTP估值方法**: 分部独立估(各用正确的倍数锚),加总。行业倍数参照来自knowledge_supplement。不要求分部利润精确。
   **数据不足时**: 2a会设置sotp_triggered=false,此时以主锚为准——宁可单锚近似,也不在无数据时强行SOTP。
+  **SOTP触发时必填字段**: 当主模型=J时，必须额外输出 `sotp_primary_segment_model`——为叙事主锚分部（2a的primary_anchor）选择最合适的模型。例如primary_anchor=revenue→选B(PS+TAM)；primary_anchor=earnings→选A/K(ROIC-DCF)。这个字段告诉SOTP Agent叙事分部该用什么参数体系。
 
 # 输出格式
 
@@ -140,7 +141,8 @@ routing_reason 必须引用: (1) 2a的叙事线索 (2) 具体财务数据。≥8
       "constraint_override": false,
       "override_rationale": ""
     },
-    "anchor_shift_warning": "如果存在锚切换风险,标注在此"
+    "anchor_shift_warning": "如果存在锚切换风险,标注在此",
+    "sotp_primary_segment_model": "仅当primary_model=J时填写,如B/A/K。为叙事主锚分部选模型"
   }
 }
 ```
