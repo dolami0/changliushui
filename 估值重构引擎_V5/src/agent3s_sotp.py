@@ -755,6 +755,30 @@ def _format_pricing_tool(agent2a_output: dict) -> str:
     return "\n".join(lines)
 
 
+def _fill_sotp_placeholders(prompt: str, agent2b_output: dict | None = None) -> str:
+    """替换 SOTP prompt 中残留的 Agent-3 占位符。"""
+    # 从 2b 取主锚分部模型
+    seg_model = "?"
+    if agent2b_output:
+        rd = agent2b_output.get("routing_decision", {})
+        if isinstance(rd, dict):
+            seg_model = rd.get("sotp_primary_segment_model", "B")
+
+    replacements = {
+        "{PRIMARY_MODEL}": "J",
+        "{MODEL_DESC}": "SOTP",
+        "{MODEL_FAMILY}": "分拆",
+        "{VALIDATION_MODEL}": "自校验(SOTP无独立校验模型)",
+        "{VALIDATION_MODEL_DESC}": "SOTP不分拆校验",
+        "{SCENARIO_PARAMS_EXAMPLE}": '"bear": {...}, "base": {...}, "bull": {...}',
+        "{MODEL_PARAM_NAMES}": f"叙事主锚: {seg_model}模型参数; 其他业务: pe_target/segment_margin_pct(earnings)或target_ps(revenue)或target_pb(asset)",
+        "{MODEL_PARAM_SELF_CHECK}": "- 叙事分部参数单调递增\n- 其他业务参数保守合理\n- Bull/base<=3x",
+    }
+    for k, v in replacements.items():
+        prompt = prompt.replace(k, v)
+    return prompt
+
+
 def _get_sotp_primary_model(agent2b_output: dict | None) -> str:
     """从 Agent-2b 输出提取叙事主锚分部的模型。"""
     if not agent2b_output:
@@ -1194,9 +1218,11 @@ class SOTPScenarioAsymmetry:
             volc_data=volc_data,
         )
 
+        # 替换 prompt 中的 Agent-3 占位符（SOTP 不需要模型选择，直接填 J/SOTP）
+        prompt = _fill_sotp_placeholders(SOTP_SYSTEM_PROMPT, agent2b_output)
         try:
             result = call_deepseek(
-                SOTP_SYSTEM_PROMPT, user_msg,
+                prompt, user_msg,
                 max_tokens=30720, temperature=0.1,
                 api_key=self.api_key,
             )
@@ -1207,7 +1233,7 @@ class SOTPScenarioAsymmetry:
             # 重试一次
             try:
                 result = call_deepseek(
-                    SOTP_SYSTEM_PROMPT, user_msg,
+                    prompt, user_msg,
                     max_tokens=30720, temperature=0.1,
                     api_key=self.api_key,
                 )
