@@ -822,7 +822,11 @@ def _fill_sotp_placeholders(prompt: str, agent2b_output: dict | None = None) -> 
         "{MODEL_FAMILY}": "分拆",
         "{VALIDATION_MODEL}": "自校验(SOTP无独立校验模型)",
         "{VALIDATION_MODEL_DESC}": "SOTP不分拆校验",
-        "{SCENARIO_PARAMS_EXAMPLE}": '"bear": {...}, "base": {...}, "bull": {...}',
+        "{SCENARIO_PARAMS_EXAMPLE}": (
+            '"bear": {"probability": 0.20, "scenario_narrative": "<=60字"}, '
+            '"base": {"probability": 0.60, "scenario_narrative": "<=60字"}, '
+            '"bull": {"probability": 0.20, "scenario_narrative": "<=60字"}'
+        ),
         "{MODEL_PARAM_NAMES}": f"叙事主锚: {seg_model}模型参数; 其他业务: pe_target/segment_margin_pct(earnings)或target_ps(revenue)或target_pb(asset)",
         "{MODEL_PARAM_SELF_CHECK}": "- 叙事分部参数单调递增\n- 其他业务参数保守合理\n- Bull/base<=3x",
     }
@@ -1165,6 +1169,15 @@ def _compute_sotp_from_llm(
         target_mcap = sotp["total_mcap_yi"]
 
         prob = details.get(scenario_name, {}).get("probability", 0)
+        # 兜底: LLM 漏填 probability 时，从 reasoning_trace 或默认分配
+        if prob is None or prob == 0:
+            prob = details.get(scenario_name, {}).get("probability", None)
+        if prob is None or prob == 0:
+            # 用默认值兜底: bear=0.20, base=0.60, bull=0.20
+            defaults = {"bear": 0.20, "base": 0.60, "bull": 0.20}
+            prob = defaults.get(scenario_name, 0.20)
+            details[scenario_name]["probability"] = prob
+            details[scenario_name]["_probability_fallback"] = True
         probs.append(prob)
 
         if target_mcap > 0 and current_mcap > 0:
@@ -1184,6 +1197,11 @@ def _compute_sotp_from_llm(
         details[scenario_name]["_net_cash_yi"] = sotp["net_cash_yi"]
         details[scenario_name]["_primary_value_yi"] = sotp["primary_value_yi"]
         details[scenario_name]["_other_value_yi"] = sotp["other_value_yi"]
+
+    # 概率归一化（兜底后可能不正好1.0）
+    prob_sum = sum(probs)
+    if abs(prob_sum - 1.0) > 0.01:
+        probs = [p / prob_sum for p in probs]
 
     # 概率加权计算
     weighted_upside = sum(p * u for p, u in zip(probs, upsides))
