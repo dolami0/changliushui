@@ -242,6 +242,26 @@ class PipelineScenario:
         if "_parse_error" in result:
             return {"_error": "LLM调用失败", "_fallback": True}
 
+        # ── 代码修正: net_cash 以 2r/财务数据为准，防止 LLM 幻算 ──
+        sotp = valuation_result.get("sotp_total", {})
+        actual_nc = sotp.get("net_cash_yi", 0)  # 2r 已被代码修正，此为可靠值
+        if not actual_nc:
+            actual_nc = pipeline_data.get("company_financials", {}).get("net_cash_yi", 0)
+        if actual_nc:
+            sv = result.get("scenario_valuation", {})
+            if isinstance(sv, dict):
+                for sn in ("bear", "base", "bull"):
+                    s = sv.get(sn, {})
+                    if isinstance(s, dict) and s.get("net_cash_yi"):
+                        llm_nc = s.get("net_cash_yi", 0)
+                        if abs(llm_nc - actual_nc) > 0.5:
+                            s["net_cash_yi"] = actual_nc
+                            s["total_value_yi"] = round(
+                                s.get("pipeline_value_yi", 0) +
+                                s.get("mature_products_value_yi", 0) + actual_nc, 1
+                            )
+                            result["scenario_valuation"][sn] = s
+
         return result
 
 

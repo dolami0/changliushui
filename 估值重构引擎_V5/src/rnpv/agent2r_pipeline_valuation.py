@@ -249,6 +249,25 @@ class PipelineValuation:
         if "_parse_error" in result:
             return {"_error": "LLM调用失败,无法完成管线估值", "_fallback": True}
 
+        # ── 代码修正: net_cash 以 Agent-1 财务数据为准，防止 LLM 幻算 ──
+        fin = pipeline_data.get("company_financials", {})
+        actual_nc = fin.get("net_cash_yi", 0)
+        sotp = result.get("sotp_total", {})
+        if isinstance(sotp, dict) and actual_nc:
+            llm_nc = sotp.get("net_cash_yi", 0)
+            if abs(llm_nc - actual_nc) > 0.5:  # 差异 >0.5亿 = 幻算
+                sotp["net_cash_yi"] = actual_nc
+                sotp["total_fair_value_yi"] = round(
+                    sotp.get("mature_products_yi", 0) +
+                    sotp.get("pipeline_yi", 0) + actual_nc, 1
+                )
+                if sotp.get("current_mcap_yi", 0) > 0:
+                    sotp["upside_pct"] = round(
+                        (sotp["total_fair_value_yi"] / sotp["current_mcap_yi"] - 1) * 100, 1
+                    )
+                result["sotp_total"] = sotp
+                print(f"  [Agent-2r] net_cash 修正: {llm_nc} -> {actual_nc} 亿", flush=True)
+
         return result
 
 
