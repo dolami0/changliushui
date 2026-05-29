@@ -30,6 +30,7 @@ from agent3_scenario_asymmetry import (
     _validate_output,
     MODEL_PARAM_TEMPLATES,
     PARAM_SELF_CHECK_MAP,
+    SCENARIO_PARAMS_MAP,
     _fix_trade_annotation,
     _assemble_final_output,
     _augment_trace_with_fixes,
@@ -189,6 +190,8 @@ SOTP_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 - **BS画像解读** — 2a 已解读市场定价水位，你引用其结论，不做重复解读
 
 你的职责: 基于上述已被验证的叙事框架，做**三情景的参数推演和估值计算**。
+
+你掌握 A/B/C/D/E/F/G/H/I/J/K 共 11 种估值模型。路由判官已选定最适合叙事主锚分部的模型（sotp_primary_segment_model），你的职责是在选定的模型框架内完成参数推演。
 
 本标的触发 SOTP 分部估值。公司将业务拆为两段：
 1. **叙事主锚分部**: 事件驱动的核心业务。推演 bear/base/bull 三情景参数
@@ -375,6 +378,7 @@ base = 100% - bull - bear。
 - 增速=50% -> earnings_growth_pct: 50 (不是0.5)
 - PE=80x -> pe_target: 80
 - 概率=30% -> probability: 0.30 (概率字段例外,使用0-1小数)
+- 计算公式 ICxROIC%/100xPE 中,ROIC%/100 是把15转为0.15——如果 roic_assumed_pct=0.08,则 ICx0.0008xPE≈0
 
 **参数的经济含义——赋参前必须逐参数过这关:**
 
@@ -389,14 +393,16 @@ PS: 当前 PS 是市场讲的故事。base PS = 当前PS x f(priced_in):
 
 PB: 与 ROE 匹配。ROE<5% 不应 >2x PB（除非隐蔽资产重估）。
 
-ROIC: 故事里的事件节点驱动 ROIC 改善幅度。从叙事推演 ROIC 路径——毛利率修复到多少？规模效应何时释放？——而非从当前低基数线性外推。
+EV/EBITDA: 与行业中枢的偏离幅度必须可解释。上行周期可高于中枢 20-50%。
+
+ROIC: 故事里的事件节点驱动 ROIC 改善幅度。从叙事推演 ROIC 路径——毛利率修复到多少？规模效应何时释放？——而非从当前低基数线性外推。滞后财务数据里的低 ROIC 是故事起点，不是终点。
 
 CAGR/增速: 高增速必须匹配高再投资率（RR=g/ROIC）。增速和 RR 不能脱节。
 
 参数联动规则:
 - 三情景参数必须逐级递增: bear < base < bull，禁止相同数值
 - PE/PS/PB 的升降方向必须与因果剧本一致
-- 概率不由模板决定——由因果链条环节数推导
+- 概率不由模板决定——由因果链条环节数推导。bear 需要 N 个独立环节同时崩塌→联合概率就是小概率，不需要"凑"到某个数字
 
 **参数自检（赋参后逐条过）:**
 
@@ -406,12 +412,17 @@ CAGR/增速: 高增速必须匹配高再投资率（RR=g/ROIC）。增速和 RR 
 
 | 模型 | 代码公式 | 你控制的参数 |
 |------|----------|-------------|
-| A | IC x ROIC% x PE | ROIC、RR(->g)、PE |
-| B | revenue x (1+cagr)^3 x PS | 3y CAGR、PS |
-| C | IC x ROIC% x PE x 拐点折扣 | ROIC、PE、距拐点 |
-| D | equity x PB | PB |
-| G | IC x ROIC% x min(PE, PEGx增速) | ROIC、PE、PEG、增速 |
-| K | sigma[FCFF_t/(1+WACC)^t] + NOPAT_NxPE/(1+WACC)^N | stage1_growth, stage1_years, ROIC, terminal_PE |
+| A | `IC x ROIC% x PE` | ROIC、RR(→g)、PE | RR 决定可持续增速 g=ROIC×RR |
+| C | `IC x ROIC% x PE x 拐点折扣` | ROIC、PE、距拐点 | 拐点>4Q后每年折6% |
+| G | `IC x ROIC% x min(PE, PEGx增速)` | ROIC、PE、PEG、增速 | PE 不能超过 PEGx增速 上限 |
+| B | `revenue x (1+cagr)^3 x PS` | 3y CAGR、PS |
+| D | `equity x PB` | PB |
+| E | `EBITDAx(1+g) x EV/EBITDA - 净负债` | EBITDA增速、EV/EBITDA |
+| F | `峰值销售 x 成功率% / (1+折现率)` | 成功率、峰值销售、折现率 |
+| H | `equity / (1-NAV折价%)` | NAV折价 |
+| I | `投入资本 x 正常化ROIC% x 正常化PE` | 正常化ROIC、正常化PE |
+| J | 保留你的估值 | target_mcap |
+| K | `sigma[FCFF_t/(1+WACC)^t] + NOPAT_NxPE/(1+WACC)^N` | stage1_growth(高增长NOPAT年增速), stage1_years, ROIC(→RR=g/ROIC→FCFF), terminal_PE | 代码逐年折现,NOPAT逐年复利增长,RR封顶[0.3,0.9] |
 
 **赋参数时反向验证: 用上表公式心算一遍，你的参数产出的数字和你因果剧本应得的估值是否匹配？**
 
@@ -834,6 +845,9 @@ def _fill_sotp_placeholders(prompt: str, agent2b_output: dict | None = None) -> 
     # 注入模型专属参数模板（复用 Agent-3 的详细定义）
     schema = MODEL_PARAM_TEMPLATES.get(seg_model, MODEL_PARAM_TEMPLATES["B"])
     self_check = PARAM_SELF_CHECK_MAP.get(seg_model, PARAM_SELF_CHECK_MAP.get("B", ""))
+    # 模型专属参数示例（SOTP 的 scenario_details 只存 prob+narrative，但示例要展示
+    # seg_model 的完整参数以引导 LLM 在 reasoning_trace 中展开推理）
+    params_example_raw = SCENARIO_PARAMS_MAP.get(seg_model, SCENARIO_PARAMS_MAP["A"])
 
     replacements = {
         "{PRIMARY_MODEL}": "J",
@@ -841,11 +855,7 @@ def _fill_sotp_placeholders(prompt: str, agent2b_output: dict | None = None) -> 
         "{MODEL_FAMILY}": "分拆",
         "{VALIDATION_MODEL}": "自校验(SOTP无独立校验模型)",
         "{VALIDATION_MODEL_DESC}": "SOTP不分拆校验",
-        "{SCENARIO_PARAMS_EXAMPLE}": (
-            '"bear": {"probability": 0.20, "scenario_narrative": "<=60字"}, '
-            '"base": {"probability": 0.60, "scenario_narrative": "<=60字"}, '
-            '"bull": {"probability": 0.20, "scenario_narrative": "<=60字"}'
-        ),
+        "{SCENARIO_PARAMS_EXAMPLE}": params_example_raw,
         "{MODEL_PARAM_SCHEMA}": schema,
         "{MODEL_PARAM_NAMES}": f"叙事主锚: {seg_model}模型参数; 其他业务: pe_target/segment_margin_pct(earnings)或target_ps(revenue)或target_pb(asset)",
         "{MODEL_PARAM_SELF_CHECK}": (
