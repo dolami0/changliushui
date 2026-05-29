@@ -252,7 +252,7 @@ tushare/investoday 均无法覆盖的数据，不得以「没有命令」为由�
 
 | 禁止行为 | 检测方式 |
 |---------|---------|
-| 直接接受定数录三情景参数而不独立推演 | valuation 文件中必须标注每个参数来源（独立/引用/修正）。三个情景涨幅与定数录偏差全部 <5pct → ⛔ 视为未独立推演，回退重算。至少一个情景的 CAGR 独立计算、至少一个情景的 PS 有可比公司数据支撑 |
+| 直接接受定数录三情景参数而不独立推演 | valuation 必须闭卷推导：先基于 financial 产品增速+ WebSearch 行业数据+可比公司 PS 自己算完 CAGR/PS/概率，再打开定数录对比。差异 <10pct 可采信定数录；差异 >30pct 必须用自己的。严禁微调上游概率就声称「独立」 |
 | 数据拉取失败后跳过而不切换数据源 | tushare 空 → investoday → WebSearch，链条断点必须在文件中记录 |
 | 只使用上游喂给的案例而不搜索案例库 | case-match 文件中必须出现至少 1 个自行从 `memory/cases/` 检索的案例 |
 | 压缩成一轮搜索 + 一轮输出 | 每个 Skill 至少需要独立的 WebSearch/Bash 回合 |
@@ -322,7 +322,7 @@ decision 文件写入前，逐条对照 `skills/decision.md` 末尾的质量检�
 - 每个 Skill 至少需要 **1 次 Bash + 1 次 WebSearch**（或 investoday 替代）
 - 数据拉取遵循 **tushare(主) → investoday(备) → WebSearch(兜底)**。tushare 成功则跳过后续。tushare 失败（空/报错/乱码）→ 切 investoday；investoday 也失败 → 切 WebSearch。**每次切换必须在文件中记录：哪个源失败、失败原因、切换到谁。**
 - industry 必须通过 **WebSearch 获取 TAM 来源引用 + 竞争对手数据**
-- valuation 必须满足 **三情景硬闸门**（skills/valuation.md §5）：至少一个 CAGR 独立计算 + 至少一个 PS 有可比数据支撑 + 涨跌幅不能全与上游偏差 <5pct + Bear 不能是 Base 打折版
+- valuation 必须 **闭卷推导再开卷对比**（skills/valuation.md §5）：先基于 financial 产品增速+WebSearch 行业数据+可比公司 PS 独立计算 CAGR/PS/概率，再对照定数录。禁止在上游数字上微调概率就声称独立
 - case-match 必须包含 **至少 1 次 Bash: ls/Glob memory/cases/ + Grep 关键词筛选**。匹配到案例 → Read 至少 1 个案例文件进行 6 维比对。无可匹配案例 → 输出「无匹配案例」并说明原因，不强制 Read。
 - catalyst 必须包含 **信源逐条审计（§1）**：逐条追溯上游催化剂至公告/纪要/研报原文 → 标注 L1-L5 等级 → 调研纪要来源必须做两版对比 → L3 及以下不得标 Critical。
 
