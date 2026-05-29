@@ -28,6 +28,8 @@ from valuation_utils import call_deepseek, build_forward_signal_panel, fmt_pct
 from agent3_scenario_asymmetry import (
     ScenarioError,
     _validate_output,
+    MODEL_PARAM_TEMPLATES,
+    PARAM_SELF_CHECK_MAP,
     _fix_trade_annotation,
     _assemble_final_output,
     _augment_trace_with_fixes,
@@ -361,7 +363,11 @@ base = 100% - bull - bear。
 剧本 + 清单项2评分修正 -> 三情景参数。
 参数锚定行业估值中枢（来自 knowledge_supplement 或行业常识），不锚定具体个股案例。
 
-当前模型是 {PRIMARY_MODEL} ({MODEL_DESC})，你必须使用的参数体系:
+当前叙事分部模型是 {PRIMARY_MODEL} ({MODEL_DESC})，参数模板如下:
+
+{MODEL_PARAM_SCHEMA}
+
+你必须使用的参数体系:
 {MODEL_PARAM_NAMES}
 
 **百分比格式铁律——所有带 pct 后缀的字段都使用实际百分比数值,不是小数:**
@@ -392,6 +398,10 @@ CAGR/增速: 高增速必须匹配高再投资率（RR=g/ROIC）。增速和 RR 
 - PE/PS/PB 的升降方向必须与因果剧本一致
 - 概率不由模板决定——由因果链条环节数推导
 
+**参数自检（赋参后逐条过）:**
+
+{MODEL_PARAM_SELF_CHECK}
+
 **注意: 你只输出参数假设。所有估值数字由代码统一计算:**
 
 | 模型 | 代码公式 | 你控制的参数 |
@@ -407,11 +417,12 @@ CAGR/增速: 高增速必须匹配高再投资率（RR=g/ROIC）。增速和 RR 
 
 **SOTP 特殊规则:**
 
-**其他业务** (is_primary=false): 事件催化剂只驱动叙事主线，不影响传统业务。因此其他业务不需要推演三情景——只需要判断它的合理保守估值是多少（一组 base 参数），bear/base/bull 三个情景都用这同一个估值。具体来说：
+**其他业务** (is_primary=false): 事件催化剂只驱动叙事主线，不影响传统业务。因此其他业务不需要推演三情景——只需要判断它的合理估值是多少（一组 base 参数），bear/base/bull 三个情景都用这同一个估值。具体来说：
   - 如果产品结构数据中有该分部的实际毛利率 -> 引用为 segment_margin_pct
   - 如果没有 -> 基于行业知识和公司整体毛利率做合理假设，在 segment_rationale 中标注[估算]
-  - PE 取行业周期底部（通常 10-20x），PS 取保守值（通常 0.5-2.0x），PB 取 0.8-1.2x
+  - PE 取行业合理水平（参考 knowledge_supplement 中的行业中枢，通常 12-25x），PS 取合理值（与增速匹配，通常 1.0-3.0x），PB 取合理值（0.8-2.0x）
   - 这不是精确估值——其他业务的作用是提供一个稳定的基准锚，防止叙事锚把整家公司高估或低估
+  - **关键**: 不要机械取最低值。取"这个业务如果单独上市，市场会给什么估值"。如果行业中枢 PE=20x，不要因为"保守"就给 10x
 
 ### 禁止事项
 - 禁止三个情景共用同一套假设数字微调
@@ -810,11 +821,19 @@ def _format_pricing_tool(agent2a_output: dict) -> str:
 def _fill_sotp_placeholders(prompt: str, agent2b_output: dict | None = None) -> str:
     """替换 SOTP prompt 中残留的 Agent-3 占位符。"""
     # 从 2b 取主锚分部模型
-    seg_model = "?"
+    seg_model = "B"
     if agent2b_output:
         rd = agent2b_output.get("routing_decision", {})
         if isinstance(rd, dict):
             seg_model = rd.get("sotp_primary_segment_model", "B")
+    # 规范化: 取首字母，确保在已知模板中
+    seg_model = seg_model[0] if seg_model else "B"
+    if seg_model not in MODEL_PARAM_TEMPLATES:
+        seg_model = "B"
+
+    # 注入模型专属参数模板（复用 Agent-3 的详细定义）
+    schema = MODEL_PARAM_TEMPLATES.get(seg_model, MODEL_PARAM_TEMPLATES["B"])
+    self_check = PARAM_SELF_CHECK_MAP.get(seg_model, PARAM_SELF_CHECK_MAP.get("B", ""))
 
     replacements = {
         "{PRIMARY_MODEL}": "J",
@@ -827,8 +846,14 @@ def _fill_sotp_placeholders(prompt: str, agent2b_output: dict | None = None) -> 
             '"base": {"probability": 0.60, "scenario_narrative": "<=60字"}, '
             '"bull": {"probability": 0.20, "scenario_narrative": "<=60字"}'
         ),
+        "{MODEL_PARAM_SCHEMA}": schema,
         "{MODEL_PARAM_NAMES}": f"叙事主锚: {seg_model}模型参数; 其他业务: pe_target/segment_margin_pct(earnings)或target_ps(revenue)或target_pb(asset)",
-        "{MODEL_PARAM_SELF_CHECK}": "- 叙事分部参数单调递增\n- 其他业务参数保守合理\n- Bull/base<=3x",
+        "{MODEL_PARAM_SELF_CHECK}": (
+            f"- 叙事分部({seg_model}模型):\n{self_check}\n"
+            "- 叙事分部参数单调递增(bear<base<bull)\n"
+            "- 其他业务参数取行业合理水平(非周期底部)\n"
+            "- Bull/base<=3x"
+        ),
     }
     for k, v in replacements.items():
         prompt = prompt.replace(k, v)
@@ -1060,7 +1085,7 @@ def _compute_segment_value(
         peak = params.get("peak_sales_yi", 0)
         rate = params.get("discount_rate_pct", 15)
         if peak > 0 and pos > 0 and rate > 0:
-            return round(peak * (pos / 100) / (1 + rate / 100), 1)
+            return round(peak * pos / (1 + rate / 100), 1)
         return None
 
     return None
