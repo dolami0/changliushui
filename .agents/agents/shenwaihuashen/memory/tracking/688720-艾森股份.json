@@ -1,0 +1,107 @@
+{
+  "stockCode": "688720",
+  "stockName": "艾森股份",
+  "direction": "long",
+  "thesis": "国内唯一光刻胶+电镀液双赛道企业，华为韬定律确立3D堆叠后摩尔主线，光刻胶GM从22%→36%(+13ppt)独立验证产品结构升级。核心验证点：2026H1光刻胶+电镀液增速>80%+华为秋发拆解证实逻辑折叠规模采用。",
+  "conviction": 61,
+  "decisionDate": "2026-05-29",
+  "decision": "有条件通过",
+  "recommendedPosition": 10,
+  "actualPosition": 0,
+  "entryCondition": "H1光刻胶增速>60%后建首批4%，华为秋发拆解证实后加至7%",
+  "entryPriceTarget": null,
+  "pillars": [
+    {
+      "name": "光刻胶产品升级",
+      "expectation": "2026H1光刻胶收入增速>60%，GM持续改善(>36%)，KrF/PSPI新品验证通过",
+      "quantifiedTarget": "H1光刻胶收入>1亿, GM>36%",
+      "status": "pending",
+      "verificationDate": "2026-08-31",
+      "lastChecked": "2026-05-29",
+      "history": [{"date": "2026-05-29", "actual": "FY2025光刻胶1.36亿(+43.5%), GM 35.5%(+13ppt YoY)", "trend": "up"}]
+    },
+    {
+      "name": "电镀液先进制程放量",
+      "expectation": "2026H1电镀液收入增速>50%，28nm产品在存储客户端批量供货，GM企稳(>38%)",
+      "quantifiedTarget": "H1电镀液收入>2亿, GM>38%",
+      "status": "pending",
+      "verificationDate": "2026-08-31",
+      "lastChecked": "2026-05-29",
+      "history": [{"date": "2026-05-29", "actual": "FY2025电镀液2.88亿(+46.9%), GM 38.8%(-6ppt YoY, 关注)", "trend": "down"}]
+    },
+    {
+      "name": "华为韬定律催化兑现",
+      "expectation": "2026年9-10月华为秋季麒麟芯片发布，第三方拆解证实逻辑折叠技术大规模采用",
+      "status": "pending",
+      "verificationDate": "2026-10-31",
+      "lastChecked": "2026-05-29",
+      "history": [{"date": "2026-05-29", "actual": "5/25何庭波ISCAS 2026正式发布韬定律，381款芯片已量产", "trend": "up"}]
+    },
+    {
+      "name": "GM趋势持续改善",
+      "expectation": "综合GM从29%→32%+，高毛利产品(光刻胶+先进电镀液)收入占比从71.5%→>75%",
+      "status": "pending",
+      "verificationDate": "2026-08-31",
+      "lastChecked": "2026-05-29",
+      "history": [{"date": "2026-05-29", "actual": "FY2025 GM 29.0%(vs FY2024 26.6%), Q1 2026 27.7%(季节性)", "trend": "up"}]
+    },
+    {
+      "name": "南通基地如期投产",
+      "expectation": "南通23000吨新产能按计划分阶段投产，2026年底前首期投产",
+      "status": "pending",
+      "verificationDate": "2026-12-31",
+      "lastChecked": "2026-05-29",
+      "history": []
+    }
+  ],
+  "risks": [
+    {"name": "PE 178x估值压缩", "probability": "高", "impact": "PE回归过程中股价可能横盘", "monitoring": "每季PE+Forward PE"},
+    {"name": "电镀液GM持续下滑", "probability": "中", "impact": "核心业务利润恶化，综合GM承压", "monitoring": "每季报电镀液GM"},
+    {"name": "华为技术路线变更", "probability": "低", "impact": "逻辑折叠未规模采用，核心催化剂落空", "monitoring": "2026秋华为发布会+拆解"},
+    {"name": "南通产能消化", "probability": "中", "impact": "20亿投入若订单不及预期→折旧压力", "monitoring": "每季产能利用率"},
+    {"name": "BIS出口管制升级", "probability": "低-中", "impact": "限制3D堆叠设备/材料对华出口", "monitoring": "BIS实体清单更新"}
+  ],
+  "exitConditions": [
+    "半年报光刻胶增速<30% → 清仓",
+    "电镀液GM再降>3ppt(至<35%) → 减至3%",
+    "华为秋发未采用逻辑折叠 → 减半仓",
+    "跌破60元(~55亿) → 清仓"
+  ],
+  "catalystCalendar": [
+    {"date": "2026-08", "event": "2026半年报", "type": "财报", "impact": "H", "bull": "光刻胶+电镀液>80%", "bear": "<40%", "sourceLevel": "L5", "sourceDetail": "公司定期报告", "status": "pending"},
+    {"date": "2026-09", "event": "华为秋季麒麟芯片发布", "type": "行业", "impact": "H", "bull": "拆解证实逻辑折叠规模采用", "bear": "未采用或采用有限", "sourceLevel": "L5", "sourceDetail": "华为官方宣布", "sourceNote": "2026秋麒麟首发逻辑折叠", "status": "pending"},
+    {"date": "2026-Q4", "event": "南通基地首期投产", "type": "公司", "impact": "M", "bull": "如期投产", "bear": "延期", "sourceLevel": "L3", "status": "pending"},
+    {"date": "2026-H2", "event": "可转债20亿发行", "type": "公司", "impact": "M", "bull": "成功发行", "bear": "失败/缩量", "sourceLevel": "L3", "status": "pending"}
+  ],
+  "basePrice": null,
+  "baseMarketCap": 91.0,
+  "baseDate": "2026-05-29",
+  "basePE": 177.6,
+  "priceLog": [],
+  "positionLog": [],
+  "thesisLog": [{
+    "version": 1,
+    "date": "2026-05-29T10:30:00",
+    "thesis": "国内唯一光刻胶+电镀液双赛道企业，华为韬定律确立3D堆叠后摩尔主线，光刻胶GM从22%→36%(+13ppt)独立验证产品结构升级。核心验证点：2026H1光刻胶+电镀液增速>80%+华为秋发拆解证实逻辑折叠规模采用。",
+    "conviction": 72,
+    "delta": "0",
+    "trigger": "身外化身 7-Skill 流水线建档",
+    "narrative": "艾森股份是国内唯一同时布局光刻胶+电镀液双赛道的半导体材料企业。华为5/25发布韬定律确立3D堆叠为后摩尔时代主线→TSV电镀液/PSPI光刻胶需求爆发。Numbers验证：光刻胶GM+13ppt是产品结构升级的最强独立信号，扣非+93%远超归母+53%说明利润质量高。电镀液GM下滑6ppt是主要隐忧。市值91亿满足小市值条件，Numbers强支撑Narrative。",
+    "verifiedAssumptions": ["光刻胶GM+13ppt验证产品升级"],
+    "invalidatedAssumptions": [],
+    "newUnknowns": ["电镀液GM能否企稳", "华为秋发拆解结果", "南通基地投产进度"],
+    "narrativeTension": "stable"
+  }],
+  "aShareTracking": {
+    "pledgeCheck": {"lastChecked": "2026-05-29", "result": "双源确认零质押"},
+    "unlockCheck": {"lastChecked": "2026-05-29", "result": "待首次巡检"},
+    "marginCheck": {"lastChecked": "2026-05-29", "result": "待首次月度专检"},
+    "insiderTrading": {"lastChecked": "2026-05-29", "result": "待首次月度专检"}
+  },
+  "reviewSchedule": {
+    "nextFullReview": "2026-08-31(半年报)",
+    "nextQuickCheck": "2026-05-30(明日巡检)",
+    "lastCheck": "2026-05-29(建档)",
+    "patrolFrequency": "每个工作日 9:07"
+  }
+}
