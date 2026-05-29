@@ -1,8 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useMobile } from '../hooks/useMobile';
 import {
   fetchStatus, createProgressStream,
+  triggerPoll, startScheduler, stopScheduler,
+  fetchTianjiStatus, startWangqi, stopWangqi, triggerWangqi,
   triggerReview, fetchReviewStatus, fetchReviewFiles,
+  type TianjiStatus,
   type ProgressEvent,
   type ReviewStatus,
   type ReviewFile,
@@ -15,6 +19,40 @@ const cardBase: React.CSSProperties = {
   padding: '20px 24px',
   transition: 'all 0.3s ease',
 };
+
+/* ------------------------------------------------------------------ */
+/*  CountdownTimer                                                       */
+/* ------------------------------------------------------------------ */
+function CountdownTimer({ nextPollAt }: { nextPollAt: string | null }) {
+  const [remaining, setRemaining] = useState('—');
+
+  useEffect(() => {
+    const calc = () => {
+      if (!nextPollAt) { setRemaining('—'); return; }
+      const diff = new Date(nextPollAt).getTime() - Date.now();
+      if (diff <= 0) { setRemaining('00:00:00'); return; }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      setRemaining(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
+    };
+    calc();
+    const id = setInterval(calc, 1000);
+    return () => clearInterval(id);
+  }, [nextPollAt]);
+
+  return (
+    <span style={{
+      fontFamily: "'Geist Pixel', monospace",
+      fontSize: '26px',
+      color: '#ADFF00',
+      letterSpacing: '0.06em',
+      textShadow: '0 0 12px rgba(173,255,0,0.35)',
+    }}>
+      {remaining}
+    </span>
+  );
+}
 
 /* ------------------------------------------------------------------ */
 /*  StatusCard                                                          */
@@ -67,15 +105,38 @@ export default function Dashboard() {
   const jobsRef = useRef<HTMLDivElement>(null);
 
   const [sseConnected, setSseConnected] = useState(false);
+  const [schedulerRunning, setSchedulerRunning] = useState(false);
+  const [lastPollAt, setLastPollAt] = useState<string | null>(null);
+  const [nextPollAt, setNextPollAt] = useState<string | null>(null);
   const [activeJobs, setActiveJobs] = useState<Array<{ stock_code: string; stock_name: string; status: string }>>([]);
   const [completedJobs, setCompletedJobs] = useState<Array<{ stock_code: string; stock_name: string; status: string; report_url?: string }>>([]);
+  const [tianjiStatus, setTianjiStatus] = useState<TianjiStatus | null>(null);
+  const [wangqiLoading, setWangqiLoading] = useState(false);
+
+  const wangqiRunning = tianjiStatus?.running ?? false;
+  const wangqiNextTime = tianjiStatus?.next_poll_at
+    ? new Date(tianjiStatus.next_poll_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+    : '—';
+  const wangqiCountdown = tianjiStatus?.next_poll_at
+    ? (() => { const d = (new Date(tianjiStatus.next_poll_at!).getTime() - Date.now()) / 1000; return d > 0 ? `${Math.floor(d/60)}:${String(Math.floor(d%60)).padStart(2,'0')}` : '即将'; })()
+    : '';
+
+  async function handleWangqiStart() { try { await startWangqi(); setTianjiStatus(prev => prev ? { ...prev, running: true } : null); } catch {} }
+  async function handleWangqiStop() { try { await stopWangqi(); setTianjiStatus(prev => prev ? { ...prev, running: false } : null); } catch {} }
+  async function handleWangqiTrigger() {
+    setWangqiLoading(true);
+    try { await triggerWangqi(); await fetchTianjiStatus().then(setTianjiStatus); } catch {}
+    setWangqiLoading(false);
+  }
   const [jobProgress, setJobProgress] = useState<Record<string, ProgressEvent>>({});
   const [jobHistory, setJobHistory] = useState<Record<string, ProgressEvent[]>>({});
   const [error, setError] = useState('');
+  const [triggerLoading, setTriggerLoading] = useState(false);
   const [reviewTriggerLoading, setReviewTriggerLoading] = useState(false);
   const [reviewStatus, setReviewStatus] = useState<ReviewStatus | null>(null);
   const [reviewFiles, setReviewFiles] = useState<ReviewFile[]>([]);
   const [reviewMsg, setReviewMsg] = useState<{ text: string; color: string } | null>(null);
+  const [toast, setToast] = useState<{ text: string; color: string } | null>(null);
   const [expandedJob, setExpandedJob] = useState<string | null>(null);
 
   // 初始加载 + SSE 连接
@@ -88,6 +149,7 @@ export default function Dashboard() {
           setJobHistory((prev) => {
             const list = prev[event.stock_code] || [];
             const last = list[list.length - 1];
+            // 只在阶段/步骤变化时追加，避免重复
             if (!last || last.stage !== event.stage || last.step !== event.step || last.status !== event.status) {
               return { ...prev, [event.stock_code]: [...list, event] };
             }
@@ -103,6 +165,9 @@ export default function Dashboard() {
     } catch { /* EventSource not supported */ }
 
     fetchStatus().then((s) => {
+      setSchedulerRunning(s.scheduler_running);
+      setLastPollAt(s.last_poll_at);
+      setNextPollAt(s.next_poll_at);
       setActiveJobs(s.active_jobs || []);
       setCompletedJobs(s.completed_jobs || []);
       setSseConnected(true);
@@ -114,15 +179,27 @@ export default function Dashboard() {
     return () => { if (es) es.close(); };
   }, []);
 
-  // 定时刷新状态 (30s)
+  // 定时刷新状态 (10s)
   useEffect(() => {
     const id = setInterval(async () => {
       try {
         const s = await fetchStatus();
+        setSchedulerRunning(s.scheduler_running);
+        setLastPollAt(s.last_poll_at);
+        setNextPollAt(s.next_poll_at);
         setActiveJobs(s.active_jobs || []);
         setCompletedJobs(s.completed_jobs || []);
       } catch { /* keep stale */ }
-    }, 30_000);
+    }, 10_000);
+    return () => clearInterval(id);
+  }, []);
+
+  // 天机状态轮询
+  useEffect(() => {
+    fetchTianjiStatus().then(setTianjiStatus).catch(() => setTianjiStatus({ running: false, initialized: false, interval_sec: 0, last_poll_at: null, next_poll_at: null, current_status: 'offline', completed_count: 0, completed_jobs: [] }));
+    const id = setInterval(() => {
+      fetchTianjiStatus().then(setTianjiStatus).catch(() => setTianjiStatus({ running: false, initialized: false, interval_sec: 0, last_poll_at: null, next_poll_at: null, current_status: 'offline', completed_count: 0, completed_jobs: [] }));
+    }, 10_000);
     return () => clearInterval(id);
   }, []);
 
@@ -140,6 +217,37 @@ export default function Dashboard() {
     if (!contentRef.current) return;
     const cards = contentRef.current.querySelectorAll('.dash-card');
     gsap.fromTo(cards, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.5, stagger: 0.08, ease: 'power2.out' });
+  }, []);
+
+  const showToast = (text: string, color: string) => {
+    setToast({ text, color });
+    setTimeout(() => setToast(null), 5000);
+  };
+
+  const handleTrigger = useCallback(async () => {
+    setTriggerLoading(true);
+    setError('');
+    try {
+      const res = await triggerPoll();
+      if (res.processed > 0) {
+        showToast(`触发完成 · 处理了 ${res.processed} 条记录`, '#ADFF00');
+      } else {
+        showToast('触发完成 · 本轮无新记录，无需处理', '#777');
+      }
+    } catch (e) { setError(String(e)); }
+    finally { setTriggerLoading(false); }
+  }, []);
+
+  const handleStart = useCallback(async () => {
+    setError('');
+    try { await startScheduler(); setSchedulerRunning(true); }
+    catch (e) { setError(String(e)); }
+  }, []);
+
+  const handleStop = useCallback(async () => {
+    setError('');
+    try { await stopScheduler(); setSchedulerRunning(false); setNextPollAt(null); }
+    catch (e) { setError(String(e)); }
   }, []);
 
   const handleReviewTrigger = useCallback(async () => {
@@ -167,24 +275,57 @@ export default function Dashboard() {
     fetchReviewFiles().then(files => setReviewFiles(files)).catch(e => { console.error('reviewFiles fetch failed:', e); setReviewFiles([]); });
   }, []);
 
+  const nextTimeStr = nextPollAt
+    ? new Date(nextPollAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    : '—';
+
   return (
     <div style={{ minHeight: 'calc(100vh - 58px)', background: '#050401', color: '#F2F4F3' }}>
       <div ref={contentRef} style={{ maxWidth: '960px', margin: '0 auto', padding: mobile ? '24px 20px 48px' : '32px 48px 64px' }}>
         {/* Header */}
-        <div className="dash-card" style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div className="dash-card" style={{ marginBottom: '32px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
             <span style={{ width: '8px', height: '8px', background: '#ADFF00', boxShadow: '0 0 8px rgba(173,255,0,0.5)', animation: 'pulse 2s ease-in-out infinite', display: 'inline-block' }} />
             <h1 style={{ fontFamily: "'Geist Pixel', 'Noto Sans SC', monospace", fontSize: '28px', fontWeight: 400, color: '#ADFF00', margin: 0, letterSpacing: '0.06em', textShadow: '0 0 16px rgba(173,255,0,0.3)' }}>估值重构炉</h1>
-            <span style={{ flex: 1 }} />
-            <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#555' }}>
-              {sseConnected ? 'SSE 在线' : 'SSE 离线'} · {completedJobs.length} 份报告
-            </span>
           </div>
+          <p style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '14px', color: '#777', margin: 0 }}>
+            {schedulerRunning ? '引擎运转中' : '引擎已暂停'} · 每整点运行 · 已产出 {completedJobs.length} 份报告
+          </p>
         </div>
 
-        {error && (
-          <p style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#FF5C00', marginBottom: '16px', padding: '10px 16px', background: 'rgba(255,92,0,0.06)', border: '1px solid rgba(255,92,0,0.2)' }}>{error}</p>
-        )}
+        {/* Status Cards */}
+        <div className="dash-card" style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
+          <StatusCard label="SSE 连接" value={sseConnected ? '已连接' : '未连接'} color={sseConnected ? '#ADFF00' : '#FF5C00'} dot />
+          <StatusCard label="调度器" value={schedulerRunning ? '运行中' : '已暂停'} color={schedulerRunning ? '#ADFF00' : '#666'} dot />
+          <StatusCard label="上次轮询" value={lastPollAt ? new Date(lastPollAt).toLocaleTimeString('zh-CN') : '—'} color="#AAA" />
+          <StatusCard label="下次轮询" value={nextTimeStr} color="#AAA" />
+        </div>
+
+        {/* Controls + Countdown */}
+        <div className="dash-card" style={{ ...cardBase, marginBottom: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            <ControlBtn label="▶ 启动" onClick={handleStart} disabled={schedulerRunning} color="#ADFF00" />
+            <ControlBtn label="■ 停止" onClick={handleStop} disabled={!schedulerRunning} color="#FF5C00" />
+            <ControlBtn label="⚡ 手动触发" onClick={handleTrigger} disabled={triggerLoading} color="#ADFF00" loading={triggerLoading} />
+            <span style={{ flex: 1, height: '1px', background: '#2A2A2A' }} />
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '16px' }}>
+              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '16px', color: '#555', letterSpacing: '0.12em' }}>
+                距下次运行
+              </span>
+              <CountdownTimer nextPollAt={schedulerRunning ? nextPollAt : null} />
+            </div>
+          </div>
+          {toast && (
+            <p style={{
+              fontFamily: "'Space Mono', monospace", fontSize: '15px', color: toast.color,
+              marginTop: '12px', borderTop: '1px solid #2A2A2A', paddingTop: '10px',
+              animation: 'fadeUp 0.3s ease',
+            }}>{toast.text}</p>
+          )}
+          {error && (
+            <p style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#FF5C00', marginTop: toast ? '6px' : '12px', borderTop: toast ? 'none' : '1px solid #2A2A2A', paddingTop: toast ? '4px' : '10px' }}>{error}</p>
+          )}
+        </div>
 
         {/* 报告审阅 */}
         <div className="dash-card" style={{ ...cardBase, marginBottom: '20px' }}>
@@ -259,6 +400,52 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+
+        {/* 望气 — 产业利润流 */}
+        {tianjiStatus && (
+          <div className="dash-card" style={{ ...cardBase, marginBottom: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+              <span style={{ width: '8px', height: '8px', background: wangqiRunning ? '#C88D3A' : '#444', boxShadow: wangqiRunning ? '0 0 8px rgba(200,141,58,0.5)' : 'none' }} />
+              <span style={{ fontFamily: "'Geist Pixel', monospace", fontSize: '18px', color: '#C88D3A', letterSpacing: '0.06em' }}>望气</span>
+              <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#666' }}>产业利润流</span>
+            </div>
+            <p style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '14px', color: '#777', margin: '0 0 16px 0' }}>
+              {wangqiRunning ? '望气运转中' : '望气已暂停'} · 每{Math.floor((tianjiStatus.interval_sec || 3600) / 60)}分钟轮询 · 已洞察 {tianjiStatus.completed_count} 次
+            </p>
+
+            <div style={{ display: 'grid', gridTemplateColumns: mobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
+              <StatusCard label="望气" value={wangqiRunning ? '运转中' : '已暂停'} color={wangqiRunning ? '#C88D3A' : '#666'} dot />
+              <StatusCard label="上次洞察" value={tianjiStatus.last_poll_at ? new Date(tianjiStatus.last_poll_at).toLocaleTimeString('zh-CN') : '—'} color="#AAA" />
+              <StatusCard label="下次洞察" value={wangqiNextTime} color="#AAA" />
+              <StatusCard label="当前" value={tianjiStatus.current_status === 'idle' ? '等待中' : tianjiStatus.current_status} color={tianjiStatus.current_status !== 'idle' ? '#C88D3A' : '#888'} />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+              <ControlBtn label="▶ 启动" onClick={handleWangqiStart} disabled={wangqiRunning} color="#C88D3A" />
+              <ControlBtn label="■ 停止" onClick={handleWangqiStop} disabled={!wangqiRunning} color="#FF5C00" />
+              <ControlBtn label="⚡ 洞察" onClick={handleWangqiTrigger} disabled={wangqiLoading} color="#C88D3A" loading={wangqiLoading} />
+              <span style={{ flex: 1, height: '1px', background: '#2A2A2A' }} />
+              {tianjiStatus.next_poll_at && (
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '16px' }}>
+                  <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '16px', color: '#555', letterSpacing: '0.12em' }}>距下次洞察</span>
+                  <span style={{ fontFamily: "'Geist Pixel', monospace", fontSize: '24px', color: '#C88D3A', textShadow: '0 0 12px rgba(200,141,58,0.35)', letterSpacing: '0.06em' }}>{wangqiCountdown}</span>
+                </div>
+              )}
+            </div>
+
+            {tianjiStatus.completed_jobs && tianjiStatus.completed_jobs.length > 0 && (
+              <div style={{ marginTop: '14px', borderTop: '1px solid #2A2A2A', paddingTop: '10px' }}>
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#555', marginRight: '16px' }}>最近洞察</span>
+                {tianjiStatus.completed_jobs.slice(-3).reverse().map((j, i) => (
+                  <span key={i} style={{ fontSize: '14px', color: i === 0 ? '#C88D3A' : '#888', marginRight: '24px' }}>
+                    {j.top_pick || '无标的'}
+                    {j.runner_up && j.runner_up !== '无高赔率标的' ? ` | ${j.runner_up}` : ''}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Active Jobs */}
         {activeJobs.length > 0 && (

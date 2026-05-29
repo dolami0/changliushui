@@ -1,11 +1,66 @@
 import path from "path"
+import fs from "fs"
 import react from "@vitejs/plugin-react"
-import { defineConfig } from "vite"
+import { defineConfig, type Plugin } from "vite"
+
+const TRACKING_DIR = path.resolve(__dirname, ".agents/agents/shenwaihuashen/memory/tracking")
+
+function trackingApiPlugin(): Plugin {
+  return {
+    name: "tracking-api",
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (!req.url?.startsWith("/api/tracking")) return next()
+
+        res.setHeader("Access-Control-Allow-Origin", "*")
+        res.setHeader("Content-Type", "application/json; charset=utf-8")
+
+        const subpath = decodeURIComponent(req.url.replace("/api/tracking", "")) || "/"
+
+        if (subpath === "/" || subpath === "") {
+          try {
+            if (!fs.existsSync(TRACKING_DIR)) {
+              res.statusCode = 200
+              res.end(JSON.stringify([]))
+              return
+            }
+            const files = fs.readdirSync(TRACKING_DIR).filter(f => f.endsWith(".json") && f !== "_template.json")
+            const stocks = files.map(f => {
+              const raw = fs.readFileSync(path.join(TRACKING_DIR, f), "utf-8")
+              return JSON.parse(raw)
+            })
+            res.statusCode = 200
+            res.end(JSON.stringify(stocks))
+          } catch {
+            res.statusCode = 500
+            res.end(JSON.stringify({ error: "Failed to read tracking data" }))
+          }
+        } else {
+          const filename = subpath.replace(/^\//, "")
+          try {
+            const filePath = path.join(TRACKING_DIR, filename)
+            if (!fs.existsSync(filePath)) {
+              res.statusCode = 404
+              res.end(JSON.stringify({ error: "File not found" }))
+              return
+            }
+            const raw = fs.readFileSync(filePath, "utf-8")
+            res.statusCode = 200
+            res.end(raw)
+          } catch {
+            res.statusCode = 500
+            res.end(JSON.stringify({ error: "Failed to read tracking file" }))
+          }
+        }
+      })
+    },
+  }
+}
 
 // https://vite.dev/config/
 export default defineConfig({
   base: './',
-  plugins: [react()],
+  plugins: [react(), trackingApiPlugin()],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -14,22 +69,19 @@ export default defineConfig({
   server: {
     allowedHosts: ['.ngrok-free.dev'],
     proxy: {
-      // 只读 API → api-server (port 3001)
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:8080',
         changeOrigin: true,
       },
-      // 控制后台 → admin-server (port 3002)
-      // 前端/管理页面通过 /admin/api/* 调用
-      '/admin': {
-        target: 'http://localhost:3002',
-        changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/admin/, ''),
-      },
-      // 审阅 HTML 页面 → admin-server
       '/review': {
-        target: 'http://localhost:3002',
+        target: 'http://localhost:8080',
         changeOrigin: true,
+      },
+      '/investoday-market': {
+        target: 'https://data-api.investoday.net',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/investoday-market/, '/data/market'),
+        headers: { 'User-Agent': 'changliushui/1.0' },
       },
     },
   },
