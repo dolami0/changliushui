@@ -100,6 +100,7 @@ interface TrackingData {
   priceLog: PriceLogEntry[]
   positionLog: unknown[]
   thesisLog?: ThesisVersion[]
+  valuationComparison?: ValuationComparison
   aShareTracking: AShareChecks
   reviewSchedule: {
     nextFullReview: string
@@ -107,6 +108,26 @@ interface TrackingData {
     lastCheck: string
     patrolFrequency?: string
   }
+}
+
+interface ScenarioRow {
+  myCAGR: number
+  myPS: number
+  myReturn: number
+  upCAGR: number
+  upPS: number
+  upReturn: number
+}
+
+interface ValuationComparison {
+  date: string
+  method: string
+  scenarios: { bear: ScenarioRow; base: ScenarioRow; bull: ScenarioRow }
+  myWeightedReturn: number
+  upWeightedReturn: number
+  myAsymmetry: number
+  upAsymmetry: number
+  verdict: string
 }
 
 /* ================================================================== */
@@ -336,6 +357,123 @@ function PriceChartPanel({ priceLog, basePrice, baseDate, baseMarketCap }: {
         ) : (
           <div className="h-[160px] flex items-center justify-center text-sm text-muted-foreground">
             数据不足，暂无走势图
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+/* ================================================================== */
+/*  Valuation comparison (身外化身 vs 定数录)                             */
+/* ================================================================== */
+
+const SCENARIO_COLORS = {
+  bull:  { dot: 'bg-[#ADFF00]', border: 'border-[#ADFF00]/20', bg: 'bg-[#ADFF00]/[0.02]', label: '牛 Bull' },
+  base:  { dot: 'bg-amber-400',  border: 'border-amber-400/20',  bg: 'bg-amber-400/[0.02]',  label: '基 Base' },
+  bear:  { dot: 'bg-red-400',    border: 'border-red-400/20',    bg: 'bg-red-400/[0.02]',    label: '熊 Bear' },
+}
+
+function ValuationCompare({ vc, basePrice, baseMarketCap }: { vc: ValuationComparison; basePrice: number; baseMarketCap: number }) {
+  return (
+    <Card className="border-white/5 bg-[#050401]">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base font-semibold flex items-center gap-2">
+          <Activity size={14} className="text-[#C88D3A]" />
+          估值推演对比
+          <span className="text-xs text-muted-foreground font-normal">{vc.date}</span>
+        </CardTitle>
+        <CardDescription className="text-xs">{vc.method}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {/* 三情景 —— 每情景一行 */}
+        {(['bear', 'base', 'bull'] as const).map(scenario => {
+          const s = vc.scenarios[scenario]
+          const c = SCENARIO_COLORS[scenario]
+          const returnColor = s.myReturn >= 0 ? 'text-[#ADFF00]' : 'text-red-400'
+          const upReturnColor = s.upReturn >= 0 ? 'text-[#ADFF00]/60' : 'text-red-400/60'
+          return (
+            <div key={scenario} className={cn('rounded-lg border p-3', c.border, c.bg)}>
+              {/* 情景标签 + 涨跌幅 + 目标市值/价 */}
+              <div className="flex items-center gap-2 mb-2">
+                <span className={cn('w-2 h-2 rounded-full', c.dot)} />
+                <span className="text-sm font-semibold">{c.label}</span>
+                <span className="flex-1" />
+                <span className={cn('text-sm font-mono font-semibold', returnColor)}>
+                  {s.myReturn >= 0 ? '+' : ''}{s.myReturn.toFixed(1)}%
+                </span>
+                <span className="text-xs text-muted-foreground">化身</span>
+              </div>
+
+              {/* 目标市值 + 目标价 */}
+              <div className="flex items-center gap-3 text-xs mb-2">
+                {/* 化身 */}
+                <div className="flex-1">
+                  <span className="text-muted-foreground">市值 </span>
+                  <span className="font-mono text-[#ADFF00]/80">
+                    {(baseMarketCap * (1 + s.myReturn / 100)).toFixed(0)}亿
+                  </span>
+                  <span className="text-muted-foreground ml-2">价 </span>
+                  <span className="font-mono text-[#ADFF00]/80">
+                    ¥{(basePrice * (1 + s.myReturn / 100)).toFixed(1)}
+                  </span>
+                </div>
+                {/* 定数录 */}
+                <div className="flex-1 text-muted-foreground/60">
+                  <span className="text-muted-foreground/50">定数录 </span>
+                  <span className="font-mono">
+                    {(baseMarketCap * (1 + s.upReturn / 100)).toFixed(0)}亿
+                  </span>
+                  <span className="ml-1">
+                    ¥{(basePrice * (1 + s.upReturn / 100)).toFixed(1)}
+                  </span>
+                </div>
+              </div>
+
+              {/* CAGR + PS 对比条 */}
+              <div className="flex items-center gap-3 text-xs">
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground">CAGR</span>
+                  <span className="font-mono text-[#ADFF00]/80">{s.myCAGR.toFixed(0)}%</span>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span className="font-mono text-muted-foreground/60">{s.upCAGR.toFixed(0)}%</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-muted-foreground">PS</span>
+                  <span className="font-mono text-[#ADFF00]/80">{s.myPS.toFixed(0)}x</span>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span className="font-mono text-muted-foreground/60">{s.upPS.toFixed(0)}x</span>
+                </div>
+              </div>
+            </div>
+          )
+        })}
+
+        {/* 汇总行 */}
+        <div className="flex items-center gap-4 p-2 rounded bg-white/[0.02] text-xs">
+          <div className="flex items-center gap-1">
+            <span className="text-muted-foreground">概率加权</span>
+            <span className="font-mono text-[#ADFF00]">{vc.myWeightedReturn.toFixed(1)}%</span>
+            <span className="text-muted-foreground/40">vs</span>
+            <span className="font-mono text-muted-foreground">{vc.upWeightedReturn.toFixed(1)}%</span>
+          </div>
+          <span className="text-muted-foreground/20">|</span>
+          <div className="flex items-center gap-1">
+            <span className="text-muted-foreground">不对称</span>
+            <span className="font-mono text-[#ADFF00]">{vc.myAsymmetry.toFixed(1)}x</span>
+            <span className="text-muted-foreground/40">vs</span>
+            <span className="font-mono text-muted-foreground">{vc.upAsymmetry.toFixed(1)}x</span>
+          </div>
+          <span className="flex-1" />
+          <span className="text-muted-foreground/50">
+            {vc.myWeightedReturn < vc.upWeightedReturn ? '↓ 更保守' : '↑ 更乐观'}
+          </span>
+        </div>
+
+        {/* 裁决 */}
+        {vc.verdict && (
+          <div className="p-2 rounded border border-[#C88D3A]/10 bg-[#C88D3A]/[0.02]">
+            <div className="text-xs text-muted-foreground leading-relaxed">{vc.verdict}</div>
           </div>
         )}
       </CardContent>
@@ -736,6 +874,11 @@ export default function Tracking() {
                 baseDate={selectedStock.baseDate}
                 baseMarketCap={selectedStock.baseMarketCap}
               />
+
+              {/* ---- 估值对比 ---- */}
+              {selectedStock.valuationComparison && (
+                <ValuationCompare vc={selectedStock.valuationComparison} basePrice={selectedStock.basePrice} baseMarketCap={selectedStock.baseMarketCap} />
+              )}
 
               {/* ---- 催化剂日历 ---- */}
               <CatalystTimeline events={selectedStock.catalystCalendar} />

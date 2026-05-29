@@ -81,6 +81,20 @@
     {"date": "2026-05-28", "price": 103.25, "pe": 177.6, "mv_yi": 91.0, "return_pct": 0.0, "mv_change_pct": 0.0, "note": "建档基准价"}
   ],
   "positionLog": [],
+  "valuationComparison": {
+    "date": "2026-05-29",
+    "method": "闭卷推导→开卷对比",
+    "scenarios": {
+      "bear": { "myCAGR": 20.1, "myPS": 5, "myReturn": -43.4, "upCAGR": 15, "upPS": 3, "upReturn": -68.5 },
+      "base": { "myCAGR": 36.0, "myPS": 10, "myReturn": 64.1, "upCAGR": 38, "upPS": 12, "upReturn": 118.4 },
+      "bull": { "myCAGR": 50.1, "myPS": 16, "myReturn": 253.8, "upCAGR": 60, "upPS": 20, "upReturn": 467.1 }
+    },
+    "myWeightedReturn": 95.4,
+    "upWeightedReturn": 177.7,
+    "myAsymmetry": 5.8,
+    "upAsymmetry": 6.8,
+    "verdict": "独立参数更保守：Bull PS 16x vs 上游20x(20x需GM>50%,艾森当前28%)，Base PS 10x vs 12x(对标彤程11x/GM22%)。差异>30pct→采用独立参数。"
+  },
   "thesisLog": [{
     "version": 1,
     "date": "2026-05-29T10:30:00",

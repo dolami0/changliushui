@@ -109,6 +109,20 @@ cd D:\长流水\.agents\agents\shenwaihuashen && python data_helper.py daily <co
     {"date": "2026-05-27", "price": 66.53, "pe": 149.8, "mv_yi": 110.25, "return_pct": 0.0, "mv_change_pct": 0.0, "note": "建档基准价"}
   ],
   "positionLog": [],
+  "valuationComparison": {
+    "date": "2026-05-29",
+    "method": "闭卷推导→开卷对比",
+    "scenarios": {
+      "bear": { "myCAGR": 0, "myPS": 0, "myReturn": 0, "upCAGR": 0, "upPS": 0, "upReturn": 0 },
+      "base": { "myCAGR": 0, "myPS": 0, "myReturn": 0, "upCAGR": 0, "upPS": 0, "upReturn": 0 },
+      "bull": { "myCAGR": 0, "myPS": 0, "myReturn": 0, "upCAGR": 0, "upPS": 0, "upReturn": 0 }
+    },
+    "myWeightedReturn": 0,
+    "upWeightedReturn": 0,
+    "myAsymmetry": 0,
+    "upAsymmetry": 0,
+    "verdict": ""
+  },
   "aShareTracking": {
     "pledgeCheck": {"lastChecked": "2026-05-28", "result": "质押率0.88%"},
     "unlockCheck": {"lastChecked": "2026-05-28", "result": "无近期大额解禁"},
