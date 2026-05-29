@@ -354,7 +354,13 @@ class Scheduler:
 
         # ── rNPV 管线键名映射 (agent3r→agent3, agent2r→agent2) ──
         pipeline_type = result.get("pipeline_type", "standard")
+        # 先保存 rNPV 专属数据（在键名映射前）
+        _rnpv_data = {}
         if pipeline_type == "rnpv":
+            for rnpv_key in ("agent1r", "agent2r", "agent3r"):
+                val = result.get(rnpv_key)
+                if val is not None:
+                    _rnpv_data[rnpv_key] = val
             if "agent3" not in result and "agent3r" in result:
                 result = dict(result)
                 result["agent3"] = result.pop("agent3r")
@@ -426,12 +432,10 @@ class Scheduler:
             "pipeline_type": pipeline_type,
             "audit": result.get("audit", {}),
         }
-        # rNPV 管线保留专属数据
-        if pipeline_type == "rnpv":
-            for rnpv_key in ("agent1r", "agent2r"):
-                val = result.get(rnpv_key)
-                if val is not None:
-                    payload[rnpv_key] = self._serialize_agent_output(val)
+        # rNPV 管线保留专属数据（从映射前保存的 _rnpv_data 取）
+        if pipeline_type == "rnpv" and _rnpv_data:
+            for rnpv_key, rnpv_val in _rnpv_data.items():
+                payload[rnpv_key] = self._serialize_agent_output(rnpv_val)
 
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2, default=str)
