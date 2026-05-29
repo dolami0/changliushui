@@ -352,6 +352,46 @@ class Scheduler:
         stock_name = agent0_record.get("stock_name", "")
         ts = datetime.now().strftime("%Y%m%d_%H%M")
 
+        # ── rNPV 管线键名映射 (agent3r→agent3, agent2r→agent2) ──
+        pipeline_type = result.get("pipeline_type", "standard")
+        if pipeline_type == "rnpv":
+            if "agent3" not in result and "agent3r" in result:
+                result = dict(result)
+                result["agent3"] = result.pop("agent3r")
+            if "agent2" not in result and "agent2r" in result:
+                result = dict(result)
+                result["agent2"] = result.pop("agent2r")
+            # rNPV 输出格式归一化: probability_weighted → valuation_summary
+            a3 = result.get("agent3", {})
+            if isinstance(a3, dict) and "valuation_summary" not in a3:
+                pw = a3.get("probability_weighted", {})
+                if pw:
+                    a3 = dict(a3)
+                    a3["valuation_summary"] = {
+                        "probability_weighted_upside_pct": pw.get("weighted_upside_pct", 0),
+                        "asymmetry_ratio": pw.get("asymmetry_ratio", 0),
+                    }
+                    result["agent3"] = a3
+            # rNPV scenarios格式归一化: scenario_valuation dict → scenarios list
+            sv = a3.get("scenario_valuation", {})
+            if isinstance(sv, dict) and not a3.get("scenarios"):
+                a3["scenarios"] = [
+                    {"name": sn, "probability_pct": round(d.get("probability", 0) * 100, 1),
+                     "upside_pct": d.get("upside_pct", 0),
+                     "target_mcap_yi": d.get("total_value_yi", 0)}
+                    for sn in ("bear", "base", "bull")
+                    for d in [sv.get(sn, {})]
+                ]
+                result["agent3"] = a3
+
+            # rNPV 没有标准 routing_decision，从 agent2r 的 routing 字段提取
+            if "routing_decision" not in result:
+                a2r = result.get("agent2", {})
+                if isinstance(a2r, dict):
+                    rd = a2r.get("routing_decision", a2r.get("routing", {}))
+                    if rd:
+                        result["routing_decision"] = rd
+
         # ── 直接取 V6 数据（不经过 compat 转换）──
         core = self._get_core_v6(result)
         routing = self._get_routing_v6(result)
@@ -383,9 +423,16 @@ class Scheduler:
             "agent3": self._serialize_agent_output(a3),
             "routing_decision": rd_raw_val,
             "pipeline_version": result.get("pipeline_version", "6.0"),
-            "pipeline_type": result.get("pipeline_type", "standard"),
+            "pipeline_type": pipeline_type,
             "audit": result.get("audit", {}),
         }
+        # rNPV 管线保留专属数据
+        if pipeline_type == "rnpv":
+            for rnpv_key in ("agent1r", "agent2r"):
+                val = result.get(rnpv_key)
+                if val is not None:
+                    payload[rnpv_key] = self._serialize_agent_output(val)
+
         with open(json_path, "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2, default=str)
 
