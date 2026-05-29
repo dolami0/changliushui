@@ -140,6 +140,15 @@ function fmtDate(d: string) {
   return d
 }
 
+function fmtDateTime(d: string) {
+  if (!d) return '--'
+  // ISO: "2026-05-29T10:00:00" → "5/29 10:00"
+  const m = d.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+  if (m) return `${parseInt(m[2])}/${parseInt(m[3])} ${m[4]}:${m[5]}`
+  // fallback: just the date part
+  return fmtDate(d)
+}
+
 function fmtNum(n: number, decimals = 1) {
   if (n == null) return '--'
   return n.toFixed(decimals)
@@ -366,6 +375,7 @@ function ThesisTimeline({ thesisLog }: { thesisLog: ThesisVersion[] }) {
         <div className="mb-3">
           <div className="flex items-center gap-2 mb-2">
             <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#ADFF00]/10 text-[#ADFF00] font-mono">v{latest.version}</span>
+            <span className="text-[10px] text-muted-foreground font-mono">{fmtDateTime(latest.date)}</span>
             <span className={cn('text-xs flex items-center gap-1', tensionMeta[latest.narrativeTension]?.color)}>
               {tensionMeta[latest.narrativeTension]?.icon} {tensionMeta[latest.narrativeTension]?.label}
             </span>
@@ -424,7 +434,7 @@ function ThesisTimeline({ thesisLog }: { thesisLog: ThesisVersion[] }) {
                 <div className="absolute -left-[21px] top-1 w-2 h-2 rounded-full border border-[#C88D3A]/50 bg-[#C88D3A]/20" />
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-xs font-mono text-[#C88D3A]">v{v.version}</span>
-                  <span className="text-xs text-muted-foreground">{v.date}</span>
+                  <span className="text-[10px] text-muted-foreground font-mono">{fmtDateTime(v.date)}</span>
                   <span className="text-xs font-mono text-muted-foreground">Conviction: {v.conviction}</span>
                   <span className={cn('text-xs', tensionMeta[v.narrativeTension]?.color)}>
                     {tensionMeta[v.narrativeTension]?.icon}
