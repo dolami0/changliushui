@@ -40,14 +40,15 @@ description: 论点追踪 — 融合 Anthropic thesis-tracker，适配 A 股。�
 
 ### 1. 论点建立（决策通过后）
 
-**建档时必须拉取当日收盘价作为基准价：**
+**建档前必须先拉取当日收盘价（强制·不可跳过）：**
 
 ```bash
-python data_helper.py daily <code> <决策日前一交易日> <决策日>
+cd D:\长流水\.agents\agents\shenwaihuashen && python data_helper.py daily <code> <前一交易日> <当日>
 # 取最近一个交易日的 close 作为 basePrice
+# 同时记录 PE/市值作为 basePE/baseMarketCap
 ```
 
-创建 `memory/tracking/{stockCode}-{stockName}.json`：
+**硬闸门：`basePrice` 为 null 或 0 → 禁止写入 JSON。** 必须先执行上述 Bash，拿到真实收盘价，再填入模板。违反此条 → thesis 文件视为无效，前端页面将黑屏。
 
 ```json
 {

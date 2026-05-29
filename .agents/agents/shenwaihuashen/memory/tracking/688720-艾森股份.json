@@ -73,11 +73,13 @@
     {"date": "2026-Q4", "event": "南通基地首期投产", "type": "公司", "impact": "M", "bull": "如期投产", "bear": "延期", "sourceLevel": "L3", "status": "pending"},
     {"date": "2026-H2", "event": "可转债20亿发行", "type": "公司", "impact": "M", "bull": "成功发行", "bear": "失败/缩量", "sourceLevel": "L3", "status": "pending"}
   ],
-  "basePrice": null,
+  "basePrice": 103.25,
   "baseMarketCap": 91.0,
-  "baseDate": "2026-05-29",
+  "baseDate": "2026-05-28",
   "basePE": 177.6,
-  "priceLog": [],
+  "priceLog": [
+    {"date": "2026-05-28", "price": 103.25, "pe": 177.6, "mv_yi": 91.0, "return_pct": 0.0, "mv_change_pct": 0.0, "note": "建档基准价"}
+  ],
   "positionLog": [],
   "thesisLog": [{
     "version": 1,
