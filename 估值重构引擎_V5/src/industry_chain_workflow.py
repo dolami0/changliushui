@@ -292,7 +292,7 @@ class IndustryChainWorkflow:
             # ── Pass 1: 先提名+评分 第一节点候选股 ──
             self._p(progress_cb, 4, "Pass1-提名节点1候选股")
             node1 = chain.get("top_two_nodes", [{}])[0]
-            noms1 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node1, chain, web1, web2))
+            noms1 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node1, chain, web1, web2, news, step_one))
             # 股票代码校验 — LLM 可能编造代码，用 tushare 按名称查真实代码
             noms1["nominations"] = self._resolve_stock_codes(noms1.get("nominations", []))
 
@@ -321,7 +321,7 @@ class IndustryChainWorkflow:
 
                 self._p(progress_cb, 7, "Pass2-提名节点2候选股")
                 node2 = chain.get("top_two_nodes", [{}, {}])[1]
-                noms2 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node2, chain, web1, web2))
+                noms2 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node2, chain, web1, web2, news, step_one))
                 # 股票代码校验 — LLM 可能编造代码，用 tushare 按名称查真实代码
                 noms2["nominations"] = self._resolve_stock_codes(noms2.get("nominations", []))
 
@@ -432,8 +432,9 @@ class IndustryChainWorkflow:
     # ── Step 4: LLM #2 提名 ────────────
 
     @staticmethod
-    def _msg_nominate_single(node: dict, chain: dict, web1: str, web2: str) -> str:
-        """单节点提名：只为指定节点提名 2-5 只候选股"""
+    def _msg_nominate_single(node: dict, chain: dict, web1: str, web2: str,
+                             news: str = "", step_one: str = "") -> str:
+        """单节点提名：只为指定节点提名候选股。传入全部可用数据源。"""
         node_name = node.get("node_name", "")
         what = node.get("what_to_look_for", "")
         pfa = json.dumps(chain.get("profit_flow_analysis", []), ensure_ascii=False, indent=2)
@@ -443,10 +444,19 @@ class IndustryChainWorkflow:
             f"利润截留分: {node.get('profit_retention_score', 0)}",
             f"选股特征: {what}",
             f"入选理由: {node.get('justification', '')}",
-            f"\n# 全部节点利润流分析\n{pfa}",
         ]
+        # 原始资讯 — 可能直接点名了需关注的个股
+        if news.strip():
+            parts.append(f"\n# 原始产业资讯（可能含点名个股）\n{news[:2000]}")
+        if step_one.strip():
+            parts.append(f"\n# Agent0产业分析\n{step_one[:1500]}")
+        # 事件级联网搜索 — 产业链全景 + A股公司列表
+        if web1:
+            parts.append(f"\n# 事件级联网搜索结果（产业链全景,含公司列表）\n{web1[:4000]}")
+        parts.append(f"\n# 全部节点利润流分析\n{pfa}")
+        # 节点级联网搜索 — 该节点的公司详情
         if web2:
-            parts.append(f"\n# 联网搜索结果\n{web2}")
+            parts.append(f"\n# 节点级联网搜索结果\n{web2}")
         parts.append(f"\n请只为「{node_name}」这一个节点提名2-5只赔率最高的A股候选个股。不要提名其他节点的公司。")
         return "\n".join(parts)
 
