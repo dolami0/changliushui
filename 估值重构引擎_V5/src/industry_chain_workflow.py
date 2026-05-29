@@ -78,21 +78,28 @@ LLM1_PROMPT = """你是产业链利润流分析师。给定产业资讯和联网
 # ═══════════════════════════════════════
 # LLM #2 — 个股赔率评分
 # ═══════════════════════════════════════
-LLM2_NOMINATE_PROMPT = """你是十倍股猎手。给定产业链节点分析和联网搜索结果，为每个节点提名赔率最高的候选个股。
+LLM2_NOMINATE_PROMPT = """你的任务：从以下资料中提取与目标节点最相关的A股上市公司，按关联度排序输出前3只。
 
-# 提名原则（按优先级排序，不可违反）
-1. 必须从联网搜索结果中提取公司 — 搜索结果里已经列出的公司，至少提名其中2只。
-   搜索结果是实时调研数据，比你训练数据中的信息更准确、更及时。
-   只有在搜索结果覆盖不足（不足2只）时，才用你的知识补充。
-2. 主营集中 — 主营业务与节点精确对应，非多元化企业
-3. 赔率优先 — 市值偏小、卡位稀缺、盈利弹性大的优先
-4. 每个节点提名2-3只，两节点合计不超过5只
-5. 不需要填股票代码，只需输出公司全称（代码由系统自动校验）
+# 工作方式（严格按顺序执行）
+1. 阅读原始资讯、事件搜索、节点搜索 — 这些是实时调研数据
+2. 找出所有主营业务直接属于目标节点的A股公司
+3. 按与节点的关联度排序（主营越纯正越靠前），取前3只
+4. 只有资料中不足3只时，才用你的A股知识补充到3只
+
+# 关联度判断标准
+- 排名第一：公司主营产品就是节点的核心产品，数据中明确描述
+- 排名第二、三：公司业务覆盖该节点，数据中有提及
+- 不相关：只是概念炒作、蹭热点、跨行业 — 排除
+
+# 注意
+- 不需要判断市值大小、赔率高低、是否冷门 — 那是后续评分环节的工作
+- 不需要填股票代码，只需输出公司简称（如"云南锗业"而非"云南临沧鑫圆锗业股份有限公司"）
+- 搜索结果中反复出现的公司通常是该节点最重要的参与者
 
 # 输出JSON
 {
   "nominations": [
-    {"stock_name":"公司全称","node_name":"所属节点名","reason":"提名理由"}
+    {"stock_name":"公司全称","node_name":"所属节点名","reason":"关联度：主营与节点的匹配说明"}
   ]
 }"""
 
@@ -507,7 +514,41 @@ class IndustryChainWorkflow:
                                      '_code_source': 'fuzzy_match'})
                     continue
 
-                # 3) 反向：全称里查简称（LLM 输出了全称但包含多余后缀）
+                # 3) 全称去干扰词匹配（如"云南临沧鑫圆锗业股份有限公司"→"云南锗业"）
+                # 去掉常见后缀和前缀，提取核心词
+                import re as _re
+                short = name
+                for s in ['股份有限公司','有限责任公司','有限公司','科技股份','新材料','科技']:
+                    short = short.replace(s, '')
+                # 去掉地理前缀
+                for prefix in ['云南临沧','云南','北京','深圳','上海','广东','浙江','江苏','山东',
+                              '湖北','湖南','四川','福建','安徽','河北','河南','陕西','重庆',
+                              '天津','黑龙江','吉林','辽宁','江西','广西','贵州','甘肃','海南',
+                              '新疆','西藏','内蒙古','宁夏','青海','山西']:
+                    if short.startswith(prefix) and len(short) - len(prefix) >= 2:
+                        short = short[len(prefix):]
+                        break
+                core = _re.sub(r'[^一-鿿]', '', short)
+                # 尝试不同长度的核心词：4字→3字→2字
+                for window in [4, 3, 2]:
+                    if len(core) >= window:
+                        kw = core[-window:]
+                        fuzzy2 = df[df['name'].str.contains(kw, na=False)]
+                        if not fuzzy2.empty:
+                            fuzzy2 = fuzzy2.copy()
+                            fuzzy2['name_len'] = fuzzy2['name'].str.len()
+                            fuzzy2 = fuzzy2.sort_values('name_len')
+                            code = fuzzy2.iloc[0]['clean_code']
+                            matched_name = fuzzy2.iloc[0]['name']
+                            resolved.append({**nom, 'stock_code': code, 'stock_name': matched_name,
+                                             '_code_source': 'core_name'})
+                            break
+                    else:
+                        continue
+                if resolved and resolved[-1].get('stock_code'):
+                    continue
+
+                # 4) 反向：全称里查简称（LLM 输出了全称但包含多余后缀）
                 # 用 name 关键词在 df['name'] 中搜索
                 keywords = name.replace('*', '').replace('ST', '').strip()
                 if len(keywords) >= 3:
