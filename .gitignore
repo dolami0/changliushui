@@ -25,3 +25,11 @@ src_v1.0/
 
 # 案例导入数据（非构建产物）
 public/
+
+# TS 迁移 (独立仓库，不在本项目追踪)
+valuation-engine-ts/
+
+# 临时文件
+tmp_*.json
+tmp_*.md
+tmp_*.txt

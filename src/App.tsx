@@ -13,6 +13,7 @@ import AgentAvatar from './pages/AgentAvatar';
 import AvatarCC from './pages/AvatarCC';
 import TianjiPeak from './pages/TianjiPeak';
 import Tracking from './pages/Tracking';
+import Admin from './pages/Admin';
 import gsap from 'gsap';
 
 /* ------------------------------------------------------------------ */
@@ -259,6 +260,7 @@ function App() {
           <Route path="/avatar-cc" element={<PageTransition key="avatarcc"><AvatarCC /></PageTransition>} />
           <Route path="/tianjifeng" element={<PageTransition key="tianjifeng"><TianjiPeak /></PageTransition>} />
           <Route path="/tracking" element={<PageTransition key="tracking"><Tracking /></PageTransition>} />
+          <Route path="/admin" element={<PageTransition key="admin"><Admin /></PageTransition>} />
         </Routes>
       </div>
     </div>
