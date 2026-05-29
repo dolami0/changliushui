@@ -1956,6 +1956,25 @@ def _assemble_final_output(
         vx["validation_paradigm"] = fallback
         vx["_paradigm_fallback"] = True
 
+    # ── 修正: LLM 误判自校验降级 ──
+    # 当主模型≠校验模型时，不应出现"同模型自校验"后缀。
+    # LLM 可能因校验模型硬约束不适用而误套自校验降级规则——但 B≠C 就是跨族校验，标签事实错误。
+    v_model_raw = vx.get("validation_model", "")
+    if not v_model_raw:
+        v_model_raw = (routing.get("validation_models") or [None])[0] or ""
+    if v_model_raw:
+        v_model_letter = v_model_raw[0]
+        if v_model_letter != model:
+            old_assess = vx.get("assessment", "")
+            # 剔除 "(同模型自校验)" / "(同模型自校验,缺乏独立验证)" / "（同模型自校验，缺乏独立范式验证）"
+            import re as _re_assess
+            new_assess = _re_assess.sub(
+                r'\s*[\(（]同模型自校验[^)）]*[\)）]', '', old_assess
+            ).strip()
+            if new_assess != old_assess:
+                vx["assessment"] = new_assess
+                vx["_assessment_selfcheck_stripped"] = True
+
     # 组装
     return {
         "report_meta": {
