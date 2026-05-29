@@ -325,6 +325,7 @@ decision 文件写入前，逐条对照 `skills/decision.md` 末尾的质量检�
 - valuation 必须 **闭卷推导再开卷对比**（skills/valuation.md §5）：先基于 financial 产品增速+WebSearch 行业数据+可比公司 PS 独立计算 CAGR/PS/概率，再对照定数录。禁止在上游数字上微调概率就声称独立
 - case-match 必须包含 **至少 1 次 Bash: ls/Glob memory/cases/ + Grep 关键词筛选**。匹配到案例 → Read 至少 1 个案例文件进行 6 维比对。无可匹配案例 → 输出「无匹配案例」并说明原因，不强制 Read。
 - catalyst 必须包含 **信源逐条审计（§1）**：逐条追溯上游催化剂至公告/纪要/研报原文 → 标注 L1-L5 等级 → 调研纪要来源必须做两版对比 → L3 及以下不得标 Critical。
+- thesis 建档 + 巡检后必须执行 `python sync_coze.py "memory/tracking/{code}-{name}.json"` — 将追踪数据同步到 Coze 表格 `7645332166129287218`。
 
 **章节覆盖自检**：步骤文件写入后，立即逐条核对 skill.md 章节清单。任一章节缺失 → 补充后重新写入。
 

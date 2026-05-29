@@ -40,6 +40,17 @@ description: 论点追踪 — 融合 Anthropic thesis-tracker，适配 A 股。�
 
 ### 1. 论点建立（决策通过后）
 
+**建档时必须拉取当日收盘价作为基准价：**
+... (existing) ...
+
+**建档后必须同步到 Coze 追踪令表（强制）**：
+
+```bash
+cd D:\长流水\.agents\agents\shenwaihuashen && python sync_coze.py "memory/tracking/{stockCode}-{stockName}.json"
+```
+
+> 此脚本读取追踪 JSON → 映射字段 → Coze PUT 更新。Coze 表 ID: `7645332166129287218`。
+
 **建档前必须先拉取当日收盘价（强制·不可跳过）：**
 
 ```bash
