@@ -154,7 +154,7 @@ OUTPUT_TABLE_FIELDS = [
     # 核心结果 (5)
     {"name": "prob_weighted_upside_pct", "desc": "概率加权涨幅(%)", "type": "number", "is_required": False},
     {"name": "asymmetry_ratio", "desc": "不对称比", "type": "number", "is_required": False},
-    {"name": "quality_flag", "desc": "质量等级", "type": "string", "is_required": False},
+
     {"name": "current_mcap_billion", "desc": "当前市值(亿)", "type": "number", "is_required": False},
     {"name": "prob_weighted_mcap_billion", "desc": "概率加权目标市值(亿)", "type": "number", "is_required": False},
     # 三情景 (6)

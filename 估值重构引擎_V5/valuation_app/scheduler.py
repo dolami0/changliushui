@@ -178,7 +178,6 @@ class Scheduler:
                         "status": "done",
                         "completed_at": datetime.now(timezone.utc).isoformat(),
                         "report_url": report_url,
-                        "quality_flag": result.get("agent3", {}).get("valuation_summary", {}).get("quality_flag", ""),
                         "upside_pct": result.get("agent3", {}).get("valuation_summary", {}).get("probability_weighted_upside_pct", 0),
                     })
                 else:
@@ -287,8 +286,6 @@ class Scheduler:
             )
             upside = vs.get("probability_weighted_upside_pct", 0)
             asym = vs.get("asymmetry_ratio", 0)
-            quality = vs.get("quality_flag", "?")
-
             # 重新跑审阅取评级
             try:
                 from report_reviewer import review_from_orchestrator_result
@@ -301,7 +298,7 @@ class Scheduler:
 
             flag_str = ", ".join(flag_codes) if flag_codes else "无"
             lines.append(f"### {name}({code}) — {grade}")
-            lines.append(f"- 加权涨幅: {upside:+.1f}% | 不对称比: {asym:.1f}x | 质量: {quality}")
+            lines.append(f"- 加权涨幅: {upside:+.1f}% | 不对称比: {asym:.1f}x")
             lines.append(f"- 标记: {flag_str}")
             lines.append("")
 
@@ -469,7 +466,6 @@ class Scheduler:
             "primary_model": routing.get("primary_model", ""),
             "prob_weighted_upside_pct": str(vs.get("probability_weighted_upside_pct", "")),
             "asymmetry_ratio": str(vs.get("asymmetry_ratio", "")),
-            "quality_flag": vs.get("quality_flag", ""),
             "current_mcap_billion": str(core.get("market_cap_yi", "")),
             "prob_weighted_mcap_billion": str(vs.get("probability_weighted_mcap_yi", "")),
             "bear_prob": str(bear.get("probability_pct", "")),

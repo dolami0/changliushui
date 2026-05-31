@@ -404,7 +404,7 @@ def _review_l3_cases(case_comparison: dict, scenario_details: dict) -> tuple[flo
 
 def _review_l4_consistency(
     scenario_details: dict, vs: dict, confidence: dict,
-    quality_flag: str, narrative: str,
+    narrative: str,
 ) -> tuple[float, list[Flag]]:
     """检查报告内部自洽性。"""
     score = 10.0
@@ -427,25 +427,7 @@ def _review_l4_consistency(
             suggestion="代码已覆盖asymmetry_ratio，此flag不应触发——检查_compute_from_assumptions",
         ))
 
-    # 质量标签一致性
     weighted_up = sum(p * u for p, u in zip(probs, upsides))
-    if quality_flag == "HIGH_QUALITY" and weighted_up < -20:
-        score -= 2
-        flags.append(Flag(
-            code="L4_QUALITY_UPSIDE_CLASH",
-            layer=4, severity="warning",
-            message=f"HIGH_QUALITY标记与负加权涨幅({weighted_up:.0f}%)矛盾——好公司不等于好价格",
-            suggestion="质量标签应反映'当前价格下的投资质量'而非'业务质量'，需要修改提示词",
-        ))
-
-    if quality_flag == "SPECULATIVE" and weighted_up > 50:
-        score -= 1
-        flags.append(Flag(
-            code="L4_QUALITY_UPSIDE_CLASH2",
-            layer=4, severity="info",
-            message=f"SPECULATIVE标记与高加权涨幅({weighted_up:.0f}%)不完全一致",
-            suggestion="检查质量标签逻辑",
-        ))
 
     # 叙事与数字一致性
     has_upside_text = any(w in (narrative or "").lower() for w in ["上涨", "增长", "upside", "bull", "翻倍"])
@@ -541,7 +523,6 @@ def review_report(agent3_output: dict, agent2_output: dict, agent1_output: dict)
     triggers = agent3_output.get("risk_triggers", {})
     ccs = agent3_output.get("case_comparison_summary", {})
     narrative = agent3_output.get("narrative", "")
-    quality_flag = vs.get("quality_flag", "")
     scenarios = sv.get("scenario_details", {})
 
     stock_code = agent1_output.get("stock_code", "?")
@@ -576,7 +557,7 @@ def review_report(agent3_output: dict, agent2_output: dict, agent1_output: dict)
     result.flags.extend(l3_flags)
 
     # ── L4: 自洽性 ──
-    l4_score, l4_flags = _review_l4_consistency(scenarios, vs, conf, quality_flag, narrative)
+    l4_score, l4_flags = _review_l4_consistency(scenarios, vs, conf, narrative)
     result.layer_scores["L4_自洽性"] = round(l4_score, 1)
     result.flags.extend(l4_flags)
 

@@ -183,8 +183,7 @@ def print_summary(result: dict):
 
     pw_upside = vs.get("probability_weighted_upside_pct", 0)
     asym = vs.get("asymmetry_ratio", 0)
-    print(f"   加权涨幅: {pw_upside:+.1f}% | 非对称: {asym:.1f}x | "
-          f"质量: {vs.get('quality_flag','?')}")
+    print(f"   加权涨幅: {pw_upside:+.1f}% | 非对称: {asym:.1f}x")
 
     # 置信度
     dims = conf.get("dimensions", {})

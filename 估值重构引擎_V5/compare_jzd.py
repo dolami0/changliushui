@@ -28,8 +28,7 @@ def extract(d, label):
 
     w = vs.get('probability_weighted_upside_pct', 0)
     a = vs.get('asymmetry_ratio', 0)
-    q = vs.get('quality_flag', '?')
-    lines.append(f'weighted: {w:+.1f}%  asym: {a:.1f}x  quality: {q}')
+    lines.append(f'weighted: {w:+.1f}%  asym: {a:.1f}x')
 
     conf = a3.get('confidence', {})
     ta = a3.get('trade_annotation', {})

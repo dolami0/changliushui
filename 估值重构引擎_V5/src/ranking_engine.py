@@ -39,7 +39,6 @@ def compute_ranking(results: list[dict], output_dir: str | None = None) -> dict:
 
         prob_upside = vs.get("probability_weighted_upside_pct", 0)
         asym = vs.get("asymmetry_ratio", 0)
-        quality = vs.get("quality_flag", "")
         confidence = conf.get("overall_score", 5)
         tier = ta.get("tier", "")
         premium = sanity.get("market_premium_pct", 50)
@@ -47,7 +46,7 @@ def compute_ranking(results: list[dict], output_dir: str | None = None) -> dict:
         # Tier 分类
         if "规避" in tier:
             stock_tier = 0
-        elif quality == "HIGH_QUALITY" and prob_upside > 30 and asym > 3:
+        elif prob_upside > 30 and asym > 3:
             stock_tier = 1
         elif prob_upside > 15 and asym > 1.5:
             stock_tier = 2
@@ -72,7 +71,6 @@ def compute_ranking(results: list[dict], output_dir: str | None = None) -> dict:
             "composite_score": round(composite, 3),
             "prob_weighted_upside_pct": prob_upside,
             "asymmetry_ratio": asym,
-            "quality_flag": quality,
             "confidence_score": confidence,
             "trade_tier": tier,
             "market_premium_pct": premium,

@@ -498,11 +498,16 @@ class DataFetcher:
                 )
                 if df is not None and len(df) > 0:
                     df = df.sort_values("trade_date")
-                    prices = [
-                        {"date": str(r["trade_date"]), "close": tf._f(r.get("close"))}
-                        for _, r in df.iterrows()
-                        if tf._f(r.get("close"))
-                    ]
+                    prices = []
+                    for _, r in df.iterrows():
+                        close_val = tf._f(r.get("close"))
+                        if not close_val:
+                            continue
+                        td = str(r["trade_date"])
+                        # 归一化日期格式: YYYYMMDD → YYYY-MM-DD, 与 event_day_str 对齐
+                        if len(td) == 8 and td.isdigit():
+                            td = f"{td[:4]}-{td[4:6]}-{td[6:8]}"
+                        prices.append({"date": td, "close": close_val})
                     source = "tushare"
         except Exception:
             pass
@@ -529,6 +534,16 @@ class DataFetcher:
                 "source": "none",
                 "note": "Tushare和investoday均无法获取事件窗口价格",
             }
+
+        # 归一化所有价格日期为 YYYY-MM-DD（兼容 Tushare YYYYMMDD 和 investoday 混合格式）
+        def _norm_date(d: str) -> str:
+            d = str(d).strip()
+            if len(d) == 8 and d.isdigit():
+                return f"{d[:4]}-{d[4:6]}-{d[6:8]}"
+            return d[:10] if len(d) >= 10 else d
+
+        for p in prices:
+            p["date"] = _norm_date(p["date"])
 
         event_day_str = ed.strftime("%Y-%m-%d")
         event_day = next((p for p in prices if p["date"] == event_day_str), None)

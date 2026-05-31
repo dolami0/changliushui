@@ -131,7 +131,7 @@ ok = all([
 for s in ('bear','base','bull'):
     sc = details.get(s,{})
     print(f"  {s}: p={sc.get('probability',0):.0%} u={sc.get('upside_pct',0):+.1f}% m={sc.get('target_mcap_yi',0):.0f}yi")
-print(f"  weighted={vs.get('probability_weighted_upside_pct',0):+.1f}% asym={vs.get('asymmetry_ratio',0):.1f}x q={vs.get('quality_flag','?')}")
+print(f"  weighted={vs.get('probability_weighted_upside_pct',0):+.1f}% asym={vs.get('asymmetry_ratio',0):.1f}x")
 print(f"  conf={a3_out.get('confidence',{}).get('overall_score','?')}/10")
 print(f"  tier={a3_out.get('trade_annotation',{}).get('tier','?')}")
 print(f"  elapsed={elapsed:.0f}s")

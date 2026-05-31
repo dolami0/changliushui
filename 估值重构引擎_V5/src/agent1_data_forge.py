@@ -179,6 +179,21 @@ def _extract_core_fields(raw_bundle: dict, stock_code: str) -> dict[str, Any]:
     eq_roe = _num(bal.get("total_equity"))           # 最新净资产 (元)
     calc_roe_ttm = round(np_roe / eq_roe * 100, 2) if eq_roe > 0 else 0.0
 
+    # TTM EPS: 同理——fina_indicator EPS 是单期值, 不能冒充 TTM
+    # 代码计算: EPS TTM = TTM净利润 / 总股本, 与 ROE 修复逻辑一致
+    np_ttm_raw = _num(inc.get("net_profit_ttm"))     # TTM 净利润 (元)
+    shares_raw = _num(basic.get("sharesTotal"))       # 总股本 (股)
+    if shares_raw > 0 and np_ttm_raw > 0:
+        calc_eps_ttm = round(np_ttm_raw / shares_raw, 2)
+    elif current_price and market_cap > 0:
+        # fallback: 从市值/股价反推股本 → 再算 EPS
+        shares_implied = market_cap * 1e8 / current_price  # 折算为股
+        calc_eps_ttm = round(np_ttm_raw / shares_implied, 2) if shares_implied > 0 else 0
+        if shares_implied > 0 and shares_raw == 0:
+            total_shares = round(shares_implied / 1e8, 2)  # 补填 total_shares (亿股)
+    else:
+        calc_eps_ttm = 0
+
     # 交叉验证 (差异>15%告警)
     _warn_divergence(stock_code, "gross_margin", ts_gm, io_gm)
     _warn_divergence(stock_code, "net_margin", ts_nm, io_nm)
@@ -198,7 +213,7 @@ def _extract_core_fields(raw_bundle: dict, stock_code: str) -> dict[str, Any]:
         "revenue_ttm_yi": round(revenue_ttm, 1),
 
         # [TS→IO] 比率 — Tushare fina_indicator 主源
-        "eps_ttm": ts_eps or io_eps or 0,
+        "eps_ttm": calc_eps_ttm or ts_eps or io_eps or 0,  # TTM计算值优先(避免单季EPS冒充TTM)
         "net_profit_growth_yoy": _calc_yoy_growth(r, stock_code),
         "bps": ts_bps or round(_num(bal.get("total_equity")) / 1e8 / total_shares, 2) if total_shares > 0 else 0,
         "roe_ttm_pct": calc_roe_ttm or ts_roe or io_roe or 0,  # TTM计算值优先 (Tushare/investoday均为单季)
@@ -328,6 +343,15 @@ def _extract_core_fields(raw_bundle: dict, stock_code: str) -> dict[str, Any]:
     except Exception:
         pass  # 前瞻信号不是关键路径
 
+    # ── OCF TTM 双源同步: forward_looking 使用 Tushare 4季加总(更准确),
+    #     回填 core.ocf_ttm_yi 消除与 investoday 单值 TTM 的不一致 ──
+    fw_cf = fields.get("_forward_looking", {}).get("categories", {}).get("cashflow_quality", {})
+    fw_ocf = fw_cf.get("ocf_to_ni", {}).get("ocf_ttm")
+    if fw_ocf is not None and isinstance(fw_ocf, (int, float)) and fw_ocf > 0:
+        core_ocf = fields.get("ocf_ttm_yi", 0)
+        if abs(fw_ocf - core_ocf) > 0.01:  # 差异>0.01亿时同步
+            fields["ocf_ttm_yi"] = round(fw_ocf, 2)
+
     return fields
 
 
@@ -403,7 +427,8 @@ class DataForge:
         ticker = (pr.get("ticker", "") or
                   pre_routing_result.get("stock_code", ""))
         stock_name = pr.get("stock_name", "")
-        event_date = pr.get("event_date", "")
+        # bstudio_create_time 是 Coze 系统字段，始终存在；event_date 常为空
+        event_date = pr.get("bstudio_create_time", "") or pr.get("event_date", "")
 
         # ── Step 0.5: 事件窗口价格（Phase 2 计价判断用）──
         event_window_prices = None

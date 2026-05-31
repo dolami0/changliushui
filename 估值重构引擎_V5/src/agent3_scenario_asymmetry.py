@@ -1223,7 +1223,12 @@ def _call_llm_scenario(
         bs_warning = ""
     elif anchor_2a == "revenue":
         if pt_full and pt_full.get("applicable"):
-            bs_section = f"""**方法: 隐含收入 CAGR (收入锚)**\n- 当前 PS = {core.get('ps_ttm',0):.1f}x -> 市场隐含 3 年收入 CAGR = {pt_full.get('implied_value','?')}%\n"""
+            tps = pt_full.get('detail', {}).get('terminal_ps_assumed', '?')
+            bs_section = f"""**方法: 隐含收入 CAGR (收入锚, 代码预计算, 仅供参考)**
+- 定价工具假设: 当前 PS={core.get('ps_ttm',0):.1f}x 在 3 年后回归至 {tps}x (硬编码规则: PS>30→8x, PS>15→5x, PS>5→3x, 否则→2x)
+- 在此假设下反推: 市场隐含 3 年收入 CAGR = {pt_full.get('implied_value','?')}%
+- 注: 这是机械规则生成的参照系, 不反映市场真实预期。你应在情景推演中基于护城河/范式切换/成长阶段独立判断 terminal PS 假设, 不受此约束。
+"""
         else:
             bs_section = f"""**方法: 隐含收入 CAGR (收入锚)** - 工具不可用\n- 当前 PS = {core.get('ps_ttm',0):.1f}x, 营收TTM = {core.get('revenue_ttm_yi',0):.1f}亿\n"""
         bs_warning = f"""- (注意) 以下反向DCF基于NOPAT(利润锚),对收入锚不适用仅供参考: EV={bs_profile['ev_yi']}亿 g/WACC={bs_profile.get('implied_g_pct',0)}%/{wacc_params['wacc_pct']}%\n"""

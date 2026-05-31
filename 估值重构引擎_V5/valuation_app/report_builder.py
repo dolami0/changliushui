@@ -284,10 +284,10 @@ def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict, agent2a
 
     upside = vs.get("probability_weighted_upside_pct", 0)
     asym = vs.get("asymmetry_ratio", 0)
-    quality = vs.get("quality_flag", "")
+
 
     body = (
-        _sec_header(stock_code, stock_name, now, primary, vr, industry, upside, asym, quality)
+        _sec_header(stock_code, stock_name, now, primary, vr, industry, upside, asym)
         + _sec_narrative_diagnosis(a2a_mn, a2a_ep, a2a_pr, a2a_pa, a2a_pt, sanity, cf)  # V6: 叙事诊断
         + _sec_routing(vr)
         + _sec_financials(cf, va, wacc)
@@ -326,7 +326,7 @@ def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict, agent2a
 def _sec_footer(stock_code, now):
     return f'<div class="rpt-footer">估值重构引擎 V5 | {stock_code} | {now} | 本报告不构成投资建议</div>'
 
-def _sec_header(stock_code, stock_name, now, primary, vr, industry, upside, asym, quality):
+def _sec_header(stock_code, stock_name, now, primary, vr, industry, upside, asym):
     cls = "badge-up" if upside > 0 else ("badge-down" if upside < 0 else "badge-neutral")
     return f"""<div class="rpt-header">
 <h1>估值重构报告: {stock_name}({stock_code})</h1>
@@ -334,7 +334,6 @@ def _sec_header(stock_code, stock_name, now, primary, vr, industry, upside, asym
 <div class="score-badges">
   <span class="badge {cls}">概率加权涨幅 {upside:+.1f}%</span>
   <span class="badge badge-neutral">不对称比 {asym:.1f}x</span>
-  <span class="badge badge-neutral">质量: {quality}</span>
 </div>
 </div>"""
 
@@ -635,7 +634,7 @@ def _sec_validation(vx, rd, gap, vs):
         parts.append(_card("反向DCF", f'<p style="color:var(--text-dim)">不适用: {rd.get("applicable_note","")}</p>'))
     if gap and gap.get("level"):
         parts.append(_card("预期差", f'<p style="font-size:15px"><strong>{gap.get("level","?")}</strong></p><p style="font-size:14px">{_md(gap.get("note",""))}</p>'))
-    parts.append(_card("估值汇总", f'<div class="bignums">{"".join([_big_num(vs.get("probability_weighted_upside_pct"),"概率加权涨幅","%"),_big_num(vs.get("probability_weighted_mcap_yi"),"目标市值","亿"),_big_num(vs.get("asymmetry_ratio"),"不对称比","x")])}</div><p style="font-size:14px;margin-top:8px">质量等级: <strong>{vs.get("quality_flag","?")}</strong></p>'))
+    parts.append(_card("估值汇总", f'<div class="bignums">{"".join([_big_num(vs.get("probability_weighted_upside_pct"),"概率加权涨幅","%"),_big_num(vs.get("probability_weighted_mcap_yi"),"目标市值","亿"),_big_num(vs.get("asymmetry_ratio"),"不对称比","x")])}</div>'))
     return _section("07", "校验与估值汇总", "".join(parts)) if parts else ""
 
 
@@ -862,7 +861,6 @@ def build_markdown_report(agent0_record: dict, a1: dict, a2: dict, a3: dict, age
     md += f"| 指标 | 值 |\n|------|-----|\n"
     md += f"| 概率加权涨幅 | **{vs.get('probability_weighted_upside_pct',0):+.1f}%** |\n"
     md += f"| 不对称比 | {vs.get('asymmetry_ratio',0):.1f}x |\n"
-    md += f"| 质量等级 | {vs.get('quality_flag','?')} |\n"
     md += f"| 目标市值 | {vs.get('probability_weighted_mcap_yi',0):.0f}亿 |\n\n"
 
     # ── 九、置信度 ──

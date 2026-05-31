@@ -146,7 +146,6 @@ def test_validation():
             "probability_weighted_upside_pct": 28,
             "probability_weighted_mcap_billion": 258,
             "asymmetry_ratio": 4.0,
-            "quality_flag": "HIGH_QUALITY",
         },
         "reverse_dcf": {"market_implied_g_pct": 5, "my_implied_g_pct": 15, "expectation_gap_pct": 10,
                         "gap_direction": "市场低估", "gap_magnitude": "显著"},
@@ -179,7 +178,6 @@ def test_output_schema():
             "probability_weighted_upside_pct": 28,
             "probability_weighted_mcap_billion": 258,
             "asymmetry_ratio": 4.0,
-            "quality_flag": "HIGH_QUALITY",
         },
         "reverse_dcf": {"market_implied_g_pct": 5, "my_implied_g_pct": 15,
                         "expectation_gap_pct": 10, "gap_direction": "市场低估", "gap_magnitude": "显著"},
@@ -224,7 +222,6 @@ def test_output_schema():
     vs = output["valuation_summary"]
     assert "probability_weighted_upside_pct" in vs
     assert "asymmetry_ratio" in vs
-    assert "quality_flag" in vs
 
     print("  All required V4 fields present")
     print("  [OK] Output schema test passed")

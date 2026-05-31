@@ -71,8 +71,7 @@ def test_full_pipeline():
     a3 = result.get("agent3", {})
     vs = a3.get("valuation_summary", {})
     print(f"Agent-3: upside={vs.get('probability_weighted_upside_pct',0):.1f}% "
-          f"asym={vs.get('asymmetry_ratio',0):.1f} "
-          f"quality={vs.get('quality_flag','?')}")
+          f"asym={vs.get('asymmetry_ratio',0):.1f}")
     conf = a3.get("confidence", {})
     print(f"  confidence={conf.get('overall_score')}/10")
     ta = a3.get("trade_annotation", {})

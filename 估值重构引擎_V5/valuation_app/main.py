@@ -130,7 +130,7 @@ def print_summary(report: dict):
 ═══ 预期差 ═══
   {gap['level']} | {gap['note']}
   概率加权涨幅: {vs['probability_weighted_upside_pct']:.1f}%
-  不对称比: {vs['asymmetry_ratio']:.1f} | {vs['quality_flag']}
+  不对称比: {vs['asymmetry_ratio']:.1f}
 
 ═══ 三情景推演 ═══""")
 
@@ -285,7 +285,6 @@ def export_markdown(report: dict) -> str:
 |------|-----|
 | 概率加权涨幅 | **{vs['probability_weighted_upside_pct']:.1f}%** |
 | 不对称比 | {vs['asymmetry_ratio']:.1f} |
-| 质量等级 | {vs['quality_flag']} |
 | 概率加权市值 | {vs['probability_weighted_mcap_yi']:.0f}亿 |
 | 当前市值 | {vs['current_mcap_yi']:.0f}亿 |
 
@@ -484,7 +483,7 @@ def main():
         for code, r in results.items():
             ta = r["trade_annotation"]
             vs = r["valuation_summary"]
-            print(f"  {code} {r['report_meta']['stock_name']:6s} | {ta['tier']} | 涨幅{vs['probability_weighted_upside_pct']:+.1f}% | {vs['quality_flag']}")
+            print(f"  {code} {r['report_meta']['stock_name']:6s} | {ta['tier']} | 涨幅{vs['probability_weighted_upside_pct']:+.1f}%")
 
 
 if __name__ == "__main__":

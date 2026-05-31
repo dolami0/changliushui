@@ -104,7 +104,6 @@ def test_full_integration():
         "primary_model": vr.get("primary_model", ""),
         "prob_weighted_upside_pct": vs.get("probability_weighted_upside_pct"),
         "asymmetry_ratio": vs.get("asymmetry_ratio"),
-        "quality_flag": vs.get("quality_flag"),
         "current_mcap_billion": cf.get("market_cap_billion"),
         "bear_prob": bear.get("probability_pct"),
         "bear_upside_pct": bear.get("upside_pct"),
