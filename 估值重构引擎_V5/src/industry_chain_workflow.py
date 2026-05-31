@@ -970,21 +970,22 @@ class IndustryChainWorkflow:
             try:
                 is_last_turn = (turn == max_turns - 1)
                 if is_last_turn:
-                    # 最后一轮：追加指令，强制输出 JSON
                     messages.append({
                         "role": "user",
-                        "content": "信息已充足。请立即输出最终JSON报告，不要再调用工具。"
+                        "content": "搜索已完成。请立即输出最终JSON报告。"
                     })
 
                 payload = {
                     "model": DEEPSEEK_MODEL,
                     "messages": messages,
-                    "tools": tools,
                     "max_tokens": 30720,
                     "stream": False, "temperature": 0,
                     "thinking": {"type": "enabled"},
                     "reasoning_effort": "max",
                 }
+                # 最后轮不传 tools — LLM 必须输出 JSON
+                if not is_last_turn:
+                    payload["tools"] = tools
 
                 r = requests.post(DEEPSEEK_URL, json=payload,
                     headers={"Authorization": f"Bearer {self.dk}",
