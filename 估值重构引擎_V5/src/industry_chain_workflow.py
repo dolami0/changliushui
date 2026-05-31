@@ -42,14 +42,20 @@ LLM1_PROMPT = """你是产业链利润流分析师。你的任务是通过自主
 
 # 工作流程
 
-阅读产业资讯后，使用 bocha_search 工具针对以下5个维度各至少搜索1次：
-1. 产业链结构 — 搜索"<产业名> 产业链 上游 中游 下游 核心环节"
-2. 利润分配 — 搜索"<产业名> 利润分配 哪个环节最赚钱 毛利率"
-3. 竞争格局 — 搜索"<产业名> <节点名> 集中度 竞争格局 市场份额"
-4. 进入壁垒 — 搜索"<产业名> <节点名> 认证 壁垒 客户绑定"
-5. 需求弹性 — 搜索"<产业名> 受益环节 弹性最大 事件驱动"
+使用 bocha_search 工具搜索以下维度。每次搜索后暂停，阅读返回结果，判断信息是否足够：
 
-每次搜索后阅读结果，判断信息是否足够。不够则换角度再搜。总共控制在5次搜索内完成——每维度1次，精准搜索，不展开。所有维度覆盖后，交叉验证各来源的一致性，然后输出最终JSON。
+维度覆盖清单：
+1. 产业链结构 — 上游/中游/下游各环节及核心公司
+2. 利润分配 — 哪个环节毛利率最高、截留利润最多
+3. 竞争格局 — 各环节的集中度、头部公司市场份额
+4. 进入壁垒 — 认证周期、客户绑定、技术门槛
+5. 需求弹性 — 事件对哪个环节拉动最大
+
+搜索策略：
+- 先搜最关键的1-2个维度，读结果后判断是否还需补充
+- 信息充分就停止搜索，不必用完所有轮次
+- 最多5轮，第5轮后必须输出最终JSON
+- 所有维度覆盖完毕后，交叉验证，输出完整报告
 
 # 分析框架：5维度利润截留评估
 
@@ -969,23 +975,24 @@ class IndustryChainWorkflow:
         for turn in range(max_turns):
             try:
                 is_last_turn = (turn == max_turns - 1)
-                if is_last_turn:
-                    messages.append({
-                        "role": "user",
-                        "content": "搜索已完成。请立即输出最终JSON报告。"
-                    })
 
                 payload = {
                     "model": DEEPSEEK_MODEL,
                     "messages": messages,
                     "max_tokens": 30720,
                     "stream": False, "temperature": 0,
-                    "thinking": {"type": "enabled"},
-                    "reasoning_effort": "max",
                 }
-                # 最后轮不传 tools — LLM 必须输出 JSON
+                # 前N-1轮: 传tools, LLM自主决定搜还是停
+                # 最后轮: 不传tools, 强制输出JSON
                 if not is_last_turn:
                     payload["tools"] = tools
+                    payload["thinking"] = {"type": "enabled"}
+                    payload["reasoning_effort"] = "max"
+                else:
+                    messages.append({
+                        "role": "user",
+                        "content": "最后一轮。请综合所有搜索结果，输出最终JSON报告。"
+                    })
 
                 r = requests.post(DEEPSEEK_URL, json=payload,
                     headers={"Authorization": f"Bearer {self.dk}",
