@@ -32,6 +32,7 @@ from agents.tools import bocha_search, TOOL_DEFINITIONS, TOOL_MAP
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 DEEPSEEK_MODEL = "deepseek-v4-pro"
 DEEPSEEK_MODEL_FAST = "deepseek-chat"  # 轻量模型, 用于提名等低复杂度任务
+BOCHA_TOOLS = [t for t in TOOL_DEFINITIONS if t["function"]["name"] == "bocha_search"]
 VOLC_URL = "https://open.feedcoopapi.com/agent_api/agent/chat/completion"
 VOLC_BOT_ID = "7640524154441156122"
 
@@ -111,6 +112,8 @@ LLM2_NOMINATE_PROMPT = """你的任务：从以下资料中提取与目标节点
 }"""
 
 LLM2_SCORE_PROMPT = """你是十倍股赔率评估师。基于实时财务数据和V3案例库经验，对候选个股评分排序。输出前2名推荐。
+
+你可以使用 bocha_search 工具搜索补充信息（如最新市值、近期催化、竞争对比），最多搜索2次。
 
 # V3 十倍股案例库速查表 (42例)
 | # | 股票 | 产业链节点 | 截留 | x倍 | 核心逻辑 | 壁垒 | 驱动类型 |
@@ -277,10 +280,10 @@ class IndustryChainWorkflow:
         try:
             # Step 1: LLM #1 — 产业链推理（flash + bocha_search）
             self._p(progress_cb, 1, "LLM产业链推理(flash+bocha)")
-            llm1_tools = [t for t in TOOL_DEFINITIONS if t["function"]["name"] == "bocha_search"]
+            
             chain = self._llm_tool_use(LLM1_PROMPT,
                 self._msg_llm1(news, step_one),
-                tools=llm1_tools, tool_map=TOOL_MAP, model=DEEPSEEK_MODEL_FAST)
+                tools=BOCHA_TOOLS, tool_map=TOOL_MAP, model=DEEPSEEK_MODEL_FAST)
             chain.pop("_search_log", [])  # bocha原始结果不再传入提名, LLM #1报告已精炼
 
             # 校验 LLM #1 输出
@@ -292,7 +295,7 @@ class IndustryChainWorkflow:
                 chain = self._llm_tool_use(LLM1_PROMPT,
                     self._msg_llm1(news, step_one)
                     + "\n\n上次输出industry或top_two_nodes为空。请确保chain_overview.industry不为空、top_two_nodes包含2个节点。",
-                    tools=llm1_tools, tool_map=TOOL_MAP, model=DEEPSEEK_MODEL_FAST)
+                    tools=BOCHA_TOOLS, tool_map=TOOL_MAP, model=DEEPSEEK_MODEL_FAST)
                 chain.pop("_search_log", [])
 
             # Step 2: Volc节点搜索 — 为提名LLM提供节点内公司列表
@@ -313,7 +316,8 @@ class IndustryChainWorkflow:
 
             self._p(progress_cb, 3, "Pass1-评分排序")
             msg1 = self._msg_score_single(node1, chain, enriched1)
-            scores1 = self._llm(LLM2_SCORE_PROMPT, msg1)
+            scores1 = self._llm_tool_use(LLM2_SCORE_PROMPT, msg1,
+                tools=BOCHA_TOOLS, tool_map=TOOL_MAP, max_turns=2)
             scores1 = self._validate_and_retry_score(scores1, msg1)
 
             # 判断节点1最高分是否达标
@@ -344,7 +348,8 @@ class IndustryChainWorkflow:
 
                 self._p(progress_cb, 6, "Pass2-混合评分排序")
                 msg_all = self._msg_score(chain, all_enriched)
-                final_scores = self._llm(LLM2_SCORE_PROMPT, msg_all)
+                final_scores = self._llm_tool_use(LLM2_SCORE_PROMPT, msg_all,
+                    tools=BOCHA_TOOLS, tool_map=TOOL_MAP, max_turns=2)
                 final_scores = self._validate_and_retry_score(final_scores, msg_all)
                 final_noms = all_noms
                 final_enriched = all_enriched
@@ -850,8 +855,9 @@ class IndustryChainWorkflow:
 
         if (not ss or (not tp.get("stock_code", "") and not _is_no_pick(tp))) and not scores.get("error", "").startswith("API "):
             print(f"[LLM2-EMPTY] scored_stocks={len(ss)} top_pick_code='{tp.get('stock_code','')}', retrying...", flush=True)
-            scores = self._llm(LLM2_SCORE_PROMPT,
-                msg + "\n\n上次输出缺少有效的scored_stocks或top_pick。请确保输出完整，top_pick和runner_up必须有stock_code。")
+            scores = self._llm_tool_use(LLM2_SCORE_PROMPT,
+                msg + "\n\n上次输出缺少有效的scored_stocks或top_pick。请确保输出完整，top_pick和runner_up必须有stock_code。",
+                tools=BOCHA_TOOLS, tool_map=TOOL_MAP, max_turns=2)
         return scores
 
     # ── 组装结果 ────────────────────────
@@ -945,7 +951,7 @@ class IndustryChainWorkflow:
         return {"error": "重试耗尽"}
 
     def _llm_tool_use(self, system: str, user: str, tools: list[dict],
-                       tool_map: dict, max_turns: int = 5,
+                       tool_map: dict, max_turns: int = 4,
                        model: str = "") -> dict:
         """带 tool-use 的 LLM 调用。返回 dict 含 _search_log(搜索记录列表)"""
         model = model or DEEPSEEK_MODEL
