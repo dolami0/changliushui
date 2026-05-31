@@ -32,7 +32,7 @@ from agents.tools import bocha_search, TOOL_DEFINITIONS, TOOL_MAP
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 DEEPSEEK_MODEL = "deepseek-v4-pro"
 DEEPSEEK_MODEL_FAST = "deepseek-chat"  # 轻量模型, 用于提名等低复杂度任务
-BOCHA_TOOLS = [t for t in TOOL_DEFINITIONS if t["function"]["name"] == "bocha_search"]
+BOCHA_TOOLS = [t for t in TOOL_DEFINITIONS if t["function"]["name"] in ("bocha_search", "fetch_url")]
 VOLC_URL = "https://open.feedcoopapi.com/agent_api/agent/chat/completion"
 VOLC_BOT_ID = "7640524154441156122"
 
@@ -43,7 +43,7 @@ LLM1_PROMPT = """你是产业链利润流分析师。你的任务是通过自主
 
 # 工作流程
 
-使用 bocha_search 工具搜索以下维度。每次搜索后暂停，阅读返回结果，判断信息是否足够：
+使用 bocha_search 工具搜索，摘要信息不足时用 fetch_url 读取原文。每次搜索后暂停，判断信息是否足够：
 
 维度覆盖清单：
 1. 产业链结构 — 上游/中游/下游各环节及核心公司
@@ -113,7 +113,7 @@ LLM2_NOMINATE_PROMPT = """你的任务：从以下资料中提取与目标节点
 
 LLM2_SCORE_PROMPT = """你是十倍股赔率评估师。基于实时财务数据和V3案例库经验，对候选个股评分排序。输出前2名推荐。
 
-阅读已提供的个股数据后，对照评分标准，判断还缺少哪些关键信息。如有缺失，使用 bocha_search 搜索补充，最多搜索1次。
+阅读已提供的个股数据后，对照评分标准，判断还缺少哪些关键信息。如有缺失，使用 bocha_search 搜索或 fetch_url 读取原文补充，最多搜索1次。
 
 # V3 十倍股案例库速查表 (42例)
 | # | 股票 | 产业链节点 | 截留 | x倍 | 核心逻辑 | 壁垒 | 驱动类型 |
