@@ -67,8 +67,9 @@ class IndustryChainCoze:
             level = int(r.get("level", 0))
             mode = str(r.get("mode", ""))
             analyzed = str(r.get("is_analyzed", "")).lower()
+            analyzing = str(r.get("is_analyzing", "")).lower()
 
-            if level >= min_level and "产业" in mode and analyzed != "true":
+            if level >= min_level and "产业" in mode and analyzed != "true" and analyzing != "true":
                 candidates.append(r)
 
         # 去重: 同日同 news_content 跳过
@@ -158,13 +159,27 @@ class IndustryChainCoze:
         self.coze.insert_records(db_id, [row])
         return db_id
 
+    def mark_analyzing(self, record_id: str) -> None:
+        """标记源表记录为分析中 — 防止调度器重复拉取"""
+        try:
+            self.coze.update_records(
+                SOURCE_TABLE_ID,
+                update_fields=[{"field_name": "is_analyzing", "value": "true"}],
+                filter_conditions={"logic": "and", "conditions": [{"left": "id", "operation": "equal", "right": str(record_id)}]},
+            )
+        except Exception as e:
+            print(f'[Coze] mark_analyzing 失败: {e}', flush=True)
+
     def mark_processed(self, record_id: str) -> None:
         """标记源表记录为已分析"""
-        self.coze.update_records(
-            SOURCE_TABLE_ID,
-            update_fields=[{"field_name": "is_analyzed", "value": "true"}],
-            filter_conditions={"logic": "and", "conditions": [{"left": "id", "operation": "equal", "right": str(record_id)}]},
-        )
+        try:
+            self.coze.update_records(
+                SOURCE_TABLE_ID,
+                update_fields=[{"field_name": "is_analyzed", "value": "true"}],
+                filter_conditions={"logic": "and", "conditions": [{"left": "id", "operation": "equal", "right": str(record_id)}]},
+            )
+        except Exception as e:
+            print(f'[Coze] mark_processed 失败: {e}', flush=True)
 
     def get_output_db_id(self) -> str | None:
         return self._output_db_id

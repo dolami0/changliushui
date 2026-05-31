@@ -67,6 +67,7 @@ class WangqiScheduler:
         record = self.coze_io.get_record_by_id(record_id)
         if not record:
             return {"status": "error", "error": f"记录 {record_id} 未找到"}
+        self.coze_io.mark_analyzing(record_id)
         result = self.workflow.run_on_record(record, progress_cb=self._on_progress)
         if result.get("status") == "done":
             try:
@@ -98,6 +99,9 @@ class WangqiScheduler:
         for record in records[:10]:
             record_id = str(record.get("id", ""))
             try:
+                # 标记分析中，防止调度器重复拉取
+                self.coze_io.mark_analyzing(record_id)
+
                 self.current_poll_status = f"analyzing {record_id[:8]}"
                 self._emit_progress({
                     "type": "tianji_job",
@@ -113,10 +117,7 @@ class WangqiScheduler:
                     except Exception as e:
                         result["write_error"] = str(e)[:500]
 
-                    try:
-                        self.coze_io.mark_processed(record_id)
-                    except Exception:
-                        pass
+                    self.coze_io.mark_processed(record_id)
 
                     tp = _safe_pick_name(result.get("top_pick"))
                     ru = _safe_pick_name(result.get("runner_up"))

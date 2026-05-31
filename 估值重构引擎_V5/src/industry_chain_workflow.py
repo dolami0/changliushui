@@ -30,6 +30,7 @@ from env_config import VOLC_AGENT_KEY
 # ═══════════════════════════════════════
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 DEEPSEEK_MODEL = "deepseek-v4-pro"
+DEEPSEEK_MODEL_FAST = "deepseek-chat"  # 轻量模型, 用于提名等低复杂度任务
 VOLC_URL = "https://open.feedcoopapi.com/agent_api/agent/chat/completion"
 VOLC_BOT_ID = "7640524154441156122"
 
@@ -299,7 +300,7 @@ class IndustryChainWorkflow:
             # ── Pass 1: 先提名+评分 第一节点候选股 ──
             self._p(progress_cb, 4, "Pass1-提名节点1候选股")
             node1 = chain.get("top_two_nodes", [{}])[0]
-            noms1 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node1, chain, web1, web2, news, step_one))
+            noms1 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node1, chain, web1, web2, news, step_one), model=DEEPSEEK_MODEL_FAST)
             # 股票代码校验 — LLM 可能编造代码，用 tushare 按名称查真实代码
             noms1["nominations"] = self._resolve_stock_codes(noms1.get("nominations", []))
 
@@ -328,7 +329,7 @@ class IndustryChainWorkflow:
 
                 self._p(progress_cb, 7, "Pass2-提名节点2候选股")
                 node2 = chain.get("top_two_nodes", [{}, {}])[1]
-                noms2 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node2, chain, web1, web2, news, step_one))
+                noms2 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node2, chain, web1, web2, news, step_one), model=DEEPSEEK_MODEL_FAST)
                 # 股票代码校验 — LLM 可能编造代码，用 tushare 按名称查真实代码
                 noms2["nominations"] = self._resolve_stock_codes(noms2.get("nominations", []))
 
@@ -922,17 +923,22 @@ class IndustryChainWorkflow:
 
     # ── LLM 调用 ────────────────────────
 
-    def _llm(self, system: str, user: str, label: str = "") -> dict:
+    def _llm(self, system: str, user: str, label: str = "", model: str = "") -> dict:
+        model = model or DEEPSEEK_MODEL
+        use_thinking = model == DEEPSEEK_MODEL  # 仅 v4-pro 开启深度推理, flash 不需要
         for attempt in range(3):
             try:
-                r = requests.post(DEEPSEEK_URL, json={
-                    "model": DEEPSEEK_MODEL,
+                payload = {
+                    "model": model,
                     "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
-                    "max_tokens": 30720,
+                    "max_tokens": 30720 if use_thinking else 8192,
                     "stream": False, "temperature": 0,
-                    "thinking": {"type": "enabled"},
-                    "reasoning_effort": "max",
-                }, headers={"Authorization": f"Bearer {self.dk}", "Content-Type": "application/json"}, timeout=600)
+                }
+                if use_thinking:
+                    payload["thinking"] = {"type": "enabled"}
+                    payload["reasoning_effort"] = "max"
+                r = requests.post(DEEPSEEK_URL, json=payload,
+                    headers={"Authorization": f"Bearer {self.dk}", "Content-Type": "application/json"}, timeout=600)
                 if r.status_code != 200:
                     if attempt < 2: time.sleep(3 * (attempt + 1)); continue
                     return {"error": f"API {r.status_code}", "raw": r.text[:500]}
