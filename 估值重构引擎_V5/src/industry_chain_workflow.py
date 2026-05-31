@@ -968,7 +968,15 @@ class IndustryChainWorkflow:
         ]
         for turn in range(max_turns):
             try:
-                r = requests.post(DEEPSEEK_URL, json={
+                is_last_turn = (turn == max_turns - 1)
+                if is_last_turn:
+                    # 最后一轮：追加指令，强制输出 JSON
+                    messages.append({
+                        "role": "user",
+                        "content": "信息已充足。请立即输出最终JSON报告，不要再调用工具。"
+                    })
+
+                payload = {
                     "model": DEEPSEEK_MODEL,
                     "messages": messages,
                     "tools": tools,
@@ -976,7 +984,10 @@ class IndustryChainWorkflow:
                     "stream": False, "temperature": 0,
                     "thinking": {"type": "enabled"},
                     "reasoning_effort": "max",
-                }, headers={"Authorization": f"Bearer {self.dk}",
+                }
+
+                r = requests.post(DEEPSEEK_URL, json=payload,
+                    headers={"Authorization": f"Bearer {self.dk}",
                            "Content-Type": "application/json"}, timeout=300)
                 if r.status_code != 200:
                     return {"error": f"API {r.status_code}", "raw": r.text[:500]}
@@ -1010,6 +1021,7 @@ class IndustryChainWorkflow:
                     parsed = self._parse_json(content)
                     if parsed:
                         return parsed
+                    print(f'[LLM1-PARSE-FAIL] raw(500): {content[:500]}', flush=True)
                     return {"error": "JSON解析失败", "raw": content[:2000]}
             except requests.Timeout:
                 continue
