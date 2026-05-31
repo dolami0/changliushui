@@ -49,7 +49,7 @@ LLM1_PROMPT = """你是产业链利润流分析师。你的任务是通过自主
 4. 进入壁垒 — 搜索"<产业名> <节点名> 认证 壁垒 客户绑定"
 5. 需求弹性 — 搜索"<产业名> 受益环节 弹性最大 事件驱动"
 
-每次搜索后阅读结果，判断信息是否足够。不够则换角度再搜。总共控制在6-8次搜索内完成。所有维度覆盖后，交叉验证各来源的一致性，然后输出最终JSON。
+每次搜索后阅读结果，判断信息是否足够。不够则换角度再搜。总共控制在5次搜索内完成——每维度1次，精准搜索，不展开。所有维度覆盖后，交叉验证各来源的一致性，然后输出最终JSON。
 
 # 分析框架：5维度利润截留评估
 
@@ -960,7 +960,7 @@ class IndustryChainWorkflow:
         return {"error": "重试耗尽"}
 
     def _llm_tool_use(self, system: str, user: str, tools: list[dict],
-                       tool_map: dict, max_turns: int = 8) -> dict:
+                       tool_map: dict, max_turns: int = 5) -> dict:
         """带 tool-use 的 LLM 调用 — LLM 可主动调用搜索工具获取信息"""
         messages = [
             {"role": "system", "content": system},
