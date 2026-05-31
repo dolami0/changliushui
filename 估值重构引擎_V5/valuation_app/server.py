@@ -622,10 +622,225 @@ async def get_report_data_legacy(stock_code: str, at: str = ""):
 
 _TRACKING_DIR = Path(__file__).resolve().parent.parent.parent / ".agents" / "agents" / "shenwaihuashen" / "memory" / "tracking"
 
+# ── Coze 表 ID ──
+COZE_TRACKING_TABLE = "7645332166129287218"
+COZE_CASES_TABLE = "7645333715039830079"
+COZE_LINGGUANG_TABLE = "7645332554400153646"
+
+
+def _coze_token() -> str:
+    """获取 Coze API token"""
+    config_path = Path(__file__).resolve().parent / "config.json"
+    try:
+        with open(config_path, encoding="utf-8") as f:
+            cfg = json.load(f)
+        return cfg.get("coze_sat_token", "") or os.environ.get("COZE_SAT_TOKEN", "")
+    except Exception:
+        return os.environ.get("COZE_SAT_TOKEN", "")
+
+
+def _coze_query_all(table_id: str) -> list[dict]:
+    """从 Coze 表查询全部记录"""
+    import requests as _requests
+    token = _coze_token()
+    if not token:
+        return []
+    all_items = []
+    page = 1
+    s = _requests.Session()
+    s.headers.update({"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+    while True:
+        try:
+            r = s.post(f"https://api.coze.cn/v1/databases/{table_id}/records/query",
+                       json={"page_num": page, "page_size": 500, "is_async": False}, timeout=30)
+            data = r.json()
+            if data.get("code") != 0:
+                break
+            items = data.get("data", {}).get("items", [])
+            all_items.extend(items)
+            if not data.get("data", {}).get("has_more"):
+                break
+            page += 1
+        except Exception:
+            break
+    return all_items
+
+
+def _coze_query_one(table_id: str, filters: list[dict]) -> dict | None:
+    """从 Coze 表查询单条记录"""
+    import requests as _requests
+    token = _coze_token()
+    if not token:
+        return None
+    s = _requests.Session()
+    s.headers.update({"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+    try:
+        r = s.post(f"https://api.coze.cn/v1/databases/{table_id}/records/query",
+                   json={"page_num": 1, "page_size": 1, "is_async": False,
+                         "filter": {"logic": "and", "conditions": filters}}, timeout=30)
+        data = r.json()
+        items = data.get("data", {}).get("items", [])
+        return items[0] if items else None
+    except Exception:
+        return None
+
+
+def _coze_insert(table_id: str, rows: list[dict]) -> bool:
+    """写入 Coze 表"""
+    import requests as _requests
+    token = _coze_token()
+    if not token:
+        return False
+    s = _requests.Session()
+    s.headers.update({"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+    try:
+        insert_rows = [{k: str(v) if v is not None else "" for k, v in row.items()} for row in rows]
+        r = s.post(f"https://api.coze.cn/v1/databases/{table_id}/records",
+                   json={"insert_rows": insert_rows, "is_async": False}, timeout=30)
+        return r.json().get("code") == 0
+    except Exception:
+        return False
+
+
+def _coze_update_by_stock(table_id: str, stock_code: str, fields: dict) -> bool:
+    """按 stock_code 更新 Coze 记录"""
+    import requests as _requests
+    token = _coze_token()
+    if not token:
+        return False
+    s = _requests.Session()
+    s.headers.update({"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+    try:
+        update_fields = [{"field_name": k, "value": str(v) if v is not None else ""} for k, v in fields.items()]
+        r = s.post(f"https://api.coze.cn/v1/databases/{table_id}/records/update",
+                   json={"update_fields": update_fields, "is_async": False,
+                         "filter": {"logic": "and", "conditions": [
+                             {"left": "stock_code", "operation": "equal", "right": stock_code}]}},
+                   timeout=30)
+        return r.json().get("code") == 0
+    except Exception:
+        return False
+
+
+def _coze_update_by_slug(table_id: str, slug: str, fields: dict) -> bool:
+    """按 slug 更新 Coze 记录"""
+    import requests as _requests
+    token = _coze_token()
+    if not token:
+        return False
+    s = _requests.Session()
+    s.headers.update({"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+    try:
+        update_fields = [{"field_name": k, "value": str(v) if v is not None else ""} for k, v in fields.items()]
+        r = s.post(f"https://api.coze.cn/v1/databases/{table_id}/records/update",
+                   json={"update_fields": update_fields, "is_async": False,
+                         "filter": {"logic": "and", "conditions": [
+                             {"left": "slug", "operation": "equal", "right": slug}]}},
+                   timeout=30)
+        return r.json().get("code") == 0
+    except Exception:
+        return False
+
+
+# ── 字段映射: Coze 列名 → API JSON 格式 ──
+
+def _map_tracking_from_coze(row: dict) -> dict:
+    """将 Coze 追踪令记录转为前端 JSON 格式"""
+    def _parse(v):
+        if isinstance(v, str) and v:
+            try: return json.loads(v)
+            except: return v
+        return v
+
+    return {
+        "stockCode": row.get("stock_code", ""),
+        "stockName": row.get("stock_name", ""),
+        "direction": row.get("direction", ""),
+        "thesis": row.get("thesis", ""),
+        "conviction": str(row.get("conviction", "")),
+        "decisionDate": row.get("decision_date", ""),
+        "decision": row.get("decision", ""),
+        "recommendedPosition": str(row.get("recommended_position", "")),
+        "actualPosition": "0",
+        "entryCondition": row.get("entry_condition", ""),
+        "entryPriceTarget": str(row.get("base_price", "")),
+        "basePrice": str(row.get("base_price", "")),
+        "baseMarketCap": str(row.get("base_market_cap", "")),
+        "baseDate": row.get("base_date", ""),
+        "pillars": _parse(row.get("pillars_json", "[]")),
+        "risks": _parse(row.get("risks_json", "[]")),
+        "catalystCalendar": _parse(row.get("catalyst_json", "[]")),
+        "priceLog": _parse(row.get("price_log_json", "[]")),
+        "thesisLog": _parse(row.get("thesis_log_json", "[]")),
+        "positionLog": [],
+        **(_parse(row.get("meta_json", "{}")) or {}),
+        "updatedAt": row.get("updated_at", ""),
+        "file_name": row.get("file_name", ""),
+    }
+
+
+def _map_case_from_coze(row: dict) -> dict:
+    """将 Coze 案例记录转为前端 JSON 格式"""
+    def _parse(v):
+        if isinstance(v, str) and v:
+            try: return json.loads(v)
+            except: return v
+        return v
+    return {
+        "id": f"case-{row.get('stock_code', '')}",
+        "stockName": row.get("stock_name", ""),
+        "stockCode": row.get("stock_code", ""),
+        "sector": row.get("sector", ""),
+        "logic": row.get("logic", ""),
+        "catalyst": row.get("catalyst", ""),
+        "primaryDriver": row.get("primary_driver", ""),
+        "startDate": row.get("start_date", ""),
+        "startPrice": str(row.get("start_price", "")),
+        "entryPrice": str(row.get("entry_price", "")),
+        "exitPrice": str(row.get("exit_price", "")),
+        "peakPrice": str(row.get("peak_price", "")),
+        "peakDate": row.get("peak_date", ""),
+        "returnType": row.get("return_type", ""),
+        "endState": row.get("end_state", ""),
+        "gainMultiple": str(row.get("gain_multiple", "")),
+        "actualReturnPct": str(row.get("actual_return_pct", "")),
+        "maxDrawdownPct": str(row.get("max_drawdown_pct", "")),
+        "peExpansion": str(row.get("pe_expansion", "")),
+        "roicImprovement": str(row.get("roic_improvement", "")),
+        "tags": _parse(row.get("tags_json", "[]")),
+    }
+
+
+def _map_lingguang_from_coze(row: dict) -> dict:
+    """将 Coze 灵光记录转为前端 JSON 格式"""
+    def _parse(v):
+        if isinstance(v, str) and v:
+            try: return json.loads(v)
+            except: return v
+        return v
+    return {
+        "id": row.get("slug", ""),
+        "slug": row.get("slug", ""),
+        "title": row.get("title", ""),
+        "content": row.get("content", ""),
+        "source": row.get("source", ""),
+        "confidence": row.get("confidence", ""),
+        "tags": _parse(row.get("tags_json", "[]")),
+        "matches": _parse(row.get("matches_json", "[]")),
+        "revisionHistory": _parse(row.get("revision_json", "[]")),
+        "createdAt": row.get("created_at", ""),
+        "updatedAt": row.get("updated_at", ""),
+    }
+
 
 @app.get("/api/tracking")
 async def api_tracking_list():
-    """返回所有追踪令列表，兼容前端 Tracking 页面的 /api/tracking 调用"""
+    """返回所有追踪令列表，兼容前端 Tracking 页面的 /api/tracking 调用 — Coze 优先，本地回退"""
+    # 优先 Coze
+    rows = _coze_query_all(COZE_TRACKING_TABLE)
+    if rows:
+        return JSONResponse([_map_tracking_from_coze(r) for r in rows])
+    # 本地回退
     if not _TRACKING_DIR.exists():
         return JSONResponse([])
     files = [f for f in _TRACKING_DIR.iterdir() if f.suffix == ".json" and f.stem != "_template"]
@@ -1051,7 +1266,51 @@ def _update_index():
 
 @app.get("/api/avatar/memory/index")
 async def api_memory_index():
-    """获取记忆总索引"""
+    """获取记忆总索引 — Coze 优先，本地回退"""
+    # 优先从 Coze 三表聚合
+    try:
+        tracking_rows = _coze_query_all(COZE_TRACKING_TABLE)
+        case_rows = _coze_query_all(COZE_CASES_TABLE)
+        ling_rows = _coze_query_all(COZE_LINGGUANG_TABLE)
+        if tracking_rows or case_rows or ling_rows:
+            idx = {
+                "version": 2,
+                "lastUpdated": datetime.now(timezone.utc).isoformat(),
+                "lingguangCount": len(ling_rows),
+                "caseCount": len(case_rows),
+                "trackingCount": len(tracking_rows),
+                "lingguangIndex": {},
+                "caseIndex": {},
+                "trackingIndex": {},
+                "_source": "coze",
+            }
+            for r in ling_rows:
+                idx["lingguangIndex"][r.get("slug", "")] = {
+                    "title": r.get("title", ""),
+                    "tags": (lambda v: json.loads(v) if isinstance(v, str) and v else [])(r.get("tags_json", "[]")),
+                    "updatedAt": r.get("updated_at", ""),
+                }
+            for r in case_rows:
+                idx["caseIndex"][f"case-{r.get('stock_code', '')}"] = {
+                    "stockName": r.get("stock_name", ""),
+                    "stockCode": r.get("stock_code", ""),
+                    "sector": r.get("sector", ""),
+                    "gainMultiple": str(r.get("gain_multiple", "")),
+                    "returnType": r.get("return_type", ""),
+                    "tags": (lambda v: json.loads(v) if isinstance(v, str) and v else [])(r.get("tags_json", "[]")),
+                }
+            for r in tracking_rows:
+                code = r.get("stock_code", "")
+                if code:
+                    idx["trackingIndex"][code] = {
+                        "stockName": r.get("stock_name", ""),
+                        "status": "active",
+                        "lastUpdated": r.get("updated_at", ""),
+                    }
+            return JSONResponse(idx)
+    except Exception:
+        pass
+    # 本地回退
     idx = _read_json(MEMORY_DIR / "_index.json")
     if not idx:
         idx = _update_index()
@@ -1060,7 +1319,11 @@ async def api_memory_index():
 
 @app.get("/api/avatar/memory/lingguang")
 async def api_list_lingguang():
-    """列出所有灵光"""
+    """列出所有灵光 — Coze 优先，本地回退"""
+    rows = _coze_query_all(COZE_LINGGUANG_TABLE)
+    if rows:
+        return JSONResponse([_map_lingguang_from_coze(r) for r in rows])
+    # 本地回退
     items = []
     d = MEMORY_DIR / "lingguang"
     if d.exists():
@@ -1073,14 +1336,18 @@ async def api_list_lingguang():
 
 @app.get("/api/avatar/memory/lingguang/{slug}")
 async def api_get_lingguang(slug: str):
-    """获取单条灵光"""
+    """获取单条灵光 — Coze 优先，本地回退"""
+    row = _coze_query_one(COZE_LINGGUANG_TABLE, [{"left": "slug", "operation": "equal", "right": slug}])
+    if row:
+        return JSONResponse(_map_lingguang_from_coze(row))
+    # 本地回退
     data = _read_json(MEMORY_DIR / "lingguang" / f"{slug}.json")
     return JSONResponse(data or {"error": "not found"})
 
 
 @app.put("/api/avatar/memory/lingguang/{slug}")
 async def api_save_lingguang(slug: str, request: Request):
-    """保存（创建或更新）灵光"""
+    """保存（创建或更新）灵光 — 本地 + Coze 双写"""
     body = await request.json()
     body["id"] = slug
     body["updatedAt"] = datetime.now(timezone.utc).isoformat()
@@ -1088,9 +1355,33 @@ async def api_save_lingguang(slug: str, request: Request):
         body["createdAt"] = body["updatedAt"]
     if "revisionHistory" not in body:
         body["revisionHistory"] = []
-    ok = _write_json(MEMORY_DIR / "lingguang" / f"{slug}.json", body)
-    if ok:
+    # 本地写入（始终保留）
+    local_ok = _write_json(MEMORY_DIR / "lingguang" / f"{slug}.json", body)
+    if local_ok:
         _update_index()
+    # Coze 同步写入
+    try:
+        coze_fields = {
+            "slug": slug,
+            "title": str(body.get("title", "")),
+            "content": str(body.get("content", "")),
+            "source": str(body.get("source", "")),
+            "confidence": str(body.get("confidence", "")),
+            "tags_json": json.dumps(body.get("tags", []), ensure_ascii=False),
+            "matches_json": json.dumps(body.get("matches", []), ensure_ascii=False),
+            "revision_json": json.dumps(body.get("revisionHistory", []), ensure_ascii=False),
+            "updated_at": body["updatedAt"],
+            "created_at": body.get("createdAt", body["updatedAt"]),
+        }
+        # 检查是否已存在
+        existing = _coze_query_one(COZE_LINGGUANG_TABLE, [{"left": "slug", "operation": "equal", "right": slug}])
+        if existing:
+            _coze_update_by_slug(COZE_LINGGUANG_TABLE, slug, coze_fields)
+        else:
+            _coze_insert(COZE_LINGGUANG_TABLE, [coze_fields])
+    except Exception:
+        pass  # Coze 写失败不影响本地
+    if local_ok:
         return JSONResponse({"ok": True, "slug": slug})
     return JSONResponse({"ok": False, "error": "write failed"}, status_code=500)
 
@@ -1109,7 +1400,11 @@ async def api_delete_lingguang(slug: str):
 
 @app.get("/api/avatar/memory/cases")
 async def api_list_cases():
-    """列出所有案例（不含完整字段，只返回摘要）"""
+    """列出所有案例 — Coze 优先，本地回退"""
+    rows = _coze_query_all(COZE_CASES_TABLE)
+    if rows:
+        return JSONResponse([_map_case_from_coze(r) for r in rows])
+    # 本地回退
     items = []
     d = MEMORY_DIR / "cases"
     if d.exists():
@@ -1122,39 +1417,83 @@ async def api_list_cases():
 
 @app.get("/api/avatar/memory/cases/{slug}")
 async def api_get_case(slug: str):
-    """获取完整案例"""
+    """获取完整案例 — Coze 优先，本地回退"""
+    # slug 格式: "case-000408"，提取 stock_code
+    code = slug.replace("case-", "").upper()
+    row = _coze_query_one(COZE_CASES_TABLE, [{"left": "stock_code", "operation": "equal", "right": code}])
+    if row:
+        return JSONResponse(_map_case_from_coze(row))
+    # 本地回退
     data = _read_json(MEMORY_DIR / "cases" / f"{slug}.json")
     return JSONResponse(data or {"error": "not found"})
 
 
 @app.put("/api/avatar/memory/cases/{slug}")
 async def api_save_case(slug: str, request: Request):
-    """保存案例"""
+    """保存案例 — 本地 + Coze 双写"""
     body = await request.json()
     body["id"] = slug
     body["updatedAt"] = datetime.now(timezone.utc).isoformat()
     if "createdAt" not in body:
         body["createdAt"] = body["updatedAt"]
-    ok = _write_json(MEMORY_DIR / "cases" / f"{slug}.json", body)
-    if ok:
+    # 本地写入
+    local_ok = _write_json(MEMORY_DIR / "cases" / f"{slug}.json", body)
+    if local_ok:
         _update_index()
+    # Coze 同步写入
+    try:
+        code = slug.replace("case-", "").upper()
+        coze_fields = {
+            "stock_code": code,
+            "stock_name": str(body.get("stockName", "")),
+            "sector": str(body.get("sector", "")),
+            "logic": str(body.get("logic", "")),
+            "catalyst": str(body.get("catalyst", "")),
+            "primary_driver": str(body.get("primaryDriver", "")),
+            "start_date": str(body.get("startDate", "")),
+            "start_price": str(body.get("startPrice", "")),
+            "entry_price": str(body.get("entryPrice", "")),
+            "exit_price": str(body.get("exitPrice", "")),
+            "peak_price": str(body.get("peakPrice", "")),
+            "peak_date": str(body.get("peakDate", "")),
+            "return_type": str(body.get("returnType", "")),
+            "end_state": str(body.get("endState", "")),
+            "gain_multiple": str(body.get("gainMultiple", "")),
+            "actual_return_pct": str(body.get("actualReturnPct", "")),
+            "max_drawdown_pct": str(body.get("maxDrawdownPct", "")),
+            "pe_expansion": str(body.get("peExpansion", "")),
+            "roic_improvement": str(body.get("roicImprovement", "")),
+            "tags_json": json.dumps(body.get("tags", []), ensure_ascii=False),
+        }
+        existing = _coze_query_one(COZE_CASES_TABLE, [{"left": "stock_code", "operation": "equal", "right": code}])
+        if existing:
+            _coze_update_by_stock(COZE_CASES_TABLE, code, coze_fields)
+        else:
+            _coze_insert(COZE_CASES_TABLE, [coze_fields])
+    except Exception:
+        pass
+    if local_ok:
         return JSONResponse({"ok": True, "slug": slug})
     return JSONResponse({"ok": False, "error": "write failed"}, status_code=500)
 
 
 @app.put("/api/avatar/memory/cases/{slug}/from-tracking")
 async def api_upgrade_tracking_to_case(slug: str):
-    """从追踪升级为案例（evolve skill 的终局复盘用）"""
-    from pathlib import Path as P
-    # 查找对应的 tracking 文件
-    track_dir = MEMORY_DIR / "tracking"
+    """从追踪升级为案例（evolve skill 的终局复盘用）— Coze 优先，本地回退"""
     tracking = None
-    if track_dir.exists():
-        for f in track_dir.glob("track-*.json"):
-            d = _read_json(f)
-            if d and d.get("stockCode", "").lower() == slug.lower():
-                tracking = d
-                break
+    # 优先从 Coze 查追踪令
+    row = _coze_query_one(COZE_TRACKING_TABLE, [{"left": "stock_code", "operation": "equal", "right": slug.upper()}])
+    if row:
+        tracking = _map_tracking_from_coze(row)
+    # 本地回退
+    if not tracking:
+        track_dir = MEMORY_DIR / "tracking"
+        if track_dir.exists():
+            for f in track_dir.glob("track-*.json"):
+                d = _read_json(f)
+                if d and d.get("stockCode", "").lower() == slug.lower():
+                    tracking = d
+                    break
     if not tracking:
         return JSONResponse({"ok": False, "error": "tracking not found"}, status_code=404)
 
@@ -1184,7 +1523,11 @@ async def api_upgrade_tracking_to_case(slug: str):
 
 @app.get("/api/avatar/memory/tracking")
 async def api_list_tracking():
-    """列出所有追踪"""
+    """列出所有追踪 — Coze 优先，本地回退"""
+    rows = _coze_query_all(COZE_TRACKING_TABLE)
+    if rows:
+        return JSONResponse([_map_tracking_from_coze(r) for r in rows])
+    # 本地回退
     items = []
     d = MEMORY_DIR / "tracking"
     if d.exists():
@@ -1197,22 +1540,64 @@ async def api_list_tracking():
 
 @app.get("/api/avatar/memory/tracking/{ticker}")
 async def api_get_tracking(ticker: str):
-    """获取单条追踪"""
+    """获取单条追踪 — Coze 优先，本地回退"""
+    row = _coze_query_one(COZE_TRACKING_TABLE, [{"left": "stock_code", "operation": "equal", "right": ticker}])
+    if row:
+        return JSONResponse(_map_tracking_from_coze(row))
+    # 本地回退
     data = _read_json(MEMORY_DIR / "tracking" / f"track-{ticker}.json")
     return JSONResponse(data or {"error": "not found"})
 
 
 @app.post("/api/avatar/memory/tracking/{ticker}")
 async def api_create_or_update_tracking(ticker: str, request: Request):
-    """创建或更新追踪"""
+    """创建或更新追踪 — 本地 + Coze 双写"""
     body = await request.json()
     body["stockCode"] = ticker
     body["updatedAt"] = datetime.now(timezone.utc).isoformat()
     if "createdAt" not in body:
         body["createdAt"] = body["updatedAt"]
-    ok = _write_json(MEMORY_DIR / "tracking" / f"track-{ticker}.json", body)
-    if ok:
+    # 本地写入
+    local_ok = _write_json(MEMORY_DIR / "tracking" / f"track-{ticker}.json", body)
+    if local_ok:
         _update_index()
+    # Coze 同步写入
+    try:
+        coze_fields = {
+            "stock_code": ticker,
+            "stock_name": str(body.get("stockName", "")),
+            "file_name": f"{ticker}-{body.get('stockName', '')}.json",
+            "direction": str(body.get("direction", "")),
+            "thesis": str(body.get("thesis", "")),
+            "conviction": str(body.get("conviction", "")),
+            "decision_date": str(body.get("decisionDate", "")),
+            "decision": str(body.get("decision", "")),
+            "recommended_position": str(body.get("recommendedPosition", "")),
+            "entry_condition": str(body.get("entryCondition", "")),
+            "base_price": str(body.get("basePrice", "")),
+            "base_market_cap": str(body.get("baseMarketCap", "")),
+            "base_date": str(body.get("baseDate", "")),
+            "pillars_json": json.dumps(body.get("pillars", []), ensure_ascii=False),
+            "risks_json": json.dumps(body.get("risks", []), ensure_ascii=False),
+            "catalyst_json": json.dumps(body.get("catalystCalendar", []), ensure_ascii=False),
+            "price_log_json": json.dumps(body.get("priceLog", []), ensure_ascii=False),
+            "thesis_log_json": json.dumps(body.get("thesisLog", []), ensure_ascii=False),
+            "meta_json": json.dumps({
+                "exitConditions": body.get("exitConditions", []),
+                "aShareTracking": body.get("aShareTracking", {}),
+                "reviewSchedule": body.get("reviewSchedule", {}),
+                "positionLog": body.get("positionLog", []),
+            }, ensure_ascii=False),
+            "updated_at": body["updatedAt"],
+        }
+        existing = _coze_query_one(COZE_TRACKING_TABLE, [{"left": "stock_code", "operation": "equal", "right": ticker}])
+        if existing:
+            _coze_update_by_stock(COZE_TRACKING_TABLE, ticker, coze_fields)
+        else:
+            _coze_insert(COZE_TRACKING_TABLE, [coze_fields])
+    except Exception:
+        pass
+    if local_ok:
         return JSONResponse({"ok": True, "ticker": ticker})
     return JSONResponse({"ok": False, "error": "write failed"}, status_code=500)
 

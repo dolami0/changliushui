@@ -24,6 +24,7 @@ class Scheduler:
         self.runner = pipeline_runner
         self.agent0_db_id = config["agent0_database_id"]
         self.output_db_id = config.get("output_database_id", "")
+        self.detail_db_id = config.get("detail_database_id", "")
         self.interval = config.get("polling_interval_sec", 600)
         self.server_port = config.get("server_port", 8080)
         self._task: asyncio.Task | None = None
@@ -484,6 +485,15 @@ class Scheduler:
         }
         self.coze.insert_records(self.output_db_id, [row])
 
+        # ── 写入详情归档表（完整JSON，供深度回溯）──
+        if self.detail_db_id:
+            try:
+                _write_detail_row(self.detail_db_id, self.coze, agent0_record,
+                                  a1_raw, a2_raw, a2a_raw, a3, routing,
+                                  pipeline_type, _rnpv_data, stock_code, stock_name, ts)
+            except Exception as e:
+                logger.warning(f"[V6] 详情归档写入失败(非致命): {e}")
+
         # ── 评测记录（可选，失败不影响主流程）──
         try:
             from evals.eval_builder import build_eval_record
@@ -516,3 +526,61 @@ class Scheduler:
             stage="report", step=step, total_steps=total,
             step_name=name, status=status, elapsed_s=0,
         ))
+
+
+# ── 详情归档写入（模块级函数，供 _write_result_to_coze_v5 调用）──
+
+def _write_detail_row(detail_db_id: str, coze, agent0_record: dict,
+                      a1_raw: dict, a2_raw: dict, a2a_raw: dict,
+                      a3: dict, routing: dict,
+                      pipeline_type: str, _rnpv_data: dict,
+                      stock_code: str, stock_name: str, ts: str):
+    """将完整 Agent JSON 归档写入 Coze 详情表 7644911309938589711。
+
+    与输出表（摘要字段）互补：此表存每个 Agent 的完整原始输出，供深度回溯。
+    """
+    serialize = Scheduler._serialize_agent_output
+
+    # ── 按管线类型选择正确的数据源 ──
+    if pipeline_type == "rnpv":
+        # rNPV：使用专属三步管线数据，而非标准 Agent-1/2/3
+        agent1_detail = _rnpv_data.get("agent1r", a1_raw)
+        agent2_detail = _rnpv_data.get("agent2r", a2_raw)
+        agent3_detail = _rnpv_data.get("agent3r", a3)
+        agent2a_detail = {}
+        routing_detail = {"primary_model": "F", "pipeline_type": "rnpv",
+                          "note": "rNPV无标准模型路由，F为管线估值锚定"}
+    elif pipeline_type == "sotp":
+        # SOTP：使用标准 Agent-1 + Agent-2a + Agent-3s
+        agent1_detail = a1_raw
+        agent2_detail = a2_raw
+        agent3_detail = a3
+        agent2a_detail = a2a_raw
+        routing_detail = routing
+    else:
+        # 标准管线
+        agent1_detail = a1_raw
+        agent2_detail = a2_raw
+        agent3_detail = a3
+        agent2a_detail = a2a_raw
+        routing_detail = routing
+
+    # 注意: Coze insert_records 会自动将所有值转为字符串
+    # json.dumps 确保嵌套结构在 Coze 中以 JSON 字符串形式存储
+    # 注意: 不要传 bstudio_create_time 等 bstudio_* 字段，
+    # Coze 表会自动注入这些系统字段，手动传递会导致 "Column specified twice" 错误
+    detail_row = {
+        "stock_code": stock_code,
+        "stock_name": stock_name,
+        "event_date": agent0_record.get("bstudio_create_time", ""),
+        "json_filename": f"{stock_code}_{ts}",
+        "processed_at": datetime.now(timezone.utc).isoformat(),
+        "agent0_json": json.dumps(serialize(agent0_record), ensure_ascii=False, default=str),
+        "agent1_json": json.dumps(serialize(agent1_detail), ensure_ascii=False, default=str),
+        "agent2_json": json.dumps(serialize(agent2_detail), ensure_ascii=False, default=str),
+        "agent2a_json": json.dumps(serialize(agent2a_detail), ensure_ascii=False, default=str) if agent2a_detail else "",
+        "agent3_json": json.dumps(serialize(agent3_detail), ensure_ascii=False, default=str),
+        "routing_json": json.dumps(serialize(routing_detail), ensure_ascii=False, default=str),
+    }
+    coze.insert_records(detail_db_id, [detail_row])
+    logger.info(f"[V6] 详情归档写入完成: {stock_code} → {detail_db_id}")

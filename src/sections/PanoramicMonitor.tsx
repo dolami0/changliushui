@@ -56,8 +56,14 @@ const PANEL_HEADER_STYLE: React.CSSProperties = {
 
 function formatDate(ts: string) {
   if (!ts) return '';
+  // 直接从字符串截取日期，绕过 JS Date 时区解析差异
+  const match = ts.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (match) return `${parseInt(match[2])}/${parseInt(match[3])}`;
+  // 回退: 用 Date 解析（处理非标准格式）
   const d = new Date(ts);
-  return `${d.getMonth() + 1}/${d.getDate()}`;
+  if (isNaN(d.getTime())) return '';
+  const parts = d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', timeZone: 'Asia/Shanghai' }).split('/');
+  return `${parseInt(parts[0])}/${parseInt(parts[1])}`;
 }
 
 const PANEL_BODY_STYLE: React.CSSProperties = {
