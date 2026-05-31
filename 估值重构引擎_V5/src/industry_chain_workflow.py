@@ -275,12 +275,13 @@ class IndustryChainWorkflow:
             return {"status": "skipped", "error": "news_content 为空"}
 
         try:
-            # Step 1: LLM #1 — 产业链推理（flash + bocha_search tool-use）
+            # Step 1: LLM #1 — 产业链推理（flash + bocha_search）
             self._p(progress_cb, 1, "LLM产业链推理(flash+bocha)")
             llm1_tools = [t for t in TOOL_DEFINITIONS if t["function"]["name"] == "bocha_search"]
             chain = self._llm_tool_use(LLM1_PROMPT,
                 self._msg_llm1(news, step_one),
                 tools=llm1_tools, tool_map=TOOL_MAP, model=DEEPSEEK_MODEL_FAST)
+            bocha_log = chain.pop("_search_log", [])  # 取出搜索日志,不留入chain
 
             # 校验 LLM #1 输出
             industry = chain.get("chain_overview", {}).get("industry", "")
@@ -292,12 +293,19 @@ class IndustryChainWorkflow:
                     self._msg_llm1(news, step_one)
                     + "\n\n上次输出industry或top_two_nodes为空。请确保chain_overview.industry不为空、top_two_nodes包含2个节点。",
                     tools=llm1_tools, tool_map=TOOL_MAP, model=DEEPSEEK_MODEL_FAST)
+                bocha_log = chain.pop("_search_log", [])
 
-            # Step 2: 提名节点1候选股（flash, 仅用节点信息+资讯）
-            self._p(progress_cb, 2, "Pass1-提名节点1候选股")
+            # Step 2: Volc节点搜索 — 为提名LLM提供节点内公司列表
+            if not eval_mode:
+                self._p(progress_cb, 2, "Volc节点搜索")
+                web2 = self._search_nodes(chain)
+            else:
+                web2 = ""
+
+            # Step 3: 提名节点1候选股（flash, 资讯+节点分析+bocha搜索结果+Volc节点信息）
+            self._p(progress_cb, 3, "Pass1-提名节点1候选股")
             node1 = chain.get("top_two_nodes", [{}])[0]
-            noms1 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node1, chain, news, step_one), model=DEEPSEEK_MODEL_FAST)
-            # 股票代码校验
+            noms1 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node1, chain, news, step_one, bocha_log, web2), model=DEEPSEEK_MODEL_FAST)
             noms1["nominations"] = self._resolve_stock_codes(noms1.get("nominations", []))
 
             self._p(progress_cb, 3, "Pass1-批量查询实时数据")
@@ -321,9 +329,9 @@ class IndustryChainWorkflow:
             else:
                 print(f"[PASS1-FAIL] node1 best={best1} < 6.5, adding node2...", flush=True)
 
-                self._p(progress_cb, 4, "Pass2-提名节点2候选股")
+                self._p(progress_cb, 5, "Pass2-提名节点2候选股")
                 node2 = chain.get("top_two_nodes", [{}, {}])[1]
-                noms2 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node2, chain, news, step_one), model=DEEPSEEK_MODEL_FAST)
+                noms2 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node2, chain, news, step_one, bocha_log, web2), model=DEEPSEEK_MODEL_FAST)
                 noms2["nominations"] = self._resolve_stock_codes(noms2.get("nominations", []))
 
                 self._p(progress_cb, 5, "Pass2-批量查询实时数据")
@@ -341,7 +349,7 @@ class IndustryChainWorkflow:
                 final_noms = all_noms
                 final_enriched = all_enriched
 
-            return self._assemble(record, chain, final_noms, final_scores, final_enriched)
+            return self._assemble(record, chain, final_noms, final_scores, final_enriched, web2)
 
         except Exception as e:
             return {"status": "error", "error": str(e)[:1000], "record_id": rid}
@@ -375,12 +383,12 @@ class IndustryChainWorkflow:
     # ── Step 2: LLM #1 ─────────────────
 
     @staticmethod
-    def _msg_llm1(news: str, step_one: str, web: str) -> str:
+    def _msg_llm1(news: str, step_one: str, web: str = "") -> str:
         parts = [f"# 产业资讯\n{news}"]
         if step_one:
             parts.append(f"\n# Agent0初步分析\n{step_one}")
         if web:
-            parts.append(f"\n# 联网搜索结果(雪球/全网,note置信度)\n{web[:3000]}")
+            parts.append(f"\n# 联网搜索结果\n{web[:3000]}")
         return "\n".join(parts)
 
     # ── Step 3: 联网搜索2 (并行) ───────
@@ -432,8 +440,9 @@ class IndustryChainWorkflow:
 
     @staticmethod
     def _msg_nominate_single(node: dict, chain: dict, news: str = "",
-                             step_one: str = "") -> str:
-        """单节点提名：传资讯 + 节点分析，LLM按关联度出候选股"""
+                             step_one: str = "", bocha_log: list = None,
+                             web2: str = "") -> str:
+        """单节点提名：资讯 + 节点分析 + bocha搜索结果 + Volc节点信息 → 候选股"""
         node_name = node.get("node_name", "")
         what = node.get("what_to_look_for", "")
         pfa = json.dumps(chain.get("profit_flow_analysis", []), ensure_ascii=False, indent=2)
@@ -448,8 +457,18 @@ class IndustryChainWorkflow:
             parts.append(f"\n# 原始产业资讯\n{news[:2000]}")
         if step_one.strip():
             parts.append(f"\n# Agent0产业分析\n{step_one[:1500]}")
+        # bocha搜索结果 — LLM #1 搜索时已找到的公司信息
+        if bocha_log:
+            bocha_text = "\n\n".join(
+                f"[搜索 {i+1}: {r['query'][:80]}]\n{r['result'][:1500]}"
+                for i, r in enumerate(bocha_log[:6])
+            )
+            parts.append(f"\n# bocha实时搜索结果（含公司信息）\n{bocha_text}")
         parts.append(f"\n# 全部节点利润流分析\n{pfa}")
-        parts.append(f"\n请为「{node_name}」提名2-5只最相关的A股候选个股。")
+        # Volc节点搜索 — 该节点的公司详情
+        if web2:
+            parts.append(f"\n# Volc节点搜索结果\n{web2[:3000]}")
+        parts.append(f"\n请为「{node_name}」提名2-5只最相关的A股候选个股，优先从搜索结果中提取公司。")
         return "\n".join(parts)
 
     # ── Step 4.5: 股票代码校验 ────────────
@@ -846,7 +865,7 @@ class IndustryChainWorkflow:
 
     # ── 组装结果 ────────────────────────
 
-    def _assemble(self, record, chain, noms, scores, enriched) -> dict:
+    def _assemble(self, record, chain, noms, scores, enriched, web2="") -> dict:
         tp = scores.get("top_pick", {})
         ru = scores.get("runner_up", {})
         ss = scores.get("scored_stocks", [])
@@ -879,7 +898,7 @@ class IndustryChainWorkflow:
             "top5_reference": ss[:5],
             "news_content": str(record.get("news_content", "")),
             "step_one": str(record.get("step_one", "")),
-            "web_research": "",
+            "web_research": f"=== Volc节点搜索 ===\n{web2}",
             "source_record_id": _safe_int(record.get("id", 0)),
             "industry_chain": chain.get("chain_overview", {}).get("industry", ""),
             "event_summary": chain.get("chain_overview", {}).get("event_summary", ""),
@@ -937,9 +956,10 @@ class IndustryChainWorkflow:
     def _llm_tool_use(self, system: str, user: str, tools: list[dict],
                        tool_map: dict, max_turns: int = 5,
                        model: str = "") -> dict:
-        """带 tool-use 的 LLM 调用 — LLM 可主动调用搜索工具获取信息"""
+        """带 tool-use 的 LLM 调用。返回 dict 含 _search_log(搜索记录列表)"""
         model = model or DEEPSEEK_MODEL
         use_thinking = model == DEEPSEEK_MODEL
+        search_log = []  # 收集所有搜索结果
         messages = [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
@@ -964,14 +984,15 @@ class IndustryChainWorkflow:
                 else:
                     messages.append({
                         "role": "user",
-                        "content": "最后一轮。请综合所有搜索结果，输出最终JSON报告。"
+                        "content": "最后一轮。请综合所有搜索结果，输出最终JSON报告。要求：每个rationale/justification不超过150字，保持JSON完整可解析。"
                     })
+                    payload["max_tokens"] = 4096
 
                 r = requests.post(DEEPSEEK_URL, json=payload,
                     headers={"Authorization": f"Bearer {self.dk}",
                            "Content-Type": "application/json"}, timeout=300)
                 if r.status_code != 200:
-                    return {"error": f"API {r.status_code}", "raw": r.text[:500]}
+                    return {"error": f"API {r.status_code}", "raw": r.text[:500], "_search_log": search_log}
                 msg = r.json()["choices"][0]["message"]
 
                 if msg.get("tool_calls"):
@@ -992,6 +1013,10 @@ class IndustryChainWorkflow:
                         else:
                             result = f"未知工具: {fn_name}"
                         print(f'[TOOL] {fn_name}({json.dumps(fn_args, ensure_ascii=False)[:100]}) -> {len(result)} chars', flush=True)
+                        search_log.append({
+                            "query": fn_args.get("query", ""),
+                            "result": str(result)[:3000],
+                        })
                         messages.append({
                             "role": "tool",
                             "tool_call_id": tc["id"],
@@ -1001,14 +1026,15 @@ class IndustryChainWorkflow:
                     content = msg.get("content", "")
                     parsed = self._parse_json(content)
                     if parsed:
+                        parsed["_search_log"] = search_log
                         return parsed
                     print(f'[LLM1-PARSE-FAIL] raw(500): {content[:500]}', flush=True)
-                    return {"error": "JSON解析失败", "raw": content[:2000]}
+                    return {"error": "JSON解析失败", "raw": content[:2000], "_search_log": search_log}
             except requests.Timeout:
                 continue
             except Exception as e:
-                return {"error": str(e)[:500]}
-        return {"error": f"tool-use 超过 {max_turns} 轮"}
+                return {"error": str(e)[:500], "_search_log": search_log}
+        return {"error": f"tool-use 超过 {max_turns} 轮", "_search_log": search_log}
 
     @staticmethod
     def _call_volc(query: str) -> str:
