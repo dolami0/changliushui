@@ -281,7 +281,7 @@ class IndustryChainWorkflow:
             chain = self._llm_tool_use(LLM1_PROMPT,
                 self._msg_llm1(news, step_one),
                 tools=llm1_tools, tool_map=TOOL_MAP, model=DEEPSEEK_MODEL_FAST)
-            bocha_log = chain.pop("_search_log", [])  # 取出搜索日志,不留入chain
+            chain.pop("_search_log", [])  # bocha原始结果不再传入提名, LLM #1报告已精炼
 
             # 校验 LLM #1 输出
             industry = chain.get("chain_overview", {}).get("industry", "")
@@ -293,7 +293,7 @@ class IndustryChainWorkflow:
                     self._msg_llm1(news, step_one)
                     + "\n\n上次输出industry或top_two_nodes为空。请确保chain_overview.industry不为空、top_two_nodes包含2个节点。",
                     tools=llm1_tools, tool_map=TOOL_MAP, model=DEEPSEEK_MODEL_FAST)
-                bocha_log = chain.pop("_search_log", [])
+                chain.pop("_search_log", [])
 
             # Step 2: Volc节点搜索 — 为提名LLM提供节点内公司列表
             if not eval_mode:
@@ -302,10 +302,10 @@ class IndustryChainWorkflow:
             else:
                 web2 = ""
 
-            # Step 3: 提名节点1候选股（flash, 资讯+节点分析+bocha搜索结果+Volc节点信息）
+            # Step 3: 提名节点1候选股（flash, 资讯+LLM #1报告+Volc节点公司列表）
             self._p(progress_cb, 3, "Pass1-提名节点1候选股")
             node1 = chain.get("top_two_nodes", [{}])[0]
-            noms1 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node1, chain, news, step_one, bocha_log, web2), model=DEEPSEEK_MODEL_FAST)
+            noms1 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node1, chain, news, step_one, web2), model=DEEPSEEK_MODEL_FAST)
             noms1["nominations"] = self._resolve_stock_codes(noms1.get("nominations", []))
 
             self._p(progress_cb, 3, "Pass1-批量查询实时数据")
@@ -331,7 +331,7 @@ class IndustryChainWorkflow:
 
                 self._p(progress_cb, 5, "Pass2-提名节点2候选股")
                 node2 = chain.get("top_two_nodes", [{}, {}])[1]
-                noms2 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node2, chain, news, step_one, bocha_log, web2), model=DEEPSEEK_MODEL_FAST)
+                noms2 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node2, chain, news, step_one, web2), model=DEEPSEEK_MODEL_FAST)
                 noms2["nominations"] = self._resolve_stock_codes(noms2.get("nominations", []))
 
                 self._p(progress_cb, 5, "Pass2-批量查询实时数据")
@@ -440,9 +440,8 @@ class IndustryChainWorkflow:
 
     @staticmethod
     def _msg_nominate_single(node: dict, chain: dict, news: str = "",
-                             step_one: str = "", bocha_log: list = None,
-                             web2: str = "") -> str:
-        """单节点提名：资讯 + 节点分析 + bocha搜索结果 + Volc节点信息 → 候选股"""
+                             step_one: str = "", web2: str = "") -> str:
+        """单节点提名：资讯 + LLM #1节点分析 + Volc节点公司列表 → 候选股"""
         node_name = node.get("node_name", "")
         what = node.get("what_to_look_for", "")
         pfa = json.dumps(chain.get("profit_flow_analysis", []), ensure_ascii=False, indent=2)
@@ -457,18 +456,10 @@ class IndustryChainWorkflow:
             parts.append(f"\n# 原始产业资讯\n{news[:2000]}")
         if step_one.strip():
             parts.append(f"\n# Agent0产业分析\n{step_one[:1500]}")
-        # bocha搜索结果 — LLM #1 搜索时已找到的公司信息
-        if bocha_log:
-            bocha_text = "\n\n".join(
-                f"[搜索 {i+1}: {r['query'][:80]}]\n{r['result'][:1500]}"
-                for i, r in enumerate(bocha_log[:6])
-            )
-            parts.append(f"\n# bocha实时搜索结果（含公司信息）\n{bocha_text}")
-        parts.append(f"\n# 全部节点利润流分析\n{pfa}")
-        # Volc节点搜索 — 该节点的公司详情
+        parts.append(f"\n# 全部节点利润流分析（LLM #1 产业链推理结论）\n{pfa}")
         if web2:
-            parts.append(f"\n# Volc节点搜索结果\n{web2[:3000]}")
-        parts.append(f"\n请为「{node_name}」提名2-5只最相关的A股候选个股，优先从搜索结果中提取公司。")
+            parts.append(f"\n# 节点内A股公司列表（Volc实时搜索）\n{web2}")
+        parts.append(f"\n请为「{node_name}」提名2-5只最相关的A股候选个股。优先从Volc搜索结果中提取公司。")
         return "\n".join(parts)
 
     # ── Step 4.5: 股票代码校验 ────────────
