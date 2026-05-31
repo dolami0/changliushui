@@ -113,7 +113,7 @@ LLM2_NOMINATE_PROMPT = """你的任务：从以下资料中提取与目标节点
 
 LLM2_SCORE_PROMPT = """你是十倍股赔率评估师。基于实时财务数据和V3案例库经验，对候选个股评分排序。输出前2名推荐。
 
-你可以使用 bocha_search 工具补充近期催化剂和竞对信息（市值/PE已提供，不要重复搜索），最多搜索1次。
+阅读已提供的个股数据后，对照评分标准，判断还缺少哪些关键信息。如有缺失，使用 bocha_search 搜索补充，最多搜索1次。
 
 # V3 十倍股案例库速查表 (42例)
 | # | 股票 | 产业链节点 | 截留 | x倍 | 核心逻辑 | 壁垒 | 驱动类型 |
@@ -971,11 +971,9 @@ class IndustryChainWorkflow:
                     "max_tokens": 30720,
                     "stream": False, "temperature": 0,
                 }
-                # 前N-1轮: 传tools + tool_choice=auto 防止DSML格式
-                # 最后轮: 不传tools, 强制输出JSON
+                # 前N-1轮: 传tools; 最后轮: 不传tools强制输出JSON
                 if not is_last_turn:
                     payload["tools"] = tools
-                    payload["tool_choice"] = "auto"
                     if use_thinking:
                         payload["thinking"] = {"type": "enabled"}
                         payload["reasoning_effort"] = "max"
@@ -994,9 +992,11 @@ class IndustryChainWorkflow:
                 msg = r.json()["choices"][0]["message"]
 
                 if msg.get("tool_calls"):
+                    # V4 requires non-empty content for tool call messages
+                    assistant_content = msg.get("content") or "正在搜索..."
                     messages.append({
                         "role": "assistant",
-                        "content": msg.get("content") or "",
+                        "content": assistant_content,
                         "tool_calls": msg["tool_calls"],
                     })
                     for tc in msg["tool_calls"]:
