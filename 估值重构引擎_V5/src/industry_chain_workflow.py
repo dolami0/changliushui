@@ -275,21 +275,12 @@ class IndustryChainWorkflow:
             return {"status": "skipped", "error": "news_content 为空"}
 
         try:
-            if eval_mode:
-                # 评测模式：跳过联网搜索，纯推理
-                web1, web2 = "", ""
-            else:
-                # Step 1: 联网搜索1 — 产业事件
-                self._p(progress_cb, 1, "联网搜索1-产业事件")
-                web1 = self._search(news, step_one)
-
-            # Step 2: LLM #1 — 产业链推理（tool-use 模式, 主动调 bocha_search）
-            self._p(progress_cb, 2, "LLM产业链推理(tool-use)")
-            # 仅传 bocha_search 工具, 不需要其他复杂工具
+            # Step 1: LLM #1 — 产业链推理（flash + bocha_search tool-use）
+            self._p(progress_cb, 1, "LLM产业链推理(flash+bocha)")
             llm1_tools = [t for t in TOOL_DEFINITIONS if t["function"]["name"] == "bocha_search"]
             chain = self._llm_tool_use(LLM1_PROMPT,
-                self._msg_llm1(news, step_one, web1),
-                tools=llm1_tools, tool_map=TOOL_MAP)
+                self._msg_llm1(news, step_one),
+                tools=llm1_tools, tool_map=TOOL_MAP, model=DEEPSEEK_MODEL_FAST)
 
             # 校验 LLM #1 输出
             industry = chain.get("chain_overview", {}).get("industry", "")
@@ -298,27 +289,22 @@ class IndustryChainWorkflow:
             if (not industry or not nodes) and not is_hard_error:
                 print(f"[LLM1-EMPTY] industry='{industry}' nodes={len(nodes)}, retrying...", flush=True)
                 chain = self._llm_tool_use(LLM1_PROMPT,
-                    self._msg_llm1(news, step_one, web1)
+                    self._msg_llm1(news, step_one)
                     + "\n\n上次输出industry或top_two_nodes为空。请确保chain_overview.industry不为空、top_two_nodes包含2个节点。",
-                    tools=llm1_tools, tool_map=TOOL_MAP)
+                    tools=llm1_tools, tool_map=TOOL_MAP, model=DEEPSEEK_MODEL_FAST)
 
-            if not eval_mode:
-                # Step 3: 联网搜索2 — 每节点1个query (并行)
-                self._p(progress_cb, 3, "联网搜索2-节点详情")
-                web2 = self._search_nodes(chain)
-
-            # ── Pass 1: 先提名+评分 第一节点候选股 ──
-            self._p(progress_cb, 4, "Pass1-提名节点1候选股")
+            # Step 2: 提名节点1候选股（flash, 仅用节点信息+资讯）
+            self._p(progress_cb, 2, "Pass1-提名节点1候选股")
             node1 = chain.get("top_two_nodes", [{}])[0]
-            noms1 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node1, chain, web1, web2, news, step_one), model=DEEPSEEK_MODEL_FAST)
-            # 股票代码校验 — LLM 可能编造代码，用 tushare 按名称查真实代码
+            noms1 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node1, chain, news, step_one), model=DEEPSEEK_MODEL_FAST)
+            # 股票代码校验
             noms1["nominations"] = self._resolve_stock_codes(noms1.get("nominations", []))
 
-            self._p(progress_cb, 5, "Pass1-批量查询实时数据")
+            self._p(progress_cb, 3, "Pass1-批量查询实时数据")
             enriched1 = self._enrich(noms1, chain)
 
-            self._p(progress_cb, 6, "Pass1-评分排序")
-            msg1 = self._msg_score_single(node1, chain, enriched1, web2)
+            self._p(progress_cb, 3, "Pass1-评分排序")
+            msg1 = self._msg_score_single(node1, chain, enriched1)
             scores1 = self._llm(LLM2_SCORE_PROMPT, msg1)
             scores1 = self._validate_and_retry_score(scores1, msg1)
 
@@ -328,38 +314,34 @@ class IndustryChainWorkflow:
             node1_ok = best1 >= 6.5
 
             if node1_ok:
-                #  节点1有达标标的，直接输出
                 print(f"[PASS1-OK] node1 best={best1}, using node1 only", flush=True)
                 final_scores = scores1
                 final_noms = noms1
                 final_enriched = enriched1
             else:
-                #  节点1无达标标的 → Pass 2 加入节点2
                 print(f"[PASS1-FAIL] node1 best={best1} < 6.5, adding node2...", flush=True)
 
-                self._p(progress_cb, 7, "Pass2-提名节点2候选股")
+                self._p(progress_cb, 4, "Pass2-提名节点2候选股")
                 node2 = chain.get("top_two_nodes", [{}, {}])[1]
-                noms2 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node2, chain, web1, web2, news, step_one), model=DEEPSEEK_MODEL_FAST)
-                # 股票代码校验 — LLM 可能编造代码，用 tushare 按名称查真实代码
+                noms2 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node2, chain, news, step_one), model=DEEPSEEK_MODEL_FAST)
                 noms2["nominations"] = self._resolve_stock_codes(noms2.get("nominations", []))
 
-                self._p(progress_cb, 8, "Pass2-批量查询实时数据")
+                self._p(progress_cb, 5, "Pass2-批量查询实时数据")
                 enriched2 = self._enrich(noms2, chain)
 
-                # 合并两节点数据
                 all_enriched = {**enriched1, **enriched2}
                 all_noms = {
                     "nominations": (noms1.get("nominations", []) + noms2.get("nominations", []))
                 }
 
-                self._p(progress_cb, 9, "Pass2-混合评分排序")
-                msg_all = self._msg_score(chain, all_enriched, web2)
+                self._p(progress_cb, 6, "Pass2-混合评分排序")
+                msg_all = self._msg_score(chain, all_enriched)
                 final_scores = self._llm(LLM2_SCORE_PROMPT, msg_all)
                 final_scores = self._validate_and_retry_score(final_scores, msg_all)
                 final_noms = all_noms
                 final_enriched = all_enriched
 
-            return self._assemble(record, chain, final_noms, final_scores, final_enriched, web1, web2)
+            return self._assemble(record, chain, final_noms, final_scores, final_enriched)
 
         except Exception as e:
             return {"status": "error", "error": str(e)[:1000], "record_id": rid}
@@ -449,9 +431,9 @@ class IndustryChainWorkflow:
     # ── Step 4: LLM #2 提名 ────────────
 
     @staticmethod
-    def _msg_nominate_single(node: dict, chain: dict, web1: str, web2: str,
-                             news: str = "", step_one: str = "") -> str:
-        """单节点提名：只为指定节点提名候选股。传入全部可用数据源。"""
+    def _msg_nominate_single(node: dict, chain: dict, news: str = "",
+                             step_one: str = "") -> str:
+        """单节点提名：传资讯 + 节点分析，LLM按关联度出候选股"""
         node_name = node.get("node_name", "")
         what = node.get("what_to_look_for", "")
         pfa = json.dumps(chain.get("profit_flow_analysis", []), ensure_ascii=False, indent=2)
@@ -462,19 +444,12 @@ class IndustryChainWorkflow:
             f"选股特征: {what}",
             f"入选理由: {node.get('justification', '')}",
         ]
-        # 原始资讯 — 可能直接点名了需关注的个股
         if news.strip():
-            parts.append(f"\n# 原始产业资讯（可能含点名个股）\n{news[:2000]}")
+            parts.append(f"\n# 原始产业资讯\n{news[:2000]}")
         if step_one.strip():
             parts.append(f"\n# Agent0产业分析\n{step_one[:1500]}")
-        # 事件级联网搜索 — 产业链全景 + A股公司列表
-        if web1:
-            parts.append(f"\n# 事件级联网搜索结果（产业链全景,含公司列表）\n{web1[:4000]}")
         parts.append(f"\n# 全部节点利润流分析\n{pfa}")
-        # 节点级联网搜索 — 该节点的公司详情
-        if web2:
-            parts.append(f"\n# 节点级联网搜索结果\n{web2}")
-        parts.append(f"\n请只为「{node_name}」这一个节点提名2-5只赔率最高的A股候选个股。不要提名其他节点的公司。")
+        parts.append(f"\n请为「{node_name}」提名2-5只最相关的A股候选个股。")
         return "\n".join(parts)
 
     # ── Step 4.5: 股票代码校验 ────────────
@@ -739,7 +714,7 @@ class IndustryChainWorkflow:
     # ── Step 6: LLM #2 评分 ────────────
 
     @staticmethod
-    def _msg_score(chain: dict, enriched: dict, web2: str) -> str:
+    def _msg_score(chain: dict, enriched: dict) -> str:
         nodes = chain.get("top_two_nodes", [])
         nodes_text = json.dumps(nodes, ensure_ascii=False, indent=2)
         pfa = json.dumps(chain.get("profit_flow_analysis", []), ensure_ascii=False, indent=2)
@@ -791,14 +766,11 @@ class IndustryChainWorkflow:
                 f"数据缺失的股票 impact_score 和 narrative_score 不得超过 3 分。"
             )
 
-        if web2:
-            lines.append(f"\n# 节点联网搜索结果\n{web2}")
-
         lines.append("\n请基于以上数据对候选股评分排序。")
         return "\n".join(lines)
 
     @staticmethod
-    def _msg_score_single(node: dict, chain: dict, enriched: dict, web2: str) -> str:
+    def _msg_score_single(node: dict, chain: dict, enriched: dict) -> str:
         """单节点评分：只有一个节点的候选股，简单评分"""
         node_name = node.get("node_name", "")
         evt = chain.get("chain_overview", {}).get("event_summary", "")
@@ -843,9 +815,6 @@ class IndustryChainWorkflow:
                 f"数据缺失的股票 impact_score 和 narrative_score 不得超过 3 分。"
             )
 
-        if web2:
-            lines.append(f"\n# 联网搜索结果\n{web2}")
-
         lines.append(f"\n请对以上「{node_name}」节点的候选股评分排序。每只打出impact/v3match/narrative/scarcity四个分，选出top_pick和runner_up。")
         return "\n".join(lines)
 
@@ -877,7 +846,7 @@ class IndustryChainWorkflow:
 
     # ── 组装结果 ────────────────────────
 
-    def _assemble(self, record, chain, noms, scores, enriched, web1, web2) -> dict:
+    def _assemble(self, record, chain, noms, scores, enriched) -> dict:
         tp = scores.get("top_pick", {})
         ru = scores.get("runner_up", {})
         ss = scores.get("scored_stocks", [])
@@ -910,7 +879,7 @@ class IndustryChainWorkflow:
             "top5_reference": ss[:5],
             "news_content": str(record.get("news_content", "")),
             "step_one": str(record.get("step_one", "")),
-            "web_research": f"=== 产业事件搜索 ===\n{web1}\n\n=== 节点详情搜索 ===\n{web2}",
+            "web_research": "",
             "source_record_id": _safe_int(record.get("id", 0)),
             "industry_chain": chain.get("chain_overview", {}).get("industry", ""),
             "event_summary": chain.get("chain_overview", {}).get("event_summary", ""),
@@ -966,8 +935,11 @@ class IndustryChainWorkflow:
         return {"error": "重试耗尽"}
 
     def _llm_tool_use(self, system: str, user: str, tools: list[dict],
-                       tool_map: dict, max_turns: int = 5) -> dict:
+                       tool_map: dict, max_turns: int = 5,
+                       model: str = "") -> dict:
         """带 tool-use 的 LLM 调用 — LLM 可主动调用搜索工具获取信息"""
+        model = model or DEEPSEEK_MODEL
+        use_thinking = model == DEEPSEEK_MODEL
         messages = [
             {"role": "system", "content": system},
             {"role": "user", "content": user},
@@ -977,7 +949,7 @@ class IndustryChainWorkflow:
                 is_last_turn = (turn == max_turns - 1)
 
                 payload = {
-                    "model": DEEPSEEK_MODEL,
+                    "model": model,
                     "messages": messages,
                     "max_tokens": 30720,
                     "stream": False, "temperature": 0,
@@ -986,8 +958,9 @@ class IndustryChainWorkflow:
                 # 最后轮: 不传tools, 强制输出JSON
                 if not is_last_turn:
                     payload["tools"] = tools
-                    payload["thinking"] = {"type": "enabled"}
-                    payload["reasoning_effort"] = "max"
+                    if use_thinking:
+                        payload["thinking"] = {"type": "enabled"}
+                        payload["reasoning_effort"] = "max"
                 else:
                     messages.append({
                         "role": "user",
