@@ -43,7 +43,7 @@ LLM1_PROMPT = """你是产业链利润流分析师。你的任务是通过自主
 
 # 工作流程
 
-使用 bocha_search 工具搜索，摘要信息不足时用 fetch_url 读取原文。每次搜索后暂停，判断信息是否足够：
+使用 bocha_search 搜索。搜索结果中标题看起来关键、但摘要太短（<300字）或缺少具体数字的，必须用 fetch_url 点进去读全文。每次操作后暂停，判断信息是否足够：
 
 维度覆盖清单：
 1. 产业链结构 — 上游/中游/下游各环节及核心公司
@@ -1012,7 +1012,8 @@ class IndustryChainWorkflow:
                             result = f"未知工具: {fn_name}"
                         print(f'[TOOL] {fn_name}({json.dumps(fn_args, ensure_ascii=False)[:100]}) -> {len(result)} chars', flush=True)
                         search_log.append({
-                            "query": fn_args.get("query", ""),
+                            "fn": fn_name,
+                            "args": fn_args,
                             "result": str(result)[:3000],
                         })
                         messages.append({
