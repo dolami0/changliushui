@@ -24,6 +24,7 @@ from typing import Any, Callable
 
 from data_fetcher import DataFetcher
 from env_config import VOLC_AGENT_KEY
+from agents.tools import bocha_search, TOOL_DEFINITIONS, TOOL_MAP
 
 # ═══════════════════════════════════════
 # API 配置
@@ -37,11 +38,20 @@ VOLC_BOT_ID = "7640524154441156122"
 # ═══════════════════════════════════════
 # LLM #1 — 产业链节点利润截留分析
 # ═══════════════════════════════════════
-LLM1_PROMPT = """你是产业链利润流分析师。给定产业资讯和联网搜索结果，判断此产业链上哪些节点截取最多利润，输出前2个节点。
+LLM1_PROMPT = """你是产业链利润流分析师。你的任务是通过自主搜索，判断产业链上哪些节点截取最多利润，输出前2个节点。
+
+# 工作流程
+
+阅读产业资讯后，使用 bocha_search 工具针对以下5个维度各至少搜索1次：
+1. 产业链结构 — 搜索"<产业名> 产业链 上游 中游 下游 核心环节"
+2. 利润分配 — 搜索"<产业名> 利润分配 哪个环节最赚钱 毛利率"
+3. 竞争格局 — 搜索"<产业名> <节点名> 集中度 竞争格局 市场份额"
+4. 进入壁垒 — 搜索"<产业名> <节点名> 认证 壁垒 客户绑定"
+5. 需求弹性 — 搜索"<产业名> 受益环节 弹性最大 事件驱动"
+
+每次搜索后阅读结果，判断信息是否足够。不够则换角度再搜。总共控制在6-8次搜索内完成。所有维度覆盖后，交叉验证各来源的一致性，然后输出最终JSON。
 
 # 分析框架：5维度利润截留评估
-
-对产业链上每个节点（上游/中游/下游的具体环节），从5个维度评估其截留利润的能力：
 
 1. 议价能力 — 该节点对上游能否压价？对下游能否提价？
 2. 集中度 — 寡头还是散兵？集中才能留住利润
@@ -49,27 +59,17 @@ LLM1_PROMPT = """你是产业链利润流分析师。给定产业资讯和联网
 4. 增值比例 — 该节点贡献最终产品价值的百分之几？
 5. 需求弹性 — 事件直接拉动该节点需求，还是间接蹭到？
 
-# 节点命名规则
-
-节点名必须包含「产业链具体环节+行业定语」。例如不应输出"产品集成与系统制造"，应输出"智能医疗器械整机制造"或"医用AI软件与算法平台"。节点名要能让读者一眼看出这是哪条产业链的哪个环节。
-
 # 隐性上游优先原则
 
 产业链利润往往向"隐性上游"集中——即体积小、价值密度高、认证壁垒极强的上游环节（芯片、特种材料、核心元器件），而非显眼的中游总装。分析时重点关注：
-
 - 若某上游环节占下游成品成本<5%但断供即瘫痪 → 利润截留极高（如宇航芯片、高速光芯片）
 - 中游总装即使产值大，若竞争分散、切换成本低，利润截留反而不如隐性上游
-- 不要无限向上游追溯：只考虑一阶相关（直接供应商），不取二阶衍生（供应商的供应商）。如光芯片是一阶上游，光芯片的衬底材料是二阶——利润逻辑已不同
+- 不要无限向上游追溯：只考虑一阶直接供应商
 
-信息来源置信度
-联网搜索结果多来自雪球等投资社区。硬事实(财报/公告)→高置信；软观点(大V判断/预期)→低置信，仅参考。
+# 节点命名规则
+节点名必须包含「产业链具体环节+行业定语」。
 
-# 输出格式（严格执行）
-- 只输出纯JSON，不要用 ```json``` 或任何markdown标记包裹
-- JSON中不要包含注释（// 或 /* */）
-- 输出前后不能有任何其他文字
-
-# 输出JSON (只输出JSON)
+# 最终输出JSON（搜索完成后输出，不要用markdown包裹）
 {
   "chain_overview": {"industry":"","event_summary":"","nodes":[{"name":"","position":"upstream/midstream/downstream","key_products":[]}]},
   "profit_flow_analysis": [{"node_name":"","position":"","bargaining_power":"high/medium/low","concentration":"high/medium/low","switching_cost":"high/medium/low","value_add_ratio_pct":0,"demand_elasticity":"high/medium/low","profit_retention_score":0,"rationale":""}],
@@ -277,20 +277,24 @@ class IndustryChainWorkflow:
                 self._p(progress_cb, 1, "联网搜索1-产业事件")
                 web1 = self._search(news, step_one)
 
-            # Step 2: LLM #1 — 产业链推理
-            self._p(progress_cb, 2, "LLM产业链推理")
-            chain = self._llm(LLM1_PROMPT, self._msg_llm1(news, step_one, web1))
+            # Step 2: LLM #1 — 产业链推理（tool-use 模式, 主动调 bocha_search）
+            self._p(progress_cb, 2, "LLM产业链推理(tool-use)")
+            # 仅传 bocha_search 工具, 不需要其他复杂工具
+            llm1_tools = [t for t in TOOL_DEFINITIONS if t["function"]["name"] == "bocha_search"]
+            chain = self._llm_tool_use(LLM1_PROMPT,
+                self._msg_llm1(news, step_one, web1),
+                tools=llm1_tools, tool_map=TOOL_MAP)
 
-            # 校验 LLM #1 输出：industry空或top_two_nodes空 → 重试一次
-            # 注意：JSON解析失败({error:...})也要重试，只跳过HTTP硬错误
+            # 校验 LLM #1 输出
             industry = chain.get("chain_overview", {}).get("industry", "")
             nodes = chain.get("top_two_nodes", [])
             is_hard_error = chain.get("error", "").startswith("API ")
             if (not industry or not nodes) and not is_hard_error:
                 print(f"[LLM1-EMPTY] industry='{industry}' nodes={len(nodes)}, retrying...", flush=True)
-                chain = self._llm(LLM1_PROMPT,
+                chain = self._llm_tool_use(LLM1_PROMPT,
                     self._msg_llm1(news, step_one, web1)
-                    + "\n\n上次输出industry或top_two_nodes为空。请确保chain_overview.industry不为空、top_two_nodes包含2个节点。")
+                    + "\n\n上次输出industry或top_two_nodes为空。请确保chain_overview.industry不为空、top_two_nodes包含2个节点。",
+                    tools=llm1_tools, tool_map=TOOL_MAP)
 
             if not eval_mode:
                 # Step 3: 联网搜索2 — 每节点1个query (并行)
@@ -401,20 +405,19 @@ class IndustryChainWorkflow:
             name = n.get("node_name", "")
             what = n.get("what_to_look_for", "")
             q = (
-                f"全网搜索「{name}」产业链节点，整理一份深度分析报告。\n\n"
-                f"背景事件：{evt}\n\n"
-                f"要求：\n"
-                f"1. 只列出主营业务直接属于「{name}」的A股公司（含股票代码），"
-                f"说明各家主营与此节点的关系\n"
-                f"2. 哪些公司最符合此特征：{what}\n"
-                f"3. 各公司的竞争壁垒、市场份额、近期业绩\n"
-                f"4. 区分硬事实（财报/公告/研报）与软观点（投资者讨论）\n"
-                f"5. 优先引用券商研报和公司公告等权威来源\n\n"
-                f"重要约束：\n"
-                f"- 排除仅因概念炒作被提及、但主营与「{name}」无关的公司\n"
-                f"- 例如不要因为是军工股就归入商业航天，不要因为有AI概念就归入医疗设备\n"
-                f"- 如果某公司主营产品与节点核心产品不是同一品类，不要列入\n"
-                f"- 宁缺毋滥，只列出真正在此节点有实质业务的公司"
+                f"搜索「{name}」产业链节点的A股核心公司。\n\n"
+                f"背景事件：{evt}\n"
+                f"筛选标准：{what}\n\n"
+                f"输出要求（按此结构，每家公司一个条目）：\n"
+                f"【公司名+代码】主营业务与该节点的匹配说明（1句话）\n"
+                f"【竞争壁垒】核心壁垒+市场份额（引用公告/研报）\n"
+                f"【业绩与催化】近期业绩趋势+具体催化事件（注明数字和时间）\n\n"
+                f"严格排除规则：\n"
+                f"- 排除：主营业务产品与该节点核心产品不是同一品类的公司\n"
+                f"- 排除：仅因概念/题材被提及，无实质业务的公司\n"
+                f"- 排除：跨行业蹭热度的公司（如军工股归入商业航天、AI概念归入医疗设备）\n"
+                f"- 优先：券商研报和公司公告中明确点名属于该节点的公司\n"
+                f"- 宁缺毋滥，至少列出2家，最多输出5家最核心的公司"
             )
             queries.append(q)
 
@@ -925,7 +928,7 @@ class IndustryChainWorkflow:
 
     def _llm(self, system: str, user: str, label: str = "", model: str = "") -> dict:
         model = model or DEEPSEEK_MODEL
-        use_thinking = model == DEEPSEEK_MODEL  # 仅 v4-pro 开启深度推理, flash 不需要
+        use_thinking = model == DEEPSEEK_MODEL
         for attempt in range(3):
             try:
                 payload = {
@@ -954,8 +957,65 @@ class IndustryChainWorkflow:
                 return {"error": "API超时"}
             except Exception as e:
                 if attempt < 2: time.sleep(3); continue
-                return {"error": str(e)[:500]}
         return {"error": "重试耗尽"}
+
+    def _llm_tool_use(self, system: str, user: str, tools: list[dict],
+                       tool_map: dict, max_turns: int = 8) -> dict:
+        """带 tool-use 的 LLM 调用 — LLM 可主动调用搜索工具获取信息"""
+        messages = [
+            {"role": "system", "content": system},
+            {"role": "user", "content": user},
+        ]
+        for turn in range(max_turns):
+            try:
+                r = requests.post(DEEPSEEK_URL, json={
+                    "model": DEEPSEEK_MODEL,
+                    "messages": messages,
+                    "tools": tools,
+                    "max_tokens": 30720,
+                    "stream": False, "temperature": 0,
+                    "thinking": {"type": "enabled"},
+                    "reasoning_effort": "max",
+                }, headers={"Authorization": f"Bearer {self.dk}",
+                           "Content-Type": "application/json"}, timeout=300)
+                if r.status_code != 200:
+                    return {"error": f"API {r.status_code}", "raw": r.text[:500]}
+                msg = r.json()["choices"][0]["message"]
+
+                if msg.get("tool_calls"):
+                    messages.append({
+                        "role": "assistant",
+                        "content": msg.get("content") or "",
+                        "tool_calls": msg["tool_calls"],
+                    })
+                    for tc in msg["tool_calls"]:
+                        fn_name = tc["function"]["name"]
+                        fn_args = json.loads(tc["function"]["arguments"])
+                        fn = tool_map.get(fn_name)
+                        if fn:
+                            try:
+                                result = fn(**fn_args)
+                            except Exception as e:
+                                result = f"工具调用异常: {e}"
+                        else:
+                            result = f"未知工具: {fn_name}"
+                        print(f'[TOOL] {fn_name}({json.dumps(fn_args, ensure_ascii=False)[:100]}) -> {len(result)} chars', flush=True)
+                        messages.append({
+                            "role": "tool",
+                            "tool_call_id": tc["id"],
+                            "content": str(result)[:8000],
+                        })
+                else:
+                    content = msg.get("content", "")
+                    parsed = self._parse_json(content)
+                    if parsed:
+                        return parsed
+                    return {"error": "JSON解析失败", "raw": content[:2000]}
+            except requests.Timeout:
+                continue
+            except Exception as e:
+                return {"error": str(e)[:500]}
+        return {"error": f"tool-use 超过 {max_turns} 轮"}
 
     @staticmethod
     def _call_volc(query: str) -> str:
