@@ -568,7 +568,6 @@ def _write_detail_row(detail_db_id: str, coze, agent0_record: dict,
     detail_row = {
         "stock_code": stock_code,
         "stock_name": stock_name,
-        "event_date": agent0_record.get("bstudio_create_time", ""),
         "json_filename": f"{stock_code}_{ts}",
         "processed_at": datetime.now(timezone.utc).isoformat(),
         "agent0_json": json.dumps(serialize(agent0_record), ensure_ascii=False, default=str),
