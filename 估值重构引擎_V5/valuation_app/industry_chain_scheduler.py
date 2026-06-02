@@ -75,6 +75,8 @@ class WangqiScheduler:
                 self.coze_io.mark_processed(record_id)
             except Exception as e:
                 result["write_error"] = str(e)[:500]
+        elif result.get("status") == "skipped":
+            self.coze_io.mark_processed(record_id)
         return result
 
     async def _loop(self):
@@ -131,6 +133,17 @@ class WangqiScheduler:
                         "type": "tianji_job", "record_id": record_id, "status": "done",
                         "top_pick": tp,
                         "runner_up": ru,
+                    })
+                elif result.get("status") == "skipped":
+                    self.coze_io.mark_processed(record_id)
+                    self.completed_jobs.append({
+                        "record_id": record_id, "status": "skipped",
+                        "error": result.get("error", ""),
+                        "at": datetime.now(timezone.utc).isoformat(),
+                    })
+                    self._emit_progress({
+                        "type": "tianji_job", "record_id": record_id, "status": "skipped",
+                        "error": result.get("error", "")[:200],
                     })
                 else:
                     self.completed_jobs.append({

@@ -31,7 +31,7 @@ from agents.tools import bocha_search, TOOL_DEFINITIONS, TOOL_MAP
 # ═══════════════════════════════════════
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 DEEPSEEK_MODEL = "deepseek-v4-pro"
-DEEPSEEK_MODEL_FAST = "deepseek-chat"  # 轻量模型, 用于提名等低复杂度任务
+DEEPSEEK_MODEL_FAST = "deepseek-v4-flash"  # 统一用 Flash 开思考
 BOCHA_TOOLS = [t for t in TOOL_DEFINITIONS if t["function"]["name"] in ("bocha_search", "fetch_url")]
 VOLC_URL = "https://open.feedcoopapi.com/agent_api/agent/chat/completion"
 VOLC_BOT_ID = "7640524154441156122"
@@ -86,28 +86,30 @@ LLM1_PROMPT = """你是产业链利润流分析师。你的任务是通过自主
 # ═══════════════════════════════════════
 # LLM #2 — 个股赔率评分
 # ═══════════════════════════════════════
-LLM2_NOMINATE_PROMPT = """你的任务：从以下资料中提取与目标节点最相关的A股上市公司，按关联度排序输出前3只。
+LLM2_NOMINATE_PROMPT = """你的任务：为指定产业链节点找出最相关的A股上市公司，按关联度排序输出前5只。
 
 # 工作方式（严格按顺序执行）
-1. 阅读原始资讯、事件搜索、节点搜索 — 这些是实时调研数据
-2. 找出所有主营业务直接属于目标节点的A股公司
-3. 按与节点的关联度排序（主营越纯正越靠前），取前3只
-4. 只有资料中不足3只时，才用你的A股知识补充到3只
+1. 从Volc搜索结果中提取所有主营业务直接属于目标节点的A股公司
+2. 从原始资讯、Agent0分析、背景知识中找出所有被提及的该节点公司
+3. 合并去重后，按与节点的关联度排序（主营越纯正越靠前）
+4. 上述来源合计不足5只时，用你的A股知识补充到5只（该行业知名公司）
+5. 确保最终输出恰好5只
 
 # 关联度判断标准
-- 排名第一：公司主营产品就是节点的核心产品，数据中明确描述
-- 排名第二、三：公司业务覆盖该节点，数据中有提及
-- 不相关：只是概念炒作、蹭热点、跨行业 — 排除
+- 第一梯队：公司主营产品就是该节点的核心产品，资料中明确描述
+- 第二梯队：公司业务部分覆盖该节点，资料中有提及
+- 第三梯队：公司是该节点知名A股标的（用你的知识补充）
+- 排除：纯概念炒作、跨行业蹭热点、主营完全不沾边
 
 # 注意
-- 不需要判断市值大小、赔率高低、是否冷门 — 那是后续评分环节的工作
-- 不需要填股票代码，只需输出公司简称（如"云南锗业"而非"云南临沧鑫圆锗业股份有限公司"）
-- 搜索结果中反复出现的公司通常是该节点最重要的参与者
+- 不需要判断市值大小、赔率高低 — 那是后续评分环节的工作
+- 不需要填股票代码，只需输出公司简称（如"云南锗业"）
+- 必须恰好输出5只，不足时必须用你的A股知识补足
 
 # 输出JSON
 {
   "nominations": [
-    {"stock_name":"公司全称","node_name":"所属节点名","reason":"关联度：主营与节点的匹配说明"}
+    {"stock_name":"公司简称","node_name":"所属节点名","reason":"关联度：主营与节点的匹配说明"}
   ]
 }"""
 
@@ -191,7 +193,10 @@ V3速查表是历史经验的参考，不是必须匹配的模板：
 	     a) 已通过头部客户正式认证（如进入英伟达/华为供应链）
 	     b) 扩产项目3-6个月内投产且公告了具体产能数字
 	     c) 已签署框架协议或意向订单且金额明确
-	   则按未来弹性上调评分：市值<50亿最高可给8分, 市值50-100亿最高可给7分, 市值100-200亿最高可给5分。
+	   则按未来弹性上调评分：
+             - 三条条件全部满足 → 确定性等同于成熟型，按成熟型标准给分（不受验证突破型上限约束）
+             - 满足1-2条 → 市值<50亿最高8分, 市值50-100亿最高7分, 市值100-200亿最高5分
+           10分只给已有规模化收入的公司——验证突破型最高8分。
 	   10分只给已有规模化收入的公司——验证突破型最高8分。
 
 	2. V3模式匹配(25%)：不猜具体利润倍数，匹配V3中4种十倍股原型
@@ -214,11 +219,12 @@ V3速查表是历史经验的参考，不是必须匹配的模板：
 	   4分 = 仅满足1个维度：宏观景气受益或模糊利好，缺乏个股层面独特性和具体催化剂
 	   1分 = 四个维度均不满足：无清晰叙事，纯概念炒作
 
-4. 唯一性溢价(10%)：A股还有没有第二个纯正标的？
-   10=该节点在A股唯一纯正标的
-   7 =该节点仅2-3家纯正标的
-   4 =该节点有4-8家公司
-   1 =竞争激烈>8家
+4. 唯一性溢价(10%)：按该股票实际可触及的细分市场竞争格局评估，而非整个行业。
+   例：MLCC行业有几十家，但"AI服务器高端MLCC"国内能做的不超过5家→基于后者评分。
+   10=该细分A股唯一纯正标的
+   7 =该细分仅2-3家纯正标的
+   4 =该细分有4-8家公司
+   1 =竞争激烈>8家（按细分市场计）
 
 # V3案例库关键经验
 42个A股十倍股起涨状态：市值中位数39亿，ROIC中位数0.4%，PE中位数44。
@@ -246,7 +252,7 @@ scored_stocks按total_score降序。top_pick = 总分最高者（优先第一节
 总分 = impact*0.45 + v3match*0.25 + narrative*0.20 + scarcity*0.10
 
 # 阈值硬规则（不可违反）
-- 所有候选股total_score均 < 6.5 -> 必须严格按以下格式输出, 不得填入其他字段:
+- 所有候选股total_score均 < 6.0 -> 必须严格按以下格式输出, 不得填入其他字段:
   "top_pick": {"stock_code": "", "stock_name": "无高赔率标的", "node_name": "", "investment_thesis": "所有候选股均未达到6.5分阈值"}
   "runner_up": {"stock_code": "", "stock_name": "无高赔率标的", "node_name": "", "investment_thesis": ""}
 - 禁止虚高打分凑数。宁缺毋滥。"""
@@ -272,6 +278,7 @@ class IndustryChainWorkflow:
         """
         news = str(record.get("news_content", ""))
         step_one = str(record.get("step_one", ""))
+        knowledge = str(record.get("knowledge", ""))
         rid = str(record.get("id", ""))
 
         if not news.strip():
@@ -282,8 +289,8 @@ class IndustryChainWorkflow:
             self._p(progress_cb, 1, "LLM产业链推理(flash+bocha)")
             
             chain = self._llm_tool_use(LLM1_PROMPT,
-                self._msg_llm1(news, step_one),
-                tools=BOCHA_TOOLS, tool_map=TOOL_MAP, model=DEEPSEEK_MODEL_FAST)
+                self._msg_llm1(news, step_one, knowledge),
+                tools=BOCHA_TOOLS, tool_map=TOOL_MAP, model=DEEPSEEK_MODEL_FAST, max_turns=5)
             chain.pop("_search_log", [])  # bocha原始结果不再传入提名, LLM #1报告已精炼
 
             # 校验 LLM #1 输出
@@ -293,10 +300,16 @@ class IndustryChainWorkflow:
             if (not industry or not nodes) and not is_hard_error:
                 print(f"[LLM1-EMPTY] industry='{industry}' nodes={len(nodes)}, retrying...", flush=True)
                 chain = self._llm_tool_use(LLM1_PROMPT,
-                    self._msg_llm1(news, step_one)
+                    self._msg_llm1(news, step_one, knowledge)
                     + "\n\n上次输出industry或top_two_nodes为空。请确保chain_overview.industry不为空、top_two_nodes包含2个节点。",
-                    tools=BOCHA_TOOLS, tool_map=TOOL_MAP, model=DEEPSEEK_MODEL_FAST)
+                    tools=BOCHA_TOOLS, tool_map=TOOL_MAP, model=DEEPSEEK_MODEL_FAST, max_turns=5)
                 chain.pop("_search_log", [])
+                # 重试后再次检查
+                industry = chain.get("chain_overview", {}).get("industry", "")
+                nodes = chain.get("top_two_nodes", [])
+                is_hard_error = chain.get("error", "").startswith("API ")
+            if (not industry or not nodes) and not is_hard_error:
+                return {"status": "skipped", "error": "LLM #1 无法识别产业链/节点", "record_id": rid}
 
             # Step 2: Volc节点搜索 — 为提名LLM提供节点内公司列表
             if not eval_mode:
@@ -308,7 +321,7 @@ class IndustryChainWorkflow:
             # Step 3: 提名节点1候选股（flash, 资讯+LLM #1报告+Volc节点公司列表）
             self._p(progress_cb, 3, "Pass1-提名节点1候选股")
             node1 = chain.get("top_two_nodes", [{}])[0]
-            noms1 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node1, chain, news, step_one, web2), model=DEEPSEEK_MODEL_FAST)
+            noms1 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node1, chain, news, step_one, knowledge, web2), model=DEEPSEEK_MODEL_FAST)
             noms1["nominations"] = self._resolve_stock_codes(noms1.get("nominations", []))
 
             self._p(progress_cb, 3, "Pass1-批量查询实时数据")
@@ -323,7 +336,7 @@ class IndustryChainWorkflow:
             # 判断节点1最高分是否达标
             ss1 = scores1.get("scored_stocks", [])
             best1 = ss1[0].get("total_score", 0) if ss1 else 0
-            node1_ok = best1 >= 6.5
+            node1_ok = best1 >= 6.0
 
             if node1_ok:
                 print(f"[PASS1-OK] node1 best={best1}, using node1 only", flush=True)
@@ -335,7 +348,7 @@ class IndustryChainWorkflow:
 
                 self._p(progress_cb, 5, "Pass2-提名节点2候选股")
                 node2 = chain.get("top_two_nodes", [{}, {}])[1]
-                noms2 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node2, chain, news, step_one, web2), model=DEEPSEEK_MODEL_FAST)
+                noms2 = self._llm(LLM2_NOMINATE_PROMPT, self._msg_nominate_single(node2, chain, news, step_one, knowledge, web2), model=DEEPSEEK_MODEL_FAST)
                 noms2["nominations"] = self._resolve_stock_codes(noms2.get("nominations", []))
 
                 self._p(progress_cb, 5, "Pass2-批量查询实时数据")
@@ -388,10 +401,12 @@ class IndustryChainWorkflow:
     # ── Step 2: LLM #1 ─────────────────
 
     @staticmethod
-    def _msg_llm1(news: str, step_one: str, web: str = "") -> str:
+    def _msg_llm1(news: str, step_one: str, knowledge: str = "", web: str = "") -> str:
         parts = [f"# 产业资讯\n{news}"]
         if step_one:
             parts.append(f"\n# Agent0初步分析\n{step_one}")
+        if knowledge:
+            parts.append(f"\n# 背景知识\n{knowledge}")
         if web:
             parts.append(f"\n# 联网搜索结果\n{web[:3000]}")
         return "\n".join(parts)
@@ -445,7 +460,7 @@ class IndustryChainWorkflow:
 
     @staticmethod
     def _msg_nominate_single(node: dict, chain: dict, news: str = "",
-                             step_one: str = "", web2: str = "") -> str:
+                             step_one: str = "", knowledge: str = "", web2: str = "") -> str:
         """单节点提名：资讯 + LLM #1节点分析 + Volc节点公司列表 → 候选股"""
         node_name = node.get("node_name", "")
         what = node.get("what_to_look_for", "")
@@ -461,124 +476,130 @@ class IndustryChainWorkflow:
             parts.append(f"\n# 原始产业资讯\n{news[:2000]}")
         if step_one.strip():
             parts.append(f"\n# Agent0产业分析\n{step_one[:1500]}")
+        if knowledge.strip():
+            parts.append(f"\n# 背景知识\n{knowledge[:1500]}")
         parts.append(f"\n# 全部节点利润流分析（LLM #1 产业链推理结论）\n{pfa}")
         if web2:
             parts.append(f"\n# 节点内A股公司列表（Volc实时搜索）\n{web2}")
-        parts.append(f"\n请为「{node_name}」提名2-5只最相关的A股候选个股。优先从Volc搜索结果中提取公司。")
+        parts.append(f"\n请为「{node_name}」提名5只最相关的A股候选个股。优先从Volc搜索结果中提取公司，不足5只时用你的A股知识补足到5只。")
         return "\n".join(parts)
 
     # ── Step 4.5: 股票代码校验 ────────────
 
     def _resolve_stock_codes(self, nominations: list[dict]) -> list[dict]:
-        """用 tushare 按名称查找真实股票代码，修正 LLM 可能编造的代码"""
+        """用 tushare 按名称查找真实股票代码，修正 LLM 可能编造的代码。含3次重试。"""
         if not nominations:
             return nominations
 
-        try:
-            import tushare as ts
-            config_path = Path(__file__).parent.parent / 'valuation_app' / 'config.json'
-            with open(config_path) as f:
-                cfg = json.load(f)
-            pro = ts.pro_api(cfg.get('tushare_token', ''))
+        df = None
+        for attempt in range(3):
+            try:
+                import tushare as ts
+                config_path = Path(__file__).parent.parent / 'valuation_app' / 'config.json'
+                with open(config_path) as f:
+                    cfg = json.load(f)
+                pro = ts.pro_api(cfg.get('tushare_token', ''))
 
-            # 全量 A 股名称索引
-            df = pro.stock_basic(
-                fields='ts_code,name,list_status')
-            df = df[df['list_status'] == 'L']  # 仅上市中
-            df['clean_code'] = df['ts_code'].str[:6]
+                # 全量 A 股名称索引
+                df = pro.stock_basic(
+                    fields='ts_code,name,list_status')
+                df = df[df['list_status'] == 'L']  # 仅上市中
+                df['clean_code'] = df['ts_code'].str[:6]
+                break
+            except Exception as e:
+                if attempt < 2:
+                    print(f'[CODE-RESOLVE] tushare stock_basic 失败(attempt {attempt+1}): {e}', flush=True)
+                    time.sleep(3 * (attempt + 1))
+                else:
+                    print(f'[CODE-RESOLVE] tushare 3次重试均失败，返回空代码', flush=True)
+                    return [{**nom, 'stock_code': '', '_code_source': 'tushare_down'} for nom in nominations]
 
-            resolved = []
-            for nom in nominations:
-                name = str(nom.get('stock_name', '')).strip()
-                if not name:
-                    resolved.append({**nom, 'stock_code': '', '_code_source': 'empty_name'})
-                    continue
+        if df is None or df.empty:
+            return [{**nom, 'stock_code': '', '_code_source': 'tushare_empty'} for nom in nominations]
 
-                # 1) 精确名称匹配
-                exact = df[df['name'] == name]
-                if not exact.empty:
-                    code = exact.iloc[0]['clean_code']
-                    resolved.append({**nom, 'stock_code': code, '_code_source': 'exact_match'})
-                    continue
+        resolved = []
+        for nom in nominations:
+            name = str(nom.get('stock_name', '')).strip()
+            if not name:
+                resolved.append({**nom, 'stock_code': '', '_code_source': 'empty_name'})
+                continue
 
-                # 2) 名称包含匹配（公司全称包含简称关键词）
-                contains = df[df['name'].str.contains(name.replace('(', '\\(').replace(')', '\\)'), na=False)]
-                if not contains.empty:
-                    # 优先取最短名称（最可能是简称对应的全称）
-                    contains = contains.copy()
-                    contains['name_len'] = contains['name'].str.len()
-                    contains = contains.sort_values('name_len')
-                    code = contains.iloc[0]['clean_code']
-                    matched_name = contains.iloc[0]['name']
-                    resolved.append({**nom, 'stock_code': code, 'stock_name': matched_name,
-                                     '_code_source': 'fuzzy_match'})
-                    continue
+            # 1) 精确名称匹配
+            exact = df[df['name'] == name]
+            if not exact.empty:
+                code = exact.iloc[0]['clean_code']
+                resolved.append({**nom, 'stock_code': code, '_code_source': 'exact_match'})
+                continue
 
-                # 3) 全称去干扰词匹配（如"云南临沧鑫圆锗业股份有限公司"→"云南锗业"）
-                # 去掉常见后缀和前缀，提取核心词
-                import re as _re
-                short = name
-                for s in ['股份有限公司','有限责任公司','有限公司','科技股份','新材料','科技']:
-                    short = short.replace(s, '')
-                # 去掉地理前缀
-                for prefix in ['云南临沧','云南','北京','深圳','上海','广东','浙江','江苏','山东',
-                              '湖北','湖南','四川','福建','安徽','河北','河南','陕西','重庆',
-                              '天津','黑龙江','吉林','辽宁','江西','广西','贵州','甘肃','海南',
-                              '新疆','西藏','内蒙古','宁夏','青海','山西']:
-                    if short.startswith(prefix) and len(short) - len(prefix) >= 2:
-                        short = short[len(prefix):]
-                        break
-                core = _re.sub(r'[^一-鿿]', '', short)
-                # 尝试不同长度的核心词：4字→3字→2字
-                for window in [4, 3, 2]:
-                    if len(core) >= window:
-                        kw = core[-window:]
-                        fuzzy2 = df[df['name'].str.contains(kw, na=False)]
-                        if not fuzzy2.empty:
-                            fuzzy2 = fuzzy2.copy()
-                            fuzzy2['name_len'] = fuzzy2['name'].str.len()
-                            fuzzy2 = fuzzy2.sort_values('name_len')
-                            code = fuzzy2.iloc[0]['clean_code']
-                            matched_name = fuzzy2.iloc[0]['name']
-                            resolved.append({**nom, 'stock_code': code, 'stock_name': matched_name,
-                                             '_code_source': 'core_name'})
-                            break
-                    else:
-                        continue
-                if resolved and resolved[-1].get('stock_code'):
-                    continue
+            # 2) 名称包含匹配（公司全称包含简称关键词）
+            contains = df[df['name'].str.contains(name.replace('(', '\\(').replace(')', '\\)'), na=False)]
+            if not contains.empty:
+                contains = contains.copy()
+                contains['name_len'] = contains['name'].str.len()
+                contains = contains.sort_values('name_len')
+                code = contains.iloc[0]['clean_code']
+                matched_name = contains.iloc[0]['name']
+                resolved.append({**nom, 'stock_code': code, 'stock_name': matched_name,
+                                 '_code_source': 'fuzzy_match'})
+                continue
 
-                # 4) 反向：全称里查简称（LLM 输出了全称但包含多余后缀）
-                # 用 name 关键词在 df['name'] 中搜索
-                keywords = name.replace('*', '').replace('ST', '').strip()
-                if len(keywords) >= 3:
-                    fuzzy = df[df['name'].str.contains(keywords, na=False)]
-                    if not fuzzy.empty:
-                        fuzzy = fuzzy.copy()
-                        fuzzy['name_len'] = fuzzy['name'].str.len()
-                        fuzzy = fuzzy.sort_values('name_len')
-                        code = fuzzy.iloc[0]['clean_code']
-                        matched_name = fuzzy.iloc[0]['name']
+            # 3) 全称去干扰词匹配（如"云南临沧鑫圆锗业股份有限公司"→"云南锗业"）
+            import re as _re
+            short = name
+            for s in ['股份有限公司','有限责任公司','有限公司','科技股份','新材料','科技']:
+                short = short.replace(s, '')
+            for prefix in ['云南临沧','云南','北京','深圳','上海','广东','浙江','江苏','山东',
+                          '湖北','湖南','四川','福建','安徽','河北','河南','陕西','重庆',
+                          '天津','黑龙江','吉林','辽宁','江西','广西','贵州','甘肃','海南',
+                          '新疆','西藏','内蒙古','宁夏','青海','山西']:
+                if short.startswith(prefix) and len(short) - len(prefix) >= 2:
+                    short = short[len(prefix):]
+                    break
+            core = _re.sub(r'[^一-鿿]', '', short)
+            for window in [4, 3, 2]:
+                if len(core) >= window:
+                    kw = core[-window:]
+                    fuzzy2 = df[df['name'].str.contains(kw, na=False)]
+                    if not fuzzy2.empty:
+                        fuzzy2 = fuzzy2.copy()
+                        fuzzy2['name_len'] = fuzzy2['name'].str.len()
+                        fuzzy2 = fuzzy2.sort_values('name_len')
+                        code = fuzzy2.iloc[0]['clean_code']
+                        matched_name = fuzzy2.iloc[0]['name']
                         resolved.append({**nom, 'stock_code': code, 'stock_name': matched_name,
-                                         '_code_source': 'keyword_match'})
-                        continue
+                                         '_code_source': 'core_name'})
+                        break
+                else:
+                    continue
+            if resolved and resolved[-1].get('stock_code'):
+                continue
 
-                # 4) 找不到
-                print(f'[CODE-UNMATCHED] 无法匹配: \"{name}\"', flush=True)
-                resolved.append({**nom, 'stock_code': '', '_code_source': 'unmatched'})
+            # 4) 关键词模糊匹配
+            keywords = name.replace('*', '').replace('ST', '').strip()
+            if len(keywords) >= 3:
+                fuzzy = df[df['name'].str.contains(keywords, na=False)]
+                if not fuzzy.empty:
+                    fuzzy = fuzzy.copy()
+                    fuzzy['name_len'] = fuzzy['name'].str.len()
+                    fuzzy = fuzzy.sort_values('name_len')
+                    code = fuzzy.iloc[0]['clean_code']
+                    matched_name = fuzzy.iloc[0]['name']
+                    resolved.append({**nom, 'stock_code': code, 'stock_name': matched_name,
+                                     '_code_source': 'keyword_match'})
+                    continue
 
-            # 日志
-            matched = sum(1 for r in resolved if r.get('stock_code'))
-            print(f'[CODE-RESOLVE] {matched}/{len(resolved)} 只代码校验通过', flush=True)
-            for r in resolved:
-                src = r.get('_code_source', '?')
-                print(f'  {r.get("stock_name","?")} -> {r.get("stock_code","?")} [{src}]', flush=True)
+            # 找不到
+            print(f'[CODE-UNMATCHED] 无法匹配: \"{name}\"', flush=True)
+            resolved.append({**nom, 'stock_code': '', '_code_source': 'unmatched'})
 
-            return resolved
+        # 日志
+        matched = sum(1 for r in resolved if r.get('stock_code'))
+        print(f'[CODE-RESOLVE] {matched}/{len(resolved)} 只代码校验通过', flush=True)
+        for r in resolved:
+            src = r.get('_code_source', '?')
+            print(f'  {r.get("stock_name","?")} -> {r.get("stock_code","?")} [{src}]', flush=True)
 
-        except Exception as e:
-            print(f'[CODE-RESOLVE] tushare校验失败: {e}, 使用 LLM 原始代码', flush=True)
-            return nominations
+        return resolved
 
     # ── Step 4.6: Volc 个股投资地图 ──────
 
@@ -919,7 +940,7 @@ class IndustryChainWorkflow:
 
     def _llm(self, system: str, user: str, label: str = "", model: str = "") -> dict:
         model = model or DEEPSEEK_MODEL
-        use_thinking = model == DEEPSEEK_MODEL
+        use_thinking = model in (DEEPSEEK_MODEL, DEEPSEEK_MODEL_FAST)  # v4-pro 和 Flash 都开思考
         for attempt in range(3):
             try:
                 payload = {
@@ -930,7 +951,7 @@ class IndustryChainWorkflow:
                 }
                 if use_thinking:
                     payload["thinking"] = {"type": "enabled"}
-                    payload["reasoning_effort"] = "max"
+                    payload["reasoning_effort"] = "high"
                 r = requests.post(DEEPSEEK_URL, json=payload,
                     headers={"Authorization": f"Bearer {self.dk}", "Content-Type": "application/json"}, timeout=600)
                 if r.status_code != 200:
@@ -955,7 +976,7 @@ class IndustryChainWorkflow:
                        model: str = "") -> dict:
         """带 tool-use 的 LLM 调用。返回 dict 含 _search_log(搜索记录列表)"""
         model = model or DEEPSEEK_MODEL
-        use_thinking = model == DEEPSEEK_MODEL
+        use_thinking = model in (DEEPSEEK_MODEL, DEEPSEEK_MODEL_FAST)  # v4-pro 和 Flash 都开思考
         search_log = []  # 收集所有搜索结果
         messages = [
             {"role": "system", "content": system},
@@ -971,25 +992,35 @@ class IndustryChainWorkflow:
                     "max_tokens": 30720,
                     "stream": False, "temperature": 0,
                 }
+                # 最后一轮：Flash → v4-pro 输出可靠 JSON
+                if is_last_turn and model == DEEPSEEK_MODEL_FAST:
+                    payload["model"] = DEEPSEEK_MODEL
+                    payload["thinking"] = {"type": "enabled"}
+                elif is_last_turn:
+                    pass  # v4-pro already set, thinking handled below
                 # 前N-1轮: 传tools; 最后轮: 不传tools强制输出JSON
                 if not is_last_turn:
                     payload["tools"] = tools
                     if use_thinking:
                         payload["thinking"] = {"type": "enabled"}
-                        payload["reasoning_effort"] = "max"
+                        payload["reasoning_effort"] = "high"
                 else:
                     messages.append({
                         "role": "user",
-                        "content": "最后一轮。请综合所有搜索结果，输出最终JSON报告。要求：每个rationale/justification不超过150字，保持JSON完整可解析。"
+                        "content": "工具已关闭。请基于以上所有搜索结果，直接输出最终JSON报告。禁止使用工具、DSML、XML或任何非JSON格式。输出必须是纯JSON对象（以{开头，以}结尾）。"
                     })
-                    payload["max_tokens"] = 4096
+                    # 思考模式输出更大(推理tokens+JSON)，统一给16384
+                    payload["max_tokens"] = 16384
 
                 r = requests.post(DEEPSEEK_URL, json=payload,
                     headers={"Authorization": f"Bearer {self.dk}",
                            "Content-Type": "application/json"}, timeout=300)
                 if r.status_code != 200:
                     return {"error": f"API {r.status_code}", "raw": r.text[:500], "_search_log": search_log}
-                msg = r.json()["choices"][0]["message"]
+                resp_json = r.json()
+                msg = resp_json["choices"][0]["message"]
+                usage = resp_json.get("usage", {})
+                print(f'[LLM-TOKEN] turn={turn}/{max_turns} prompt={usage.get("prompt_tokens",0)} completion={usage.get("completion_tokens",0)} total={usage.get("total_tokens",0)}', flush=True)
 
                 if msg.get("tool_calls"):
                     # V4 requires non-empty content for tool call messages
@@ -1021,14 +1052,59 @@ class IndustryChainWorkflow:
                             "tool_call_id": tc["id"],
                             "content": str(result)[:8000],
                         })
-                else:
-                    content = msg.get("content", "")
-                    parsed = self._parse_json(content)
-                    if parsed:
-                        parsed["_search_log"] = search_log
-                        return parsed
-                    print(f'[LLM1-PARSE-FAIL] raw(500): {content[:500]}', flush=True)
-                    return {"error": "JSON解析失败", "raw": content[:2000], "_search_log": search_log}
+                    continue
+
+                content = msg.get("content", "")
+
+                # 检测 DSML tool_call（DeepSeek Flash 偶发，含最后一轮）
+                dsml_tool_calls = self._parse_dsml(content)
+                if dsml_tool_calls:
+                    if is_last_turn:
+                        # 最后一轮仍输出DSML：追加强制JSON指令，立即重试一次
+                        messages.append({"role": "user", "content": "不要再用工具。请直接输出最终JSON报告，不要用DSML或XML格式，输出纯JSON。不要输出任何其他格式。"})
+                        payload["messages"] = messages
+                        r2 = requests.post(DEEPSEEK_URL, json=payload,
+                            headers={"Authorization": f"Bearer {self.dk}",
+                                   "Content-Type": "application/json"}, timeout=300)
+                        if r2.status_code == 200:
+                            content2 = r2.json()["choices"][0]["message"].get("content", "")
+                            parsed2 = self._parse_json(content2)
+                            if parsed2:
+                                parsed2["_search_log"] = search_log
+                                return parsed2
+                        # 重试也失败 — 回退：构造最小化结果
+                        print(f'[LLM1-DSML-RETRY-FAIL] 最后一轮重试仍失败', flush=True)
+                        return {"error": "DSML格式无法转换", "raw": content[:2000], "_search_log": search_log}
+                    messages.append({"role": "assistant", "content": content[:500]})
+                    for tc in dsml_tool_calls:
+                        fn_name = tc["name"]
+                        fn_args = tc["args"]
+                        fn = tool_map.get(fn_name)
+                        if fn:
+                            try:
+                                result = fn(**fn_args)
+                            except Exception as e:
+                                result = f"工具调用异常: {e}"
+                        else:
+                            result = f"未知工具: {fn_name}"
+                        print(f'[TOOL-DSML] {fn_name}({json.dumps(fn_args, ensure_ascii=False)[:100]}) -> {len(result)} chars', flush=True)
+                        search_log.append({
+                            "fn": fn_name,
+                            "args": fn_args,
+                            "result": str(result)[:3000],
+                        })
+                        messages.append({
+                            "role": "user",
+                            "content": f"[{fn_name} 结果]\n{str(result)[:5000]}",
+                        })
+                    continue
+
+                parsed = self._parse_json(content)
+                if parsed:
+                    parsed["_search_log"] = search_log
+                    return parsed
+                print(f'[LLM1-PARSE-FAIL] raw(500): {content[:500]}', flush=True)
+                return {"error": "JSON解析失败", "raw": content[:2000], "_search_log": search_log}
             except requests.Timeout:
                 continue
             except Exception as e:
@@ -1049,6 +1125,44 @@ class IndustryChainWorkflow:
         except Exception:
             pass
         return ""
+
+    @staticmethod
+    @staticmethod
+    def _parse_dsml(content: str) -> list[dict] | None:
+        """解析 DeepSeek Flash 偶发的 DSML 格式 tool_call，返回 [{"name":..., "args":{...}}]"""
+        # DSML 格式: 〈DSML｜tool_calls〉〈DSML｜invoke name="fn"〉〈DSML｜parameter name="x" string="true"〉val〈/DSML｜parameter〉...
+        if 'DSML' not in content and 'tool_calls' not in content:
+            return None
+        import re as _re
+        # 提取 invoke 块: name + 所有 parameter
+        invokes = _re.findall(
+            r'<[^>]*DSML[^>]*invoke\s+name\s*=\s*"([^"]*)"\s*>(.*?)</[^>]*DSML[^>]*invoke\s*>',
+            content, _re.DOTALL)
+        if not invokes:
+            return None
+        results = []
+        for fn_name, params_block in invokes:
+            args = {}
+            for pm in _re.finditer(
+                r'<[^>]*DSML[^>]*parameter\s+name\s*=\s*"([^"]*)"[^>]*>\s*(.*?)\s*</[^>]*DSML[^>]*parameter\s*>',
+                params_block, _re.DOTALL):
+                pname = pm.group(1)
+                pval = pm.group(2).strip()
+                # 字符串值去掉首尾引号
+                if pval.startswith('"') and pval.endswith('"'):
+                    pval = pval[1:-1]
+                # 尝试转为数字
+                try:
+                    if '.' in pval:
+                        pval = float(pval)
+                    else:
+                        pval = int(pval)
+                except (ValueError, TypeError):
+                    pass
+                args[pname] = pval
+            if fn_name:
+                results.append({"name": fn_name, "args": args})
+        return results if results else None
 
     @staticmethod
     def _parse_json(text: str) -> dict | None:
