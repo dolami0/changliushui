@@ -152,8 +152,7 @@ class IndustryChainCoze:
             "top5_json": str(result.get("scored_stocks_json", "")),
             "chain_analysis_json": str(result.get("chain_analysis_json", "")),
             "stock_analysis_json": str(result.get("stock_analysis_json", "")),
-            "is_analyzed": False,
-            "is_complete": True,
+            "is_analyzed": True,
             "status": str(result.get("status", "done")),
         }
 
