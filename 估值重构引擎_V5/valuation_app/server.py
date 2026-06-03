@@ -1067,7 +1067,7 @@ async def api_ic_results():
                 "runner_up_thesis": str(r.get("runner_up_thesis", "")),
                 "top5_json": r.get("top5_json", ""),
                 "analysis_date": r.get("bstudio_create_time", ""),
-                "status": "done" if str(r.get("is_analyzed", "")).lower() == "true" else "pending",
+                "status": "done" if r.get("status", "pending") else "pending",
             })
         return JSONResponse({"status": "ok", "count": len(results), "results": results})
     except Exception as e:
