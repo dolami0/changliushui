@@ -170,6 +170,17 @@ class IndustryChainCoze:
         except Exception as e:
             print(f'[Coze] mark_analyzing 失败: {e}', flush=True)
 
+    def mark_analyzing_reset(self, record_id: str) -> None:
+        """仅清除分析中标志（用于错误/异常恢复，不标记已分析，允许重试）"""
+        try:
+            self.coze.update_records(
+                SOURCE_TABLE_ID,
+                update_fields=[{"field_name": "is_analyzing", "value": "false"}],
+                filter_conditions={"logic": "and", "conditions": [{"left": "id", "operation": "equal", "right": str(record_id)}]},
+            )
+        except Exception as e:
+            print(f'[Coze] mark_analyzing_reset 失败: {e}', flush=True)
+
     def mark_processed(self, record_id: str) -> None:
         """标记源表记录为已分析，同时清除分析中标志"""
         try:
