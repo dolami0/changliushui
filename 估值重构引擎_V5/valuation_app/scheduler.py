@@ -36,6 +36,8 @@ class Scheduler:
         self.completed_jobs: list[dict] = []
         self.current_poll_status: str = "idle"
         self._latest_review: dict | None = None  # 最新一轮审阅结果
+        self._fail_tracker: dict[str, int] = {}    # {record_id: 连续失败次数} 防止无限重试
+        self._fail_tracker_date: str = ""           # 重置日期（跨天清零）
 
     async def start(self):
         """启动定时轮询（由 FastAPI lifespan 调用）"""
@@ -184,11 +186,44 @@ class Scheduler:
                     job["status"] = "error"
                     logger.error(f"管线处理失败: {rec.get('stock_code')} — "
                                  f"{result.get('error','未知错误')[:120]}")
+                    # 重试上限: 连续3次失败后强制标记完成，防止无限重试消耗 token
+                    rid = rec.get("id", "")
+                    if rid:
+                        if self._fail_tracker_date != datetime.now().strftime("%Y%m%d"):
+                            self._fail_tracker.clear()
+                            self._fail_tracker_date = datetime.now().strftime("%Y%m%d")
+                        fails = self._fail_tracker.get(rid, 0) + 1
+                        self._fail_tracker[rid] = fails
+                        if fails >= 3:
+                            logger.warning(
+                                f"记录 {rid}({rec.get('stock_code')}) 连续失败{fails}次，"
+                                f"强制标记完成以中断重试循环"
+                            )
+                            try:
+                                self.coze.mark_record_complete(self.agent0_db_id, rid)
+                            except Exception as e:
+                                logger.error(f"强制标记失败: {e}")
+                        else:
+                            logger.info(f"记录 {rid} 失败 {fails}/3 次，将继续重试")
 
             except Exception as e:
                 logger.error(f"处理 {rec.get('stock_code', '?')} 失败: {e}")
                 job["status"] = "error"
                 results.append({"agent0": rec, "status": "error", "error": str(e)})
+                # 异常同样计入重试上限
+                rid = rec.get("id", "")
+                if rid:
+                    if self._fail_tracker_date != datetime.now().strftime("%Y%m%d"):
+                        self._fail_tracker.clear()
+                        self._fail_tracker_date = datetime.now().strftime("%Y%m%d")
+                    fails = self._fail_tracker.get(rid, 0) + 1
+                    self._fail_tracker[rid] = fails
+                    if fails >= 3:
+                        logger.warning(f"记录 {rid} 连续异常{fails}次，强制标记完成")
+                        try:
+                            self.coze.mark_record_complete(self.agent0_db_id, rid)
+                        except Exception as e2:
+                            logger.error(f"强制标记失败: {e2}")
 
         # 4. 跨股赔率排序
         try:

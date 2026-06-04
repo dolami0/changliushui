@@ -92,7 +92,7 @@ def call_deepseek(
             "temperature": temperature,
             "stream": False,
             "thinking": {"type": "enabled"},
-            "reasoning_effort": "max",
+            "reasoning_effort": "high",
         },
         timeout=600,
     )
