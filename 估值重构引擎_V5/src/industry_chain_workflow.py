@@ -9,8 +9,8 @@ Pass 1:
   Step 4.5: tushare 按名称校验真实代码
   Step 5: tushare市值+PE(3次重试) + Volc并行个股投资地图
   Step 6: LLM #2 — 四维评分(impact/v3match/narrative/scarcity)
-  ├─ best >= 6.5 → 输出
-  └─ best < 6.5 → Pass 2:
+  ├─ best >= 6.0 → 输出
+  └─ best < 6.0 → Pass 2:
       Step 7: 提名节点2候选股
       Step 7.5: tushare 代码校验
       Step 8: 数据富化
@@ -253,7 +253,7 @@ scored_stocks按total_score降序。top_pick = 总分最高者（优先第一节
 
 # 阈值硬规则（不可违反）
 - 所有候选股total_score均 < 6.0 -> 必须严格按以下格式输出, 不得填入其他字段:
-  "top_pick": {"stock_code": "", "stock_name": "无高赔率标的", "node_name": "", "investment_thesis": "所有候选股均未达到6.5分阈值"}
+  "top_pick": {"stock_code": "", "stock_name": "无高赔率标的", "node_name": "", "investment_thesis": "所有候选股均未达到6.0分阈值"}
   "runner_up": {"stock_code": "", "stock_name": "无高赔率标的", "node_name": "", "investment_thesis": ""}
 - 禁止虚高打分凑数。宁缺毋滥。"""
 # ═══════════════════════════════════════
