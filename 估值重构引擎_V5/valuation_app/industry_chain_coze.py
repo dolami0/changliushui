@@ -171,11 +171,14 @@ class IndustryChainCoze:
             print(f'[Coze] mark_analyzing 失败: {e}', flush=True)
 
     def mark_processed(self, record_id: str) -> None:
-        """标记源表记录为已分析"""
+        """标记源表记录为已分析，同时清除分析中标志"""
         try:
             self.coze.update_records(
                 SOURCE_TABLE_ID,
-                update_fields=[{"field_name": "is_analyzed", "value": "true"}],
+                update_fields=[
+                    {"field_name": "is_analyzed", "value": "true"},
+                    {"field_name": "is_analyzing", "value": "false"},
+                ],
                 filter_conditions={"logic": "and", "conditions": [{"left": "id", "operation": "equal", "right": str(record_id)}]},
             )
         except Exception as e:
