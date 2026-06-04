@@ -68,7 +68,7 @@ def parse_json(text: str) -> dict:
 def call_deepseek(
     system: str,
     user_message: str,
-    max_tokens: int = 30720,
+    max_tokens: int = 40960,
     temperature: float = 0,
     api_key: str | None = None,
     model: str = "deepseek-v4-pro",

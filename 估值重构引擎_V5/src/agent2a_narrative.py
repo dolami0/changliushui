@@ -517,7 +517,7 @@ class NarrativeDiagnosis:
 
         result = call_deepseek(
             NARRATIVE_DIAGNOSIS_PROMPT, user_msg,
-            max_tokens=30720, temperature=0,
+            temperature=0,
             api_key=self.api_key,
         )
 
@@ -525,7 +525,7 @@ class NarrativeDiagnosis:
             # 重试一次
             result = call_deepseek(
                 NARRATIVE_DIAGNOSIS_PROMPT, user_msg,
-                max_tokens=30720, temperature=0,
+                temperature=0,
                 api_key=self.api_key,
             )
 

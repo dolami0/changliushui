@@ -1365,7 +1365,7 @@ def _call_llm_scenario(
                     {"role": "system", "content": _build_model_aware_prompt(primary, validation_model)},
                     {"role": "user", "content": user_msg},
                 ],
-                "max_tokens": 30720,
+                "max_tokens": 40960,
                 "temperature": 0.1,
                 "stream": False,
                 "thinking": {"type": "enabled"},

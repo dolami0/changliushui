@@ -126,7 +126,7 @@ def _call_flash_extraction(
                     {"role": "system", "content": PIPELINE_EXTRACTION_PROMPT},
                     {"role": "user", "content": f"目标公司: {stock_name}\n\n材料:\n{prompt_text[:40000]}"},
                 ],
-                "max_tokens": 4096,
+                "max_tokens": 8192,
                 "temperature": 0,
                 "stream": False,
             },

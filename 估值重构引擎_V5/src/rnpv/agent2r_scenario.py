@@ -824,7 +824,7 @@ class RnpvScenarioValuation:
         # Step 2: LLM 调用 → 参数推演
         result = call_deepseek(
             RNPV_SCENARIO_PROMPT, user_msg,
-            max_tokens=30720, temperature=0.1,
+            temperature=0.1,
             api_key=self.api_key,
         )
 
@@ -833,7 +833,7 @@ class RnpvScenarioValuation:
             print(f"  [Agent-2r] LLM 解析失败，重试...", flush=True)
             result = call_deepseek(
                 RNPV_SCENARIO_PROMPT, user_msg,
-                max_tokens=30720, temperature=0.1,
+                temperature=0.1,
                 api_key=self.api_key,
             )
 

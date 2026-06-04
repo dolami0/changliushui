@@ -1328,7 +1328,7 @@ class SOTPScenarioAsymmetry:
         try:
             result = call_deepseek(
                 prompt, user_msg,
-                max_tokens=30720, temperature=0.1,
+                temperature=0.1,
                 api_key=self.api_key,
             )
         except Exception as e:
@@ -1339,7 +1339,7 @@ class SOTPScenarioAsymmetry:
             try:
                 result = call_deepseek(
                     prompt, user_msg,
-                    max_tokens=30720, temperature=0.1,
+                    temperature=0.1,
                     api_key=self.api_key,
                 )
             except Exception:
