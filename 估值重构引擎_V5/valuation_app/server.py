@@ -156,8 +156,9 @@ async def lifespan(app: FastAPI):
         sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
         _ic_coze = IndustryChainCoze(coze)
         from industry_chain_workflow import IndustryChainWorkflow
+        from env_config import DEEPSEEK_API_KEY as _dk
         ic_wf = IndustryChainWorkflow(
-            deepseek_key=_config.get("deepseek_api_key", ""),
+            deepseek_key=_dk,
             coze_client=coze,
         )
         _wangqi = WangqiScheduler(coze, ic_wf, _ic_coze, _config, progress_cb=_handle_wangqi_progress)
