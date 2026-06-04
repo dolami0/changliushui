@@ -297,7 +297,9 @@ class IndustryChainWorkflow:
             industry = chain.get("chain_overview", {}).get("industry", "")
             nodes = chain.get("top_two_nodes", [])
             is_hard_error = chain.get("error", "").startswith("API ")
-            if (not industry or not nodes) and not is_hard_error:
+            if is_hard_error:
+                return {"status": "skipped", "error": chain.get("error", ""), "record_id": rid}
+            if (not industry or not nodes):
                 print(f"[LLM1-EMPTY] industry='{industry}' nodes={len(nodes)}, retrying...", flush=True)
                 chain = self._llm_tool_use(LLM1_PROMPT,
                     self._msg_llm1(news, step_one, knowledge)
@@ -308,7 +310,9 @@ class IndustryChainWorkflow:
                 industry = chain.get("chain_overview", {}).get("industry", "")
                 nodes = chain.get("top_two_nodes", [])
                 is_hard_error = chain.get("error", "").startswith("API ")
-            if (not industry or not nodes) and not is_hard_error:
+                if is_hard_error:
+                    return {"status": "skipped", "error": chain.get("error", ""), "record_id": rid}
+            if (not industry or not nodes):
                 return {"status": "skipped", "error": "LLM #1 无法识别产业链/节点", "record_id": rid}
 
             # Step 2: Volc节点搜索 — 为提名LLM提供节点内公司列表
@@ -957,7 +961,11 @@ class IndustryChainWorkflow:
                 if r.status_code != 200:
                     if attempt < 2: time.sleep(3 * (attempt + 1)); continue
                     return {"error": f"API {r.status_code}", "raw": r.text[:500]}
-                content = r.json()["choices"][0]["message"]["content"]
+                resp_json = r.json()
+                content = resp_json["choices"][0]["message"]["content"]
+                usage = resp_json.get("usage", {})
+                reasoning = (usage.get("completion_tokens_details", {}) or {}).get("reasoning_tokens", 0)
+                print(f"[LLM-TOKEN] _llm model={model} prompt={usage.get("prompt_tokens",0)} completion={usage.get("completion_tokens",0)} reasoning={reasoning} total={usage.get("total_tokens",0)}", flush=True)
                 parsed = self._parse_json(content)
                 if parsed: return parsed
                 if attempt < 2:
@@ -1020,7 +1028,8 @@ class IndustryChainWorkflow:
                 resp_json = r.json()
                 msg = resp_json["choices"][0]["message"]
                 usage = resp_json.get("usage", {})
-                print(f'[LLM-TOKEN] turn={turn}/{max_turns} prompt={usage.get("prompt_tokens",0)} completion={usage.get("completion_tokens",0)} total={usage.get("total_tokens",0)}', flush=True)
+                reasoning = (usage.get("completion_tokens_details", {}) or {}).get("reasoning_tokens", 0)
+                print(f'[LLM-TOKEN] turn={turn}/{max_turns} model={model} prompt={usage.get("prompt_tokens",0)} completion={usage.get("completion_tokens",0)} reasoning={reasoning} total={usage.get("total_tokens",0)}', flush=True)
 
                 if msg.get("tool_calls"):
                     # V4 requires non-empty content for tool call messages
