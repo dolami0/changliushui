@@ -940,7 +940,7 @@ class IndustryChainWorkflow:
 
     def _llm(self, system: str, user: str, label: str = "", model: str = "") -> dict:
         model = model or DEEPSEEK_MODEL
-        use_thinking = model in (DEEPSEEK_MODEL, DEEPSEEK_MODEL_FAST)  # v4-pro 和 Flash 都开思考
+        use_thinking = model == DEEPSEEK_MODEL  # 仅 v4-pro 评分开思考，提名不需要
         for attempt in range(3):
             try:
                 payload = {

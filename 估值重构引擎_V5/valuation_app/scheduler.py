@@ -352,49 +352,15 @@ class Scheduler:
 
         # ── rNPV 管线键名映射 (agent3r→agent3, agent2r→agent2) ──
         pipeline_type = result.get("pipeline_type", "standard")
-        # 先保存 rNPV 专属数据（在键名映射前）
+        # 先保存 rNPV 专属数据（V7: 保留 agent1r 原始数据供 detail 表使用）
         _rnpv_data = {}
         if pipeline_type == "rnpv":
-            for rnpv_key in ("agent1r", "agent2r", "agent3r"):
+            # agent1r/agent2r 直接取（V7: agent2r 已是 Agent-3 兼容格式, agent2/agent3 = agent2r）
+            for rnpv_key in ("agent1r", "agent2r"):
                 val = result.get(rnpv_key)
                 if val is not None:
                     _rnpv_data[rnpv_key] = val
-            if "agent3" not in result and "agent3r" in result:
-                result = dict(result)
-                result["agent3"] = result.pop("agent3r")
-            if "agent2" not in result and "agent2r" in result:
-                result = dict(result)
-                result["agent2"] = result.pop("agent2r")
-            # rNPV 输出格式归一化: probability_weighted → valuation_summary
-            a3 = result.get("agent3", {})
-            if isinstance(a3, dict) and "valuation_summary" not in a3:
-                pw = a3.get("probability_weighted", {})
-                if pw:
-                    a3 = dict(a3)
-                    a3["valuation_summary"] = {
-                        "probability_weighted_upside_pct": pw.get("weighted_upside_pct", 0),
-                        "asymmetry_ratio": pw.get("asymmetry_ratio", 0),
-                    }
-                    result["agent3"] = a3
-            # rNPV scenarios格式归一化: scenario_valuation dict → scenarios list
-            sv = a3.get("scenario_valuation", {})
-            if isinstance(sv, dict) and not a3.get("scenarios"):
-                a3["scenarios"] = [
-                    {"name": sn, "probability_pct": round(d.get("probability", 0) * 100, 1),
-                     "upside_pct": d.get("upside_pct", 0),
-                     "target_mcap_yi": d.get("total_value_yi", 0)}
-                    for sn in ("bear", "base", "bull")
-                    for d in [sv.get(sn, {})]
-                ]
-                result["agent3"] = a3
-
-            # rNPV 没有标准 routing_decision，从 agent2r 的 routing 字段提取
-            if "routing_decision" not in result:
-                a2r = result.get("agent2", {})
-                if isinstance(a2r, dict):
-                    rd = a2r.get("routing_decision", a2r.get("routing", {}))
-                    if rd:
-                        result["routing_decision"] = rd
+            # V7: orchestrator 已注入 agent2/agent3/agent2a/routing_decision, 无需额外归一化
 
         # ── 直接取 V6 数据（不经过 compat 转换）──
         core = self._get_core_v6(result)
@@ -539,13 +505,13 @@ def _write_detail_row(detail_db_id: str, coze, agent0_record: dict,
 
     # ── 按管线类型选择正确的数据源 ──
     if pipeline_type == "rnpv":
-        # rNPV：使用专属三步管线数据，而非标准 Agent-1/2/3
+        # V7: agent2r 已是 Agent-3 兼容格式, agent3=agent2r
+        # agent3r 不再存在（已合并入 agent2r）
         agent1_detail = _rnpv_data.get("agent1r", a1_raw)
-        agent2_detail = _rnpv_data.get("agent2r", a2_raw)
-        agent3_detail = _rnpv_data.get("agent3r", a3)
-        agent2a_detail = {}
-        routing_detail = {"primary_model": "F", "pipeline_type": "rnpv",
-                          "note": "rNPV无标准模型路由，F为管线估值锚定"}
+        agent2_detail = a2_raw                      # agent2 = agent2r (Agent-3 兼容)
+        agent3_detail = a3                          # agent3 = agent2r (Agent-3 兼容)
+        agent2a_detail = a2a_raw                    # V7 修复: 不再为空
+        routing_detail = routing                    # V7 修复: 使用实际路由
     elif pipeline_type == "sotp":
         # SOTP：使用标准 Agent-1 + Agent-2a + Agent-3s
         agent1_detail = a1_raw

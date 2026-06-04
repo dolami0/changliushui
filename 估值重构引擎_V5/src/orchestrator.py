@@ -39,8 +39,7 @@ from env_config import DEEPSEEK_API_KEY
 # rNPV 管线 (条件导入，避免缺失依赖时阻塞标准管线)
 try:
     from rnpv.agent1r_pipeline_data import PipelineDataAssembler
-    from rnpv.agent2r_pipeline_valuation import PipelineValuation
-    from rnpv.agent3r_scenario import PipelineScenario
+    from rnpv.agent2r_scenario import RnpvScenarioValuation
     _RNPV_AVAILABLE = True
 except ImportError:
     _RNPV_AVAILABLE = False
@@ -332,40 +331,33 @@ class Orchestrator:
     # ── rNPV 管线 ──
 
     def _run_rnpv_pipeline(self, state: PipelineState, event_data: dict, cb) -> dict:
-        """执行 rNPV 专用管线: Agent-1r → Agent-2r → Agent-3r"""
+        """执行 rNPV 专用管线: Agent-1r → Agent-2r (V7: 合并旧 2r+3r, 单次LLM)"""
         stock_code = state.stock_code
         stock_name = state.stock_name
 
-        # Agent-1r: 管线数据组装 + Volc 搜索
-        cb("agent1r", 1, 3, "running", "管线数据+Volc搜索")
+        # Agent-1r: 管线数据组装 + Volc 搜索（无 LLM）
+        cb("agent1r", 1, 2, "running", "管线数据+Volc搜索")
         t0 = time.time()
-        a1r = PipelineDataAssembler()
+        a1r = PipelineDataAssembler(deepseek_key=self.api_key)
         a1_std = state.agent1_output  # 复用标准管线的财务数据
         pipeline_data = a1r.run(stock_code, stock_name, event_data, a1_std)
         state.step_times["agent1r"] = round(time.time() - t0, 2)
         drugs_found = pipeline_data.get("extracted_from_pre_research", {}).get("drug_count", 0)
-        cb("agent1r", 1, 3, "done", f"识别管线:{drugs_found}条")
+        cb("agent1r", 1, 2, "done", f"识别管线:{drugs_found}条")
 
-        # Agent-2r: 管线估值
-        cb("agent2r", 2, 3, "running", "两段式估值(成熟产品+管线)")
+        # Agent-2r: 情景推演 + 代码估值（单次 LLM, 合并旧 2r+3r）
+        cb("agent2r", 2, 2, "running", "rNPV参数推演+代码估值")
         t0 = time.time()
-        a2r = PipelineValuation(deepseek_key=self.api_key)
-        valuation = a2r.run(pipeline_data, event_data)
+        a2r = RnpvScenarioValuation(deepseek_key=self.api_key)
+        scenario_output = a2r.run(
+            pipeline_data, event_data,
+            agent2a_output=state.agent2a_output,
+        )
         state.step_times["agent2r"] = round(time.time() - t0, 2)
-        sotp = valuation.get("sotp_total", {})
-        imp = valuation.get("implied_pos_check", {})
-        cb("agent2r", 2, 3, "done",
-           f"公允值:{sotp.get('total_fair_value_yi','?')}亿 计价:{imp.get('priced_in_assessment','?')}")
-
-        # Agent-3r: 情景推演
-        cb("agent3r", 3, 3, "running", "rNPV情景推演")
-        t0 = time.time()
-        a3r = PipelineScenario(deepseek_key=self.api_key)
-        scenario = a3r.run(pipeline_data, valuation, event_data)
-        state.step_times["agent3r"] = round(time.time() - t0, 2)
-        pw = scenario.get("probability_weighted", {})
-        cb("agent3r", 3, 3, "done",
-           f"upside={pw.get('weighted_upside_pct',0):+.1f}% asym={pw.get('asymmetry_ratio',0):.1f}x")
+        vs = scenario_output.get("valuation_summary", {})
+        cb("agent2r", 2, 2, "done",
+           f"upside={vs.get('probability_weighted_upside_pct',0):+.1f}% "
+           f"asym={vs.get('asymmetry_ratio',0):.1f}x")
 
         state.status = "done"
         state.completed_at = datetime.now(timezone.utc).isoformat()
@@ -374,10 +366,18 @@ class Orchestrator:
             "agent0": state.agent0_output or {},
             "agent1": state.agent1_output or {},
             "agent1r": pipeline_data,
-            "agent2r": valuation,
-            "agent3r": scenario,
+            "agent2r": scenario_output,                # Agent-2r 完整输出（含 valuation_summary/scenarios）
+            "agent2": scenario_output,                 # scheduler 兼容: agent2 = agent2r
+            "agent3": scenario_output,                 # Agent-3 兼容: 已组装为 Agent-3 格式
+            "agent2a": state.agent2a_output or {},     # V7 修复: 保留 Agent-2a 叙事诊断
+            "routing_decision": {                      # V7 修复: 构造路由信息
+                "primary_model": "F",
+                "model_category": "rNPV",
+                "routing_reason": "Agent-2a判定pipeline锚→分叉至rNPV管线",
+                "validation_models": [],
+            },
             "status": "done",
-            "pipeline_version": "6.0-rnpv",
+            "pipeline_version": "7.0-rnpv",
             "pipeline_type": "rnpv",
             "audit": {
                 "stock_code": stock_code,
