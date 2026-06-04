@@ -1,0 +1,27 @@
+# 密钥文件 — 严禁提交
+.env
+valuation_app/config.json
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+
+# 日志/临时文件
+*.log
+server.log
+reports/data/
+reports/reviews/
+reports/ranking/
+
+# 测试临时产物
+tmp_*.json
+tmp_*.md
+test_*.py
+_pipeline_eval.py
