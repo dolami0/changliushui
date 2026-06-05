@@ -88,14 +88,14 @@ def _search_segment_data(
     if not VOLC_AGENT_KEY or not secondary_anchors:
         return {}
     
-    seg_names = "、".join(sa.get("segment", "?") for sa in secondary_anchors)
-    
+    seg_names = "、".join(_safe_dict(sa).get("segment", "?") for sa in secondary_anchors)
+
     # Query 1: 分部毛利率
     q1 = f"{stock_name}({stock_code})的分部业务{seg_names}各自的毛利率大概是多少？给出百分比数字。"
     result1 = _call_volc(q1)
-    
+
     # Query 2: 行业估值倍数
-    anchors = set(sa.get("anchor", "earnings") for sa in secondary_anchors)
+    anchors = set(_safe_dict(sa).get("anchor", "earnings") for sa in secondary_anchors)
     anchor_desc = "、".join(anchors)
     q2 = f"{stock_name}所处行业中，{seg_names}这类业务通常用什么估值倍数？{anchor_desc}锚对应的PE或PS大概什么范围？"
     result2 = _call_volc(q2)
@@ -124,13 +124,14 @@ def _check_data_adequacy(
         return True, "无副锚，100%主锚，不需要SOTP"
     
     # 检查 product_mix 数据
-    fw = data_package.get("forward_looking", {}) or data_package.get("_forward_looking", {}) or {}
-    products = fw.get("categories", {}).get("earnings_elasticity", {}).get("products", {}) or {}
+    fw = _safe_dict(data_package.get("forward_looking")) or _safe_dict(data_package.get("_forward_looking"))
+    products = _safe_dict(_safe_dict(_safe_dict(fw.get("categories")).get("earnings_elasticity")).get("products"))
     mix = products.get("product_mix", []) or []
     
     issues = []
     
     for sa in secondary_anchors:
+        sa = _safe_dict(sa)
         seg_name = sa.get("segment", "?")
         share = sa.get("revenue_share_pct", 0)
         conf = sa.get("data_confidence", "low")
@@ -610,15 +611,21 @@ asymmetry_ratio = bull_upside / |bear_upside|
 # 数据格式兼容层
 # ═══════════════════════════════════════
 
+def _safe_dict(v, default=None):
+    """防御: 如果 v 不是 dict 则返回 default(默认{})。防止 'str' object has no attribute 'get' 崩溃。"""
+    if default is None:
+        default = {}
+    return v if isinstance(v, dict) else default
+
 def _get_core_fields(data_package: dict) -> dict:
     """从 data_package 提取核心财务字段，兼容两种格式：
     - 新格式: packages.core.fields (Agent-1 标准输出)
     - 旧格式: clean_financials (历史缓存/快照)
     """
     # 新格式
-    pkgs = data_package.get("packages", {}) or {}
-    core = pkgs.get("core", {}) or {}
-    fields = core.get("fields", {}) or {}
+    pkgs = _safe_dict(data_package.get("packages", {}))
+    core = _safe_dict(pkgs.get("core", {}))
+    fields = _safe_dict(core.get("fields", {}))
     if fields:
         return fields
 
@@ -903,10 +910,10 @@ def _build_sotp_user_message(
     stock = core.get("stock_name", data_package.get("stock_name", ""))
     code = data_package.get("stock_code", "")
 
-    mn = agent2a_output.get("market_narrative", {})
-    ep = agent2a_output.get("event_pricing", {})
-    sa = agent2a_output.get("signal_audit", {})
-    pa = ep.get("pricing_assessment", {})
+    mn = _safe_dict(agent2a_output.get("market_narrative"))
+    ep = _safe_dict(agent2a_output.get("event_pricing"))
+    sa = _safe_dict(agent2a_output.get("signal_audit"))
+    pa = _safe_dict(ep.get("pricing_assessment"))
     primary = mn.get("primary_anchor", "earnings")
     sas = mn.get("secondary_anchors", [])
 
@@ -933,12 +940,12 @@ def _build_sotp_user_message(
     net_cash = cash - debt
 
     # ── 事件窗口价格 ──
-    ew = data_package.get("event_window_prices", {}) or {}
+    ew = _safe_dict(data_package.get("event_window_prices"))
     ew_text = ""
     if ew and ew.get("source") not in ("none", None):
-        pre = ew.get("pre_event") or {}
-        post = ew.get("post_event") or {}
-        cur = ew.get("current") or {}
+        pre = _safe_dict(ew.get("pre_event"))
+        post = _safe_dict(ew.get("post_event"))
+        cur = _safe_dict(ew.get("current"))
         ew_text = f"""
 ## 事件窗口价格
 | 窗口 | 均价 |
