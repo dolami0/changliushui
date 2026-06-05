@@ -11,6 +11,7 @@ os.chdir(BASE_DIR)
 sys.path.insert(0, os.path.join(BASE_DIR, 'src'))
 
 from industry_chain_workflow import IndustryChainWorkflow
+from env_config import DEEPSEEK_API_KEY
 
 LOG_FILE = 'eval_run.log'
 RESULT_FILE = 'eval_results.json'
@@ -23,12 +24,10 @@ def log(msg: str):
 
 
 # ── 加载 ──
-with open('valuation_app/config.json') as f:
-    cfg = json.load(f)
 with open('evals/industry_chain_eval.json', encoding='utf-8') as f:
     evals = json.load(f)
 
-wf = IndustryChainWorkflow(deepseek_key=cfg['deepseek_api_key'])
+wf = IndustryChainWorkflow(deepseek_key=DEEPSEEK_API_KEY)
 cases = evals['cases']
 
 # 清空日志

@@ -1,13 +1,16 @@
 """
 产业链利润流分析器 — 双Pass LLM架构
 
-Step 1: Volc联网搜索1 — 产业事件全局
-Step 2: DeepSeek LLM #1 — 产业链推理 → 前2节点
-Step 3: Volc联网搜索2 — 每节点1个query (并行)
+Step 1: DeepSeek LLM #1 (flash+bocha) — 产业链推理 → 前2节点
+Step 2: Volc联网搜索 — 每节点1个query (并行)
 Pass 1:
-  Step 4: LLM #2 — 提名节点1候选股(仅名称,无代码)
-  Step 4.5: tushare 按名称校验真实代码
-  Step 5: tushare市值+PE(3次重试) + Volc并行个股投资地图
+  Step 3: LLM #2 (flash) — 提名节点1候选股(仅名称,无代码)
+  Step 3.5: tushare 按名称校验真实代码
+  Step 4: tushare市值/PE/财务指标 + Volc个股投资地图 (并行)
+  Step 5: LLM #2 (v4-pro) — 四维评分(黑洞/弹射+连续光谱+裁量权)
+  ├─ best >= 6.0 → 输出
+  └─ best < 6.0 → Pass 2:
+      Step 6: 提名+富化+评分节点2 → 混合输出
   Step 6: LLM #2 — 四维评分(impact/v3match/narrative/scarcity)
   ├─ best >= 6.0 → 输出
   └─ best < 6.0 → Pass 2:
@@ -180,24 +183,61 @@ V3速查表是历史经验的参考，不是必须匹配的模板：
 
 # 评分维度(1-10分)
 
-1. 事件冲击比(45%)：暴露度 × 赔率杠杆。分两种类型评估：
+1. 事件冲击比(45%)：暴露度 × 赔率杠杆。分两种类型评估。
 
-	   成熟型（当前已有规模化收入）：
-	   10=暴露>70% + 市值<50亿  (纯正小微盘,事件直接砸中)
-	   8 =暴露50-70% + 市值50-100亿
-	   7 =暴露30-50% + 市值100-200亿
-	   5 =暴露<30% 或 市值200-300亿
+   # ═══ 关键前置判断：低市值是"弹射"还是"黑洞"？ ═══
 
-	   验证突破型（产品已通过认证/产能即将放量, 但收入尚未起量）：
-	   若当前收入占比<30%但以下条件至少满足一条：
-	     a) 已通过头部客户正式认证（如进入英伟达/华为供应链）
-	     b) 扩产项目3-6个月内投产且公告了具体产能数字
-	     c) 已签署框架协议或意向订单且金额明确
-	   则按未来弹性上调评分：
-             - 三条条件全部满足 → 确定性等同于成熟型，按成熟型标准给分（不受验证突破型上限约束）
-             - 满足1-2条 → 市值<50亿最高8分, 市值50-100亿最高7分, 市值100-200亿最高5分
-           10分只给已有规模化收入的公司——验证突破型最高8分。
-	   10分只给已有规模化收入的公司——验证突破型最高8分。
+   市值<100亿的公司，低市值可能是因为被错杀的潜力股（弹射），也可能是因为业务在持续毁灭价值（黑洞）。评分前必须先判定——财务数据已在个股卡片中提供。
+
+   【黑洞信号 — 出现任一信号则 impact_score ≤ 5 分】
+   - 毛利率 < 15% → 主业本身不创造价值，低市值是合理定价
+   - 资产负债率 > 70% 且净利率 < -30% → 债务悬崖+持续失血，退市风险是真实生存问题
+   - 营业利润亏损额 > 营收的 50% → 经营失控，新业务利润被旧业务黑洞吞噬
+   - 营收同比持续下滑(连续两期) → 业务在萎缩，不是"即将反转"
+   ※ 黑洞型：事件利好被旧业务亏损黑洞吞噬。低市值≠低估，而是价值毁灭的合理定价。
+
+   【弹射信号 — 可正常评分】
+   - 毛利率 > 25%，亏损来自研发/扩张投入而非主营业务衰退
+   - 资产负债率 < 60%，有时间窗口等待反转
+   - 营收同比转正或环比改善
+   - 扣非亏损在收窄（非扩大）
+   ※ 弹射型：低市值=临时困境，新业务有价值且资源在向新业务倾斜。
+
+   【灰色地带】不满足黑洞也不满足弹射 → impact 最高 7 分。
+
+   完成判定后，按连续光谱给分（消除跳档悬崖效应）：
+
+   成熟型（当前已有规模化收入）：
+   impact 在 1-10 之间连续取值，综合两个因子：
+
+   ① 暴露度得分（核心）— 事件相关收入占总营收的实际比例，连续评估：
+      暴露度 > 70% → 基础区间 8-10 分
+      暴露度 50-70% → 基础区间 6-8 分
+      暴露度 30-50% → 基础区间 4-6 分
+      暴露度 < 30% → 基础区间 2-4 分
+      在区间内按实际比例连续取值。例：暴露度 65% 可取 7.5，暴露度 55% 可取 6.5。不要机械锁死在某个整数。
+
+   ② 市值弹性系数 — 市值越小赔率越大，连续衰减：
+      50 亿以下 → 不折价（在基础区间上半段取值）
+      50-100 亿 → 轻折价（倾向区间中段）
+      100-200 亿 → 中等折价（倾向区间下半段）
+      200-300 亿 → 显著折价（倾向区间底部）
+      105 亿和 195 亿应有可感知的差异——不要同档处理。210 亿和 290 亿也不应同分。
+
+   impact = 暴露度在区间内连续定位 × 市值弹性微调
+
+   验证突破型（产品已通过认证/产能即将放量, 但收入尚未起量）：
+   同成熟型逻辑但上限 8 分（10 分只给已有规模化收入的公司）。
+   同样按连续光谱——市值 105 亿的最高分应高于市值 195 亿。
+   三条条件全部满足 → 确定性等同于成熟型，可在成熟型范围内连续取值。
+   满足 1-2 条 → 上限按市值连续衰减：50 亿→最高 8, 100 亿→最高 7, 200 亿→最高 5（中间值线性插值）。
+
+   # ±1 裁量调整（在 rationale 中显式声明理由）
+   允许在上述评分基础上 ±1 调整：
+   +1 条件：标的在节点中的纯正度/壁垒/确定性远超同市值段其他公司
+   -1 条件：标的在节点中的暴露度/确定性弱于同市值段
+   必须在 rationale 中显式声明，格式为「裁量+1：<理由>」或「裁量-1：<理由>」。
+   未声明理由的调整视为评分错误。
 
 	2. V3模式匹配(25%)：不猜具体利润倍数，匹配V3中4种十倍股原型
    10=亏损反转型 (寒武纪型): 当前亏损/微利,事件将赋予技术壁垒+市场垄断,利润从负→正大幅反转
@@ -376,33 +416,7 @@ class IndustryChainWorkflow:
         except Exception as e:
             return {"status": "error", "error": str(e)[:1000], "record_id": rid}
 
-    # ── Step 1: 联网搜索1 ──────────────
-
-    def _search(self, news: str, step_one: str) -> str:
-        """模板直出查询 —— 不浪费LLM调用改写query"""
-        chain_hint = ""
-        if step_one:
-            parts = [p.strip() for p in step_one.split(",")]
-            for p in parts:
-                if p and "level" not in p.lower() and "产业模式" not in p:
-                    chain_hint = p
-                    break
-        chain_clause = f"聚焦「{chain_hint}」产业链。" if chain_hint else ""
-
-        query = (
-            f"全网搜索并整理关于以下产业事件的深度分析报告。\n\n"
-            f"资讯：{news}\n\n"
-            f"{chain_clause}"
-            f"要求：\n"
-            f"1. 拆解产业链各环节（上游/中游/下游），列出每个环节真正有主营业务的A股公司（含代码）\n"
-            f"2. 分析事件的利润分配格局——哪个环节截取最多价值？\n"
-            f"3. 找出赔率最高的环节和个股\n"
-            f"4. 优先引用券商研报和公司公告，区分硬事实与投资者讨论\n"
-            f"5. 排除纯概念炒作无实质业务的公司"
-        )
-        return self._call_volc(query)
-
-    # ── Step 2: LLM #1 ─────────────────
+    # ── Step 1: LLM #1 ─────────────────
 
     @staticmethod
     def _msg_llm1(news: str, step_one: str, knowledge: str = "", web: str = "") -> str:
@@ -689,6 +703,43 @@ class IndustryChainWorkflow:
                             enriched[c]['float_share'] = float(row['float_share']) / 1e4 if row['float_share'] else 0
                             enriched[c]['turnover_rate'] = float(row['turnover_rate']) if row['turnover_rate'] else 0
                             fetched_count += 1
+
+                        # 财务指标: 盈利质量 + 生存概率（用于黑洞/弹射区分）
+                        try:
+                            df_fina = pro.fina_indicator(ts_code=ts_code,
+                                fields='ts_code,end_date,roe,roa,grossprofit_margin,netprofit_margin,debt_to_assets')
+                            if not df_fina.empty:
+                                row_f = df_fina.iloc[0]
+                                enriched[c]['roe'] = float(row_f['roe']) if row_f['roe'] else 0
+                                enriched[c]['roa'] = float(row_f['roa']) if row_f['roa'] else 0
+                                enriched[c]['gross_margin'] = float(row_f['grossprofit_margin']) if row_f['grossprofit_margin'] else 0
+                                enriched[c]['net_margin'] = float(row_f['netprofit_margin']) if row_f['netprofit_margin'] else 0
+                                enriched[c]['debt_ratio'] = float(row_f['debt_to_assets']) if row_f['debt_to_assets'] else 0
+                        except Exception:
+                            pass
+
+                        # 利润表: 营收+利润趋势（tushare income 单位为元，需 / 1e8 → 亿元）
+                        try:
+                            df_inc = pro.income(ts_code=ts_code,
+                                fields='ts_code,end_date,total_revenue,operate_profit,n_deducted_netprofit')
+                            if not df_inc.empty:
+                                # 最新一期
+                                row_i = df_inc.iloc[0]
+                                enriched[c]['revenue'] = float(row_i['total_revenue']) / 1e8  # 元→亿元
+                                enriched[c]['op_profit'] = float(row_i['operate_profit']) / 1e8 if row_i['operate_profit'] else 0
+                                enriched[c]['deducted_np'] = float(row_i['n_deducted_netprofit']) / 1e8 if row_i['n_deducted_netprofit'] else 0
+                                # 上一期（同比趋势）
+                                if len(df_inc) >= 2:
+                                    rp = df_inc.iloc[1]
+                                    prev_rev = float(rp['total_revenue']) / 1e8
+                                    if prev_rev and prev_rev > 0:
+                                        enriched[c]['revenue_yoy'] = round((enriched[c]['revenue'] - prev_rev) / prev_rev * 100, 1)
+                                    else:
+                                        enriched[c]['revenue_yoy'] = None
+                                else:
+                                    enriched[c]['revenue_yoy'] = None
+                        except Exception:
+                            pass
                     except Exception:
                         pass
 
@@ -710,9 +761,10 @@ class IndustryChainWorkflow:
         for c in codes:
             has_mcap = enriched[c].get('market_cap') is not None
             has_pe = enriched[c].get('pe_ttm', 0) != 0
-            if has_mcap and has_pe:
+            has_fina = enriched[c].get('gross_margin') is not None
+            if has_mcap and has_pe and has_fina:
                 enriched[c]['_data_quality'] = 'full'
-            elif has_mcap:
+            elif has_mcap and (has_pe or has_fina):
                 enriched[c]['_data_quality'] = 'partial'
             else:
                 enriched[c]['_data_quality'] = 'missing'
@@ -775,10 +827,20 @@ class IndustryChainWorkflow:
             pe = data.get('pe_ttm', 0) or 0
             pb = data.get('pb', 0) or 0
             ind = data.get('industry', '') or ''
-            ts = data.get('total_share', 0) or 0
-            fs = data.get('float_share', 0) or 0
+            ts_val = data.get('total_share', 0) or 0
+            fs_val = data.get('float_share', 0) or 0
             tr = data.get('turnover_rate', 0) or 0
             volc_intel = data.get('_volc_intel', '') or ''
+
+            # 财务健康数据（用于黑洞/弹射区分）
+            gm = data.get('gross_margin')
+            nm = data.get('net_margin')
+            roe = data.get('roe')
+            da = data.get('debt_ratio')
+            rev = data.get('revenue')
+            op_profit = data.get('op_profit')
+            rev_yoy = data.get('revenue_yoy')
+            deducted = data.get('deducted_np')
 
             name = data.get('stock_name', '') or f'({code})'
 
@@ -790,10 +852,32 @@ class IndustryChainWorkflow:
 
             intel_block = f"\n[个股投资地图-Volc实时搜索]\n{volc_intel}" if volc_intel else "\n[个股投资地图: 未获取到]"
 
+            # 构建财务健康行（有数据则展示，无则跳过）
+            fin_parts = []
+            if gm is not None:
+                fin_parts.append(f"毛利率={gm:.1f}%")
+            if nm is not None:
+                fin_parts.append(f"净利率={nm:.1f}%")
+            if roe is not None:
+                fin_parts.append(f"ROE={roe:.1f}%")
+            if da is not None:
+                fin_parts.append(f"负债率={da:.1f}%")
+            if rev is not None:
+                rev_str = f"营收={rev:.1f}亿"
+                if rev_yoy is not None:
+                    rev_str += f"(同比{rev_yoy:+.1f}%)" if rev_yoy else ""
+                fin_parts.append(rev_str)
+            if op_profit is not None:
+                fin_parts.append(f"营业利润={op_profit:+.1f}亿")
+            if deducted is not None:
+                fin_parts.append(f"扣非={deducted:+.1f}亿")
+            fin_line = (" | ".join(fin_parts)) if fin_parts else "财务数据: 暂无"
+
             card = (
                 f"\n### {name}({code})\n"
                 f"市值{mcap_str} | PE={pe:.1f} | PB={pb:.1f} | 换手率{tr:.1f}%\n"
-                f"行业: {ind} | 总股本{ts:.1f}亿 | 流通{fs:.1f}亿"
+                f"行业: {ind} | 总股本{ts_val:.1f}亿 | 流通{fs_val:.1f}亿\n"
+                f"{fin_line}"
                 f"{intel_block}"
             )
             lines.append(card)
@@ -832,6 +916,15 @@ class IndustryChainWorkflow:
             ind = data.get('industry', '') or ''
             volc_intel = data.get('_volc_intel', '') or ''
 
+            # 财务健康数据
+            gm = data.get('gross_margin')
+            nm = data.get('net_margin')
+            roe_val = data.get('roe')
+            da = data.get('debt_ratio')
+            rev = data.get('revenue')
+            op_profit = data.get('op_profit')
+            rev_yoy = data.get('revenue_yoy')
+
             if data_qual == 'missing':
                 has_missing = True
                 mcap_str = "[数据缺失-禁止臆测]"
@@ -840,9 +933,23 @@ class IndustryChainWorkflow:
 
             intel_block = f"\n[个股投资地图-Volc实时搜索]\n{volc_intel}" if volc_intel else "\n[个股投资地图: 未获取到]"
 
+            fin_parts = []
+            if gm is not None: fin_parts.append(f"毛利率={gm:.1f}%")
+            if nm is not None: fin_parts.append(f"净利率={nm:.1f}%")
+            if roe_val is not None: fin_parts.append(f"ROE={roe_val:.1f}%")
+            if da is not None: fin_parts.append(f"负债率={da:.1f}%")
+            if rev is not None:
+                rev_str = f"营收={rev:.1f}亿"
+                if rev_yoy is not None:
+                    rev_str += f"(同比{rev_yoy:+.1f}%)"
+                fin_parts.append(rev_str)
+            if op_profit is not None: fin_parts.append(f"营业利润={op_profit:+.1f}亿")
+            fin_line = (" | ".join(fin_parts)) if fin_parts else "财务数据: 暂无"
+
             card = (
                 f"\n### {name}({code})\n"
-                f"市值{mcap_str} | PE={pe:.1f} | 行业: {ind}"
+                f"市值{mcap_str} | PE={pe:.1f} | 行业: {ind}\n"
+                f"{fin_line}"
                 f"{intel_block}"
             )
             lines.append(card)
@@ -1135,7 +1242,6 @@ class IndustryChainWorkflow:
             pass
         return ""
 
-    @staticmethod
     @staticmethod
     def _parse_dsml(content: str) -> list[dict] | None:
         """解析 DeepSeek Flash 偶发的 DSML 格式 tool_call，返回 [{"name":..., "args":{...}}]"""
