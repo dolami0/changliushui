@@ -8,12 +8,8 @@ Pass 1:
   Step 3.5: tushare 按名称校验真实代码
   Step 4: tushare市值/PE/财务指标 + Volc个股投资地图 (并行)
   Step 5: LLM #2 (v4-pro) — 四维评分(黑洞/弹射+连续光谱+裁量权)
-  ├─ best >= 6.0 → 输出
-  └─ best < 6.0 → Pass 2:
-      Step 6: 提名+富化+评分节点2 → 混合输出
-  Step 6: LLM #2 — 四维评分(impact/v3match/narrative/scarcity)
-  ├─ best >= 6.0 → 输出
-  └─ best < 6.0 → Pass 2:
+  ├─ best >= 6.5 → 输出
+  └─ best < 6.5 → Pass 2:
       Step 7: 提名节点2候选股
       Step 7.5: tushare 代码校验
       Step 8: 数据富化
@@ -292,8 +288,8 @@ scored_stocks按total_score降序。top_pick = 总分最高者（优先第一节
 总分 = impact*0.45 + v3match*0.25 + narrative*0.20 + scarcity*0.10
 
 # 阈值硬规则（不可违反）
-- 所有候选股total_score均 < 6.0 -> 必须严格按以下格式输出, 不得填入其他字段:
-  "top_pick": {"stock_code": "", "stock_name": "无高赔率标的", "node_name": "", "investment_thesis": "所有候选股均未达到6.0分阈值"}
+- 所有候选股total_score均 < 6.5 -> 必须严格按以下格式输出, 不得填入其他字段:
+  "top_pick": {"stock_code": "", "stock_name": "无高赔率标的", "node_name": "", "investment_thesis": "所有候选股均未达到6.5分阈值"}
   "runner_up": {"stock_code": "", "stock_name": "无高赔率标的", "node_name": "", "investment_thesis": ""}
 - 禁止虚高打分凑数。宁缺毋滥。"""
 # ═══════════════════════════════════════
@@ -380,7 +376,7 @@ class IndustryChainWorkflow:
             # 判断节点1最高分是否达标
             ss1 = scores1.get("scored_stocks", [])
             best1 = ss1[0].get("total_score", 0) if ss1 else 0
-            node1_ok = best1 >= 6.0
+            node1_ok = best1 >= 6.5
 
             if node1_ok:
                 print(f"[PASS1-OK] node1 best={best1}, using node1 only", flush=True)
