@@ -120,7 +120,12 @@ reasoning_trace 按清单项顺序组织，每项写 3-6 句话：你的分析�
 - step2b_match: 关键的交叉验证结论（支撑/削弱/时序错位）
 - 数据异常标注: 2a 已在 data_gaps 中标注的数据问题
 
-**2b. 概率推导原则**: 概率不由模板决定，由叙事中的因果链条推导。从 3d 的因果剧本出发: bull 概率取决于超预期需要的独立条件数量和确定性；bear 概率聚焦 2-3 个最脆弱的核心假设；分布形状提供方向感——bimodal 两种极端都可能、narrow 超预期难度大、unimodal 居中。base = 100% - bull - bear。
+**2b. 概率推导原则**: 概率不由模板决定，由叙事中的因果链条推导。从 3d 的因果剧本出发:
+- bull 概率取决于超预期需要的独立条件数量和每个条件的确定性。条件越少越确定 → bull 概率越高。连续取值，不要凑整数
+- bear 概率聚焦 2-3 个最脆弱的核心假设，推演"如果这个错了故事就塌了"的联合概率
+- 分布形状提供方向感——bimodal 两种极端都可能、narrow 超预期难度大、unimodal 居中
+- 2a 的 step2d_score 告诉你前瞻信号对叙事的数据支撑程度，在概率推演时作为参考——不是模板，不是上限
+- base = 100% - bull - bear
 
 **bear 估值硬底**: 故事证伪不等于公司归零。自行选择适用底线:
   - 盈利企业: bear mcap ≥ TTM净利 × 保守PE(行业底部,通常10-20x)
@@ -239,7 +244,7 @@ PB: 与 ROE 匹配。ROE<5% 不应 >2x PB（除非隐蔽资产重估）。
 
 EV/EBITDA: 与行业中枢的偏离幅度必须可解释。上行周期可高于中枢，下行周期应低于中枢。偏离的方向和幅度需与 3d 因果剧本一致。
 
-ROIC: 故事里的事件节点驱动 ROIC 改善幅度。从叙事推演 ROIC 路径——毛利率修复到多少？规模效应何时释放？——而非从当前低基数线性外推。滞后财务数据里的低 ROIC 是故事起点，不是终点。
+ROIC: 故事里的事件节点驱动 ROIC 改善幅度。从叙事推演 ROIC 路径——毛利率修复到多少？规模效应何时释放？当前财务数据可能是周期底部或转型前夜——但只有叙事提供了明确的改善机制时（如需求爆发→产能利用率跳升、产品结构升级→毛利率跃迁），才能将 forward ROIC 推高。如果叙事没有指向具体的 ROIC 改善路径（仅是"行业好转"式的模糊预期），forward ROIC 应保守。滞后财务数据里的低 ROIC 是故事起点，不是终点——但起点到终点的路必须有叙事铺就。
 
 CAGR/增速: 高增速必须匹配高再投资率（RR=g/ROIC）。增速和 RR 不能脱节。
 
@@ -1760,7 +1765,6 @@ def _augment_trace_with_fixes(
     trace: list[str],
     sv: dict,
     llm_original: dict,
-    bull_capped: bool,
 ) -> list[str]:
     """在推理链末尾追加系统修正条目，标注代码计算覆盖的数值差异。"""
     if not trace:
@@ -1792,9 +1796,6 @@ def _augment_trace_with_fixes(
             entries.append(f"[系统修正] {d}")
     else:
         entries.append("[系统修正] 代码重算值与 LLM 原始值一致，无实质性算术误差")
-
-    if bull_capped:
-        entries.append("[系统修正] Bull 概率已由代码封顶（step2d 信号评分偏低→抑制乐观偏误）")
 
     if sv.get("_validation_warnings"):
         entries.append(f"[系统修正] 校验警告: {sv.get('_validation_warnings')}")
@@ -2015,7 +2016,6 @@ def _assemble_final_output(
             llm_output.get("reasoning_trace", []),
             sv,
             llm_original_values or {},
-            sv.get("_bull_capped_by_code", False),
         ),
         "preflight_check": llm_output.get("preflight_check", []),
         "probability_rationale": llm_output.get("probability_rationale", ""),
@@ -2114,48 +2114,6 @@ class ScenarioAsymmetry:
         sv["probability_weighted_mcap_yi"] = computed["probability_weighted_mcap_yi"]
         sv["asymmetry_ratio"] = computed["asymmetry_ratio"]
         sv["_computed_by_code"] = True
-
-        # ── Step 1.55: Bull 概率硬封顶（低信号评分时抑制乐观偏误）──
-        # V6: 优先使用 Agent-2a 的信号评分（信源更可靠，审核更完整）
-        a2a_signal = (agent2a_output or {}).get("signal_audit", {})
-        signal_audit = llm_output.get("signal_audit", a2a_signal)
-        step2d = a2a_signal.get("step2d_score") or signal_audit.get("step2d_score", 10)
-        details_raw = sv.get("scenario_details", {})
-        if isinstance(details_raw, list):
-            details = {item.get("scenario", ""): item for item in details_raw}
-        else:
-            details = details_raw
-
-        bull_prob = details.get("bull", {}).get("probability", 0)
-        cap_applied = False
-
-        if step2d is not None and step2d <= 6:
-            # 信号评分≤6: bull概率上限15%（防止在信号混杂时过度押注上行）
-            # 评分≤4: bull概率上限8%
-            cap = 0.15 if step2d >= 5 else 0.08
-            if bull_prob > cap:
-                excess = bull_prob - cap
-                details["bull"]["probability"] = cap
-                # 超出部分转移给base（bear概率不受影响——bear由证伪逻辑独立决定）
-                details["base"]["probability"] = details.get("base", {}).get("probability", 0) + excess
-                cap_applied = True
-                print(f"  [Agent3 bull cap] step2d={step2d}≤6, bull {bull_prob:.0%}→{cap:.0%} "
-                      f"(excess {excess:.0%}→base)", flush=True)
-
-        # 如果封顶后概率和可能≠1（浮点），归一化
-        if cap_applied:
-            probs = {s: details.get(s, {}).get("probability", 0) for s in ("bear", "base", "bull")}
-            total = sum(probs.values())
-            if abs(total - 1.0) > 0.001:
-                for s in probs:
-                    details[s]["probability"] = round(probs[s] / total, 4)
-            # 封顶后重新计算加权值
-            computed = _compute_from_assumptions(sv, primary, core_fields)
-            sv["probability_weighted_upside_pct"] = computed["probability_weighted_upside_pct"]
-            sv["probability_weighted_mcap_yi"] = computed["probability_weighted_mcap_yi"]
-            sv["asymmetry_ratio"] = computed["asymmetry_ratio"]
-            sv["_bull_capped_by_code"] = True
-            sv["_bull_cap_step2d"] = step2d
 
         # ── Step 1.6: 修正交易标注文字（消除数值-文字脱节）──
         cb(3.5, "修正交易标注")

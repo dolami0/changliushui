@@ -168,13 +168,17 @@ class Orchestrator:
                     {"missing": critical_missing, "stock_code": stock_code},
                 )
 
-            # ── 灵光预筛 (V6.2): Flash模型4维快速评估 ──
-            cb("pre_screen", 1, 1, "running", "灵光预筛(标的-事件匹配)")
+            # ── 灵光预筛 (V6.2): Flash模型4维快速评估（评测模式跳过）──
             t0 = time.time()
-            _gate = PreScreenGate(api_key=self.api_key)
-            state.pre_screen_result = _gate.run(
-                event_data, state.agent1_output, stock_code,
-            )
+            if self._eval_mode:
+                cb("pre_screen", 1, 1, "done", "评测模式跳过预筛")
+                state.pre_screen_result = PreScreenResult(total_score=40, passed=True, summary="评测模式跳过")
+            else:
+                cb("pre_screen", 1, 1, "running", "灵光预筛(标的-事件匹配)")
+                _gate = PreScreenGate(api_key=self.api_key)
+                state.pre_screen_result = _gate.run(
+                    event_data, state.agent1_output, stock_code,
+                )
             state.step_times["pre_screen"] = round(time.time() - t0, 2)
             ps = state.pre_screen_result
             if ps.passed:
