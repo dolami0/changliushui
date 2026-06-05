@@ -35,6 +35,7 @@ from agent2b_routing import RouteJudgeV6
 from agent3_scenario_asymmetry import ScenarioAsymmetry, ScenarioError, precompute_wacc
 from data_fetcher import DataFetcher
 from env_config import DEEPSEEK_API_KEY
+from pre_screen_gate import PreScreenGate, PreScreenResult  # V6.2 灵光预筛
 
 # rNPV 管线 (条件导入，避免缺失依赖时阻塞标准管线)
 try:
@@ -71,6 +72,7 @@ class PipelineState:
     agent1_output: dict | None = None
     agent2a_output: dict | None = None   # V6 新增: 叙事诊断
     agent2b_output: dict | None = None   # V6 改名: 路由判决
+    pre_screen_result: PreScreenResult | None = None  # V6.2 灵光预筛
     agent3_output: dict | None = None
 
     # 增量补取
@@ -165,6 +167,26 @@ class Orchestrator:
                     "E101", f"Agent-1 关键字段为零或缺失: {critical_missing}",
                     {"missing": critical_missing, "stock_code": stock_code},
                 )
+
+            # ── 灵光预筛 (V6.2): Flash模型4维快速评估 ──
+            cb("pre_screen", 1, 1, "running", "灵光预筛(标的-事件匹配)")
+            t0 = time.time()
+            _gate = PreScreenGate(api_key=self.api_key)
+            state.pre_screen_result = _gate.run(
+                event_data, state.agent1_output, stock_code,
+            )
+            state.step_times["pre_screen"] = round(time.time() - t0, 2)
+            ps = state.pre_screen_result
+            if ps.passed:
+                cb("pre_screen", 1, 1, "done",
+                   f"PASS {ps.total_score}/40 "
+                   f"同源{ps.homology} 暴露{ps.exposure} 弹性{ps.elasticity} 地位{ps.position}")
+            else:
+                state.status = "pre_screened_out"
+                state.completed_at = datetime.now(timezone.utc).isoformat()
+                cb("pre_screen", 1, 1, "done",
+                   f"BLOCK: {ps.cut_reason[:60]}")
+                return self._assemble_result(state)
 
             # ── WACC 预计算 (Agent-2a 定价工具需要) ──
             fetcher = DataFetcher()
@@ -457,7 +479,18 @@ class Orchestrator:
             "agent2a": state.agent2a_output or {},  # V6 新增
             "agent3": state.agent3_output or {},
             "status": state.status,
-            "pipeline_version": "6.0",
+            "pre_screen": {
+                "total_score": ps.total_score,
+                "passed": ps.passed,
+                "homology": ps.homology,
+                "exposure": ps.exposure,
+                "elasticity": ps.elasticity,
+                "position": ps.position,
+                "discretionary_adjustment": ps.discretionary_adjustment,
+                "cut_reason": ps.cut_reason,
+                "summary": ps.summary,
+            } if (ps := state.pre_screen_result) else {},
+            "pipeline_version": "6.2",
             "pipeline_type": state.pipeline_type,
             "audit": {
                 "stock_code": state.stock_code,

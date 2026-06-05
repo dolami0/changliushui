@@ -140,9 +140,48 @@ class Scheduler:
             job_statuses.append(job)
             self.active_jobs = job_statuses
 
+            # ── 防竞态: 提前标记complete → 并发轮询不会重复处理 ──
+            record_id = rec.get("id", "")
+            if record_id:
+                try:
+                    self.coze.mark_record_complete(self.agent0_db_id, record_id)
+                except Exception:
+                    pass  # 标记失败不阻塞管线
+
             try:
                 result = self.runner.run_single(rec, deepseek_key)
                 results.append(result)
+
+                # ── V6.2: 灵光预筛拦截 ──
+                if result.get("status") == "pre_screened_out":
+                    job["status"] = "pre_screened_out"
+                    stock_code = rec.get("stock_code", "")
+                    stock_name = rec.get("stock_name", "")
+                    pre_screen = result.get("pre_screen", {})
+                    record_id = rec.get("id", "")
+                    if record_id:
+                        try:
+                            self.coze.update_records(
+                                self.agent0_db_id,
+                                [
+                                    {"field_name": "pre_screen_score",
+                                     "value": str(pre_screen.get("total_score", 0))},
+                                    {"field_name": "pre_screen_detail",
+                                     "value": json.dumps(pre_screen, ensure_ascii=False, default=str)[:15000]},
+                                ],
+                                {"logic": "and", "conditions": [
+                                    {"left": "id", "operation": "equal", "right": record_id}
+                                ]},
+                            )
+                            self.coze.mark_record_complete(self.agent0_db_id, record_id)
+                            logger.info(
+                                f"[PreScreen] BLOCK {stock_code}({stock_name}): "
+                                f"总分{pre_screen.get('total_score','?')}/40 — "
+                                f"{pre_screen.get('cut_reason','?')[:100]}"
+                            )
+                        except Exception as e:
+                            logger.error(f"[PreScreen] 写入源表失败: {rec.get('stock_code')} — {e}")
+                    continue  # 跳过 done/error 分支，不写入输出表
 
                 if result.get("status") == "done":
                     stock_code = rec.get("stock_code", "")
@@ -194,17 +233,24 @@ class Scheduler:
                             self._fail_tracker_date = datetime.now().strftime("%Y%m%d")
                         fails = self._fail_tracker.get(rid, 0) + 1
                         self._fail_tracker[rid] = fails
-                        if fails >= 3:
+                        if fails >= 2:
                             logger.warning(
                                 f"记录 {rid}({rec.get('stock_code')}) 连续失败{fails}次，"
                                 f"强制标记完成以中断重试循环"
                             )
-                            try:
-                                self.coze.mark_record_complete(self.agent0_db_id, rid)
-                            except Exception as e:
-                                logger.error(f"强制标记失败: {e}")
+                            # is_complete 已在管线开始前设为 true，无需再设
                         else:
-                            logger.info(f"记录 {rid} 失败 {fails}/3 次，将继续重试")
+                            logger.info(f"记录 {rid} 失败 {fails}/3 次，退回 false 以重试")
+                            try:
+                                self.coze.update_records(
+                                    self.agent0_db_id,
+                                    [{"field_name": "is_complete", "value": "false"}],
+                                    {"logic": "and", "conditions": [
+                                        {"left": "id", "operation": "equal", "right": rid}
+                                    ]},
+                                )
+                            except Exception as e:
+                                logger.error(f"退回is_complete失败: {e}")
 
             except Exception as e:
                 logger.error(f"处理 {rec.get('stock_code', '?')} 失败: {e}")
@@ -218,12 +264,20 @@ class Scheduler:
                         self._fail_tracker_date = datetime.now().strftime("%Y%m%d")
                     fails = self._fail_tracker.get(rid, 0) + 1
                     self._fail_tracker[rid] = fails
-                    if fails >= 3:
+                    if fails >= 2:
                         logger.warning(f"记录 {rid} 连续异常{fails}次，强制标记完成")
+                        # is_complete 已在管线开始前设为 true，无需再设
+                    else:
                         try:
-                            self.coze.mark_record_complete(self.agent0_db_id, rid)
+                            self.coze.update_records(
+                                self.agent0_db_id,
+                                [{"field_name": "is_complete", "value": "false"}],
+                                {"logic": "and", "conditions": [
+                                    {"left": "id", "operation": "equal", "right": rid}
+                                ]},
+                            )
                         except Exception as e2:
-                            logger.error(f"强制标记失败: {e2}")
+                            logger.error(f"退回is_complete失败: {e2}")
 
         # 4. 跨股赔率排序
         try:

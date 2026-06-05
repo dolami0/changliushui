@@ -133,10 +133,12 @@ RNPV_SCENARIO_PROMPT = """# 你是创新药管线估值分析师
 
 ### 事件驱动调节
 
-用户消息中的 **事件推演（event_deduction）** 包含三阶段（T+30/90/180 天）的证实/证伪节点和转移概率。你必须：
+用户消息中的 **发展推演** 包含三阶段（T+30/90/180 天）的证实/证伪节点和转移概率。你必须：
 1. 引用证实/证伪节点来校准 PoS——已发生的证实节点提升 PoS，证伪节点下调 PoS
-2. 引用 **对抗性思考（adversarial_thinking）** 的五维风险（核心假设脆弱性/利益相关方博弈/反身性/产业链挤压/外部冲击）来校准 bear 概率
-3. 引用 **投资主题（investment_theme）** 的市场空间/竞争格局数据来校准峰值销售
+2. 引用 **逆向风险** 的五维风险（核心假设脆弱性/利益相关方博弈/反身性/产业链挤压/外部冲击）来校准 bear 概率
+3. 引用 **投资主题** 的市场空间/竞争格局数据来校准峰值销售
+4. 参考 **事件变量**（原始事件、事件研判）理解外部催化剂的确定性和结构性强弱
+5. 参考 **行业全貌** 的竞争格局判断个股在产业链中的议价能力和利润率可持续性
 
 **事件计价**: Agent-2a 已判断事件的计价程度。这是情景推演的起点——不是重新判断事件好不好，而是判断市场已经 price in 了多少。
 
@@ -155,7 +157,7 @@ RNPV_SCENARIO_PROMPT = """# 你是创新药管线估值分析师
 ```json
 {
   "reasoning_trace": [
-    "清单项1-事件吸收: 从event_deduction/adversarial_thinking/investment_theme中提取关键证实/证伪节点和市场数据",
+    "清单项1-素材吸收: 从发展推演/逆向风险/投资主题中提取关键证实/证伪节点和市场数据，理解事件变量的性质和影响范围",
     "清单项2-管线分析: 逐药评估临床阶段/竞争格局/催化剂时间线，引用2a诊断结论",
     "清单项3-三情景因果推演: bear/base/bull各情景的核心假设和因果链条",
     "清单项4-参数赋参: 各情景逐药赋参(需满足单调递增 bear<base<bull)",
@@ -347,36 +349,22 @@ def _build_user_message(
     if not mature_text:
         mature_text = "合并报表层面有收入，但无分产品拆分数据\n"
 
-    # ── 事件数据（全量，不截断）──
+    # ── 事件与个股素材（全量，不截断）──
     event_sections = []
-    if event_data.get("investment_theme"):
-        event_sections.append(
-            "### 投资主题\n" + str(event_data["investment_theme"])
-        )
-    if event_data.get("event_deduction"):
-        event_sections.append(
-            "### 事件推演（T+30/90/180 天证实/证伪节点）\n" + str(event_data["event_deduction"])
-        )
-    if event_data.get("adversarial_thinking"):
-        event_sections.append(
-            "### 对抗性思考（五维风险）\n" + str(event_data["adversarial_thinking"])
-        )
-    if event_data.get("knowledge_supplement"):
-        event_sections.append(
-            "### 行业研究/知识补充\n" + str(event_data["knowledge_supplement"])
-        )
     if event_data.get("raw_event_text"):
-        event_sections.append(
-            "### 事件原文\n" + str(event_data["raw_event_text"])
-        )
-    if event_data.get("industry_expert_research"):
-        event_sections.append(
-            "### 产业链/竞争格局\n" + str(event_data["industry_expert_research"])
-        )
+        event_sections.append("## 事件变量\n" + str(event_data["raw_event_text"]))
     if event_data.get("preliminary_reasoning"):
-        event_sections.append(
-            "### 预判推理\n" + str(event_data["preliminary_reasoning"])
-        )
+        event_sections.append("## 事件研判\n" + str(event_data["preliminary_reasoning"]))
+    if event_data.get("knowledge_supplement"):
+        event_sections.append("## 背景知识\n" + str(event_data["knowledge_supplement"]))
+    if event_data.get("investment_theme"):
+        event_sections.append(f"## {stock_name}的投资主题\n" + str(event_data["investment_theme"]))
+    if event_data.get("event_deduction"):
+        event_sections.append(f"## {stock_name}的发展推演\n" + str(event_data["event_deduction"]))
+    if event_data.get("adversarial_thinking"):
+        event_sections.append(f"## {stock_name}的逆向风险\n" + str(event_data["adversarial_thinking"]))
+    if event_data.get("industry_expert_research"):
+        event_sections.append("## 行业全貌\n" + str(event_data["industry_expert_research"]))
     event_text = "\n\n".join(event_sections)
 
     # ── Agent-2a 诊断（如有）──

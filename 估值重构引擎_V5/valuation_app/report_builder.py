@@ -285,6 +285,8 @@ def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict, agent2a
     upside = vs.get("probability_weighted_upside_pct", 0)
     asym = vs.get("asymmetry_ratio", 0)
 
+    # SOTP 分部明细
+    sotp_bd = a3.get("_sotp_breakdown", {})
 
     body = (
         _sec_header(stock_code, stock_name, now, primary, vr, industry, upside, asym)
@@ -293,6 +295,7 @@ def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict, agent2a
         + _sec_financials(cf, va, wacc)
         + _sec_bs_profile(sanity, cf, a2a_mn.get("primary_anchor","earnings"))
         + _sec_forward_signals(sa, fw, cf)
+        + _sec_sotp_breakdown(sotp_bd, vr)  # SOTP: 分部估值明细（非SOTP自动跳过）
         + _sec_scenarios(scenarios, primary, pr)
         + _sec_validation(vx, rd, gap, vs)
         + _sec_confidence(conf)
@@ -612,6 +615,87 @@ def _sec_scenarios(scenarios, primary, pr):
     if pr:
         body += _card("概率推导", _md(pr))
     return _section("05", "三情景推演", body)
+
+
+def _sec_sotp_breakdown(sotp_bd, vr):
+    """SOTP 分部估值明细 — 仅当 model_category=SOTP 时渲染"""
+    if not sotp_bd or vr.get("model_category", "") != "SOTP":
+        return ""
+
+    segments = sotp_bd.get("segments", [])
+    details = sotp_bd.get("scenario_details", {})
+    capital = sotp_bd.get("capital_structure", {})
+
+    if not segments:
+        return ""
+
+    # ── 分部概览表 ──
+    rows = ""
+    for seg in segments:
+        is_p = seg.get("is_primary", True)
+        role = "🎯 叙事主锚（事件驱动，三情景变参）" if is_p else "📎 其他业务（三情景共用基准）"
+        anchor_raw = seg.get("anchor", "?")
+        anchor_label = {"earnings": "利润锚 (PE)", "revenue": "收入锚 (PS)", "asset": "资产锚 (PB)", "pipeline": "管线锚 (rNPV)"}.get(anchor_raw, anchor_raw)
+        share = seg.get("revenue_share_pct", 0)
+        rationale = (seg.get("segment_rationale", "") or seg.get("base", {}).get("segment_rationale_note", ""))[:120]
+        rows += f"""<tr>
+            <td><strong>{seg.get("segment","?")}</strong></td>
+            <td>{role}</td>
+            <td>{anchor_label}</td>
+            <td class="num">{share:.1f}%</td>
+            <td style="font-size:13px;color:var(--text-dim)">{rationale}</td>
+        </tr>"""
+
+    overview = f"""
+    <table class="data">
+    <thead><tr><th>分部</th><th>角色</th><th>估值锚</th><th>收入占比</th><th>估值理由</th></tr></thead>
+    <tbody>{rows}</tbody>
+    </table>"""
+
+    # ── 三情景分部拆解 ──
+    scenario_rows = ""
+    for sn in ("bear", "base", "bull"):
+        d = details.get(sn, {})
+        label = {"bear": "🐻 Bear", "base": "📊 Base", "bull": "🐂 Bull"}.get(sn, sn)
+        breakdown = d.get("_segment_breakdown", [])
+        mcap = d.get("target_mcap_yi", "?")
+        upside = d.get("upside_pct", 0)
+        prob = d.get("probability", 0) * 100
+        uc = "up" if upside > 0 else "down"
+        floor_applied = d.get("_floor_applied", False)
+        floor_note = " ⚠️触底" if floor_applied else ""
+        seg_parts = " + ".join(
+            f"{str(b.get('segment','?'))[:8]}={b.get('segment_value_yi','?')}亿"
+            for b in breakdown
+        ) if breakdown else "分部明细未展开"
+        net_cash_raw = d.get("_net_cash_yi", 0)
+        net_cash_str = f"{net_cash_raw:.0f}亿" if isinstance(net_cash_raw, (int, float)) else str(net_cash_raw)
+
+        scenario_rows += f"""<tr>
+            <td><strong>{label}</strong></td>
+            <td class="num">{prob:.0f}%</td>
+            <td style="font-size:13px">{seg_parts} + 净现金{net_cash_str}</td>
+            <td class="num">{mcap}{floor_note}</td>
+            <td class="num {uc}">{upside:+.1f}%</td>
+        </tr>"""
+
+    breakdown_table = f"""
+    <table class="data">
+    <thead><tr><th>情景</th><th>概率</th><th>分部价值拆解</th><th>总市值(亿)</th><th>涨跌幅</th></tr></thead>
+    <tbody>{scenario_rows}</tbody>
+    </table>"""
+
+    # ── 资本结构标注 ──
+    cap_note = ""
+    if capital and capital.get("leverage_flag") not in ("normal", None):
+        cap_flag = capital.get("leverage_flag", "")
+        flag_emoji = {"extreme": "🔴", "high": "🟡", "cash_heavy": "🟢"}.get(cap_flag, "")
+        cap_note = f"""<div class="card" style="margin-top:12px">
+            <p style="font-size:14px">{flag_emoji} <strong>资本结构提示 [{cap_flag}]</strong>: {capital.get("note","")}</p>
+        </div>"""
+
+    body = overview + breakdown_table + cap_note
+    return _section("05a", "SOTP 分部估值明细", body)
 
 
 def _sec_validation(vx, rd, gap, vs):

@@ -222,19 +222,19 @@ SOTP_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 以下 6 个清单项必须按顺序执行，不可跳过、不可调换顺序。
 reasoning_trace 按清单项顺序组织，每项写 3-6 句话：你的分析、你的依据、你的结论。
 
-## 清单项 1: 素材吸收（引用 2a 诊断 + 吸收事件原文）
+## 清单项 1: 素材吸收
 
 **Agent-2a 已完成叙事诊断。** 从用户消息末尾的"Agent-2a 叙事诊断结论"中提取:
 - 估值锚: 2a 判定的 primary_anchor 和 evidence
 - 计价程度: 2a 判定的 overall_priced_in 和 residual_catalyst
 - 事件分布形状: distribution_shape — 决定概率分布的形状和宽度
 
-**再从事件原文中**自行提取（2a 未覆盖的细节）:
-- 因果分叉点（event_deduction 中的证实/证伪节点 + adversarial_thinking 的证伪路径）
-- 风险边界（TAM 从 knowledge_supplement + 竞争格局从 industry_expert_research）
-- 参照系：行业估值中枢 + 2a 的 precedent_richness 提供的先例丰富度
+**素材说明** — 用户消息中包含三类素材:
+- **事件变量**（原始事件、事件研判、背景知识）：触发本次估值的外部催化剂。事件研判中的评分帮助你理解事件的性质和影响范围。
+- **个股路线**（投资主题、发展推演、催化节点、逆向风险）：该公司的既定发展轨迹。事件变量将作用于这条路线。
+- **行业全貌**：产业链竞争格局、公司在其中的位置。
 
-**关键**: 估值锚和计价程度以 2a 为准（不可推翻），因果细节可从原文补充。
+**关键**: 估值锚和计价程度以 2a 为准（不可推翻）。
 
 ## 清单项 2: 引用 Agent-2a 诊断结论（不重做审核）
 
@@ -272,8 +272,6 @@ reasoning_trace 按清单项顺序组织，每项写 3-6 句话：你的分析�
   - 纯故事型: bear mcap ≥ 净现金
 bear 不可推翻已发生的业务事实（如已出货产品→不应给0估值）。
 
-bear 概率聚焦 2-3 个核心假设，推演"如果这个错了故事就塌了"的概率。
-base = 100% - bull - bear。
 
 **禁止**: 重新从面板逐条审核信号——2a 已完成此工作。你只需引用结论。
 
@@ -292,44 +290,34 @@ base = 100% - bull - bear。
 **为什么事件性质改变分布形状:**
 事件的 payoff 结构由 2a 的 `distribution_shape` 决定:
 
-| distribution_shape | 分布特征 | bull上限 | bear特征 | 典型bull概率 |
-|---------|:------:|:------:|------|:------:|
-| **wide_bimodal** | 宽双峰, 两个极端都可能 | 全量事件价值 | 回到事件前估值范式 | 不可趋近0（"万一成了"） |
-| **wide_bimodal_date_anchored** | 宽双峰, 锚定在日期附近 | 全量事件价值 | 回到事件前估值范式 | 同上,但概率在日期附近集中 |
-| **wide_unimodal** | 宽单峰, 方向确定但幅度不确定 | 全量但高不确定性 | 叙事证伪+退回 | 15-30% (受step2d封顶) |
-| **narrow_concentrated** | 窄集中, base主导 | 二阶导数部分 | 趋势逆转+范式降级 | 10-20% |
-| **narrow_base_dominant** | 极窄, 几乎只有base | 必须有质变 | 趋势惯性保护 | 5-10% |
+| distribution_shape | 分布特征 | bull上限 | bear特征 |
+|---------|:------:|:------:|------|
+| **wide_bimodal** | 宽双峰, 两个极端都可能 | 全量事件价值 | 回到事件前估值范式 |
+| **wide_bimodal_date_anchored** | 宽双峰, 锚定在日期附近 | 全量事件价值 | 回到事件前估值范式 |
+| **wide_unimodal** | 宽单峰, 方向确定但幅度不确定 | 全量但高不确定性 | 叙事证伪+退回 |
+| **narrow_concentrated** | 窄集中, base主导 | 二阶导数部分 | 趋势逆转+范式降级 |
+| **narrow_base_dominant** | 极窄, 几乎只有base | 必须有质变 | 趋势惯性保护 |
 
 **关键**: 不要用旧的 sudden/ongoing 概念。直接根据 2a 给出的 `distribution_shape` 选择对应的行。
 
 ### 3b. 计价程度→upside 天花板
 
-**bull 的 upside 受"还剩下多少没计价"的硬约束:**
+**bull 的 upside 受计价程度的约束:**
 
-- priced_in ≈ 0%（完全未计价）:
-  → bull upside = 事件完整兑现后的估值 - 当前估值
-  → 且 2a 的"当前价格隐含期望"和"叙事指向期望"之间的差距 = bull 的理论最大空间
+2a 的 priced_in 告诉你市场已经消化了多少事件价值。剩余未计价的空间越大，bull 的理论上限越高；已充分计价的标的，bull 只能来自"比市场预期的还要好"——即二阶导数变化（增速超预期、时间超前、利润率更高）。
 
-- priced_in ≈ 50%（部分计价）:
-  → bull upside = 剩余 50% 的事件价值 + 超预期演绎的额外价值
-  → 超预期部分: 如果执行比市场预期的好（利润率更高、增速更快、时间更早）
-
-- priced_in ≈ 100%（完全计价）:
-  → bull upside = 只有"二阶导数"变化才能产生 alpha
-  → 二阶导数: 涨价预期是 20%，结果涨了 30%；产能释放预期 Q3，结果 Q2 就投产
-  → 如果叙事没有二阶导数的空间，bull=0% 是合理的
-
-**bear 的 downside 则相反——计价越多，逆转伤害越大:**
-- not_priced: bear = 回到事件前估值范式（故事根本没开始，损失的是时间成本）
-- fully_priced: bear = 预期逆转 + 估值范式降级（故事讲了一半塌了，损失的是信仰溢价）
+**bear 的 downside 则相反:** 计价越多，逆转伤害越大。未计价的标的，bear 仅回到事件前估值范式（损失时间成本）；充分计价的标的，预期逆转叠加估值范式降级（损失信仰溢价）。
 
 ### 3c. 投资命题 + 因果分叉点
 
-引用 2a 的 primary_anchor 和 priced_in_estimate，写 1 句"如果-那么"命题。
+引用 2a 的 primary_anchor 和 priced_in_estimate，结合事件变量和个股路线，写 1 句"如果-那么"命题。
 拆命题为因果环节，标注证实/证伪条件。
 
 ### 3d. 因果剧本（先写故事，不赋参数）
 
+**前置: 风险映射** — 逐条阅读逆向风险。每条风险主要约束哪个情景？在写剧本之前先明确: 涉及已发生负面事实的风险→同时约束 base 和 bull；涉及未发生潜在威胁的风险→主要约束 bear 的证伪路径。 如果你认为某条风险不影响任何情景，在 reasoning_trace 中写一句理由。
+
+然后写三情景剧本:
 - **bear**: 证伪路径必须区分两件事:
     **已发生的事实**（认证通过、已签合同、已投产产能）→ bear 不能"反悔"这些，只能假设后续执行恶化
     **未发生的推测**（远期订单、产能爬坡、市场份额）→ 这才是 bear 的证伪空间
@@ -359,13 +347,15 @@ base = 100% - bull - bear。
 
 **重要: 永远不要"凑"概率**——bear 需要 N 个独立环节同时崩塌 → 联合概率自然就是小概率。
 
+**参数-叙事一致性**: 赋完参数后，回顾 3d 因果剧本和风险映射。参数是叙事的数字表达——如果剧本中指出了一个风险或约束但参数中看不到对应影响，必须在 scenario_narrative 中解释原因。参数和推理链不可以各说各话。
+
 ### 3e. 分部赋参
 
 **叙事主锚分部** (is_primary=true): bear/base/bull 三组参数，按 2b 选定的 sotp_primary_segment_model 使用 Agent-3 标准参数体系。以下参数规则与原 Agent-3 完全相同:
 
-赋参数时，用 3a 的分布形状约束和 3b 的 upside 天花板反向验证。
-剧本 + 清单项2评分修正 -> 三情景参数。
-参数锚定行业估值中枢（来自 knowledge_supplement 或行业常识），不锚定具体个股案例。
+赋参数的起点是 3d 的因果剧本。思考事件变量作用于个股路线的方式——这决定了三情景参数的方向和幅度。然后用 3a 的分布形状和 3b 的计价天花板做约束。在此基础上，用以下参数规则校准具体数值。
+
+参数锚定行业估值中枢（来自背景知识或行业常识），参考行业全貌中公司的竞争位势做调整。不锚定具体个股案例。
 
 当前叙事分部模型是 {PRIMARY_MODEL} ({MODEL_DESC})，参数模板如下:
 
@@ -385,16 +375,14 @@ base = 100% - bull - bear。
 
 PE: 不是抽象数字。PE=600x 需要极高增速支撑。bear（事件失败）的 PE 必须回到行业周期底部（通常 10-30x，不是 600x）。
 
-PS: 当前 PS 是市场讲的故事。base PS = 当前PS x f(priced_in):
-  - priced_in=not_priced: f=1.0-1.2 (故事刚开始,PS可扩张)
-  - priced_in=partially: f=0.85-1.0 (部分计价,PS大体维持)
-  - priced_in=fully: f=0.7-0.85 (已充分计价,PS应部分回归)
-  再结合增长可持续性微调: 增长加速->取上限,增长放缓->取下限。
-  禁止"因为PS很高所以base给低PS"的均值回归,也禁止"因为PS高所以维持高PS"的惯性。
+PS: 锚定该行业在稳态下的合理估值水平，不锚定当前市场价。当前 PS 是市场情绪和增长预期的混合产物——可能合理，也可能严重偏离。你的工作是运用行业知识判断合理 PS 在哪。
+  - base PS: 公司在稳定增长状态下，理性市场愿意支付的 PS。取决于行业增速、公司壁垒、利润率水平。与当前 PS 的差异反映了"市场定价"和"你的判断"之间的预期差——这个差异不需要被消灭，它本身就是估值结论的一部分。
+  - bull PS: 行业终局下赢家能拿到的天花板 PS。不是泡沫峰值——是 3 年后公司做到了行业最优，理性市场会给出的估值。可以用历史上同行业最优公司在稳态下的交易区间做参照。
+  - bear PS: 增长证伪后，市场回到对普通参与者的定价。
 
 PB: 与 ROE 匹配。ROE<5% 不应 >2x PB（除非隐蔽资产重估）。
 
-EV/EBITDA: 与行业中枢的偏离幅度必须可解释。上行周期可高于中枢 20-50%。
+EV/EBITDA: 与行业中枢的偏离幅度必须可解释。上行周期可高于中枢，下行周期应低于中枢。偏离的方向和幅度需与 3d 因果剧本一致。
 
 ROIC: 故事里的事件节点驱动 ROIC 改善幅度。从叙事推演 ROIC 路径——毛利率修复到多少？规模效应何时释放？——而非从当前低基数线性外推。滞后财务数据里的低 ROIC 是故事起点，不是终点。
 
@@ -500,10 +488,10 @@ asymmetry_ratio = bull_upside / |bear_upside|
 
 ## 清单项 6: 输出
 
-- reasoning_trace 按清单项 1→2→3→4→5 顺序组织
+- reasoning_trace 按清单项顺序组织。清单项3 必须包含以下子项（各写一条 trace，不可合并）: "清单项3a-分布形状+投资命题: ..." "清单项3b-计价天花板: ..." "清单项3c-风险映射: ..." "清单项3d-因果剧本(bear/base/bull各一段): ..." "清单项3e-约束确认: ..." "清单项3e-赋参数: ..." "清单项3e-叙事一致性检查: ..."
 - `signal_audit`: **直接复制 2a 的 signal_audit 结论**（你不再做信号审核，只透传）
 - `data_gaps` 标注缺失的数据，引用 2a 已标注的数据异常。格式: "缺少[具体数据]，导致[具体判断]置信度下降"
-- `preflight_check` 逐项自检格式: ["[OK] 清单项1素材吸收完成", "[OK] 清单项2引用2a审核结论完成", "[OK] 清单项3a-3e赋参+案例完成", "[OK] 概率和=1.00", "[OK] upside单调递增,全参数经济含义自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
+- `preflight_check` 逐项自检格式: ["[OK] 清单项1素材吸收完成", "[OK] 清单项2引用2a审核结论完成", "[OK] 清单项3a-3e完成(含风险映射+约束确认+叙事一致性检查)", "[OK] 概率和=1.00", "[OK] upside单调递增,全参数经济含义自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
 - 输出纯 JSON，不要用 markdown 代码块包裹
 
 # 核心约束
@@ -998,26 +986,29 @@ def _build_sotp_user_message(
 
 {bs_section}{bs_warning}
 
-## 事件背景 (Agent-0 预研)
+## 事件变量
+{event_data.get('raw_event_text', '')}
 
-### 投资主题
+## 事件研判
+{event_data.get('preliminary_reasoning', '')}
+
+## 背景知识
+{event_data.get('knowledge_supplement', '')}
+
+## {stock}的投资主题
 {event_data.get('investment_theme', '')}
 
-### 事件推演
-传导链: {event_data.get('event_deduction', '')}
-催化节点: {event_data.get('future', '')}
+## {stock}的发展推演
+{event_data.get('event_deduction', '')}
 
-### 压力测试
+## {stock}的催化节点
+{event_data.get('future', '')}
+
+## {stock}的逆向风险
 {event_data.get('adversarial_thinking', '')}
 
-### 赛道标尺
-知识补充: {event_data.get('knowledge_supplement', '')}
-行业研究: {event_data.get('industry_expert_research', '')}
-
-### 深度预研
-响应等级: L{event_data.get('response_level','?')}
-事件原文: {event_data.get('raw_event_text', '')}
-预研推理: {event_data.get('preliminary_reasoning', '')}
+## 行业全貌
+{event_data.get('industry_expert_research', '')}
 
 ## Agent-2a 叙事诊断结论（已审核，可直接信任）
 
@@ -1090,11 +1081,14 @@ def _compute_segment_value(
 
     elif anchor == "asset":
         pb = params.get("target_pb", 0)
-        total_equity = core.get("total_equity_yi", 1)
         total_revenue = core.get("revenue_ttm_yi", 1)
         if pb > 0 and total_revenue > 0:
-            # 分部净资产按收入占比估算
-            segment_equity = total_equity * (segment_revenue / total_revenue)
+            # 优先使用 LLM 提供的分部净资产（若提供）
+            segment_equity = params.get("segment_equity_yi")
+            if segment_equity is None or segment_equity <= 0:
+                # 后备: 按收入占比估算（对重资产/轻资产混合的公司有偏差）
+                total_equity = core.get("total_equity_yi", 1)
+                segment_equity = total_equity * (segment_revenue / total_revenue)
             return round(segment_equity * pb, 1)
         return None
 
@@ -1165,13 +1159,24 @@ def _compute_sotp_total(
             else:
                 other_val += seg_val
 
+    # ── 经济底线: 权益价值不能为负（有限责任原则）──
+    # bear 情景下高杠杆公司可能出现 "分部价值 < 净负债" → 总值为负
+    # 底线下限 = max(0, net_cash): 至少保留净现金价值（若净现金为正）
+    # 但若净现金本身为负, 底线为 0（股东不承担超出投资额的损失）
+    raw_total = round(total_value, 1)
+    floor = max(0.0, net_cash)  # 净现金为正时保留，为负时底线=0
+    floored_total = max(floor, raw_total)
+    was_floored = floored_total > raw_total
+
     return {
-        "total_mcap_yi": round(total_value, 1),
+        "total_mcap_yi": floored_total,
+        "total_mcap_raw_yi": raw_total if was_floored else None,  # 仅触发底线时记录原始值
         "net_cash_yi": round(net_cash, 1),
         "primary_value_yi": primary_val,
         "other_value_yi": round(other_val, 1) if other_val > 0 else 0,
         "segment_values": segment_values,
         "skipped_segments": [],
+        "_floor_applied": was_floored,
     }
 
 
@@ -1216,15 +1221,21 @@ def _compute_sotp_from_llm(
         if prob is None or prob == 0:
             prob = details.get(scenario_name, {}).get("probability", None)
         if prob is None or prob == 0:
-            # 用默认值兜底: bear=0.20, base=0.60, bull=0.20
-            defaults = {"bear": 0.20, "base": 0.60, "bull": 0.20}
-            prob = defaults.get(scenario_name, 0.20)
+            # 保守兜底: 偏 base-dominant（15/70/15），避免尾巴概率被高估
+            # 若 LLM 连概率都没输出 → 不确定性极高 → bull 不应有显著权重
+            defaults = {"bear": 0.15, "base": 0.70, "bull": 0.15}
+            prob = defaults.get(scenario_name, 0.15)
             details[scenario_name]["probability"] = prob
             details[scenario_name]["_probability_fallback"] = True
+            print(f"  [SOTP] ⚠️ {scenario_name}概率兜底: LLM未输出→使用默认{prob}", flush=True)
         probs.append(prob)
 
-        if target_mcap > 0 and current_mcap > 0:
-            ups = round((target_mcap / current_mcap - 1) * 100, 1)
+        if current_mcap > 0:
+            if target_mcap > 0:
+                ups = round((target_mcap / current_mcap - 1) * 100, 1)
+            else:
+                # 被底线抬升至 0 或接近 0：真实跌幅 ≈ -100%
+                ups = -100.0
         else:
             ups = 0
 
@@ -1240,6 +1251,9 @@ def _compute_sotp_from_llm(
         details[scenario_name]["_net_cash_yi"] = sotp["net_cash_yi"]
         details[scenario_name]["_primary_value_yi"] = sotp["primary_value_yi"]
         details[scenario_name]["_other_value_yi"] = sotp["other_value_yi"]
+        if sotp.get("_floor_applied"):
+            details[scenario_name]["_floor_applied"] = True
+            details[scenario_name]["_floor_raw_mcap"] = sotp.get("total_mcap_raw_yi")
 
     # 概率归一化（兜底后可能不正好1.0）
     prob_sum = sum(probs)
@@ -1266,6 +1280,230 @@ def _compute_sotp_from_llm(
         "weighted_upside_pct": round(weighted_upside, 1),
         "weighted_mcap_yi": round(weighted_mcap, 1),
         "asymmetry_ratio": round(asym, 1),
+    }
+
+
+# ═══════════════════════════════════════
+# SOTP 专属一致性校验
+# ═══════════════════════════════════════
+
+def _validate_sotp_specific(
+    sotp_result: dict,
+    sotp_details: dict,
+    core: dict,
+) -> list[dict]:
+    """SOTP 特有的一致性校验——补充标准 _validate_output。
+
+    Checks:
+      1. 分部值单调性: primary_val(bear) < primary_val(base) < primary_val(bull)
+      2. 其他业务不变性: other_val 三情景一致
+      3. 收入占比和 ≈ 100%
+      4. 分部参数 bear < base < bull (逐参数)
+    """
+    warnings = []
+
+    # Check 1: 分部值单调性
+    primary_vals = {}
+    for sn in ("bear", "base", "bull"):
+        d = sotp_details.get(sn, {})
+        primary_vals[sn] = d.get("_primary_value_yi")
+    if primary_vals.get("bear") is not None and primary_vals.get("base") is not None and primary_vals.get("bull") is not None:
+        if not (primary_vals["bear"] < primary_vals["base"] < primary_vals["bull"]):
+            warnings.append({
+                "code": "E401", "level": "SOTP",
+                "message": f"主锚分部值非单调递增: bear={primary_vals['bear']} base={primary_vals['base']} bull={primary_vals['bull']}",
+            })
+
+    # Check 2: 其他业务不变性
+    other_vals = {}
+    for sn in ("bear", "base", "bull"):
+        d = sotp_details.get(sn, {})
+        other_vals[sn] = d.get("_other_value_yi", 0)
+    unique_other = set(round(v, 1) for v in other_vals.values() if v is not None)
+    if len(unique_other) > 1:
+        warnings.append({
+            "code": "E402", "level": "SOTP",
+            "message": f"其他业务分部值应在三情景中不变，实际值: {other_vals}",
+        })
+
+    # Check 3: 收入占比和
+    segments = sotp_result.get("segments", [])
+    if segments:
+        total_share = sum(seg.get("revenue_share_pct", 0) for seg in segments)
+        if abs(total_share - 100) > 10:
+            warnings.append({
+                "code": "E403", "level": "SOTP",
+                "message": f"分部收入占比之和={total_share:.1f}%（应≈100%）",
+            })
+
+    # Check 4: 分部级 monotonic 参数递增
+    for seg in segments:
+        if not seg.get("is_primary", True):
+            continue
+        anchor = seg.get("anchor", "")
+        key_params = {
+            "earnings": ["pe_target", "segment_margin_pct"],
+            "revenue": ["revenue_growth_3y_cagr_pct", "target_ps"],
+            "asset": ["target_pb"],
+            "pipeline": ["pos_pct", "peak_sales_yi"],
+        }.get(anchor, [])
+
+        for param_name in key_params:
+            vals = {}
+            for sn in ("bear", "base", "bull"):
+                vals[sn] = seg.get(sn, {}).get(param_name)
+            if all(v is not None for v in vals.values()):
+                if not (vals["bear"] <= vals["base"] <= vals["bull"]):
+                    warnings.append({
+                        "code": "E404", "level": "SOTP",
+                        "message": f"分部'{seg.get('segment','?')}'参数{param_name}非递增: bear={vals['bear']} base={vals['base']} bull={vals['bull']}",
+                    })
+
+    return warnings
+
+def _sotp_capital_structure_check(core: dict, sotp_base_mcap: float) -> dict:
+    """诊断净现金对 SOTP 估值的影响程度。
+
+    问题: 当 |净负债| 接近或超过分部价值时，SOTP 退化为
+    "债务覆盖测试"而非真正的分部估值。此函数标记这些情况。
+
+    Returns:
+        {"leverage_flag": "normal"|"high"|"extreme", "note": str,
+         "net_cash_pct_of_sotp": float}
+    """
+    cash = core.get("cash_yi", 0)
+    debt = core.get("interest_bearing_debt_yi", 0)
+    net_cash = cash - debt
+    mcap = core.get("market_cap_yi", 50)
+    equity = core.get("total_equity_yi", 0)
+
+    # 净现金占市值比例
+    net_cash_pct_of_mcap = abs(net_cash) / mcap * 100 if mcap > 0 else 0
+    # 净现金占 SOTP base 比例
+    net_cash_pct_of_sotp = abs(net_cash) / sotp_base_mcap * 100 if sotp_base_mcap > 0 else 0
+
+    if net_cash < 0 and (net_cash_pct_of_sotp > 50 or net_cash_pct_of_mcap > 60):
+        flag = "extreme"
+        note = (f"净负债{-net_cash:.0f}亿占SOTP Base {sotp_base_mcap:.0f}亿的{net_cash_pct_of_sotp:.0f}%。"
+                f"SOTP估值对分部参数的敏感性被净负债剧烈放大——Bear情景下"
+                f"分部价值可能完全被净负债吞噬。这不是传统意义上的分部估值，"
+                f"而是'分部价值能否跑赢债务黑洞'的二元赌注。"
+                f"建议同时评估债务可持续性。")
+    elif net_cash < 0 and (net_cash_pct_of_sotp > 30 or net_cash_pct_of_mcap > 30):
+        flag = "high"
+        note = (f"净负债{-net_cash:.0f}亿占SOTP Base {sotp_base_mcap:.0f}亿的{net_cash_pct_of_sotp:.0f}%。"
+                f"净负债对SOTP估值有显著影响。Bear情景下分部价值可能不足以覆盖净负债。")
+    elif net_cash > 0 and net_cash_pct_of_sotp > 30:
+        flag = "cash_heavy"
+        note = (f"净现金{net_cash:.0f}亿占SOTP Base {sotp_base_mcap:.0f}亿的{net_cash_pct_of_sotp:.0f}%。"
+                f"大量净现金对SOTP估值有显著正面影响。请注意：分部估值(PE/PS/PB法)"
+                f"已内含分部应占的现金部分——在SOTP顶层再加净现金可能部分双计。")
+    else:
+        flag = "normal"
+        note = "净现金/净负债对SOTP估值影响在正常范围内。"
+
+    return {
+        "leverage_flag": flag,
+        "note": note,
+        "net_cash_yi": round(net_cash, 1),
+        "net_cash_pct_of_mcap": round(net_cash_pct_of_mcap, 1),
+        "net_cash_pct_of_sotp_base": round(net_cash_pct_of_sotp, 1),
+    }
+
+def _sotp_sanity_check(
+    core: dict,
+    segments: list[dict],
+    sotp_base_mcap: float,
+    primary_anchor: str,
+) -> dict:
+    """用公司整体简单倍数做 SOTP 的独立交叉校验。
+
+    原理: 取"其他业务"分部的行业合理倍数，反推如果整家公司用
+    同样倍数估值会是多少。与 SOTP 加总结果对比，差异 >30% 标记。
+
+    这不是严格意义上的"第二模型"，但提供了零成本的独立视角——
+    至少比"自查——无独立验证"更有信息量。
+
+    Returns:
+        validation_crosscheck 兼容格式 dict
+    """
+    # 1. 从"其他业务"分部提取行业合理倍数作为参考
+    ref_pe = None
+    ref_ps = None
+    for seg in segments:
+        if not seg.get("is_primary", True):
+            anchor = seg.get("anchor", "")
+            base_params = seg.get("base", {})
+            if anchor == "earnings":
+                ref_pe = base_params.get("pe_target")
+            elif anchor == "revenue":
+                ref_ps = base_params.get("target_ps")
+            # asset 锚不产生可比的 PE/PS
+
+    # 2. 用参考倍数估算整家公司价值
+    simple_mcap = None
+    method_label = ""
+
+    if ref_pe and ref_pe > 0:
+        net_profit = core.get("net_profit_ttm_yi", 0)
+        if net_profit > 0:
+            simple_mcap = round(net_profit * ref_pe, 1)
+            method_label = f"整体PE法 (PE={ref_pe}x × TTM净利{net_profit:.1f}亿)"
+
+    if simple_mcap is None and ref_ps and ref_ps > 0:
+        revenue = core.get("revenue_ttm_yi", 0)
+        if revenue > 0:
+            simple_mcap = round(revenue * ref_ps, 1)
+            method_label = f"整体PS法 (PS={ref_ps}x × TTM营收{revenue:.1f}亿)"
+
+    if simple_mcap is None:
+        # 用最保守的兜底倍数
+        net_profit = core.get("net_profit_ttm_yi", 0)
+        if net_profit > 0:
+            simple_mcap = round(net_profit * 15, 1)  # A股底线PE
+            method_label = f"保守PE法 (PE=15x × TTM净利{net_profit:.1f}亿)"
+        else:
+            revenue = core.get("revenue_ttm_yi", 0)
+            if revenue > 0:
+                simple_mcap = round(revenue * 1.5, 1)  # A股底线PS
+                method_label = f"保守PS法 (PS=1.5x × TTM营收{revenue:.1f}亿)"
+
+    if simple_mcap is None or simple_mcap <= 0:
+        return {
+            "validation_model": "简易倍数校验",
+            "validation_paradigm": "无法执行",
+            "base_target_mcap_yi": sotp_base_mcap,
+            "validation_mcap_yi": None,
+            "gap_pct": None,
+            "gap_direction": "无法计算",
+            "assessment": "无可用倍数——SOTP无独立校验",
+        }
+
+    # 3. 计算差异 → SOTP 感知的评估标签
+    gap_pct = round((sotp_base_mcap / simple_mcap - 1) * 100, 1)
+    gap_abs = abs(gap_pct)
+
+    if gap_abs <= 30:
+        assessment = "互相印证"
+        note = "整体倍数与SOTP大致吻合，叙事溢价有限"
+    elif gap_abs <= 100:
+        assessment = "叙事依赖"
+        note = f"整体倍数法仅{simple_mcap:.0f}亿，SOTP中{abs(gap_pct):.0f}%的增量来自叙事驱动的分部重估。此偏离是SOTP的预期特征，但提示估值高度依赖事件催化兑现。"
+    else:
+        assessment = "强叙事依赖"
+        note = f"SOTP估值({sotp_base_mcap:.0f}亿)与整体倍数({simple_mcap:.0f}亿)差距{abs(gap_pct):.0f}%。估值近乎完全由事件驱动叙事支撑——若叙事证伪，价值将回归整体倍数水平。这不是校验错误，而是SOTP的'叙事纯度'指标。"
+
+    direction = "SOTP高估" if gap_pct > 0 else "SOTP低估"
+
+    return {
+        "validation_model": f"整体倍数锚 ({method_label})",
+        "validation_paradigm": "整体倍数视角（SOTP预期偏离——此校验度量'叙事纯度'而非估值准确度）",
+        "base_target_mcap_yi": sotp_base_mcap,
+        "validation_mcap_yi": simple_mcap,
+        "gap_pct": gap_pct,
+        "gap_direction": direction,
+        "assessment": assessment,
+        "_note": note,
     }
 
 
@@ -1415,6 +1653,10 @@ class SOTPScenarioAsymmetry:
             w for w in validation_warnings
             if not w.get("code", "").startswith("E306")
         ]
+        # ── 追加 SOTP 专属校验 ──
+        sv_details = sv.get("scenario_details", {})
+        sotp_warnings = _validate_sotp_specific(result, sv_details, core)
+        validation_warnings.extend(sotp_warnings)
         if validation_warnings:
             codes = [w["code"] for w in validation_warnings]
             print(f"  [SOTP validation] warnings: {codes}", flush=True)
@@ -1441,10 +1683,35 @@ class SOTPScenarioAsymmetry:
             },
         )
 
+        # ── SOTP 简易交叉校验（替换 LLM 的"自查——无独立验证"）──
+        base_details = sv.get("scenario_details", {}).get("base", {})
+        sotp_base_mcap = base_details.get("target_mcap_yi", sotp_computed["weighted_mcap_yi"])
+        output["validation_crosscheck"] = _sotp_sanity_check(
+            core, result.get("segments", []), sotp_base_mcap,
+            primary_anchor=core.get("_primary_anchor", ""),
+        )
+        if output["validation_crosscheck"].get("gap_pct") is not None:
+            gap = abs(output["validation_crosscheck"]["gap_pct"])
+            assessment = output["validation_crosscheck"]["assessment"]
+            simple = output["validation_crosscheck"]["validation_mcap_yi"]
+            if gap > 100:
+                print(f"  [SOTP crosscheck] 强叙事依赖: SOTP={sotp_base_mcap:.0f}亿 vs 整体倍数={simple:.0f}亿 (叙事纯度={gap:.0f}%)", flush=True)
+            elif gap > 30:
+                print(f"  [SOTP crosscheck] 叙事依赖: gap={gap:.0f}%", flush=True)
+            else:
+                print(f"  [SOTP crosscheck] ✓ 互相印证: gap={gap:.0f}%", flush=True)
+
         # ── Step 6: 注入 SOTP 特有字段 ──
+        base_details_for_meta = sv.get("scenario_details", {}).get("base", {})
+        sotp_base_mcap_meta = base_details_for_meta.get("target_mcap_yi", sotp_computed["weighted_mcap_yi"])
+        capital_diag = _sotp_capital_structure_check(core, sotp_base_mcap_meta)
+        if capital_diag["leverage_flag"] != "normal":
+            print(f"  [SOTP capital] {capital_diag['leverage_flag']}: {capital_diag['note'][:120]}", flush=True)
+
         output["_sotp_breakdown"] = {
             "segments": result.get("segments", []),
             "scenario_details": sv.get("scenario_details", {}),
+            "capital_structure": capital_diag,
         }
 
         cb(6, "SOTP估值完成")
