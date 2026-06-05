@@ -649,8 +649,9 @@ def _build_bs_section(data_package: dict, agent2a_output: dict, wacc_params: dic
     """构建 BS 画像文本，与 Agent-3 对齐。"""
     from agent3_scenario_asymmetry import precompute_bs_profile, precompute_wacc
     core = _get_core_fields(data_package)
-    anchor = agent2a_output.get("market_narrative", {}).get("primary_anchor", "earnings")
-    pt = agent2a_output.get("_pricing_tool", {}) or {}
+    mn_bs = _safe_dict(agent2a_output.get("market_narrative"))
+    anchor = mn_bs.get("primary_anchor", "earnings")
+    pt = _safe_dict(agent2a_output.get("_pricing_tool"))
 
     mcap = core.get("market_cap_yi", 50)
     if anchor == "earnings":
@@ -731,12 +732,12 @@ def _build_segments_section(
 def _build_product_mix_section(data_package: dict) -> str:
     """从 Agent-1 的 forward_looking 提取分产品收入/毛利率数据。"""
     # forward_looking 在 data_package 顶层（与 clean_financials 同级）或嵌套在 packages.core.fields._forward_looking 中
-    fw = data_package.get("forward_looking", {}) or data_package.get("_forward_looking", {}) or {}
+    fw = _safe_dict(data_package.get("forward_looking")) or _safe_dict(data_package.get("_forward_looking"))
     core = _get_core_fields(data_package)
     # 也检查 core fields 内部是否有 _forward_looking
     if not fw:
-        fw = core.get("_forward_looking", {}) or {}
-    products = fw.get("categories", {}).get("earnings_elasticity", {}).get("products", {}) or {}
+        fw = _safe_dict(core.get("_forward_looking"))
+    products = _safe_dict(_safe_dict(_safe_dict(fw.get("categories")).get("earnings_elasticity")).get("products"))
     mix = products.get("product_mix", []) or []
 
     if not mix:
