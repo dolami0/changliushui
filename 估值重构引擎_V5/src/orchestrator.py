@@ -235,27 +235,12 @@ class Orchestrator:
                 sotp_result = self._run_sotp_pipeline(state, event_data, cb, wacc_params)
                 return sotp_result
 
-            # ── 火山联网搜索（标准管线数据补充）──
-            volc_data_std = {}
-            try:
-                from agent3s_sotp import _call_volc
-                mn = a2a_mn
-                context = f"投资主题:{mn.get('core_bet','')[:200]}\n叙事:{mn.get('narrative_summary','')[:300]}"
-                volc_query = f"{stock_name}({stock_code}) 券商研报 营收预测 利润预测 毛利率 可比公司 PE PS 估值 产能 订单 催化。仅列数字。"
-                volc_result = _call_volc(volc_query)
-                if volc_result:
-                    volc_data_std = {"volc_text": volc_result}
-                    print(f"  [Volc Std] {len(volc_result)} chars", flush=True)
-            except Exception as e:
-                print(f"  [Volc Std] 跳过: {e}", flush=True)
-
             # ── Agent-3: 推演裁决 ──
             cb("agent3", 1, 1, "running", "推演裁决(三情景)")
             t0 = time.time()
             state.agent3_output = self._run_agent3(
                 state.agent1_output, state.agent2b_output,
                 event_data, state.agent2a_output,
-                volc_data=volc_data_std,
             )
             state.step_times["agent3"] = round(time.time() - t0, 2)
             vs = state.agent3_output.get("valuation_summary", {})
@@ -331,8 +316,7 @@ class Orchestrator:
             }
 
     def _run_agent3(self, data_package: dict, agent2b_output: dict,
-                    event_data: dict, agent2a_output: dict,
-                    volc_data: dict | None = None) -> dict:
+                    event_data: dict, agent2a_output: dict) -> dict:
         a3 = ScenarioAsymmetry(deepseek_key=self.api_key)
         rd = agent2b_output.get("routing_decision", {})
 
@@ -340,7 +324,6 @@ class Orchestrator:
             return a3.run(
                 data_package, rd, event_data,
                 agent2a_output=agent2a_output,
-                volc_data=volc_data,
             )
         except ScenarioError as e:
             if e.code in ("E301", "E302", "E303"):
