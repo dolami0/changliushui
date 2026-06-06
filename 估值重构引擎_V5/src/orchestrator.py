@@ -123,9 +123,10 @@ class Orchestrator:
         """
         cb = progress_cb or (lambda *a: None)
         event_data = event_data or {}
+        stock_name = event_data.get("stock_name", stock_code)
         state = PipelineState(
             stock_code=stock_code,
-            stock_name=event_data.get("stock_name", stock_code),
+            stock_name=stock_name,
         )
 
         try:
