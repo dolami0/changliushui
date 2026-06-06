@@ -776,7 +776,7 @@ def _build_product_mix_section(data_package: dict) -> str:
 
 
 def _build_volc_section(volc_data: dict | None) -> str:
-    """构建火山搜索补充数据段落——含下游 LLM 使用指引。"""
+    """构建火山搜索段落——SOTP 分部数据的市场视角补充。"""
     if not volc_data:
         return "（未触发火山搜索）"
 
@@ -784,16 +784,18 @@ def _build_volc_section(volc_data: dict | None) -> str:
     if not text:
         return "（火山搜索未返回有效数据）"
 
-    return f"""**以下数据来自联网搜索（火山引擎），非审计财务数据，可信度低于财报。使用时交叉验证背景知识中的行业数据：**
+    return f"""**以下数据来自联网搜索（火山引擎），是对 SOTP 各分部/各产品线收入的独立补充。Investoday/Tushare 的产品分类粒度粗（可能合并多个产品线），火山数据来自券商研报和公司披露原文，拆分更细、更接近市场定价视角。如果火山数据与上面的产品结构数据不一致，以火山为准。**
 
 {text}
 
-**使用指南**：
-- 分部收入和毛利率：可直接引用为参数锚定的基准值
-- 券商预测：用作增速假设的参考，非硬约束
-- 可比公司倍数：用作分部 PE/PS 取值的合理性校验（你的参数不应显著偏离行业中枢）
-- 产能数据：用于判断增长的物理可行性（你的增速假设不应超越产能上限）
-- 如果某项数据缺失，回到背景知识和行业全貌中寻找替代依据"""
+**火山数据 → SOTP 参数映射**：
+- 各产品收入（绝对值） → 直接填入 segment_revenue_yi
+- 各产品毛利率 → 减 10-15pp 换算为 segment_net_margin_pct（毛利率到净利率的简化折算）
+- 最新季度各产品增速 → 校准该分部的 base CAGR（不应大幅偏离最新实际增速）
+- 券商对各产品 2026-2027 收入预测 → 校验你的 (1+CAGR)^3 × segment_revenue 是否与市场一致
+- 可比公司当前 PE/PS → 校验你的 target_ps/pe_target（不应无故偏离行业中枢 2σ 以上）
+- 产能投产时间/规模 → 约束 CAGR 的物理上限（增速不能超越产能）
+- 若火山未覆盖某项数据，回退到 Agent-1 的产品结构数据和行业全貌寻找替代依据"""
 
 
 def _format_signal_audit(sa: dict) -> str:
@@ -918,10 +920,6 @@ def _build_sotp_user_message(
     primary = mn.get("primary_anchor", "earnings")
     sas = mn.get("secondary_anchors", [])
 
-    # 路由理由
-    rd_2b = (agent2b_output or {}).get("routing_decision", {}) if isinstance(agent2b_output, dict) else {}
-    routing_reason = rd_2b.get("routing_reason", "SOTP分部估值")
-
     # BS画像 (与 Agent-3 对齐)
     bs_section, bs_warning = _build_bs_section(data_package, agent2a_output, wacc_params)
 
@@ -959,26 +957,35 @@ def _build_sotp_user_message(
     # ── 前瞻信号面板 ──
     signal_panel = build_forward_signal_panel(core)
 
+    # 路由信息
+    rd_2b = (agent2b_output or {}).get("routing_decision", {}) if isinstance(agent2b_output, dict) else {}
+
     msg = f"""# SOTP 分部估值: {stock}({code})
 
-## Agent-2a 叙事诊断
-- 主锚: {primary}
-- 核心赌注: {mn.get('core_bet', '?')}
-- 生命周期: {mn.get('narrative_lifecycle', '?')}
-- 锚冲突: {mn.get('anchor_conflict', '') or '无'}
-- SOTP触发理由: {mn.get('sotp_rationale', '?')}
-- Agent-2b 路由: 主模型={_get_2b_info(agent2b_output)}, 叙事主锚分部模型={_get_sotp_primary_model(agent2b_output)}
-- 计价程度: {pa.get('overall_priced_in', '?')}（{pa.get('priced_in_estimate', '?')}）
-- 事件分布形状: {ep.get('event_profile', {}).get('distribution_shape', '?')}
-- 信号评分: {sa.get('step2d_score', '?')}/10 — {sa.get('score_rationale', '?')[:200]}
+## 一、前置裁决 — Agent-2a 叙事诊断 + Agent-2b 路由（已审核，可直接信任，不可推翻）
 
-## 分部定义 (Agent-2a 判定)
+- 主锚: {primary}
+- 锚证据: {mn.get('primary_anchor_evidence','?')[:200]}
+- 核心赌注: {mn.get('core_bet','?')}
+- 叙事总结: {mn.get('narrative_summary','?')[:300]}
+- 生命周期: {mn.get('narrative_lifecycle','?')}
+- SOTP触发理由: {mn.get('sotp_rationale','?')}
+- 锚冲突: {mn.get('anchor_conflict','') or '无'}
+- 事件分布形状: {ep.get('event_profile',{}).get('distribution_shape','?')} — {ep.get('event_profile',{}).get('shape_rationale','?')[:150]}
+- 计价程度: {pa.get('overall_priced_in','?')}（{pa.get('priced_in_estimate','?')}）
+- 剩余催化: {pa.get('residual_catalyst','?')[:200]}
+- 信号评分: {sa.get('step2d_score','?')}/10 — {sa.get('score_rationale','?')[:200]}
+- 信号审核: {_format_signal_audit(sa)}
+{_format_anchor_shift(mn)}
+{_format_pricing_tool(agent2a_output)}
+- Agent-2b 路由: 主模型={_get_2b_info(agent2b_output)}, 叙事主锚分部模型={_get_sotp_primary_model(agent2b_output)}
+
+## 分部定义 (Agent-2a 判定 — 你的 SOTP 输出必须以这些分部为基础)
+
 {_build_segments_section(sas, primary, mn, core)}
 
-## 产品结构数据 (Agent-1 财报提取)
-{_build_product_mix_section(data_package)}
+## 二、硬数据 — 财报 + 代码预计算（可引用，不可修改）
 
-## 核心财务数据
 | 指标 | 数值 | 指标 | 数值 |
 |------|------|------|------|
 | 市值 | {mcap:.0f}亿 | PE(TTM) | {pe:.1f}x |
@@ -989,60 +996,43 @@ def _build_sotp_user_message(
 | 现金 | {cash:.1f}亿 | 有息负债 | {debt:.1f}亿 |
 | 净现金 | {net_cash:.1f}亿 | 数据质量 | {core.get('data_quality_score', '?')}/10 |
 
-## WACC (代码预计算, 不可修改)
-{wacc_params.get('wacc_pct', 10)}% (rf={wacc_params.get('rf_pct', '?')}% beta={wacc_params.get('beta', '?')} ERP={wacc_params.get('erp_pct', '?')}%)
-
+**WACC** (代码预计算, 不可修改): {wacc_params.get('wacc_pct', 10)}% (rf={wacc_params.get('rf_pct', '?')}% beta={wacc_params.get('beta', '?')} ERP={wacc_params.get('erp_pct', '?')}%)
 {ew_text}
-
-## 当前市值隐含假设 (Implied Story)
-
-{bs_section}{bs_warning}
-
-## 事件变量
-{event_data.get('raw_event_text', '')}
-
-## 事件研判
-{event_data.get('preliminary_reasoning', '')}
-
-## 背景知识
-{event_data.get('knowledge_supplement', '')}
-
-## {stock}的投资主题
-{event_data.get('investment_theme', '')}
-
-## {stock}的发展推演
-{event_data.get('event_deduction', '')}
-
-## {stock}的催化节点
-{event_data.get('future', '')}
-
-## {stock}的逆向风险
-{event_data.get('adversarial_thinking', '')}
-
-## 行业全貌
-{event_data.get('industry_expert_research', '')}
-
-## Agent-2a 叙事诊断结论（已审核，可直接信任）
-
-- 估值锚: {mn.get('primary_anchor','?')}
-- 锚证据: {mn.get('primary_anchor_evidence','?')[:200]}
-- 核心赌注: {mn.get('core_bet','?')}
-- 叙事总结: {mn.get('narrative_summary','?')[:300]}
-- SOTP触发理由: {mn.get('sotp_rationale','?')}
-- 锚冲突: {mn.get('anchor_conflict','') or '无'}
-- 事件分布形状: {ep.get('event_profile',{}).get('distribution_shape','?')}
-- 计价程度: {pa.get('overall_priced_in','?')} ({pa.get('priced_in_estimate','?')})
-- 剩余催化: {pa.get('residual_catalyst','?')[:200]}
-- 信号评分: {sa.get('step2d_score','?')}/10 — {sa.get('score_rationale','?')[:200]}
-- 信号审核: {_format_signal_audit(sa)}
-
-{_format_anchor_shift(mn)}
-{_format_pricing_tool(agent2a_output)}
+### 产品结构数据 (Agent-1 财报提取)
+{_build_product_mix_section(data_package)}
 
 {signal_panel}
 
-## 火山搜索补充数据
+## 三、软素材 — 用于构建因果剧本（事件变量 → 个股路线 ← 行业全貌）
+
+### 事件变量（触发本次估值的外部催化剂）
+{event_data.get('raw_event_text','')}
+
+{event_data.get('preliminary_reasoning','')}
+
+{event_data.get('knowledge_supplement','')}
+
+### 个股路线（{stock}的既定发展轨迹，事件变量将作用于这条路线）
+
+{event_data.get('investment_theme','')}
+
+{event_data.get('event_deduction','')}
+
+{event_data.get('future','')}
+
+{event_data.get('adversarial_thinking','')}
+
+### 行业全貌（产业链竞争格局、{stock}在其中的位置）
+
+{event_data.get('industry_expert_research','')}
+
+### 火山联网搜索 — SOTP 分部/分产品数据的市场视角补充
+
 {_build_volc_section(volc_data)}
+
+## 四、反向定价参照 — 当前市值在定价什么故事
+
+{bs_section}{bs_warning}
 
 请按分部独立推演 bear/base/bull 参数。输出纯 JSON。
 """
