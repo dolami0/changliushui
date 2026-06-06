@@ -1207,6 +1207,10 @@ def _compute_sotp_total(
     other_val = 0.0
 
     for seg in segments:
+        if not isinstance(seg, dict):
+            print(f"  [SOTP] ⚠️ segment不是dict, 跳过: type={type(seg).__name__}", flush=True)
+            continue
+
         seg_name = seg.get("segment", "?")
         anchor = seg.get("anchor", "earnings")
         is_primary = seg.get("is_primary", True)
@@ -1226,6 +1230,11 @@ def _compute_sotp_total(
             params = seg.get("base", {})
         else:
             params = seg.get(scenario_name, {})
+
+        # 防御 LLM 输出格式错误：params 必须是 dict
+        if not isinstance(params, dict):
+            print(f"  [SOTP] ⚠️ {seg_name}/{scenario_name} params不是dict: type={type(params).__name__} val={str(params)[:200]}", flush=True)
+            params = {}
 
         seg_val = _compute_segment_value(anchor, params, seg_revenue, core)
 
