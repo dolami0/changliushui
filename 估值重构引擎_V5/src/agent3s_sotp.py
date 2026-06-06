@@ -123,8 +123,8 @@ def _search_segment_data(
     # 补充: 从 Agent-2a 副锚提取简单核心词（括号前部分，如 "芯片电感(AI电感+...)" → "芯片电感"）
     for sa in (secondary_anchors or []):
         seg = sa.get("segment", "") if isinstance(sa, dict) else ""
-        core = seg.split("(")[0].split("（")[0].split("+")[0].split(",")[0].strip()
-        if core and 2 <= len(core) <= 10:
+        core = seg.split("(")[0].split("（")[0].split("+")[0].split(",")[0].split("和")[0].split("与")[0].strip()
+        if core and 2 <= len(core) <= 20:
             raw_names.append(core)
 
     # 去重、过滤残值类目
