@@ -151,9 +151,14 @@ def _gen_volc_query(
         if resp.status_code == 200:
             choices = resp.json().get("choices", [])
             if choices:
-                return (choices[0].get("message", {}).get("content", "") or "").strip()
+                result = (choices[0].get("message", {}).get("content", "") or "").strip()
+                if result:
+                    print(f"  [SOTP Flash] query={result[:120]}", flush=True)
+                    return result
+        print(f"  [SOTP Flash] API失败 status={resp.status_code}", flush=True)
         return ""
-    except Exception:
+    except Exception as e:
+        print(f"  [SOTP Flash] 异常: {e}", flush=True)
         return ""
 
 
@@ -175,8 +180,21 @@ def _search_segment_data(
     # 用 Flash LLM 生成优化 query
     query = _gen_volc_query(stock_name, stock_code, agent2a_output or {})
     if not query:
-        # 回退: 简单关键词
-        query = f"{stock_name} {stock_code} 券商研报 各产品收入 毛利率 增速 预测 可比公司 产能。仅列数字。"
+        # 回退: 从叙事中提取产品名拼关键词
+        mn = (agent2a_output or {}).get("market_narrative", {}) if isinstance(agent2a_output, dict) else {}
+        keywords = [stock_name, stock_code, "券商研报"]
+        # 从副锚和核心赌注提取产品名
+        for sa in (mn.get("secondary_anchors", []) or []):
+            seg = (sa.get("segment", "") if isinstance(sa, dict) else "").split("(")[0].split("（")[0].strip()
+            if seg and len(seg) <= 12:
+                keywords.append(seg)
+        core_bet = mn.get("core_bet", "")
+        for word in ["芯片电感", "AI电感", "电感元件", "半导体", "新能源", "机器人", "丝杠", "储能", "光伏"]:
+            if word in core_bet and word not in keywords:
+                keywords.append(word)
+                break
+        query = " ".join(keywords) + " 各产品收入 毛利率 增速 预测 可比公司 产能。仅列数字。"
+        print(f"  [SOTP Flash] 回退query={query[:120]}", flush=True)
 
     result = _call_volc(query)
     if result:
