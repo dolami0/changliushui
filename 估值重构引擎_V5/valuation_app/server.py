@@ -84,6 +84,7 @@ def _load_completed_from_disk(scheduler: Scheduler, max_age_days: int = 2):
                 "status": "done",
                 "completed_at": datetime.fromtimestamp(mtime, tz=timezone.utc).isoformat(),
                 "upside_pct": vs.get("probability_weighted_upside_pct", 0),
+                "report_url": f"/report/{f.stem}",
             })
         except Exception:
             pass
