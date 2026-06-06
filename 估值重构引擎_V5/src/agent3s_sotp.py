@@ -112,6 +112,10 @@ def _gen_volc_query(
     if not api_key:
         return ""
 
+    if not isinstance(agent2a_output, dict):
+        print(f"  [SOTP Flash] agent2a_output不是dict, type={type(agent2a_output)}", flush=True)
+        return ""
+
     # 构建上下文：Agent-2a 叙事诊断 + 副锚
     mn = agent2a_output.get("market_narrative", {}) if isinstance(agent2a_output, dict) else {}
     sas = mn.get("secondary_anchors", [])
@@ -128,38 +132,43 @@ def _gen_volc_query(
         context="\n".join(context_parts),
     )
 
-    try:
-        # 直接用 requests 调 API（不用 call_deepseek，因为它只解析 JSON）
-        DEEPSEEK_API = "https://api.deepseek.com/v1/chat/completions"
-        resp = requests.post(
-            DEEPSEEK_API,
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {api_key}",
-            },
-            json={
-                "model": "deepseek-v4-flash",
-                "temperature": 0.0,
-                "max_tokens": 200,
-                "messages": [
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": "生成query"},
-                ],
-            },
-            timeout=30,
-        )
-        if resp.status_code == 200:
-            choices = resp.json().get("choices", [])
-            if choices:
-                result = (choices[0].get("message", {}).get("content", "") or "").strip()
-                if result:
-                    print(f"  [SOTP Flash] query={result[:120]}", flush=True)
-                    return result
-        print(f"  [SOTP Flash] API失败 status={resp.status_code}", flush=True)
-        return ""
-    except Exception as e:
-        print(f"  [SOTP Flash] 异常: {e}", flush=True)
-        return ""
+    DEEPSEEK_API = "https://api.deepseek.com/v1/chat/completions"
+    for attempt in range(2):
+        try:
+            resp = requests.post(
+                DEEPSEEK_API,
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {api_key}",
+                },
+                json={
+                    "model": "deepseek-v4-flash",
+                    "temperature": 0.0,
+                    "max_tokens": 200,
+                    "messages": [
+                        {"role": "system", "content": prompt},
+                        {"role": "user", "content": "生成query"},
+                    ],
+                },
+                timeout=15,
+            )
+            if resp.status_code == 200:
+                choices = resp.json().get("choices", [])
+                if choices:
+                    result = (choices[0].get("message", {}).get("content", "") or "").strip()
+                    if result:
+                        print(f"  [SOTP Flash] query={result[:120]}", flush=True)
+                        return result
+            if attempt == 0:
+                print(f"  [SOTP Flash] 第1次失败 status={resp.status_code}, 重试...", flush=True)
+                import time; time.sleep(1)
+        except Exception as e:
+            if attempt == 0:
+                print(f"  [SOTP Flash] 第1次异常: {e}, 重试...", flush=True)
+                import time; time.sleep(1)
+            else:
+                print(f"  [SOTP Flash] 第2次也失败: {e}", flush=True)
+    return ""
 
 
 def _search_segment_data(
