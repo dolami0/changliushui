@@ -230,19 +230,7 @@ class Orchestrator:
                f"主:{rd.get('primary_model','?')} 校验:{rd.get('validation_models',[])} {override_str}")
 
             # ── SOTP 分叉 (V6.1): Agent-2a 判 sotp_triggered → 走 SOTP 分部估值 ──
-            should_sotp = a2a_mn.get("sotp_triggered")
-            # 代码兜底: 主锚=revenue 且 存在≥20%的earnings副锚 → 强制SOTP
-            if not should_sotp and _SOTP_AVAILABLE:
-                primary = a2a_mn.get("primary_anchor", "")
-                sas = a2a_mn.get("secondary_anchors", []) or []
-                has_earnings_anchor = any(
-                    sa.get("anchor") == "earnings" and sa.get("revenue_share_pct", 0) >= 20
-                    for sa in sas
-                )
-                if primary == "revenue" and has_earnings_anchor:
-                    should_sotp = True
-                    print("  [Orchestrator] 代码强制SOTP: revenue主锚+earnings副锚≥20%", flush=True)
-            if should_sotp and _SOTP_AVAILABLE:
+            if a2a_mn.get("sotp_triggered") and _SOTP_AVAILABLE:
                 state.pipeline_type = "sotp"
                 sotp_result = self._run_sotp_pipeline(state, event_data, cb, wacc_params)
                 return sotp_result

@@ -199,15 +199,7 @@ NARRATIVE_DIAGNOSIS_PROMPT = """你是估值叙事诊断师。你的职责不是
 
 **SOTP 解决的是"范式不同"问题，不是"参数不同"问题。** 如果两个业务都用 PE 估值——即使一个 PE=10x 另一个 PE=40x——也不需要 SOTP，只需要正确赋参数。SOTP 仅在业务之间需要完全不同的估值范式时才触发（如一个看 PS、一个看 PE）。
 
-**🚨 强制触发规则（优先级最高）**: 以下模式出现时，`sotp_triggered=true` 是硬性要求，不可跳过:
-
-> **主锚=revenue，且存在一个收入占比≥20%的成熟盈利业务（副锚=earnings），且叙事主锚的新业务当前收入占比低（<20%）但故事驱动整体估值。**
->
-> 这个模式在 A 股极其常见：传统业务赚着稳定的钱（PE 锚），但市场在给一个还没放量的新业务（AI/半导体/机器人）PS 估值。**如果不用 SOTP，单一 revenue 锚会把 90%+ 的传统收入也按新业务 PS 估值——这是系统性高估或低估，比数据不精确严重十倍。**
->
-> 铂科新材就是这个模式的经典案例：芯片电感(收入占比3-5%, anchor=revenue) vs 金属软磁粉芯(收入占比95%+, anchor=earnings)。必须触发 SOTP。
-
-**触发条件——以下三条全部满足时设置 sotp_triggered=true（绝大多数多业务公司都应满足）:**
+**触发条件——满足以下全部三条才设置 sotp_triggered=true:**
 
 1. **估值范式冲突**: primary_anchor 和至少一个 secondary_anchor 分属**不同锚类型**。
    - 算冲突: earnings vs revenue, earnings vs pipeline, revenue vs asset 等
