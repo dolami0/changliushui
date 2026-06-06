@@ -165,16 +165,19 @@ def _gen_volc_query(
                 choices = resp.json().get("choices", [])
                 if choices:
                     result = (choices[0].get("message", {}).get("content", "") or "").strip()
-                    if result:
+                    # 校验: 必须包含股票代码/名称 + 至少一个产品关键词，且长度 > 30
+                    if result and len(result) >= 30 and stock_code in result:
                         print(f"  [SOTP Flash] query={result[:120]}", flush=True)
                         return result
+                    if result:
+                        print(f"  [SOTP Flash] query太短/缺股票代码 len={len(result)}, 重试...", flush=True)
             if attempt == 0:
                 print(f"  [SOTP Flash] 第1次失败 status={resp.status_code}, 重试...", flush=True)
-                import time; time.sleep(1)
+                import time; time.sleep(2)
         except Exception as e:
             if attempt == 0:
                 print(f"  [SOTP Flash] 第1次异常: {e}, 重试...", flush=True)
-                import time; time.sleep(1)
+                import time; time.sleep(2)
             else:
                 print(f"  [SOTP Flash] 第2次也失败: {e}", flush=True)
     return ""
