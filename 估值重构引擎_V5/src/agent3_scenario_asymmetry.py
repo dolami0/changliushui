@@ -1108,6 +1108,13 @@ def _build_forward_signal_panel(core: dict) -> str:
         if products_data.get('story_check'):
             lines.append(f'  > {products_data["story_check"]}')
 
+        # 增速时效性提示：产品表是年报数据，Q1加速信号在软素材和火山数据中
+        if "2025" in str(data_vintage):
+            lines.append(f'\n  > **增速交叉验证**（以上产品增速基于{data_vintage}，赋CAGR/增速参数前按顺序校验）：')
+            lines.append('  > 1. 查看软素材的\'投资主题\'和\'发展推演\'——2026Q1最新增速是否显著高于上述年报增速？')
+            lines.append('  > 2. 查看\'火山联网搜索\'——券商对未来2-3年的营收预测是否隐含更高的增速预期？')
+            lines.append('  > 3. 结合事件驱动逻辑——事件是加速、跃迁、还是稳步推进？若事件指向质变节点（技术突破/产能释放/客户导入），参数应反映非线性加速而非均值回归。')
+
     # ── 盈利趋势（单季度同比/环比）──
     mg = cats.get('management_guidance', {})
     et = mg.get('earnings_trend', {}) if mg else {}
