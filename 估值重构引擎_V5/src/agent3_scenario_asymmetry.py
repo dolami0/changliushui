@@ -1184,6 +1184,7 @@ def _call_llm_scenario(
     routing: dict,
     event_data: dict,
     agent2a_output: dict | None = None,
+    volc_data: dict | None = None,
 ) -> dict:
     """单次 LLM 调用：完整推演裁决（V6: 信任 Agent-2a 诊断结论）。"""
 
@@ -1341,6 +1342,17 @@ def _call_llm_scenario(
   原因: {pt.get('limitations',['?'])[0][:120]}
 """
 
+    # V6.3: 火山联网搜索补充数据
+    volc = volc_data or {}
+    volc_text = volc.get("volc_text", "")
+    if volc_text:
+        user_msg += f"""
+
+## 火山联网搜索补充数据（券商研报，非审计数据，作为参数锚定的市场视角参考）
+
+{volc_text}
+
+**使用提示**: 券商预测和可比估值是市场定价的参照系。你的 CAGR/PE/PS 参数不应无故大幅偏离券商一致预期和行业中枢。"""
     user_msg += """
 请按系统提示词的执行清单完成推演。注意: Agent-2a 已完成信号审核，你不再重复做清单项2——直接引用上述结论进入情景推演。输出纯 JSON。
 """
@@ -2055,6 +2067,7 @@ class ScenarioAsymmetry:
         event_data: dict | None = None,
         progress_cb: Callable[[int, str], None] | None = None,
         agent2a_output: dict | None = None,
+        volc_data: dict | None = None,
     ) -> dict:
         """
         执行完整推演裁决。
@@ -2063,6 +2076,7 @@ class ScenarioAsymmetry:
         routing_decision: Agent-2b routing_decision 部分
         event_data: Coze Agent0 输入
         agent2a_output: V6 新增 — Agent-2a 叙事诊断输出（信号审核 + 计价判断）
+        volc_data: V6.3 新增 — 火山联网搜索补充数据
         """
         cb = progress_cb or (lambda s, n: None)
         event_data = event_data or {}
@@ -2083,6 +2097,7 @@ class ScenarioAsymmetry:
                 bs_profile, wacc_params, data_package,
                 routing_decision, event_data,
                 agent2a_output=agent2a_output,
+                volc_data=volc_data,
             )
         except ScenarioError as e:
             cb(3, f"LLM故障: {e.code}")
@@ -2092,6 +2107,7 @@ class ScenarioAsymmetry:
                         bs_profile, wacc_params, data_package,
                         routing_decision, event_data,
                         agent2a_output=agent2a_output,
+                        volc_data=volc_data,
                     )
                 except ScenarioError:
                     raise
