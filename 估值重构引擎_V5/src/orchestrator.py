@@ -235,12 +235,53 @@ class Orchestrator:
                 sotp_result = self._run_sotp_pipeline(state, event_data, cb, wacc_params)
                 return sotp_result
 
+            # ── 火山联网搜索（Pro读叙事生成query → 火山返回券商预测/可比估值）──
+            volc_data_std = {}
+            try:
+                from agent3s_sotp import _call_volc
+                import requests as _r
+                # Pro 从完整叙事生成query
+                a2a_narrative = a2a_mn.get('narrative_summary', '') or a2a_mn.get('core_bet', '')
+                a0_text = '\n'.join([
+                    event_data.get('raw_event_text', ''),
+                    event_data.get('investment_theme', '')[:1500],
+                    event_data.get('industry_expert_research', '')[:1000],
+                ])
+                qprompt = f"""你是估值数据助手。根据以下公司信息，生成一个火山搜索query，获取券商研报中的量化数据来补充估值推演。
+
+公司: {stock_name}({stock_code})
+叙事背景: {a2a_narrative[:800]}
+事件与行业信息: {a0_text[:1500]}
+
+需要补充的数据类型: 最新季度业绩及增速、券商对未来2年营收/利润的一致预期、可比A股公司当前PE/PS估值倍数、近期催化事件进展。
+
+直接输出query。"""
+                qresp = _r.post(
+                    'https://api.deepseek.com/v1/chat/completions',
+                    headers={'Content-Type': 'application/json', 'Authorization': f'Bearer {self.api_key}'},
+                    json={'model': 'deepseek-v4-pro', 'temperature': 0.0, 'max_tokens': 300,
+                          'messages': [{'role': 'system', 'content': qprompt}, {'role': 'user', 'content': '生成query'}]},
+                    timeout=30,
+                )
+                if qresp.status_code == 200:
+                    choices = qresp.json().get('choices', [])
+                    if choices:
+                        query = (choices[0].get('message', {}).get('content', '') or '').strip()
+                        if query and len(query) >= 30:
+                            volc_result = _call_volc(query)
+                            if volc_result:
+                                volc_data_std = {'volc_text': volc_result}
+                                print(f'  [Volc Std] Pro query({len(query)}c) → volc {len(volc_result)} chars', flush=True)
+            except Exception as e:
+                print(f'  [Volc Std] 跳过: {e}', flush=True)
+
             # ── Agent-3: 推演裁决 ──
             cb("agent3", 1, 1, "running", "推演裁决(三情景)")
             t0 = time.time()
             state.agent3_output = self._run_agent3(
                 state.agent1_output, state.agent2b_output,
                 event_data, state.agent2a_output,
+                volc_data=volc_data_std,
             )
             state.step_times["agent3"] = round(time.time() - t0, 2)
             vs = state.agent3_output.get("valuation_summary", {})
@@ -316,7 +357,8 @@ class Orchestrator:
             }
 
     def _run_agent3(self, data_package: dict, agent2b_output: dict,
-                    event_data: dict, agent2a_output: dict) -> dict:
+                    event_data: dict, agent2a_output: dict,
+                    volc_data: dict | None = None) -> dict:
         a3 = ScenarioAsymmetry(deepseek_key=self.api_key)
         rd = agent2b_output.get("routing_decision", {})
 
@@ -324,6 +366,7 @@ class Orchestrator:
             return a3.run(
                 data_package, rd, event_data,
                 agent2a_output=agent2a_output,
+                volc_data=volc_data,
             )
         except ScenarioError as e:
             if e.code in ("E301", "E302", "E303"):
