@@ -844,6 +844,14 @@ def _build_product_mix_section(data_package: dict) -> str:
         imp_src = margin.get("gm_improvement_source", "?")
         lines.append(f"毛利率极差: {gm_spread}ppt | 改善来源: {imp_src}")
 
+    # 增速时效性提示：产品表是年报数据，Q1加速信号在软素材和火山数据中
+    data_vintage = products.get("data_vintage", "")
+    if "2025" in str(data_vintage):
+        lines.append(f"\n> 以上产品增速基于{data_vintage}。赋CAGR前按以下顺序交叉验证：")
+        lines.append("> 1. 查看软素材的'投资主题'和'发展推演'——各产品线2026Q1的最新增速是否显著高于上述2025全年增速？")
+        lines.append("> 2. 查看'火山联网搜索'——券商对各产品线的未来2年收入预测是否隐含更高的增速预期？")
+        lines.append("> 3. 结合事件驱动逻辑——事件变量是加速、跃迁、还是稳步推进？若事件指向技术突破/产能释放/客户导入等质变节点，CAGR应反映非线性加速而非均值回归。")
+
     return "\n".join(lines)
 
 
