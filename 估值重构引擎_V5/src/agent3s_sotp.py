@@ -94,9 +94,29 @@ def _search_segment_data(
     if not VOLC_AGENT_KEY:
         return {}
 
-    # 从 Investoday + Tushare 提取产品名
-    seg_rev = data_package.get("segment_revenue", []) or []
-    ts_segs = data_package.get("tushare_segments", []) or []
+    # 从 data_package 的多层结构中提取 segment_revenue 和 tushare_segments
+    # 层级: packages.core.fields._forward_looking → 顶层 forward_looking → 直接字段
+    def _find_in_pkg(key: str) -> list:
+        # 直接字段
+        direct = data_package.get(key)
+        if isinstance(direct, list) and direct:
+            return direct
+        # packages.core.fields._forward_looking
+        fw = {}
+        pkgs = data_package.get("packages", {}) if isinstance(data_package, dict) else {}
+        core = pkgs.get("core", {}) if isinstance(pkgs, dict) else {}
+        fields = core.get("fields", {}) if isinstance(core, dict) else {}
+        fw = fields.get("_forward_looking", {}) if isinstance(fields, dict) else {}
+        if not fw:
+            fw = data_package.get("forward_looking", {}) or data_package.get("_forward_looking", {})
+        if isinstance(fw, dict):
+            val = fw.get(key, [])
+            if isinstance(val, list) and val:
+                return val
+        return []
+
+    seg_rev = _find_in_pkg("segment_revenue")
+    ts_segs = _find_in_pkg("tushare_segments")
     raw_names = [s.get("product_name", "") for s in seg_rev if s.get("product_name")]
     raw_names += [s.get("item", "") for s in ts_segs if s.get("item")]
 
