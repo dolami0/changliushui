@@ -235,43 +235,79 @@ class Orchestrator:
                 sotp_result = self._run_sotp_pipeline(state, event_data, cb, wacc_params)
                 return sotp_result
 
-            # ── 火山联网搜索（Pro读叙事生成query → 火山返回券商预测/可比估值）──
+            # ── 火山联网搜索（Pro审阅Agent-0 → 查漏补缺 → 生成query → 火山返回）──
+            # 使用 SOTP 验证过的格式：全部上下文→system prompt，user=触发词
             volc_data_std = {}
             try:
                 from agent3s_sotp import _call_volc
                 import requests as _r
-                # Pro 从完整叙事生成query
-                a2a_narrative = a2a_mn.get('narrative_summary', '') or a2a_mn.get('core_bet', '')
-                a0_text = '\n'.join([
-                    event_data.get('raw_event_text', ''),
-                    event_data.get('investment_theme', '')[:1500],
-                    event_data.get('industry_expert_research', '')[:1000],
+
+                # Agent-0 完整数据（不截断）
+                a0_full = '\n\n'.join([
+                    f'## 事件变量\n{event_data.get("raw_event_text", "")}',
+                    f'## 事件研判\n{event_data.get("preliminary_reasoning", "")}',
+                    f'## 投资主题\n{event_data.get("investment_theme", "")}',
+                    f'## 发展推演\n{event_data.get("event_deduction", "")}',
+                    f'## 催化节点\n{event_data.get("future", "")}',
+                    f'## 逆向风险\n{event_data.get("adversarial_thinking", "")}',
+                    f'## 行业全貌\n{event_data.get("industry_expert_research", "")}',
+                    f'## 背景知识\n{event_data.get("knowledge_supplement", "")}',
                 ])
-                qprompt = f"""你是估值数据助手。根据以下公司信息，生成一个火山搜索query，获取券商研报中的量化数据来补充估值推演。
 
-公司: {stock_name}({stock_code})
-叙事背景: {a2a_narrative[:800]}
-事件与行业信息: {a0_text[:1500]}
+                # 路由裁决（让Pro知道模型类型，针对性补数据）
+                rd = state.agent2b_output.get('routing_decision', {}) if state.agent2b_output else {}
+                route_info = f'主模型={rd.get("primary_model", "?")} 类别={rd.get("model_category", "?")} 理由={rd.get("routing_reason", "?")[:200]}'
 
-需要补充的数据类型: 最新季度业绩及增速、券商对未来2年营收/利润的一致预期、可比A股公司当前PE/PS估值倍数、近期催化事件进展。
+                # system prompt = 角色+约束+全部上下文（Agent-0数据在此，不截断）
+                # user message = 仅触发词（SOTP验证过的模式，避免Pro被大文本淹没）
+                sysprompt = f'''你是估值数据补充助手。当前管线对 {stock_name}({stock_code}) 做估值推演。
 
-直接输出query。"""
-                qresp = _r.post(
-                    'https://api.deepseek.com/v1/chat/completions',
-                    headers={'Content-Type': 'application/json', 'Authorization': f'Bearer {self.api_key}'},
-                    json={'model': 'deepseek-v4-pro', 'temperature': 0.0, 'max_tokens': 300,
-                          'messages': [{'role': 'system', 'content': qprompt}, {'role': 'user', 'content': '生成query'}]},
-                    timeout=30,
-                )
-                if qresp.status_code == 200:
-                    choices = qresp.json().get('choices', [])
-                    if choices:
-                        query = (choices[0].get('message', {}).get('content', '') or '').strip()
-                        if query and len(query) >= 30:
-                            volc_result = _call_volc(query)
-                            if volc_result:
-                                volc_data_std = {'volc_text': volc_result}
-                                print(f'  [Volc Std] Pro query({len(query)}c) → volc {len(volc_result)} chars', flush=True)
+路由裁决: {route_info}
+
+火山引擎是一个结构化知识问答系统。给它一个清晰的查询，它会从券商研报、公司公告、行业数据中提取结构化的答案。
+
+请审阅以下 Agent-0 完整研究资料，结合路由裁决的模型类型，找出研究资料中缺失的量化锚点，然后生成一个火山搜索query来补足这些缺失。
+
+你应该覆盖但不限于：券商对未来2-3年营收/利润的一致预期、各业务线收入拆分及增速、可比A股公司当前PE/PS估值倍数、产能/出货量/订单等运营数据。
+
+query要求：自由格式，不需要关键词罗列。明确告诉火山你需要什么数据。尽可能覆盖多的维度。
+
+---
+{stock_name}({stock_code}) Agent-0 研究资料:
+{a0_full}
+---
+
+直接输出query，不要引号、不要解释、不要复述资料。'''
+
+                # Pro 调用来生成 query（最多 2 次尝试，匹配 SOTP 的重试策略）
+                query = ""
+                for attempt in range(2):
+                    qresp = _r.post(
+                        'https://api.deepseek.com/v1/chat/completions',
+                        headers={'Content-Type': 'application/json', 'Authorization': f'Bearer {self.api_key}'},
+                        json={'model': 'deepseek-v4-pro', 'temperature': 0.0, 'max_tokens': 300,
+                              'messages': [
+                                  {'role': 'system', 'content': sysprompt},
+                                  {'role': 'user', 'content': '生成query'},
+                              ]},
+                        timeout=90,
+                    )
+                    if qresp.status_code == 200:
+                        choices = qresp.json().get('choices', [])
+                        if choices:
+                            query = (choices[0].get('message', {}).get('content', '') or '').strip()
+                            if query and len(query) >= 30 and stock_code in query:
+                                break  # 合格，跳出重试
+                            if query:
+                                print(f'  [Volc Std] query不合格 len={len(query)} 尝试{attempt+1}/2', flush=True)
+                    if attempt == 0:
+                        time.sleep(2)
+
+                if query:
+                    volc_result = _call_volc(query)
+                    if volc_result:
+                        volc_data_std = {'volc_text': volc_result}
+                        print(f'  [Volc Std] query({len(query)}c) → volc {len(volc_result)} chars', flush=True)
             except Exception as e:
                 print(f'  [Volc Std] 跳过: {e}', flush=True)
 
