@@ -171,25 +171,34 @@ class IndustryChainCoze:
             print(f'[Coze] mark_analyzing 失败: {e}', flush=True)
 
     def mark_error(self, record_id: str, error_msg: str = "") -> None:
-        """标记为错误: is_analyzing=true + is_analyzed=false + error_log。
+        """标记为错误: is_analyzing=true + is_analyzed=false。
 
         效果: 调度器跳过(analyzing=true)，不重试；analyzed=false 可区分成功记录。
-        error_log 记录失败原因，方便事后排查。
+        错误原因写入 analysis_time 字段（现有空字段，借用来替代 error_log）。
         """
-        fields = [
+        core_fields = [
             {"field_name": "is_analyzing", "value": "true"},
             {"field_name": "is_analyzed", "value": "false"},
         ]
-        if error_msg:
-            fields.append({"field_name": "error_log", "value": str(error_msg)[:500]})
         try:
+            # 先尝试写错误信息（复用现有字段 analysis_time，可失败）
+            if error_msg:
+                try:
+                    self.coze.update_records(
+                        SOURCE_TABLE_ID,
+                        update_fields=[{"field_name": "analysis_time", "value": str(error_msg)[:500]}],
+                        filter_conditions={"logic": "and", "conditions": [{"left": "id", "operation": "equal", "right": str(record_id)}]},
+                    )
+                except Exception:
+                    pass  # analysis_time 写入可选，失败不影响核心标记
+            # 核心状态必须写入成功
             self.coze.update_records(
                 SOURCE_TABLE_ID,
-                update_fields=fields,
+                update_fields=core_fields,
                 filter_conditions={"logic": "and", "conditions": [{"left": "id", "operation": "equal", "right": str(record_id)}]},
             )
         except Exception as e:
-            print(f'[Coze] mark_error 失败: {e}', flush=True)
+            print(f'[Coze] mark_error 核心标记失败: {e}', flush=True)
 
     def mark_processed(self, record_id: str) -> None:
         """标记源表记录为已分析，同时清除分析中标志"""
