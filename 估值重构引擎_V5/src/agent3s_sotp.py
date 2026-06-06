@@ -1419,11 +1419,19 @@ def _validate_sotp_specific(
             "message": f"其他业务分部值应在三情景中不变，实际值: {other_vals}",
         })
 
-    # Check 3: 收入占比和
+    # Check 3: 收入占比和（优先用 revenue_share_pct，若缺失则用 segment_revenue_yi 推算）
     segments = sotp_result.get("segments", [])
     if segments:
         total_share = sum(seg.get("revenue_share_pct", 0) for seg in segments)
-        if abs(total_share - 100) > 10:
+        if total_share < 1:
+            # LLM 未填 revenue_share_pct → 用 segment_revenue_yi 替代校验
+            total_rev = core.get("revenue_ttm_yi", 0)
+            if total_rev > 0:
+                total_share = sum(
+                    (seg.get("segment_revenue_yi", 0) or 0) / total_rev * 100
+                    for seg in segments
+                )
+        if abs(total_share - 100) > 15:  # 放宽容差：分部收入可能含非经常性或内部抵消
             warnings.append({
                 "code": "E403", "level": "SOTP",
                 "message": f"分部收入占比之和={total_share:.1f}%（应≈100%）",
