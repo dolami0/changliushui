@@ -80,7 +80,7 @@ class WangqiScheduler:
             self.coze_io.mark_processed(record_id)
         else:
             # error: analyzing=true + analyzed=false → 不重试，可识别
-            self.coze_io.mark_error(record_id)
+            self.coze_io.mark_error(record_id, result.get("error", ""))
         return result
 
     async def _loop(self):
@@ -151,7 +151,7 @@ class WangqiScheduler:
                     })
                 else:
                     # 失败: analyzing=true + analyzed=false，不重试可识别
-                    self.coze_io.mark_error(record_id)
+                    self.coze_io.mark_error(record_id, result.get("error", ""))
                     self.completed_jobs.append({
                         "record_id": record_id, "status": result.get("status", "?"),
                         "error": result.get("error", ""),
@@ -168,9 +168,9 @@ class WangqiScheduler:
                 err = str(e)[:500]
                 results.append({"status": "error", "record_id": record_id, "error": err})
                 self._emit_progress({"type": "tianji_job", "record_id": record_id, "status": "error", "error": err})
-                # 异常: analyzing=true + analyzed=false
+                # 异常: analyzing=true + analyzed=false + error_log
                 try:
-                    self.coze_io.mark_error(record_id)
+                    self.coze_io.mark_error(record_id, str(e)[:500])
                 except Exception:
                     pass
 

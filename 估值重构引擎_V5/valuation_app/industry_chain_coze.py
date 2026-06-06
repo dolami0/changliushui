@@ -170,19 +170,22 @@ class IndustryChainCoze:
         except Exception as e:
             print(f'[Coze] mark_analyzing 失败: {e}', flush=True)
 
-    def mark_error(self, record_id: str) -> None:
-        """标记为错误: is_analyzing=true + is_analyzed=false。
+    def mark_error(self, record_id: str, error_msg: str = "") -> None:
+        """标记为错误: is_analyzing=true + is_analyzed=false + error_log。
 
         效果: 调度器跳过(analyzing=true)，不重试；analyzed=false 可区分成功记录。
-        适合错误记录，需手动排查后重置。
+        error_log 记录失败原因，方便事后排查。
         """
+        fields = [
+            {"field_name": "is_analyzing", "value": "true"},
+            {"field_name": "is_analyzed", "value": "false"},
+        ]
+        if error_msg:
+            fields.append({"field_name": "error_log", "value": str(error_msg)[:500]})
         try:
             self.coze.update_records(
                 SOURCE_TABLE_ID,
-                update_fields=[
-                    {"field_name": "is_analyzing", "value": "true"},
-                    {"field_name": "is_analyzed", "value": "false"},
-                ],
+                update_fields=fields,
                 filter_conditions={"logic": "and", "conditions": [{"left": "id", "operation": "equal", "right": str(record_id)}]},
             )
         except Exception as e:
