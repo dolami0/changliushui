@@ -798,6 +798,28 @@ def _build_segments_section(
     if not secondary_anchors:
         lines.append("| （无其他业务，100%为叙事主锚分部） | — | — | — | — |")
 
+    # ── 产品表交叉校验：Agent-2a 的分部占比是否与产品增速矛盾？──
+    fw = core.get('_forward_looking', {}) or {}
+    cats = fw.get('categories', {}) or {}
+    products = (cats.get('earnings_elasticity', {}) or {}).get('products', {}) or {}
+    mix = products.get('product_mix', []) or []
+    if mix:
+        # 产品按增速分组：>30%为高增长(revenue锚候选)，<20%为低增长(earnings锚候选)
+        high_growth_share = sum(
+            p.get('revenue_share_pct', 0) for p in mix
+            if (p.get('revenue_yoy_pct') or 0) > 30
+        )
+        low_growth_share = sum(
+            p.get('revenue_share_pct', 0) for p in mix
+            if (p.get('revenue_yoy_pct') or 0) < 20
+        )
+        # Agent-2a 主锚占比 vs 产品高增长占比
+        gap = high_growth_share - primary_share
+        if abs(gap) > 15:
+            lines.append(f'\n> **分部定义纠偏**：产品表中高增速(>30% YoY)产品合计占{high_growth_share:.0f}%，但Agent-2a判定的叙事主锚分部仅占{primary_share:.0f}%，偏差{gap:.0f}ppt。')
+            lines.append(f'> 请以产品表的增速分组为准重新划分分部：高增速产品归入叙事主锚分部(revenue锚)，低增速/低毛利产品({low_growth_share:.0f}%)归入其他业务(earnings锚)。')
+            lines.append(f'> 若2a的划分与产品表冲突，以产品表为准——2a没有产品级增速数据。')
+
     return "\n".join(lines)
 
 
