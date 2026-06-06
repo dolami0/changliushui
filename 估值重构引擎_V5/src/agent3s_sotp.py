@@ -78,74 +78,109 @@ def _call_volc(query: str, timeout: int = 120) -> str:
 # SOTP 火山搜索 query 模板：用产品名做关键词，指向券商研报（比年报拆分更细）
 SOTP_VOLC_QUERY = """{stock_name}({stock_code}) {product_keywords}。券商研报中各产品2025年收入/毛利率、最新季度增速、2026-2027年券商收入预测、可比公司PE/PS估值、在建产能投产进度。仅列数字。"""
 
+# Flash 模型生成火山 query 的 prompt
+VOLC_QUERY_GEN_PROMPT = """你是搜索query优化专家。根据以下公司信息，生成一个用于搜索该公司各产品线/业务分部数据的query。
+
+要求:
+- 用空格分隔的关键词格式，不要用自然语言问句
+- 必须包含股票名称和代码
+- 提取所有产品线/业务线名称作为关键词（包括传统业务和新业务）
+- 加入"券商研报"、"收入"、"毛利率"、"增速"、"预测"、"可比公司"、"产能"等检索词
+- 结尾加"仅列数字"
+- 只输出query本身，不要解释
+
+公司: {stock_name}({stock_code})
+业务背景:
+{context}
+
+Query:"""
+
+
+def _gen_volc_query(
+    stock_name: str,
+    stock_code: str,
+    agent2a_output: dict,
+    api_key: str | None = None,
+) -> str:
+    """用 Flash 模型从叙事中提取产品名，生成优化的火山搜索 query。"""
+    if not api_key:
+        try:
+            from env_config import DEEPSEEK_API_KEY
+            api_key = DEEPSEEK_API_KEY
+        except Exception:
+            pass
+    if not api_key:
+        return ""
+
+    # 构建上下文：Agent-2a 叙事诊断 + 副锚
+    mn = agent2a_output.get("market_narrative", {}) if isinstance(agent2a_output, dict) else {}
+    sas = mn.get("secondary_anchors", [])
+    context_parts = []
+    context_parts.append(f"核心赌注: {mn.get('core_bet', '')[:200]}")
+    context_parts.append(f"叙事总结: {mn.get('narrative_summary', '')[:300]}")
+    context_parts.append(f"主锚: {mn.get('primary_anchor', '')}")
+    for sa in (sas or [])[:5]:
+        context_parts.append(f"副锚分部: {sa.get('segment', '')} (锚={sa.get('anchor', '')})")
+
+    prompt = VOLC_QUERY_GEN_PROMPT.format(
+        stock_name=stock_name,
+        stock_code=stock_code,
+        context="\n".join(context_parts),
+    )
+
+    try:
+        # 直接用 requests 调 API（不用 call_deepseek，因为它只解析 JSON）
+        DEEPSEEK_API = "https://api.deepseek.com/v1/chat/completions"
+        resp = requests.post(
+            DEEPSEEK_API,
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {api_key}",
+            },
+            json={
+                "model": "deepseek-v4-flash",
+                "temperature": 0.0,
+                "max_tokens": 200,
+                "messages": [
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": "生成query"},
+                ],
+            },
+            timeout=30,
+        )
+        if resp.status_code == 200:
+            choices = resp.json().get("choices", [])
+            if choices:
+                return (choices[0].get("message", {}).get("content", "") or "").strip()
+        return ""
+    except Exception:
+        return ""
+
 
 def _search_segment_data(
     stock_name: str,
     stock_code: str,
     data_package: dict,
-    secondary_anchors: list[dict] | None = None,
+    agent2a_output: dict | None = None,
 ) -> dict:
-    """火山联网搜索分部数据（单次调用）。
+    """火山联网搜索分部数据。
 
-    用 Investoday/Tushare 产品名 + Agent-2a 副锚核心词做搜索关键词。
+    用 Flash LLM 从叙事中提取产品名生成 query，替代手工关键词拼接。
 
     Returns: {"volc_text": str} — 搜索失败返回空 dict。
     """
     if not VOLC_AGENT_KEY:
         return {}
 
-    # 从 data_package 的多层结构中提取 segment_revenue 和 tushare_segments
-    # 层级: packages.core.fields._forward_looking → 顶层 forward_looking → 直接字段
-    def _find_in_pkg(key: str) -> list:
-        # 直接字段
-        direct = data_package.get(key)
-        if isinstance(direct, list) and direct:
-            return direct
-        # packages.core.fields._forward_looking
-        fw = {}
-        pkgs = data_package.get("packages", {}) if isinstance(data_package, dict) else {}
-        core = pkgs.get("core", {}) if isinstance(pkgs, dict) else {}
-        fields = core.get("fields", {}) if isinstance(core, dict) else {}
-        fw = fields.get("_forward_looking", {}) if isinstance(fields, dict) else {}
-        if not fw:
-            fw = data_package.get("forward_looking", {}) or data_package.get("_forward_looking", {})
-        if isinstance(fw, dict):
-            val = fw.get(key, [])
-            if isinstance(val, list) and val:
-                return val
-        return []
+    # 用 Flash LLM 生成优化 query
+    query = _gen_volc_query(stock_name, stock_code, agent2a_output or {})
+    if not query:
+        # 回退: 简单关键词
+        query = f"{stock_name} {stock_code} 券商研报 各产品收入 毛利率 增速 预测 可比公司 产能。仅列数字。"
 
-    seg_rev = _find_in_pkg("segment_revenue")
-    ts_segs = _find_in_pkg("tushare_segments")
-    raw_names = [s.get("product_name", "") for s in seg_rev if s.get("product_name")]
-    raw_names += [s.get("item", "") for s in ts_segs if s.get("item")]
-
-    # 补充: 从 Agent-2a 副锚提取简单核心词（括号前部分，如 "芯片电感(AI电感+...)" → "芯片电感"）
-    for sa in (secondary_anchors or []):
-        seg = sa.get("segment", "") if isinstance(sa, dict) else ""
-        core = seg.split("(")[0].split("（")[0].split("+")[0].split(",")[0].split("和")[0].split("与")[0].strip()
-        if core and 2 <= len(core) <= 20:
-            raw_names.append(core)
-
-    # 去重、过滤残值类目
-    seen = set()
-    unique = []
-    for n in raw_names:
-        n = n.strip()
-        if n and n not in seen and "其他" not in n and "其它" not in n:
-            seen.add(n)
-            unique.append(n)
-    keywords = " ".join(unique[:6])
-
-    query = SOTP_VOLC_QUERY.format(
-        stock_name=stock_name,
-        stock_code=stock_code,
-        product_keywords=keywords,
-    )
     result = _call_volc(query)
-
     if result:
-        print(f"  [SOTP Volc] 联网搜索完成 ({len(result)} chars) kw={keywords[:80]}", flush=True)
+        print(f"  [SOTP Volc] 联网搜索完成 ({len(result)} chars)", flush=True)
     else:
         print(f"  [SOTP Volc] 联网搜索无结果", flush=True)
 
@@ -1563,11 +1598,10 @@ class SOTPScenarioAsymmetry:
         core = _get_core_fields(data_package)
 
         # ── Step 0: 火山联网搜索分部数据（SOTP 路由即触发）──
-        secondary_anchors_pre = agent2a_output.get("market_narrative", {}).get("secondary_anchors", [])
         cb(0.5, "火山搜索分部数据")
         volc_data = _search_segment_data(
             core.get("stock_name", ""), data_package.get("stock_code", ""),
-            data_package, secondary_anchors_pre,
+            data_package, agent2a_output,
         )
         if not volc_data:
             print(f"  [SOTP] 火山搜索无结果，继续使用财报数据", flush=True)
