@@ -78,19 +78,26 @@ def _call_volc(query: str, timeout: int = 120) -> str:
 # SOTP 火山搜索 query 模板：用产品名做关键词，指向券商研报（比年报拆分更细）
 SOTP_VOLC_QUERY = """{stock_name}({stock_code}) {product_keywords}。券商研报中各产品2025年收入/毛利率、最新季度增速、2026-2027年券商收入预测、可比公司PE/PS估值、在建产能投产进度。仅列数字。"""
 
-# Flash 模型生成火山 query 的 prompt
-VOLC_QUERY_GEN_PROMPT = """你是搜索query优化专家。根据以下公司信息，生成一个用于搜索该公司各产品线/业务分部数据的query。
+# Flash 模型生成火山 query 的 prompt — SOTP 分部数据获取
+VOLC_QUERY_GEN_PROMPT = """你是 SOTP 分部估值的数据获取助手。当前管线需要对目标公司做分部估值（Sum of the Parts），即将公司拆成不同业务线，各自用对应的估值锚（PS/PE/PB）独立估值后加总。
+
+你的任务：根据叙事背景，生成一个火山联网搜索 query，尽可能覆盖每个分部的以下数据维度：
+- 各产品线/业务线的当前收入规模（亿元）和同比增速
+- 各产品线的毛利率或净利率
+- 券商对各产品线未来2-3年的收入预测
+- 各产品线对应的A股可比公司及其当前PE/PS估值倍数
+- 核心产品线的产能、出货量、投产进度等运营数据
 
 要求:
-- 用空格分隔的关键词格式，不要用自然语言问句
+- 用空格分隔的关键词格式
 - 必须包含股票名称和代码
-- 提取所有产品线/业务线名称作为关键词（包括传统业务和新业务）
-- 加入"券商研报"、"收入"、"毛利率"、"增速"、"预测"、"可比公司"、"产能"等检索词
+- 从叙事中提取所有产品线/业务线名称作为关键词
+- 加入"券商研报"、"收入"、"毛利率"、"增速"、"预测"、"可比公司"、"产能"
 - 结尾加"仅列数字"
 - 只输出query本身，不要解释
 
 公司: {stock_name}({stock_code})
-业务背景:
+叙事背景（从中提取产品线名称和业务特征）:
 {context}
 
 Query:"""
@@ -116,15 +123,17 @@ def _gen_volc_query(
         print(f"  [SOTP Flash] agent2a_output不是dict, type={type(agent2a_output)}", flush=True)
         return ""
 
-    # 构建上下文：Agent-2a 叙事诊断 + 副锚
+    # 构建上下文：Agent-2a 完整叙事诊断（不截断，Flash 需要充分理解业务线）
     mn = agent2a_output.get("market_narrative", {}) if isinstance(agent2a_output, dict) else {}
     sas = mn.get("secondary_anchors", [])
     context_parts = []
-    context_parts.append(f"核心赌注: {mn.get('core_bet', '')[:200]}")
-    context_parts.append(f"叙事总结: {mn.get('narrative_summary', '')[:300]}")
-    context_parts.append(f"主锚: {mn.get('primary_anchor', '')}")
+    context_parts.append(f"投资主题: {mn.get('core_bet', '')}")
+    context_parts.append(f"叙事详情: {mn.get('narrative_summary', '')}")
+    context_parts.append(f"估值锚: primary={mn.get('primary_anchor', '')}")
+    if mn.get('sotp_rationale'):
+        context_parts.append(f"SOTP理由: {mn.get('sotp_rationale', '')[:300]}")
     for sa in (sas or [])[:5]:
-        context_parts.append(f"副锚分部: {sa.get('segment', '')} (锚={sa.get('anchor', '')})")
+        context_parts.append(f"分部: {sa.get('segment', '')} | 锚={sa.get('anchor', '')} | 收入占比≈{sa.get('revenue_share_pct', '?')}%")
 
     prompt = VOLC_QUERY_GEN_PROMPT.format(
         stock_name=stock_name,
