@@ -847,6 +847,43 @@ def _build_product_mix_section(data_package: dict) -> str:
     return "\n".join(lines)
 
 
+def _build_recent_growth_row(core: dict) -> str:
+    """Extract recent 4Q revenue YoY growth from Forward-Looking data."""
+    fw = core.get('_forward_looking', {}) or {}
+    cats = fw.get('categories', {}) or {}
+    mg = cats.get('management_guidance', {}) or {}
+    et = mg.get('earnings_trend', {}) or {}
+    recent = et.get('recent_4q', [])
+    if not recent:
+        return ''
+
+    parts = []
+    for q in recent[:4]:
+        period = str(q.get('period', ''))
+        if len(period) >= 6:
+            yr = period[2:4]
+            m = int(period[4:6])
+            qn = (m - 1) // 3 + 1
+            label = f"{yr}Q{qn}"
+        else:
+            label = period
+        yoy = q.get('revenue_yoy') or q.get('revenue_q_yoy')
+        if yoy is not None:
+            parts.append(f'{label}={yoy:+.1f}%'.replace('+', '+'))
+
+    if not parts:
+        return ''
+    trend = et.get('trend_direction', '')
+    trend_str = f' | {trend}' if trend else ''
+    hint = (
+        '**最近季度营收同比增速**: ' +
+        ' | '.join(parts) + trend_str + '\n'
+        '> 赋CAGR时必须对照以上实际增速。'
+        '若base CAGR与最近季度实际增速严重背离，'
+        '需在reasoning_trace中解释原因。'
+    )
+    return hint
+
 def _build_volc_section(volc_data: dict | None) -> str:
     """构建火山搜索段落——SOTP 分部数据的市场视角补充。"""
     if not volc_data:
@@ -1069,6 +1106,7 @@ def _build_sotp_user_message(
 | 净现金 | {net_cash:.1f}亿 | 数据质量 | {core.get('data_quality_score', '?')}/10 |
 
 **WACC** (代码预计算, 不可修改): {wacc_params.get('wacc_pct', 10)}% (rf={wacc_params.get('rf_pct', '?')}% beta={wacc_params.get('beta', '?')} ERP={wacc_params.get('erp_pct', '?')}%)
+{_build_recent_growth_row(core)}
 {ew_text}
 ### 产品结构数据 (Agent-1 财报提取)
 {_build_product_mix_section(data_package)}
