@@ -960,6 +960,55 @@ def _fmt_pct(val) -> str:
         return '?'
 
 
+def _build_growth_summary(core: dict) -> str:
+    """从 Agent-1 forward_looking 提取产品增速+季度趋势，生成紧凑摘要。"""
+    fw = core.get('_forward_looking', {}) or {}
+    cats = fw.get('categories', {}) or {}
+    products = (cats.get('earnings_elasticity', {}) or {}).get('products', {}) or {}
+    mix = products.get('product_mix', []) or []
+    et = (cats.get('management_guidance', {}) or {}).get('earnings_trend', {}) or {}
+
+    lines = []
+
+    # 产品级增速
+    if mix:
+        data_vintage = products.get('data_vintage', '')
+        lines.append(f'**分产品增速** ({data_vintage}):')
+        for p in mix:
+            yoy = p.get('revenue_yoy_pct')
+            yoy_str = f'{yoy:+.1f}%' if yoy is not None else '?'
+            lines.append(f'  - {p["name"]}: {yoy_str} (占比{p.get("revenue_share_pct",0):.1f}%)')
+        if '2025' in str(data_vintage):
+            lines.append('  > 以上为年报数据。请在软素材中查找各产品2026Q1最新增速，判断是否加速。')
+
+    # 季度趋势
+    recent = et.get('recent_4q', [])
+    if recent:
+        parts = []
+        for q in recent[:4]:
+            period = str(q.get('period', ''))
+            if len(period) >= 6:
+                label = f'{period[2:4]}Q{(int(period[4:6])-1)//3+1}'
+            else:
+                label = period
+            yoy = q.get('revenue_yoy') or q.get('revenue_q_yoy')
+            if yoy is not None:
+                parts.append(f'{label} {yoy:+.1f}%')
+        if parts:
+            trend = et.get('trend_direction', '')
+            trend_str = f' 趋势:{trend}' if trend else ''
+            lines.append(f'\n**最近4季度营收同比**: {" | ".join(parts)}{trend_str}')
+
+    # 交叉验证提示
+    if mix or recent:
+        lines.append('\n> **增速交叉验证**（赋CAGR/增速参数前按顺序校验）：')
+        lines.append('> 1. 软素材的\'投资主题\'和\'发展推演\'——2026Q1最新增速是否高于上表年报增速？')
+        lines.append('> 2. 火山联网搜索——券商对未来2-3年的预测是否隐含更高增速？')
+        lines.append('> 3. 事件驱动逻辑——事件是加速/跃迁/稳步推进？质变节点→非线性加速，非均值回归。')
+
+    return '\n'.join(lines) if lines else '（无分产品增速数据）'
+
+
 def _build_forward_signal_panel(core: dict) -> str:
     """构建前瞻信号面板（注入 Agent-3 用户消息）。
 
@@ -1241,6 +1290,9 @@ def _call_llm_scenario(
         bs_section = f"""**方法: 定性判断 ({anchor_2a}锚无定量反向推算工具)**\n"""
         bs_warning = f"""EV={bs_profile['ev_yi']}亿 NOPAT={bs_profile['nopat_yi']}亿 (仅供参考)\n"""
 
+    # ── 增速数据摘要（从 Agent-1 forward_looking 提取，补充叙事和火山数据的时效差）──
+    growth_summary = _build_growth_summary(core)
+
     # 构建用户消息 (一个完整的大f-string)
     user_msg = f"""# 推演裁决: {stock}({code})
 
@@ -1271,8 +1323,9 @@ def _call_llm_scenario(
 - 异常标记: {json.dumps(core.get('caution_flags',[]), ensure_ascii=False)}
 - 数据质量: {core.get('data_quality_score',10)}/10
 
-## 前瞻信号（Agent-2a 已审核，不重建面板）
-参见下文"Agent-2a 叙事诊断结论"中的 signal_audit 结论。
+## 前瞻信号 — 定量增速摘要（Agent-1 财报提取，赋CAGR前必查）
+{growth_summary}
+> Agent-2a 已完成信号审核，结论参见下文"Agent-2a 叙事诊断结论"中的 signal_audit。
 
 ## 路由判决
 - 主模型: {primary} ({category})
