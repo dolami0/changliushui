@@ -75,83 +75,62 @@ def _call_volc(query: str, timeout: int = 120) -> str:
         return ""
 
 
+# SOTP 火山搜索 query 模板：用产品名做关键词 + 半结构化方向
+SOTP_VOLC_QUERY = """{stock_name}({stock_code}) {product_keywords}。年报各产品收入/毛利率、最新季度各产品增速、券商对各产品2026-2027年收入预测、可比A股公司PE/PS估值、在建产能投产进度。仅列数字，不展开。"""
+
+
 def _search_segment_data(
     stock_name: str,
     stock_code: str,
-    secondary_anchors: list[dict],
-) -> dict:
-    """火山搜索分部数据：分部毛利率 + 行业估值倍数。
-    
-    Returns: {segment_margins: {segment_name: margin_pct}, industry_multiples: str}
-    搜索失败返回空 dict。
-    """
-    if not VOLC_AGENT_KEY or not secondary_anchors:
-        return {}
-    
-    seg_names = "、".join(_safe_dict(sa).get("segment", "?") for sa in secondary_anchors)
-
-    # Query 1: 分部毛利率
-    q1 = f"{stock_name}({stock_code})的分部业务{seg_names}各自的毛利率大概是多少？给出百分比数字。"
-    result1 = _call_volc(q1)
-
-    # Query 2: 行业估值倍数
-    anchors = set(_safe_dict(sa).get("anchor", "earnings") for sa in secondary_anchors)
-    anchor_desc = "、".join(anchors)
-    q2 = f"{stock_name}所处行业中，{seg_names}这类业务通常用什么估值倍数？{anchor_desc}锚对应的PE或PS大概什么范围？"
-    result2 = _call_volc(q2)
-    
-    if result1 or result2:
-        print(f"  [SOTP Volc] segment data found: margins={'YES' if result1 else 'NO'} multiples={'YES' if result2 else 'NO'}", flush=True)
-    
-    return {
-        "segment_margins_text": result1,
-        "industry_multiples_text": result2,
-        "_volc_used": True,
-    }
-
-
-def _check_data_adequacy(
     data_package: dict,
-    secondary_anchors: list[dict],
-) -> tuple[bool, str]:
-    """检查 SOTP 分部数据是否充分。
-    
-    Returns: (is_adequate, reason)
-    - is_adequate=True: 分部数据足够，可以运行 SOTP
-    - is_adequate=False: 数据不足，需要后备方案
+    secondary_anchors: list[dict] | None = None,
+) -> dict:
+    """火山联网搜索分部数据（单次调用）。
+
+    用 Investoday/Tushare 产品名 + Agent-2a 副锚核心词做搜索关键词。
+
+    Returns: {"volc_text": str} — 搜索失败返回空 dict。
     """
-    if not secondary_anchors:
-        return True, "无副锚，100%主锚，不需要SOTP"
-    
-    # 检查 product_mix 数据
-    fw = _safe_dict(data_package.get("forward_looking")) or _safe_dict(data_package.get("_forward_looking"))
-    products = _safe_dict(_safe_dict(_safe_dict(fw.get("categories")).get("earnings_elasticity")).get("products"))
-    mix = products.get("product_mix", []) or []
-    
-    issues = []
-    
-    for sa in secondary_anchors:
-        sa = _safe_dict(sa)
-        seg_name = sa.get("segment", "?")
-        share = sa.get("revenue_share_pct", 0)
-        conf = sa.get("data_confidence", "low")
-        
-        if share <= 0:
-            issues.append(f"{seg_name}: 收入占比未知")
-        elif conf == "low":
-            issues.append(f"{seg_name}: 收入占比置信度低")
-        
-        # 检查是否有分产品毛利率数据
-        if mix:
-            matched = [p for p in mix if seg_name in p.get("name", "") or p.get("name", "") in seg_name]
-            if not matched:
-                issues.append(f"{seg_name}: product_mix中无匹配产品，毛利率未知")
-        else:
-            issues.append(f"{seg_name}: 无product_mix数据，毛利率未知")
-    
-    if issues:
-        return False, "; ".join(issues)
-    return True, "分部数据充分"
+    if not VOLC_AGENT_KEY:
+        return {}
+
+    # 从 Investoday + Tushare 提取产品名
+    seg_rev = data_package.get("segment_revenue", []) or []
+    ts_segs = data_package.get("tushare_segments", []) or []
+    raw_names = [s.get("product_name", "") for s in seg_rev if s.get("product_name")]
+    raw_names += [s.get("item", "") for s in ts_segs if s.get("item")]
+
+    # 补充: 从 Agent-2a 副锚提取简单核心词（括号前部分，如 "芯片电感(AI电感+...)" → "芯片电感"）
+    for sa in (secondary_anchors or []):
+        seg = sa.get("segment", "") if isinstance(sa, dict) else ""
+        core = seg.split("(")[0].split("（")[0].split("+")[0].split(",")[0].strip()
+        if core and 2 <= len(core) <= 10:
+            raw_names.append(core)
+
+    # 去重、过滤残值类目
+    seen = set()
+    unique = []
+    for n in raw_names:
+        n = n.strip()
+        if n and n not in seen and "其他" not in n and "其它" not in n:
+            seen.add(n)
+            unique.append(n)
+    keywords = " ".join(unique[:6])
+
+    query = SOTP_VOLC_QUERY.format(
+        stock_name=stock_name,
+        stock_code=stock_code,
+        product_keywords=keywords,
+    )
+    result = _call_volc(query)
+
+    if result:
+        print(f"  [SOTP Volc] 联网搜索完成 ({len(result)} chars) kw={keywords[:80]}", flush=True)
+    else:
+        print(f"  [SOTP Volc] 联网搜索无结果", flush=True)
+
+    return {"volc_text": result} if result else {}
+
 
 # ═══════════════════════════════════════
 # System Prompt — SOTP 分部估值
@@ -208,14 +187,21 @@ SOTP_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 
 # SOTP 两段式估值参数体系
 
+每个分部 LLM 直接输出**绝对收入**（`segment_revenue_yi`，亿元），不要用营收占比。代码用此收入代入公式计算分部价值。
+
 | 锚 | 参数 | 代码公式 |
 |----|------|----------|
-| earnings | pe_target, segment_margin_pct | 分部收入 x 毛利率 x PE |
-| revenue | revenue_growth_3y_cagr_pct, target_ps | 分部收入 x (1+CAGR)³ x PS |
-| asset | target_pb | 净资产 x PB |
-| pipeline | pos_pct, peak_sales_yi, discount_rate_pct | 峰值销售 x PoS / (1+折现率) |
+| earnings | segment_revenue_yi, pe_target, segment_net_margin_pct | `segment_revenue_yi × 净利率% × PE` |
+| revenue | segment_revenue_yi, revenue_growth_3y_cagr_pct, target_ps | segment_revenue_yi x (1+CAGR%)^3 x target_ps |
 
-注: SOTP 用收入x毛利率简化估算分部利润(分部投入资本无法拆分)，不需要 roic_assumed_pct。
+**revenue 锚关键理解**: `target_ps` 是**第 3 年（终端年）的 PS**——代码把它乘以第 3 年的收入（已按 CAGR 增长 3 年）。它不是 trailing PS。
+心算校验：拿出你的参数算一遍—— segment_revenue_yi x (1 + CAGR%)^3 x target_ps ≈ 你剧本里这个分部应有的目标市值吗？如果差太远，调整 target_ps 或 CAGR。
+| asset | segment_revenue_yi, target_pb, [segment_equity_yi] | `净资产 × PB`（无segment_equity_yi时按收入占比估算） |
+| pipeline | pos_pct, peak_sales_yi, discount_rate_pct | `峰值销售 × PoS% / (1+折现率%)` |
+
+注:
+- `segment_net_margin_pct` 是分部**净利润率**（净利润/收入），不是毛利率。参考公司整体净利率、行业可比公司净利率、或火山数据中的分部利润率来估算。如果分部未单独披露净利润，用公司整体净利率 ± 该分部相对于公司平均水平的调整。
+- SOTP 用收入×净利率估算分部利润（分部投入资本无法拆分），不需要 roic_assumed_pct。
 
 # 执行清单（层层递进的推演过程）
 
@@ -234,6 +220,11 @@ SOTP_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 - **事件变量**（原始事件、事件研判、背景知识）：触发本次估值的外部催化剂。事件研判中的评分帮助你理解事件的性质和影响范围。
 - **个股路线**（投资主题、发展推演、催化节点、逆向风险）：该公司的既定发展轨迹。事件变量将作用于这条路线。
 - **行业全貌**：产业链竞争格局、公司在其中的位置。
+
+**数据信任层级**（优先级从高到低）:
+1. 火山联网搜索（最新研报、月度出货、产能状态）— 最接近市场定价数据
+2. 公司财报（年报/半年报中的分部披露）— 审计数据但有时滞
+3. Investoday/Tushare API 产品分类 — 注意：Investoday 的产品分类是粗粒度的（可能将多个产品合并为一个类目，如"合金软磁粉芯"包含了传统粉芯和芯片电感），Tushare 的"其他主营业务"是残值项（不代表任何具体业务）。如果火山数据给出了更细的拆分，优先以火山数据为准。
 
 **关键**: 估值锚和计价程度以 2a 为准（不可推翻）。
 
@@ -416,8 +407,8 @@ CAGR/增速: 高增速必须匹配高再投资率（RR=g/ROIC）。增速和 RR 
 **SOTP 特殊规则:**
 
 **其他业务** (is_primary=false): 事件催化剂只驱动叙事主线，不影响传统业务。因此其他业务不需要推演三情景——只需要判断它的合理估值是多少（一组 base 参数），bear/base/bull 三个情景都用这同一个估值。具体来说：
-  - 如果产品结构数据中有该分部的实际毛利率 -> 引用为 segment_margin_pct
-  - 如果没有 -> 基于行业知识和公司整体毛利率做合理假设，在 segment_rationale 中标注[估算]
+  - 如果火山数据或产品结构数据中有该分部的实际净利率 -> 引用为 segment_net_margin_pct
+  - 如果没有 -> 用公司整体净利率 ± 该分部调整（毛利率高于公司平均→净利率也应高于平均），在 segment_rationale 中标注[估算]
   - PE 取行业合理水平（参考 knowledge_supplement 中的行业中枢，通常 12-25x），PS 取合理值（与增速匹配，通常 1.0-3.0x），PB 取合理值（0.8-2.0x）
   - 这不是精确估值——其他业务的作用是提供一个稳定的基准锚，防止叙事锚把整家公司高估或低估
   - **关键**: 不要机械取最低值。取"这个业务如果单独上市，市场会给什么估值"。如果行业中枢 PE=20x，不要因为"保守"就给 10x
@@ -426,6 +417,7 @@ CAGR/增速: 高增速必须匹配高再投资率（RR=g/ROIC）。增速和 RR 
 - 禁止三个情景共用同一套假设数字微调
 - 禁止 bear 使用"宏观经济衰退"作为触发条件（除非传导链明确依赖宏观）
 - 禁止对所有标的使用相同概率分布模板
+- **禁止在叙事文本中写具体估值数字**：`scenario_narrative`、`expectation_gap.note`、`segment_rationale`、`gap_rationale`、`narrative` 等文本字段中，只写因果方向和逻辑推理，禁止写"市值 XX 亿"、"上行 XX%"、"PE XXx"、"PS XXx"等具体数字。具体数字由代码计算后填入表格。你写的数字只会跟代码计算结果冲突，产生矛盾的报告。
 
 ## 清单项 4: 校验与评分
 
@@ -519,17 +511,17 @@ asymmetry_ratio = bull_upside / |bear_upside|
   "segments": [
     {
       "segment": "叙事主锚分部",
-      "anchor": "revenue", "revenue_share_pct": 74.4, "is_primary": true,
-      "segment_rationale": "<=60字",
+      "anchor": "revenue", "segment_revenue_yi": 14.2, "is_primary": true,
+      "segment_rationale": "<=60字，说明收入来源依据（火山搜索/产品结构/占比估算）",
       "bear": {"revenue_growth_3y_cagr_pct": 10, "target_ps": 5},
       "base": {"revenue_growth_3y_cagr_pct": 30, "target_ps": 10},
       "bull": {"revenue_growth_3y_cagr_pct": 50, "target_ps": 15}
     },
     {
       "segment": "其他业务(副锚合并)",
-      "anchor": "earnings", "revenue_share_pct": 25.6, "is_primary": false,
-      "segment_rationale": "<=60字",
-      "base": {"pe_target": 15, "segment_margin_pct": 20}
+      "anchor": "earnings", "segment_revenue_yi": 4.9, "is_primary": false,
+      "segment_rationale": "<=60字，说明收入来源依据",
+      "base": {"pe_target": 15, "segment_net_margin_pct": 12}
     }
   ],
   "scenario_valuation": {
@@ -764,24 +756,24 @@ def _build_product_mix_section(data_package: dict) -> str:
 
 
 def _build_volc_section(volc_data: dict | None) -> str:
-    """构建火山搜索补充数据段落。"""
-    if not volc_data or not volc_data.get("_volc_used"):
-        return "（未触发火山搜索——分部数据充分）"
-    
-    lines = []
-    margins = volc_data.get("segment_margins_text", "")
-    multiples = volc_data.get("industry_multiples_text", "")
-    
-    if margins:
-        lines.append(f"**分部毛利率参考**: {margins[:500]}")
-    if multiples:
-        lines.append(f"**行业估值倍数参考**: {multiples[:500]}")
-    
-    if not lines:
+    """构建火山搜索补充数据段落——含下游 LLM 使用指引。"""
+    if not volc_data:
+        return "（未触发火山搜索）"
+
+    text = volc_data.get("volc_text", "")
+    if not text:
         return "（火山搜索未返回有效数据）"
-    
-    lines.insert(0, "以下数据来自火山引擎知识搜索，作为产品结构数据缺失时的补充参考：")
-    return "\n\n".join(lines)
+
+    return f"""**以下数据来自联网搜索（火山引擎），非审计财务数据，可信度低于财报。使用时交叉验证背景知识中的行业数据：**
+
+{text}
+
+**使用指南**：
+- 分部收入和毛利率：可直接引用为参数锚定的基准值
+- 券商预测：用作增速假设的参考，非硬约束
+- 可比公司倍数：用作分部 PE/PS 取值的合理性校验（你的参数不应显著偏离行业中枢）
+- 产能数据：用于判断增长的物理可行性（你的增速假设不应超越产能上限）
+- 如果某项数据缺失，回到背景知识和行业全貌中寻找替代依据"""
 
 
 def _format_signal_audit(sa: dict) -> str:
@@ -1063,12 +1055,15 @@ def _compute_segment_value(
     """
     if anchor == "earnings":
         pe = params.get("pe_target", 0)
-        margin = params.get("segment_margin_pct")
-        if margin is None:
-            margin = core.get("gross_margin_pct", 0)
-        if pe > 0 and segment_revenue > 0 and margin > 0:
-            segment_nopat = segment_revenue * margin / 100
-            return round(segment_nopat * pe, 1)
+        net_margin = params.get("segment_net_margin_pct")
+        if net_margin is None:
+            # 后备: 旧字段 segment_margin_pct（向后兼容），再后备: 公司整体净利率
+            net_margin = params.get("segment_margin_pct")
+        if net_margin is None:
+            net_margin = core.get("net_margin_pct", 0)
+        if pe > 0 and segment_revenue > 0 and net_margin > 0:
+            segment_net_profit = segment_revenue * net_margin / 100
+            return round(segment_net_profit * pe, 1)
         return None
 
     elif anchor == "revenue":
@@ -1132,8 +1127,17 @@ def _compute_sotp_total(
     for seg in segments:
         seg_name = seg.get("segment", "?")
         anchor = seg.get("anchor", "earnings")
-        share = seg.get("revenue_share_pct", 0)
         is_primary = seg.get("is_primary", True)
+
+        # ── 分部收入: 优先用 LLM 直接输出的绝对收入 ──
+        seg_revenue = seg.get("segment_revenue_yi")
+        if seg_revenue is None or seg_revenue <= 0:
+            # 后备: 旧格式用 revenue_share_pct（向后兼容）
+            share = seg.get("revenue_share_pct", 0)
+            if share > 0:
+                seg_revenue = total_revenue * share / 100
+            else:
+                seg_revenue = 0
 
         # 非主锚分部：始终使用 base 参数（不受事件驱动）
         if not is_primary:
@@ -1141,7 +1145,6 @@ def _compute_sotp_total(
         else:
             params = seg.get(scenario_name, {})
 
-        seg_revenue = total_revenue * share / 100
         seg_val = _compute_segment_value(anchor, params, seg_revenue, core)
 
         if seg_val is not None:
@@ -1149,7 +1152,6 @@ def _compute_sotp_total(
             segment_values.append({
                 "segment": seg_name,
                 "anchor": anchor,
-                "revenue_share_pct": share,
                 "segment_revenue_yi": round(seg_revenue, 2),
                 "segment_value_yi": seg_val,
                 "source": "LLM(变参)" if is_primary else "LLM(base)",
@@ -1547,20 +1549,15 @@ class SOTPScenarioAsymmetry:
         wacc_params = wacc_params or {}
         core = _get_core_fields(data_package)
 
-        # ── Step 0: 数据充分性检查 ──
+        # ── Step 0: 火山联网搜索分部数据（SOTP 路由即触发）──
         secondary_anchors_pre = agent2a_output.get("market_narrative", {}).get("secondary_anchors", [])
-        is_adequate, adequacy_reason = _check_data_adequacy(data_package, secondary_anchors_pre)
-        volc_data = {}
-        if not is_adequate:
-            print(f"  [SOTP] 分部数据不足: {adequacy_reason}", flush=True)
-            cb(0.5, "火山搜索分部数据")
-            volc_data = _search_segment_data(
-                core.get("stock_name", ""), data_package.get("stock_code", ""),
-                secondary_anchors_pre,
-            )
-            if not volc_data:
-                print(f"  [SOTP] 火山搜索失败, 回退标准管线", flush=True)
-                return {"_fallback_to_standard": True, "_fallback_reason": adequacy_reason}
+        cb(0.5, "火山搜索分部数据")
+        volc_data = _search_segment_data(
+            core.get("stock_name", ""), data_package.get("stock_code", ""),
+            data_package, secondary_anchors_pre,
+        )
+        if not volc_data:
+            print(f"  [SOTP] 火山搜索无结果，继续使用财报数据", flush=True)
 
         # ── Step 1: LLM 推演分部参数 ──
         cb(1, "SOTP LLM分部推演")

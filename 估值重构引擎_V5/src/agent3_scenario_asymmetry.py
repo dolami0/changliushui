@@ -493,7 +493,7 @@ PARAM_SELF_CHECK_MAP = {
     "C": "- ROIC: 拐点后ROIC改善幅度必须有时序节点对应(距拐点季度数)\n- PE: 拐点前PE可高于常规(买方为拐点付费),拐点后PE回归正常\n- 距拐点: 越远折现越大(每季度折6%),不应无限远",
     "G": "- earnings_growth_pct: 必须是盈利增速(EPS/净利润),不是收入增速\n- PE: 不能超过 PEG×earnings_growth, 否则违反PEG框架\n- PEG: 通常0.5-2.0,低于0.5=极度低估,高于2.0=增速不足以支持PE",
     "I": "- normalized_roic_pct: 正常化ROIC取5-10年行业中位数,不取当前极值\n- normalized_pe: 正常化PE取行业中位,不取当前畸高/畸低值",
-    "B": "- revenue_growth_3y_cagr_pct: 3年收入CAGR,基于TAM渗透率倒推。不能取>100%(3年翻倍=26%CAGR已属极高)\n- target_ps: 3年后合理PS。与增速匹配: 10% CAGR≈5-10x PS, 30% CAGR≈15-25x PS, 50%+ CAGR≈25-40x PS\n- tam_penetration_pct: 当前TAM渗透率。若<5%则PS可取上限,若>30%则PS应保守",
+    "B": "- revenue_growth_3y_cagr_pct: 3年收入CAGR,基于TAM渗透率倒推。不能取>100%(3年翻倍=26%CAGR已属极高)\n- target_ps: **第3年(终端年)的PS**——代码公式 = TTM收入 x (1+CAGR)^3 x target_ps。它不是trailing PS(当前收入xPS)，不要用trailing PS的习惯来设这个值。心算校验: 拿出你的参数→ TTM收入 x (1+CAGR%)^3 x target_ps ≈ 你剧本预期的目标市值吗？差太远就调整target_ps或CAGR\n- tam_penetration_pct: 当前TAM渗透率。若<5%则PS可取上限,若>30%则PS应保守",
     "D": "- target_roe_pct: ROE改善必须与PB修复联动(PB=ROE×权益乘数×PE的简化)。ROE从5%→15%可支撑PB从1x→3x\n- target_pb: PB不能远超ROE支撑的合理范围。ROE<5%不应>2x PB(除非隐蔽资产重估)",
     "E": "- ebitda_growth_pct: EBITDA增速必须与资源价格/产量假设一致\n- target_ev_ebitda: 与行业中枢的偏离必须可解释。上行周期可高于中枢20-50%,下行周期应低于中枢\n- resource_value_adj_pct: 资源价值调整必须基于可验证的储量/品位数据",
     "H": "- nav_discount_pct: NAV折价必须反映资产流动性/变现难度。重资产折价20-40%,现金类资产折价0-10%",

@@ -233,25 +233,7 @@ class Orchestrator:
             if a2a_mn.get("sotp_triggered") and _SOTP_AVAILABLE:
                 state.pipeline_type = "sotp"
                 sotp_result = self._run_sotp_pipeline(state, event_data, cb, wacc_params)
-                if not sotp_result.get("_fallback_to_standard"):
-                    return sotp_result
-                # 回退: 分部数据不足 → 标记 SOTP 失败, 走标准管线
-                print("  [Orchestrator] SOTP回退标准管线", flush=True)
-                a2a_mn["sotp_triggered"] = False
-                a2a_mn["sotp_rationale"] = (
-                    f"{a2a_mn.get('sotp_rationale','')} | "
-                    f"V6.1回退: {sotp_result.get('_fallback_reason','分部数据不足')}"
-                )
-                # 重新运行 Agent-2b（用修正后的 agent2a）
-                cb("agent2b", 2, 2, "running", "路由判决(回退重判)")
-                t0 = time.time()
-                state.agent2b_output = self._run_agent2b(
-                    state.agent1_output, state.agent2a_output, event_data,
-                )
-                state.step_times["agent2b"] = round(state.step_times.get("agent2b", 0) + time.time() - t0, 2)
-                rd = state.agent2b_output.get("routing_decision", {})
-                cb("agent2b", 2, 2, "done",
-                   f"回退重判→主:{rd.get('primary_model','?')} 校验:{rd.get('validation_models',[])}")
+                return sotp_result
 
             # ── Agent-3: 推演裁决 ──
             cb("agent3", 1, 1, "running", "推演裁决(三情景)")
