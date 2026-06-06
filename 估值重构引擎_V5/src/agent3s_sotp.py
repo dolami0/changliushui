@@ -75,8 +75,8 @@ def _call_volc(query: str, timeout: int = 120) -> str:
         return ""
 
 
-# SOTP 火山搜索 query 模板：用产品名做关键词 + 半结构化方向
-SOTP_VOLC_QUERY = """{stock_name}({stock_code}) {product_keywords}。年报各产品收入/毛利率、最新季度各产品增速、券商对各产品2026-2027年收入预测、可比A股公司PE/PS估值、在建产能投产进度。仅列数字，不展开。"""
+# SOTP 火山搜索 query 模板：用产品名做关键词，指向券商研报（比年报拆分更细）
+SOTP_VOLC_QUERY = """{stock_name}({stock_code}) {product_keywords}。券商研报中各产品2025年收入/毛利率、最新季度增速、2026-2027年券商收入预测、可比公司PE/PS估值、在建产能投产进度。仅列数字。"""
 
 
 def _search_segment_data(
