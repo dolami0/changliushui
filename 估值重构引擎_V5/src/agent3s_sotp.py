@@ -79,28 +79,21 @@ def _call_volc(query: str, timeout: int = 120) -> str:
 SOTP_VOLC_QUERY = """{stock_name}({stock_code}) {product_keywords}。券商研报中各产品2025年收入/毛利率、最新季度增速、2026-2027年券商收入预测、可比公司PE/PS估值、在建产能投产进度。仅列数字。"""
 
 # Flash 模型生成火山 query 的 prompt — SOTP 分部数据获取
-VOLC_QUERY_GEN_PROMPT = """你是 SOTP 分部估值的数据获取助手。当前管线需要对目标公司做分部估值（Sum of the Parts），即将公司拆成不同业务线，各自用对应的估值锚（PS/PE/PB）独立估值后加总。
+VOLC_QUERY_GEN_PROMPT = """你是 SOTP 分部估值的数据获取助手。当前管线需要对 {stock_name}({stock_code}) 做分部估值（Sum of the Parts）：拆成不同业务线，各自独立估值后加总。
 
-你的任务：根据叙事背景，生成一个火山联网搜索 query，尽可能覆盖每个分部的以下数据维度：
-- 各产品线/业务线的当前收入规模（亿元）和同比增速
-- 各产品线的毛利率或净利率
-- 券商对各产品线未来2-3年的收入预测
-- 各产品线对应的A股可比公司及其当前PE/PS估值倍数
-- 核心产品线的产能、出货量、投产进度等运营数据
+火山引擎是一个结构化知识问答系统。给它一个清晰的 query，它会从券商研报、公司公告、行业数据中提取结构化的答案。
 
-要求:
-- 用空格分隔的关键词格式
-- 必须包含股票名称和代码
-- 从叙事中提取所有产品线/业务线名称作为关键词
-- 加入"券商研报"、"收入"、"毛利率"、"增速"、"预测"、"可比公司"、"产能"
-- 结尾加"仅列数字"
-- 只输出query本身，不要解释
+根据以下叙事背景，生成一个查询该公司的 query。你想获取每个业务线的：
+- 收入规模和增速
+- 毛利率或净利率
+- 未来2-3年券商收入预测
+- 可比A股公司及估值倍数
+- 产能、出货量等运营数据
 
-公司: {stock_name}({stock_code})
-叙事背景（从中提取产品线名称和业务特征）:
+叙事背景:
 {context}
 
-Query:"""
+直接输出query，不要引号、不要解释。"""
 
 
 def _gen_volc_query(
@@ -153,7 +146,7 @@ def _gen_volc_query(
                 json={
                     "model": "deepseek-v4-flash",
                     "temperature": 0.0,
-                    "max_tokens": 200,
+                    "max_tokens": 500,
                     "messages": [
                         {"role": "system", "content": prompt},
                         {"role": "user", "content": "生成query"},
@@ -165,12 +158,14 @@ def _gen_volc_query(
                 choices = resp.json().get("choices", [])
                 if choices:
                     result = (choices[0].get("message", {}).get("content", "") or "").strip()
-                    # 校验: 必须包含股票代码/名称 + 至少一个产品关键词，且长度 > 30
-                    if result and len(result) >= 30 and stock_code in result:
+                    # 校验: 自然语言query应覆盖多个业务线，通常>50字
+                    has_id = (stock_code in result) or (stock_name in result)
+                    if result and len(result) >= 50 and has_id:
                         print(f"  [SOTP Flash] query={result[:120]}", flush=True)
                         return result
                     if result:
-                        print(f"  [SOTP Flash] query太短/缺股票代码 len={len(result)}, 重试...", flush=True)
+                        has = ('300811' in result) or (stock_name in result)
+                        print(f"  [SOTP Flash] query不合格 len={len(result)} has_id={has}, 重试...", flush=True)
             if attempt == 0:
                 print(f"  [SOTP Flash] 第1次失败 status={resp.status_code}, 重试...", flush=True)
                 import time; time.sleep(2)
