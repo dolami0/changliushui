@@ -437,7 +437,9 @@ bear 不可推翻已发生的业务事实（如已出货产品→不应给0估�
 
 ### 3e. 分部赋参
 
-**叙事主锚分部** (is_primary=true): bear/base/bull 三组参数，按 2b 选定的 sotp_primary_segment_model 使用 Agent-3 标准参数体系。以下参数规则与原 Agent-3 完全相同:
+**叙事主锚分部** (is_primary=true): bear/base/bull 三组参数。
+
+**你的模型**: 2b路由判官已将叙事主锚分部模型选定为 **{PRIMARY_MODEL} ({MODEL_DESC})**，参数族为 {MODEL_FAMILY}。你的 `anchor` 字段必须设为 `{SEGMENT_ANCHOR}`，bear/base/bull 参数必须严格使用以下参数体系——不允许使用其他模型的参数名。
 
 赋参数的起点是 3d 的因果剧本。思考事件变量作用于个股路线的方式——这决定了三情景参数的方向和幅度。然后用 3a 的分布形状和 3b 的计价天花板做约束。在此基础上，用以下参数规则校准具体数值。
 
@@ -1005,22 +1007,20 @@ def _fill_sotp_placeholders(prompt: str, agent2b_output: dict | None = None) -> 
     # seg_model = 2b判定的叙事主锚分部模型 (B/K/A/G等)
     seg_desc = MODEL_NAMES.get(seg_model, seg_model)
     seg_family = MODEL_FAMILIES.get(seg_model, "盈利乘数")
-    # 分部参数的JSON示例（与MODEL_PARAM_NAMES_MAP对齐，去掉probability/scenario_narrative/target_mcap/upside）
-    seg_params_example = {
-        "A": '"bear": {"roic_assumed_pct": 8, "rr_assumed_pct": 20, "pe_target": 15}, "base": {"roic_assumed_pct": 12, "rr_assumed_pct": 35, "pe_target": 22}, "bull": {"roic_assumed_pct": 18, "rr_assumed_pct": 50, "pe_target": 30}',
-        "B": '"bear": {"revenue_growth_3y_cagr_pct": 10, "target_ps": 5}, "base": {"revenue_growth_3y_cagr_pct": 30, "target_ps": 10}, "bull": {"revenue_growth_3y_cagr_pct": 50, "target_ps": 15}',
-        "G": '"bear": {"roic_assumed_pct": 10, "earnings_growth_pct": 15, "pe_target": 18, "peg_ratio": 1.2}, "base": {"roic_assumed_pct": 15, "earnings_growth_pct": 30, "pe_target": 30, "peg_ratio": 1.0}, "bull": {"roic_assumed_pct": 22, "earnings_growth_pct": 50, "pe_target": 45, "peg_ratio": 0.9}',
-        "K": '"bear": {"stage1_growth_pct": 10, "roic_assumed_pct": 8, "stage1_years": 5, "terminal_pe": 15, "segment_net_margin_pct": 10}, "base": {"stage1_growth_pct": 35, "roic_assumed_pct": 15, "stage1_years": 5, "terminal_pe": 22, "segment_net_margin_pct": 14}, "bull": {"stage1_growth_pct": 55, "roic_assumed_pct": 22, "stage1_years": 7, "terminal_pe": 30, "segment_net_margin_pct": 18}',
-    }
-    seg_anchor_map = {"B": "revenue", "K": "dcf", "A": "earnings", "G": "earnings",
-                      "C": "earnings", "I": "earnings", "D": "asset", "E": "resource",
-                      "H": "asset", "F": "pipeline", "J": "revenue"}
+
+    # 锚映射（模型→SOTP锚名），全部11个模型覆盖
+    seg_anchor_map = {"A": "earnings", "B": "revenue", "C": "earnings",
+                      "D": "asset", "E": "asset", "F": "pipeline",
+                      "G": "earnings", "H": "asset", "I": "earnings",
+                      "J": "revenue", "K": "dcf"}
+
     replacements = {
         "{PRIMARY_MODEL}": seg_model,
         "{MODEL_DESC}": seg_desc,
         "{MODEL_FAMILY}": seg_family,
-        "{SEGMENT_ANCHOR}": seg_anchor_map.get(seg_model, "revenue"),
-        "{SEGMENT_PARAMS_EXAMPLE}": seg_params_example.get(seg_model, seg_params_example["B"]),
+        "{SEGMENT_ANCHOR}": seg_anchor_map.get(seg_model, "earnings"),
+        # 分部参数示例：直接从SCENARIO_PARAMS_MAP取，LLM会自动去掉probability/scenario_narrative
+        "{SEGMENT_PARAMS_EXAMPLE}": SCENARIO_PARAMS_MAP.get(seg_model, SCENARIO_PARAMS_MAP["B"]),
         "{VALIDATION_MODEL}": "自校验(SOTP无独立校验模型)",
         "{VALIDATION_MODEL_DESC}": "SOTP不分拆校验",
         "{SCENARIO_PARAMS_EXAMPLE}": params_example_raw,
