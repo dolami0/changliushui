@@ -1004,10 +1004,13 @@ def _fill_sotp_placeholders(prompt: str, agent2b_output: dict | None = None) -> 
     # seg_model 的完整参数以引导 LLM 在 reasoning_trace 中展开推理）
     params_example_raw = SCENARIO_PARAMS_MAP.get(seg_model, SCENARIO_PARAMS_MAP["A"])
 
+    # seg_model = 2b判定的叙事主锚分部模型 (B/K/A/G等)
+    seg_desc = MODEL_NAMES.get(seg_model, seg_model)
+    seg_family = MODEL_FAMILIES.get(seg_model, "盈利乘数")
     replacements = {
-        "{PRIMARY_MODEL}": "J",
-        "{MODEL_DESC}": "SOTP",
-        "{MODEL_FAMILY}": "分拆",
+        "{PRIMARY_MODEL}": seg_model,
+        "{MODEL_DESC}": seg_desc,
+        "{MODEL_FAMILY}": seg_family,
         "{VALIDATION_MODEL}": "自校验(SOTP无独立校验模型)",
         "{VALIDATION_MODEL_DESC}": "SOTP不分拆校验",
         "{SCENARIO_PARAMS_EXAMPLE}": params_example_raw,
