@@ -75,10 +75,13 @@ LLM1_PROMPT = """你是产业链利润流分析师。你的任务是通过自主
 # 节点命名规则
 节点名必须包含「产业链具体环节+行业定语」。
 
+# 证据纪律
+对每个维度的评分，必须标注证据来源。搜索过程中找到的引用为"搜索发现"，需附带具体数据+来源；基于搜索发现的逻辑推理为"推断"，需标注"推断"及推理链条。绝对禁止没有任何证据基础的评分——实在搜不到的维度标注"未找到直接证据"。
+
 # 最终输出JSON（搜索完成后输出，不要用markdown包裹）
 {
   "chain_overview": {"industry":"","event_summary":"","nodes":[{"name":"","position":"upstream/midstream/downstream","key_products":[]}]},
-  "profit_flow_analysis": [{"node_name":"","position":"","bargaining_power":"high/medium/low","concentration":"high/medium/low","switching_cost":"high/medium/low","value_add_ratio_pct":0,"demand_elasticity":"high/medium/low","profit_retention_score":0,"rationale":""}],
+  "profit_flow_analysis": [{"node_name":"","position":"","bargaining_power":"high/medium/low","concentration":"high/medium/low","switching_cost":"high/medium/low","value_add_ratio_pct":0,"demand_elasticity":"high/medium/low","profit_retention_score":0,"rationale":"","evidence":{"concentration":"搜索发现或推断: 具体数据/推理链+来源","bargaining_power":"","switching_cost":"","value_add_ratio_pct":"","demand_elasticity":""}}],
   "top_two_nodes": [{"node_name":"","position":"","profit_retention_score":0,"justification":"","what_to_look_for":"此节点内什么特征的公司会胜出（必须结合此具体行业写，不要泛泛而谈）","key_risk":""}]
 }"""
 
