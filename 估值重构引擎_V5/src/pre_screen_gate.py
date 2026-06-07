@@ -299,22 +299,22 @@ def _build_pre_screen_user_message(
 这是我们要分析的事件——它决定了"哪类公司"值得深估。
 
 **原始事件触发词**:
-{str(event_data.get('raw_event_text', ''))[:800]}
+{event_data.get('raw_event_text', '')}
 
 **事件产业链分析** (Agent-0 预研):
-{str(event_data.get('industry_expert_research', ''))[:1200]}
+{event_data.get('industry_expert_research', '')}
 
 **事件逆向风险**:
-{str(event_data.get('adversarial_thinking', ''))[:600]}
+{event_data.get('adversarial_thinking', '')}
 
 # ── 个股端: Agent-0 为该标的提取的投资主题 ──
 这是该个股当前的核心叙事——它决定了"这只股票因为什么涨"。
 
 **个股投资主题**:
-{str(event_data.get('investment_theme', ''))[:2000]}
+{event_data.get('investment_theme', '')}
 
 **个股事件推演 (T+30/90/180)**:
-{str(event_data.get('event_deduction', ''))[:1200]}
+{event_data.get('event_deduction', '')}
 
 # ── 核心问题 ──
 对比上面的「事件端」和「个股端」:
