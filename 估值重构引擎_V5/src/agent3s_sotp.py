@@ -287,9 +287,14 @@ SOTP_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 心算校验：拿出你的参数算一遍—— segment_revenue_yi x (1 + CAGR%)^3 x target_ps ≈ 你剧本里这个分部应有的目标市值吗？如果差太远，调整 target_ps 或 CAGR。
 | asset | segment_revenue_yi, target_pb, [segment_equity_yi] | `净资产 × PB`（无segment_equity_yi时按收入占比估算） |
 | pipeline | pos_pct, peak_sales_yi, discount_rate_pct | `峰值销售 × PoS% / (1+折现率%)` |
+| dcf | segment_revenue_yi, stage1_growth_pct, stage1_years(默认5), roic_assumed_pct, terminal_pe, segment_net_margin_pct | 阶段1: NOPAT逐年复利增长→FCFF=NOPAT×(1-RR), RR=g/ROIC封顶[0.3,0.9]. 阶段2: NOPAT_N×terminal_PE. 全部折现到现值 |
+
+**dcf 锚适用场景**: revenue锚下，若火山数据显示产品级营收/毛利率可获取、ROIC改善路径可见、增长有产能/订单约束终局可预见，优先用dcf而非revenue——dcf能建模"增长→利润→现金流"的完整路径而非仅倍数。
+**dcf vs revenue选择**: 当你有产品级毛利率可推分部利润、且行业终局清晰（3-7年后增速回落至稳态）时选dcf。纯TAM故事/无利润路径时仍用revenue。
 
 注:
 - `segment_net_margin_pct` 是分部**净利润率**（净利润/收入），不是毛利率。参考公司整体净利率、行业可比公司净利率、或火山数据中的分部利润率来估算。如果分部未单独披露净利润，用公司整体净利率 ± 该分部相对于公司平均水平的调整。
+- earnings锚的SOTP用收入×净利率估算分部利润（分部投入资本无法拆分），不需要 roic_assumed_pct。dcf锚需要roic_assumed_pct——这是阶段1的ROIC假设，用于计算再投资率(RR=g/ROIC)。（净利润/收入），不是毛利率。参考公司整体净利率、行业可比公司净利率、或火山数据中的分部利润率来估算。如果分部未单独披露净利润，用公司整体净利率 ± 该分部相对于公司平均水平的调整。
 - SOTP 用收入×净利率估算分部利润（分部投入资本无法拆分），不需要 roic_assumed_pct。
 
 # 执行清单（层层递进的推演过程）
@@ -1195,7 +1200,7 @@ def _compute_segment_value(
     """计算单个分部的目标市值。
 
     Args:
-        anchor: 该分部的估值锚 (earnings | revenue | asset | pipeline)
+        anchor: 该分部的估值锚 (earnings | revenue | asset | pipeline | dcf)
         params: LLM 输出的该分部该情景参数
         segment_revenue: 该分部的估算收入（亿元）
         core: 公司整体财务数据字典
@@ -1244,6 +1249,35 @@ def _compute_segment_value(
         if peak > 0 and pos > 0 and rate > 0:
             return round(peak * pos / (1 + rate / 100), 1)
         return None
+
+    elif anchor == "dcf":
+        g1 = params.get("stage1_growth_pct", 0) / 100
+        years = int(params.get("stage1_years", 5) or 5)
+        term_pe = params.get("terminal_pe", 0)
+        roic_k = params.get("roic_assumed_pct", 0) / 100
+        wacc_k = core.get("_wacc_decimal", 0.10)
+
+        net_margin = params.get("segment_net_margin_pct")
+        if net_margin is None:
+            net_margin = params.get("segment_margin_pct")
+        if net_margin is None:
+            net_margin = core.get("net_margin_pct", 0)
+
+        if g1 <= 0 or term_pe <= 0 or roic_k <= 0 or segment_revenue <= 0 or net_margin <= 0:
+            return None
+
+        nopat = segment_revenue * net_margin / 100
+        pv_stage1 = 0.0
+        for t in range(1, min(years, 10) + 1):
+            nopat = nopat * (1 + g1)
+            rr = g1 / roic_k if roic_k > 0 else 0.5
+            rr = max(0.3, min(0.9, rr))
+            fcff = nopat * (1 - rr)
+            pv_stage1 += fcff / (1 + wacc_k) ** t
+
+        tv = nopat * term_pe
+        pv_tv = tv / (1 + wacc_k) ** min(years, 10)
+        return round(pv_stage1 + pv_tv, 1)
 
     return None
 
@@ -1762,6 +1796,7 @@ class SOTPScenarioAsymmetry:
 
         # ── Step 2: 代码计算 SOTP 加总 ──
         cb(2, "SOTP代码加总")
+        core['_wacc_decimal'] = wacc_params.get('wacc_pct', 10) / 100
         sotp_computed = _compute_sotp_from_llm(result, core)
 
         # ── Step 3: 修正交易标注（复用 Agent-3）──
