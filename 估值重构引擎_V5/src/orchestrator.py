@@ -218,12 +218,6 @@ class Orchestrator:
                 return self._run_rnpv_pipeline(state, event_data, cb)
 
 
-            # ── SOTP 分叉 (V6.1): Agent-2a 判 sotp_triggered → 走 SOTP 分部估值 ──
-            if a2a_mn.get("sotp_triggered") and _SOTP_AVAILABLE:
-                state.pipeline_type = "sotp"
-                sotp_result = self._run_sotp_pipeline(state, event_data, cb, wacc_params)
-                return sotp_result
-
             # ── 火山联网搜索（Pro审阅Agent-0 → 查漏补缺 → 生成query → 火山返回）──
             # 使用 SOTP 验证过的格式：全部上下文→system prompt，user=触发词
             volc_data_std = {}
@@ -313,6 +307,13 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
             override_str = "(override)" if cc.get("constraint_override") else ""
             cb("agent2b", 2, 2, "done",
                f"主:{rd.get('primary_model','?')} 校验:{rd.get('validation_models',[])} {override_str}")
+
+            # ── SOTP 分叉 (V6.4): Agent-2a 判 sotp_triggered → 走 SOTP 分部估值 ──
+            # 移到2b之后：2b已跑完，sotp_primary_segment_model可用
+            if a2a_mn.get("sotp_triggered") and _SOTP_AVAILABLE:
+                state.pipeline_type = "sotp"
+                sotp_result = self._run_sotp_pipeline(state, event_data, cb, wacc_params)
+                return sotp_result
 
             # ── Agent-3: 推演裁决 ──
             cb("agent3", 1, 1, "running", "推演裁决(三情景)")
