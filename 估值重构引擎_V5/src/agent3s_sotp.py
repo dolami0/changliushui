@@ -1008,6 +1008,16 @@ def _fill_sotp_placeholders(prompt: str, agent2b_output: dict | None = None) -> 
     seg_desc = MODEL_NAMES.get(seg_model, seg_model)
     seg_family = MODEL_FAMILIES.get(seg_model, "盈利乘数")
 
+    # 构建分部参数JSON示例：从SCENARIO_PARAMS_MAP取，去掉probability/scenario_narrative
+    # （这些属于scenario_details，不属于segments）
+    _seg_raw = SCENARIO_PARAMS_MAP.get(seg_model, SCENARIO_PARAMS_MAP["B"])
+    import re as _re
+    _seg_raw = _re.sub(r'"probability":\s*0?\.?\w+,\s*', '', _seg_raw)
+    _seg_raw = _re.sub(r'"scenario_narrative":\s*"[^"]*",?\s*', '', _seg_raw)
+    _seg_raw = _re.sub(r',\s*,', ',', _seg_raw)
+    _seg_raw = _re.sub(r'{\s*,', '{', _seg_raw)
+    _seg_raw = _re.sub(r',\s*}', '}', _seg_raw)
+
     # 锚映射（模型→SOTP锚名），全部11个模型覆盖
     seg_anchor_map = {"A": "earnings", "B": "revenue", "C": "earnings",
                       "D": "asset", "E": "asset", "F": "pipeline",
@@ -1019,8 +1029,7 @@ def _fill_sotp_placeholders(prompt: str, agent2b_output: dict | None = None) -> 
         "{MODEL_DESC}": seg_desc,
         "{MODEL_FAMILY}": seg_family,
         "{SEGMENT_ANCHOR}": seg_anchor_map.get(seg_model, "earnings"),
-        # 分部参数示例：直接从SCENARIO_PARAMS_MAP取，LLM会自动去掉probability/scenario_narrative
-        "{SEGMENT_PARAMS_EXAMPLE}": SCENARIO_PARAMS_MAP.get(seg_model, SCENARIO_PARAMS_MAP["B"]),
+        "{SEGMENT_PARAMS_EXAMPLE}": _seg_raw,
         "{VALIDATION_MODEL}": "自校验(SOTP无独立校验模型)",
         "{VALIDATION_MODEL_DESC}": "SOTP不分拆校验",
         "{SCENARIO_PARAMS_EXAMPLE}": params_example_raw,
