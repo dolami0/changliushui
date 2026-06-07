@@ -608,19 +608,9 @@ asymmetry_ratio = bull_upside / |bear_upside|
   "segments": [
     {
       "segment": "叙事主锚分部",
-      "anchor": "revenue", "segment_revenue_yi": 14.2, "is_primary": true,
+      "anchor": "{SEGMENT_ANCHOR}", "segment_revenue_yi": 14.2, "is_primary": true,
       "segment_rationale": "<=60字，说明收入来源依据（火山搜索/产品结构/占比估算）",
-      "bear": {"revenue_growth_3y_cagr_pct": 10, "target_ps": 5},
-      "base": {"revenue_growth_3y_cagr_pct": 30, "target_ps": 10},
-      "bull": {"revenue_growth_3y_cagr_pct": 50, "target_ps": 15}
-    },
-    {
-      "segment": "叙事主锚分部(dcf锚示例)",
-      "anchor": "dcf", "segment_revenue_yi": 14.2, "is_primary": true,
-      "segment_rationale": "产品毛利率可获取+ROIC改善可见+终局可预见，选dcf而非revenue",
-      "bear": {"stage1_growth_pct": 10, "roic_assumed_pct": 8, "stage1_years": 5, "terminal_pe": 15, "segment_net_margin_pct": 12},
-      "base": {"stage1_growth_pct": 35, "roic_assumed_pct": 15, "stage1_years": 5, "terminal_pe": 22, "segment_net_margin_pct": 15},
-      "bull": {"stage1_growth_pct": 55, "roic_assumed_pct": 22, "stage1_years": 7, "terminal_pe": 30, "segment_net_margin_pct": 18}
+      {SEGMENT_PARAMS_EXAMPLE}
     },
     {
       "segment": "其他业务(副锚合并)",
@@ -1015,10 +1005,22 @@ def _fill_sotp_placeholders(prompt: str, agent2b_output: dict | None = None) -> 
     # seg_model = 2b判定的叙事主锚分部模型 (B/K/A/G等)
     seg_desc = MODEL_NAMES.get(seg_model, seg_model)
     seg_family = MODEL_FAMILIES.get(seg_model, "盈利乘数")
+    # 分部参数的JSON示例（与MODEL_PARAM_NAMES_MAP对齐，去掉probability/scenario_narrative/target_mcap/upside）
+    seg_params_example = {
+        "A": '"bear": {"roic_assumed_pct": 8, "rr_assumed_pct": 20, "pe_target": 15}, "base": {"roic_assumed_pct": 12, "rr_assumed_pct": 35, "pe_target": 22}, "bull": {"roic_assumed_pct": 18, "rr_assumed_pct": 50, "pe_target": 30}',
+        "B": '"bear": {"revenue_growth_3y_cagr_pct": 10, "target_ps": 5}, "base": {"revenue_growth_3y_cagr_pct": 30, "target_ps": 10}, "bull": {"revenue_growth_3y_cagr_pct": 50, "target_ps": 15}',
+        "G": '"bear": {"roic_assumed_pct": 10, "earnings_growth_pct": 15, "pe_target": 18, "peg_ratio": 1.2}, "base": {"roic_assumed_pct": 15, "earnings_growth_pct": 30, "pe_target": 30, "peg_ratio": 1.0}, "bull": {"roic_assumed_pct": 22, "earnings_growth_pct": 50, "pe_target": 45, "peg_ratio": 0.9}',
+        "K": '"bear": {"stage1_growth_pct": 10, "roic_assumed_pct": 8, "stage1_years": 5, "terminal_pe": 15, "segment_net_margin_pct": 10}, "base": {"stage1_growth_pct": 35, "roic_assumed_pct": 15, "stage1_years": 5, "terminal_pe": 22, "segment_net_margin_pct": 14}, "bull": {"stage1_growth_pct": 55, "roic_assumed_pct": 22, "stage1_years": 7, "terminal_pe": 30, "segment_net_margin_pct": 18}',
+    }
+    seg_anchor_map = {"B": "revenue", "K": "dcf", "A": "earnings", "G": "earnings",
+                      "C": "earnings", "I": "earnings", "D": "asset", "E": "resource",
+                      "H": "asset", "F": "pipeline", "J": "revenue"}
     replacements = {
         "{PRIMARY_MODEL}": seg_model,
         "{MODEL_DESC}": seg_desc,
         "{MODEL_FAMILY}": seg_family,
+        "{SEGMENT_ANCHOR}": seg_anchor_map.get(seg_model, "revenue"),
+        "{SEGMENT_PARAMS_EXAMPLE}": seg_params_example.get(seg_model, seg_params_example["B"]),
         "{VALIDATION_MODEL}": "自校验(SOTP无独立校验模型)",
         "{VALIDATION_MODEL_DESC}": "SOTP不分拆校验",
         "{SCENARIO_PARAMS_EXAMPLE}": params_example_raw,
