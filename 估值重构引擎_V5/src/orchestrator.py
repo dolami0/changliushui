@@ -197,35 +197,12 @@ class Orchestrator:
             fetcher = DataFetcher()
             wacc_params = precompute_wacc(fetcher, stock_code, state.agent1_output)
 
-            # ── Agent-2a: 叙事诊断 ──
-            cb("agent2a", 1, 2, "running", "叙事诊断(锚+计价+信号审核)")
-            t0 = time.time()
-            state.agent2a_output = self._run_agent2a(
-                state.agent1_output, event_data, wacc_params,
-            )
-            state.step_times["agent2a"] = round(time.time() - t0, 2)
-            a2a_mn = state.agent2a_output.get("market_narrative", {})
-            a2a_ep = state.agent2a_output.get("event_pricing", {})
-            a2a_pr = a2a_ep.get("event_profile", {})
-            cb("agent2a", 1, 2, "done",
-               f"锚:{a2a_mn.get('primary_anchor','?')} "
-               f"光谱:{a2a_pr.get('distribution_shape','?')} "
-               f"计价:{a2a_ep.get('pricing_assessment',{}).get('overall_priced_in','?')}")
-
-            # ── rNPV 分叉: Agent-2a 判锚为 pipeline → 走 rNPV 专用管线 ──
-            if a2a_mn.get("primary_anchor") == "pipeline" and _RNPV_AVAILABLE:
-                state.pipeline_type = "rnpv"
-                return self._run_rnpv_pipeline(state, event_data, cb)
-
-
-            # ── 火山联网搜索（Pro审阅Agent-0 → 查漏补缺 → 生成query → 火山返回）──
-            # 使用 SOTP 验证过的格式：全部上下文→system prompt，user=触发词
+            # ── 火山联网搜索 (移到2a之前: 券商分部拆分+可比估值→2a做锚判断用) ──
             volc_data_std = {}
             try:
                 from agent3s_sotp import _call_volc
                 import requests as _r
 
-                # Agent-0 完整数据（不截断）
                 a0_full = '\n\n'.join([
                     f'## 事件变量\n{event_data.get("raw_event_text", "")}',
                     f'## 事件研判\n{event_data.get("preliminary_reasoning", "")}',
@@ -237,15 +214,7 @@ class Orchestrator:
                     f'## 背景知识\n{event_data.get("knowledge_supplement", "")}',
                 ])
 
-                # 路由裁决（让Pro知道模型类型，针对性补数据）
-                a2a_anchor = a2a_mn.get("primary_anchor", "?")
-                route_info = f'主锚={a2a_anchor} 核心赌注={a2a_mn.get("core_bet", "?")[:150]}'
-
-                # system prompt = 角色+约束+全部上下文（Agent-0数据在此，不截断）
-                # user message = 仅触发词（SOTP验证过的模式，避免Pro被大文本淹没）
                 sysprompt = f'''你是估值数据补充助手。当前管线对 {stock_name}({stock_code}) 做估值推演。
-
-路由裁决: {route_info}
 
 火山引擎是一个结构化知识问答系统。给它一个清晰的查询，它会从券商研报、公司公告、行业数据中提取结构化的答案。
 
@@ -262,7 +231,6 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
 
 直接输出query，不要引号、不要解释、不要复述资料。'''
 
-                # Pro 调用来生成 query（最多 2 次尝试，匹配 SOTP 的重试策略）
                 query = ""
                 for attempt in range(2):
                     qresp = _r.post(
@@ -280,9 +248,9 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
                         if choices:
                             query = (choices[0].get('message', {}).get('content', '') or '').strip()
                             if query and len(query) >= 30 and stock_code in query:
-                                break  # 合格，跳出重试
+                                break
                             if query:
-                                print(f'  [Volc Std] query不合格 len={len(query)} 尝试{attempt+1}/2', flush=True)
+                                print(f'  [Volc] query不合格 len={len(query)} 尝试{attempt+1}/2', flush=True)
                     if attempt == 0:
                         time.sleep(2)
 
@@ -290,9 +258,30 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
                     volc_result = _call_volc(query)
                     if volc_result:
                         volc_data_std = {'volc_text': volc_result}
-                        print(f'  [Volc Std] query({len(query)}c) → volc {len(volc_result)} chars', flush=True)
+                        print(f'  [Volc] query({len(query)}c) → volc {len(volc_result)} chars', flush=True)
             except Exception as e:
-                print(f'  [Volc Std] 跳过: {e}', flush=True)
+                print(f'  [Volc] 跳过: {e}', flush=True)
+
+            # ── Agent-2a: 叙事诊断 (火山数据已注入, 用于锚判断+SOTP判定) ──
+            cb("agent2a", 1, 2, "running", "叙事诊断(锚+计价+信号审核)")
+            t0 = time.time()
+            state.agent2a_output = self._run_agent2a(
+                state.agent1_output, event_data, wacc_params,
+                volc_data=volc_data_std,
+            )
+            state.step_times["agent2a"] = round(time.time() - t0, 2)
+            a2a_mn = state.agent2a_output.get("market_narrative", {})
+            a2a_ep = state.agent2a_output.get("event_pricing", {})
+            a2a_pr = a2a_ep.get("event_profile", {})
+            cb("agent2a", 1, 2, "done",
+               f"锚:{a2a_mn.get('primary_anchor','?')} "
+               f"光谱:{a2a_pr.get('distribution_shape','?')} "
+               f"计价:{a2a_ep.get('pricing_assessment',{}).get('overall_priced_in','?')}")
+
+            # ── rNPV 分叉: Agent-2a 判锚为 pipeline → 走 rNPV 专用管线 ──
+            if a2a_mn.get("primary_anchor") == "pipeline" and _RNPV_AVAILABLE:
+                state.pipeline_type = "rnpv"
+                return self._run_rnpv_pipeline(state, event_data, cb)
 
             # ── Agent-2b: 路由判决 ──
             cb("agent2b", 2, 2, "running", "路由判决(受2a约束)")
@@ -312,7 +301,7 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
             # 移到2b之后：2b已跑完，sotp_primary_segment_model可用
             if a2a_mn.get("sotp_triggered") and _SOTP_AVAILABLE:
                 state.pipeline_type = "sotp"
-                sotp_result = self._run_sotp_pipeline(state, event_data, cb, wacc_params)
+                sotp_result = self._run_sotp_pipeline(state, event_data, cb, wacc_params, volc_data_std)
                 return sotp_result
 
             # ── Agent-3: 推演裁决 ──
@@ -373,15 +362,14 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
         return forge.run(pre_routing)
 
     def _run_agent2a(self, data_package: dict, event_data: dict,
-                     wacc_params: dict) -> dict:
+                     wacc_params: dict, volc_data: dict | None = None) -> dict:
         a2a = NarrativeDiagnosis(deepseek_key=self.api_key)
         try:
-            return a2a.run(data_package, event_data, wacc_params)
+            return a2a.run(data_package, event_data, wacc_params, volc_data=volc_data)
         except Exception as e:
             print(f"  [Orchestrator] Agent-2a 异常, fallback: {e}", flush=True)
             return a2a._fallback_diagnosis(
                 data_package.get("packages", {}).get("core", {}).get("fields", {}),
-                {}, "",
             )
 
     def _run_agent2b(self, data_package: dict, agent2a_output: dict,
@@ -484,6 +472,7 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
 
     def _run_sotp_pipeline(
         self, state: PipelineState, event_data: dict, cb, wacc_params: dict,
+        volc_data: dict | None = None,
     ) -> dict:
         """执行 SOTP 专用管线: Agent-3s（单次 LLM 调用完成分部估值+情景推演）。"""
         stock_code = state.stock_code
@@ -500,6 +489,7 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
             agent2b_output=state.agent2b_output,
             event_data=event_data,
             wacc_params=wacc_params,
+            volc_data=volc_data,  # orchestrator预取
             progress_cb=lambda step, msg: cb("agent3s", 1, 1, "running", msg),
         )
 

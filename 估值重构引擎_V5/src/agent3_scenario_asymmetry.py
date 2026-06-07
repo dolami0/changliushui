@@ -130,8 +130,8 @@ SCENARIO_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 - base = 100% - bull - bear
 
 **bear 估值硬底**: 故事证伪不等于公司归零。自行选择适用底线:
-  - 盈利企业: bear mcap ≥ TTM净利 × 保守PE(行业底部,通常10-20x)
-  - 有硬资产: bear mcap ≥ 净资产 × 保守PB(通常0.8-1.2x)
+  - 盈利企业: bear mcap ≥ TTM净利 × 行业周期底部PE（凭行业知识判断这个"底部"是多少——不同行业的底部PE天差地别）
+  - 有硬资产: bear mcap ≥ 净资产 × 保守PB（与ROE匹配,ROE越低保值PB越低）
   - 纯故事型: bear mcap ≥ 净现金
 bear 不可推翻已发生的业务事实（如已出货产品→不应给0估值）。
 
@@ -235,16 +235,35 @@ bear 不可推翻已发生的业务事实（如已出货产品→不应给0估�
 
 **参数的经济含义——赋参前必须逐参数过这关:**
 
-PE: 不是抽象数字。PE=600x 需要极高增速支撑。bear（事件失败）的 PE 必须回到行业周期底部（通常 10-30x，不是 600x）。
+**PE/PS 的锚定法则: 用可比公司的实际交易数据,不用现价的缩放。禁止缩放——这是整个估值框架最核心的约束。**
 
-PS: 锚定该行业在稳态下的合理估值水平，不锚定当前市场价。当前 PS 是市场情绪和增长预期的混合产物——可能合理，也可能严重偏离。你的工作是运用行业知识判断合理 PS 在哪。
-  - base PS: 公司在稳定增长状态下，理性市场愿意支付的 PS。取决于行业增速、公司壁垒、利润率水平。与当前 PS 的差异反映了"市场定价"和"你的判断"之间的预期差——这个差异不需要被消灭，它本身就是估值结论的一部分。
-  - bull PS: 行业终局下赢家能拿到的天花板 PS。不是泡沫峰值——是 3 年后公司做到了行业最优，理性市场会给出的估值。可以用历史上同行业最优公司在稳态下的交易区间做参照。
-  - bear PS: 增长证伪后，市场回到对普通参与者的定价。
+估值倍数的唯一合法来源是**同行业、同生命周期阶段的公司在市场中实际交易的价格**。你给一个公司赋 PE=35x，必须有"这个行业的公司在稳态下确实交易在 30-40x"作为依据。
 
-PB: 与 ROE 匹配。ROE<5% 不应 >2x PB（除非隐蔽资产重估）。
+**缩放是估值里最常见的系统性错误**——"当前 PE 153x 太高了，base 给 35x"、"当前 PS 13x，bull 给 20x"。这些数字的唯一依据是"比现值低/高"——不是任何经济现实。如果你说不出这个 PS/PE 对应的是哪家可比公司在什么时期的实际交易，你就是在缩放。
 
-EV/EBITDA: 与行业中枢的偏离幅度必须可解释。上行周期可高于中枢，下行周期应低于中枢。偏离的方向和幅度需与 3d 因果剧本一致。
+**赋 PE/PS 的三步法**:
+1. **找参照系**: 从火山数据、知识补充、行业研究中找 2-3 家与目标公司业务最接近、处于相似生命周期阶段的 A 股可比公司
+2. **读他们的数**: 这些可比公司当前交易的 PE/PS 是多少？它们历史上在稳态期（非泡沫、非危机）交易的区间是多少？
+3. **对标赋参**: 你的 bear/base/bull PE/PS 必须落在这个参照系的合理区间内——可以有溢价/折价,但必须有理由
+
+**PS 的参照框架**:
+- **不提供"通用合理区间"**。你根据自己对行业的了解来判断。
+- **锚定方法**: 凭行业知识回想同细分赛道的 A 股公司在**非泡沫非危机**的稳态期交易在什么估值水平。火山数据中的可比公司 PS/PE 是当前时点值——可能整个板块都在泡沫或恐慌中——仅供参考，不能直接照搬。
+- **Bull PS** = 行业领导者在稳态下的 PS。不是泡沫峰值。
+- **Base PS** = 中等偏上公司在稳态下的 PS。
+- **Bear PS** = commoditized 参与者或周期底部的 PS。不是危机恐慌低点——是"故事证伪后,市场在正常情况下持续交易该股票的底部区间"。
+- **可以突破参照系——但必须输出理由**: 若 PS 超出可比公司参照系范围，在 reasoning_trace 中单独写一条"PS突破论证"，说明: (1)这家公司相比参照系中最好的公司，在哪一个维度形成了降维打击级别的优势？(2)为什么这个优势在 3 年后不会被竞争或技术迭代消解？缺乏回答→禁止突破。
+
+**PE 的参照框架**:
+- 与 PS 相同: 凭行业知识判断同赛道可比公司在**非泡沫非危机**稳态期的 PE。火山数据中的当前 PE 仅供参考。
+- **Bull PE** = 行业领导者在稳态下的 PE。
+- **Bear PE** = 行业周期底部的 PE。
+- PE > 60x: 只在"盈利低谷+增速即将爆发"的特殊阶段合理——分母(E)暂时被压制。必须注明是过渡期 PE 还是稳态 PE。
+- **可以突破参照系——但必须输出理由**: 若 PE 超出可比公司参照系范围，同样需要在 reasoning_trace 中写"PE突破论证"，说明: (1)为什么这家公司的盈利质量/增速持续性/护城河深度超越了参照系中最优公司？(2)市场为什么愿意给这家公司比行业龙头更高的稳态 PE？缺乏回答→禁止突破。
+
+**PB**: 与 ROE 匹配。ROE<5% 不应 >2x PB（除非隐蔽资产重估）。
+
+**EV/EBITDA**: 与行业中枢的偏离幅度必须可解释。
 
 ROIC: 故事里的事件节点驱动 ROIC 改善幅度。从叙事推演 ROIC 路径——毛利率修复到多少？规模效应何时释放？当前财务数据可能是周期底部或转型前夜——但只有叙事提供了明确的改善机制时（如需求爆发→产能利用率跳升、产品结构升级→毛利率跃迁），才能将 forward ROIC 推高。如果叙事没有指向具体的 ROIC 改善路径（仅是"行业好转"式的模糊预期），forward ROIC 应保守。滞后财务数据里的低 ROIC 是故事起点，不是终点——但起点到终点的路必须有叙事铺就。
 
@@ -456,14 +475,15 @@ scenario_details 为字典 {"bear":{...}, "base":{...}, "bull":{...}}，每个�
 scenario_details 为字典 {"bear":{...}, "base":{...}, "bull":{...}}，每个情景含: probability, target_roe_pct, target_pb, payout_ratio_pct, target_mcap_yi, upside_pct, valuation_method, scenario_narrative(<=60字因果剧本)""",
     "H": """Model H - NAV asset revaluation:
 scenario_details 为字典 {"bear":{...}, "base":{...}, "bull":{...}}，每个情景含: probability, nav_discount_pct, target_mcap_yi, upside_pct, valuation_method, scenario_narrative(<=60字因果剧本)""",
-    "E": """Model E - EV/EBITDA+resource value:
-scenario_details 为字典 {"bear":{...}, "base":{...}, "bull":{...}}，每个情景含: probability, ebitda_growth_pct, target_ev_ebitda, resource_value_adj_pct, target_mcap_yi, upside_pct, valuation_method, scenario_narrative(<=60字因果剧本)""",
+    "E": """Model E - EV/EBITDA (资源/矿业):
+scenario_details 为字典 {"bear":{...}, "base":{...}, "bull":{...}}，每个情景含: probability, ebitda_growth_pct(**一年期**EBITDA增速%,如50表示EBITDA从5.6→8.4亿), target_ev_ebitda, target_mcap_yi(代码计算=EBITDA×(1+g%)×EV/EBITDA−净负债), upside_pct(代码计算), valuation_method, scenario_narrative(<=60字因果剧本)
+    资源溢价/折价直接反映在 target_ev_ebitda 中——战略稀缺性给更高倍数即可,无需单独参数。""",
     "F": """Model F - rNPV pipeline valuation:
 scenario_details 为字典 {"bear":{...}, "base":{...}, "bull":{...}}，每个情景含: probability, pos_pct, peak_sales_yi(峰值销售,亿), discount_rate_pct, target_mcap_yi(代码计算), upside_pct(代码计算), valuation_method, scenario_narrative(<=60字因果剧本)""",
     "J": """Model J - SOTP sum-of-parts:
 scenario_details 为字典 {"bear":{...}, "base":{...}, "bull":{...}}，每个情景含: probability, target_mcap_yi(目标市值,亿), upside_pct(目标涨幅,%), valuation_method, rationale (<=80 chars), scenario_narrative(<=60字因果剧本)""",
     "K": """Model K - Two-Stage DCF (高增长→稳态):
-scenario_details 为字典 {"bear":{...}, "base":{...}, "bull":{...}}，每个情景含: probability, stage1_growth_pct(阶段1:未来N年的NOPAT年增速,如30表示30%), stage1_years(高增长持续年数,通常3-7), roic_assumed_pct(阶段1的ROIC%), terminal_pe(阶段2:终值PE,高增长回落后的稳态倍数), target_mcap_yi(代码计算), upside_pct(代码计算), valuation_method, scenario_narrative(<=60字因果剧本)
+scenario_details 为字典 {"bear":{...}, "base":{...}, "bull":{...}}，每个情景含: probability, stage1_growth_pct(阶段1:未来N年的NOPAT年增速,如30表示30%), stage1_years(高增长持续年数,通常3-7), roic_assumed_pct(阶段1的ROIC%), terminal_pe(阶段2:终值PE,高增长回落后的稳态倍数), segment_net_margin_pct(分部净利润率,核心参数——NOPAT=分部收入×此%,不填则回退公司整体净利率可能导致严重低估), target_mcap_yi(代码计算), upside_pct(代码计算), valuation_method, scenario_narrative(<=60字因果剧本)
     公式: Σ[NOPAT_t × (1-RR_t) / (1+WACC)^t] + NOPAT_N × terminal_PE / (1+WACC)^N
     RR_t = g1/ROIC, 约束在 [0.3, 0.9] 区间。WACC由代码预计算。""",
 }
@@ -490,17 +510,17 @@ MODEL_FAMILIES = {
 # Model-specific scenario_params examples for output schema
 # Model-specific parameter self-check (only lists params relevant to THIS model)
 PARAM_SELF_CHECK_MAP = {
-    "A": "- ROIC: 不能凭空跳变——改善幅度必须有故事节点对应。改善后的ROIC不能超过同行业ROIC上四分位\n- RR: RR=g/ROIC,高增速必须高RR,否则增速虚高\n- PE: bear PE 必须回到与利润水平匹配的行业周期底部(通常10-30x,不是600x)",
+    "A": "- ROIC: 不能凭空跳变——改善幅度必须有故事节点对应。改善后的ROIC不能超过同行业ROIC上四分位\n- RR: RR=g/ROIC,高增速必须高RR,否则增速虚高\n- PE: bear PE 必须回到行业周期底部——凭行业知识判断这个'底部'是多少,不是当前PE的缩放",
     "C": "- ROIC: 拐点后ROIC改善幅度必须有时序节点对应(距拐点季度数)\n- PE: 拐点前PE可高于常规(买方为拐点付费),拐点后PE回归正常\n- 距拐点: 越远折现越大(每季度折6%),不应无限远",
     "G": "- earnings_growth_pct: 必须是盈利增速(EPS/净利润),不是收入增速\n- PE: 不能超过 PEG×earnings_growth, 否则违反PEG框架\n- PEG: 通常0.5-2.0,低于0.5=极度低估,高于2.0=增速不足以支持PE",
     "I": "- normalized_roic_pct: 正常化ROIC取5-10年行业中位数,不取当前极值\n- normalized_pe: 正常化PE取行业中位,不取当前畸高/畸低值",
-    "B": "- revenue_growth_3y_cagr_pct: 3年收入CAGR,基于TAM渗透率倒推。不能取>100%(3年翻倍=26%CAGR已属极高)\n- target_ps: **第3年(终端年)的PS**——代码公式 = TTM收入 x (1+CAGR)^3 x target_ps。它不是trailing PS(当前收入xPS)，不要用trailing PS的习惯来设这个值。心算校验: 拿出你的参数→ TTM收入 x (1+CAGR%)^3 x target_ps ≈ 你剧本预期的目标市值吗？差太远就调整target_ps或CAGR\n- tam_penetration_pct: 当前TAM渗透率。若<5%则PS可取上限,若>30%则PS应保守",
+    "B": "- revenue_growth_3y_cagr_pct: 3年收入CAGR。必须用分部对应产品的实际YoY增速校准,不能凭空取值。若Q1增速显著减速,必须反映这一趋势\n- target_ps: **第3年(终端年)的PS**。必須从火山数据/知识补充中找2-3家同细分赛道的可比A股公司,用它们在稳态期的实际交易PS作为参照。不是当前PS的情绪缩放,也不是跨行业通用区间\n- 心算校验: TTM收入 x (1+CAGR%)^3 x target_ps ≈ 你剧本预期的目标市值吗？\n- tam_penetration_pct: 当前TAM渗透率。若<5%则PS可取上限,若>30%则PS应保守",
     "D": "- target_roe_pct: ROE改善必须与PB修复联动(PB=ROE×权益乘数×PE的简化)。ROE从5%→15%可支撑PB从1x→3x\n- target_pb: PB不能远超ROE支撑的合理范围。ROE<5%不应>2x PB(除非隐蔽资产重估)",
-    "E": "- ebitda_growth_pct: EBITDA增速必须与资源价格/产量假设一致\n- target_ev_ebitda: 与行业中枢的偏离必须可解释。上行周期可高于中枢20-50%,下行周期应低于中枢\n- resource_value_adj_pct: 资源价值调整必须基于可验证的储量/品位数据",
+    "E": "- ebitda_growth_pct: **一年期**EBITDA增速(%),不是多期累计。公式=EBITDA×(1+g/100)×EV/EBITDA。g=50表示EBITDA从5.6亿→8.4亿。心算校验: 你的g%对应的EBITDA合理吗？\n- target_ev_ebitda: 资源溢价/折价直接反映在此倍数中。矿业通常6-10x,战略稀缺性可给更高,但需说明参照系",
     "H": "- nav_discount_pct: NAV折价必须反映资产流动性/变现难度。重资产折价20-40%,现金类资产折价0-10%",
     "F": "- pos_pct: 成功率必须基于临床阶段(Phase1=10%,Phase2=30%,Phase3=60%)\n- peak_sales_yi: 峰值销售必须与TAM×市场份额一致\n- discount_rate_pct: 管线折现率通常12-20%(高于WACC,反映管线风险)",
     "J": "- target_mcap_yi: 必须是SOTP加总结果(各业务线独立估值+现金+投资-负债)",
-    "K": "- stage1_growth_pct: 阶段1 NOPAT年增速,从当前出发推演。高增长阶段通常3-7年,增速>ROIC意味着需要外部融资(RR>100%会被代码封顶)\n- stage1_years: 高增长持续年数,根据行业周期和企业生命周期判断(通常3-7)\n- roic_assumed_pct: 阶段1的ROIC,可以高于当前值(改善逻辑)。不能脱离叙事凭空跳变\n- terminal_pe: 终值PE,高增长回落后进入稳态的合理倍数。与行业中枢匹配(通常15-30x)",
+    "K": "- stage1_growth_pct: 阶段1 NOPAT年增速,从当前出发推演。高增长阶段通常3-7年,增速>ROIC意味着需要外部融资(RR>100%会被代码封顶)\n- stage1_years: 高增长持续年数,根据行业周期和企业生命周期判断(通常3-7)\n- roic_assumed_pct: 阶段1的ROIC,可以高于当前值(改善逻辑)。不能脱离叙事凭空跳变\n- terminal_pe: 终值PE,高增长回落后进入稳态的合理倍数。与行业中枢匹配(通常15-30x)\n- **segment_net_margin_pct: 分部净利润率(净利润/收入),不是毛利率。NOPAT=分部收入×此%。如果不填,代码回退到公司整体净利率,可能导致该分部被严重低估。必须根据火山数据中的产品毛利率减去10-15pp折算,或参考可比公司净利率。**",
 }
 
 # Model-specific parameter names (just the names, for inline listing)
@@ -512,10 +532,10 @@ MODEL_PARAM_NAMES_MAP = {
     "B": "probability, revenue_growth_3y_cagr_pct, target_ps, tam_penetration_pct, target_mcap_yi, upside_pct, valuation_method, scenario_narrative",
     "D": "probability, target_roe_pct, target_pb, payout_ratio_pct, target_mcap_yi, upside_pct, valuation_method, scenario_narrative",
     "H": "probability, nav_discount_pct, target_mcap_yi, upside_pct, valuation_method, scenario_narrative",
-    "E": "probability, ebitda_growth_pct, target_ev_ebitda, resource_value_adj_pct, target_mcap_yi, upside_pct, valuation_method, scenario_narrative",
+    "E": "probability, ebitda_growth_pct, target_ev_ebitda, target_mcap_yi, upside_pct, valuation_method, scenario_narrative",
     "F": "probability, pos_pct, peak_sales_yi, discount_rate_pct, target_mcap_yi, upside_pct, valuation_method, scenario_narrative",
     "J": "probability, target_mcap_yi, upside_pct, valuation_method, scenario_narrative",
-    "K": "probability, stage1_growth_pct, stage1_years, roic_assumed_pct, terminal_pe, target_mcap_yi, upside_pct, valuation_method, scenario_narrative",
+    "K": "probability, stage1_growth_pct, stage1_years, roic_assumed_pct, terminal_pe, segment_net_margin_pct, target_mcap_yi, upside_pct, valuation_method, scenario_narrative",
 }
 
 SCENARIO_PARAMS_MAP = {
@@ -526,10 +546,10 @@ SCENARIO_PARAMS_MAP = {
     "B": '"bear": {"probability":0.XX, "revenue_growth_3y_cagr_pct":X, "target_ps":X, "tam_penetration_pct":X, "scenario_narrative":"..."}, "base": {...}, "bull": {...}',
     "D": '"bear": {"probability":0.XX, "target_roe_pct":X, "target_pb":X.X, "payout_ratio_pct":X, "scenario_narrative":"..."}, "base": {...}, "bull": {...}',
     "H": '"bear": {"probability":0.XX, "nav_discount_pct":X, "scenario_narrative":"..."}, "base": {...}, "bull": {...}',
-    "E": '"bear": {"probability":0.XX, "ebitda_growth_pct":X, "target_ev_ebitda":X, "resource_value_adj_pct":X, "scenario_narrative":"..."}, "base": {...}, "bull": {...}',
+    "E": '"bear": {"probability":0.XX, "ebitda_growth_pct":X, "target_ev_ebitda":X, "scenario_narrative":"..."}, "base": {...}, "bull": {...}',
     "F": '"bear": {"probability":0.XX, "pos_pct":X, "peak_sales_yi":X, "discount_rate_pct":X, "scenario_narrative":"..."}, "base": {...}, "bull": {...}',
     "J": '"bear": {"probability":0.XX, "target_mcap_yi":X, "scenario_narrative":"..."}, "base": {...}, "bull": {...}',
-    "K": '"bear": {"probability":0.XX, "stage1_growth_pct":X, "stage1_years":X, "roic_assumed_pct":X, "terminal_pe":X, "scenario_narrative":"..."}, "base": {...}, "bull": {...}',
+    "K": '"bear": {"probability":0.XX, "stage1_growth_pct":X, "stage1_years":X, "roic_assumed_pct":X, "terminal_pe":X, "segment_net_margin_pct":X, "scenario_narrative":"..."}, "base": {...}, "bull": {...}',
 }
 
 def _build_model_aware_prompt(primary_model, validation_model=""):
@@ -558,7 +578,7 @@ def _build_model_aware_prompt(primary_model, validation_model=""):
     ).replace(
         "{VALIDATION_MODEL_DESC}", v_desc
     ).replace(
-        "{SCENARIO_PARAMS_EXAMPLE}", params_example
+        "{SCENARIO_PARAMS_EXAMPLE}", "{" + params_example + "}"
     ).replace(
         "{MODEL_PARAM_SELF_CHECK}", self_check
     ).replace(
@@ -1487,14 +1507,20 @@ def _parse_json(text: str) -> dict:
                 text = text[s:e + 1]
 
     try:
-        return json.loads(text)
+        parsed = json.loads(text)
+        if not isinstance(parsed, dict):
+            raise ScenarioError("E301", f"JSON顶层非object(type={type(parsed).__name__})", {"raw": text[:500]})
+        return parsed
     except json.JSONDecodeError:
         # 最后的 fallback: 尝试简单的 { 到 } 截取
         s = text.find("{")
         e = text.rfind("}")
         if s >= 0 and e > s:
             try:
-                return json.loads(text[s:e + 1])
+                parsed2 = json.loads(text[s:e + 1])
+                if not isinstance(parsed2, dict):
+                    raise ScenarioError("E301", f"JSON非object(type={type(parsed2).__name__})", {"raw": text[:500]})
+                return parsed2
             except json.JSONDecodeError:
                 pass
         raise ScenarioError("E301", "JSON解析失败", {"raw": text[:500]})
@@ -1820,6 +1846,27 @@ def _validate_output(llm_output: dict, bs_profile: dict,
             "message": f"LLM修改了WACC: {llm_wacc}% vs 预计算{wacc_params['wacc_pct']}%",
             "action": "以代码预计算值为准",
         })
+
+    # ── E400: 终端倍数离群检测 ──
+    # PS/PE应锚定同行业可比公司的实际交易数据。代码层只拦截极端值。
+    for sn in ("base", "bull"):
+        d = details.get(sn, {})
+        # PS离群: 超过40x几乎不可能来自可比公司锚定→必然是现价缩放
+        target_ps = d.get("target_ps", 0)
+        if target_ps > 40:
+            warnings.append({
+                "code": "E400", "severity": "warning",
+                "message": f"{sn} target_PS={target_ps}x。任何行业的稳态PS都不应超过40x——检查:你的可比公司参照系是什么？它们实际交易在什么PS？",
+                "action": "降置信度一档。",
+            })
+        # PE离群: 超过80x几乎不可能是稳态PE
+        pe_target = d.get("pe_target", 0) or d.get("terminal_pe", 0)
+        if pe_target > 80:
+            warnings.append({
+                "code": "E401", "severity": "warning",
+                "message": f"{sn} PE={pe_target}x超过任何行业的稳态PE区间。>80x仅可能是盈利低谷过渡期——确认不是误用。",
+                "action": "降置信度一档",
+            })
 
     # ── BS 方向一致性 ──
     llm_bs = ms.get("bs_level", "") or llm_output.get("expectation_gap", {}).get("level", "")

@@ -49,13 +49,19 @@ def parse_json(text: str) -> dict:
                 text = text[s:e + 1]
 
     try:
-        return json.loads(text)
+        parsed = json.loads(text)
+        if not isinstance(parsed, dict):
+            return {"_parse_error": f"JSON顶层非object(type={type(parsed).__name__})", "_raw": text[:500]}
+        return parsed
     except json.JSONDecodeError:
         s = text.find("{")
         e = text.rfind("}")
         if s >= 0 and e > s:
             try:
-                return json.loads(text[s:e + 1])
+                parsed2 = json.loads(text[s:e + 1])
+                if not isinstance(parsed2, dict):
+                    return {"_parse_error": f"JSON非object(type={type(parsed2).__name__})", "_raw": text[:500]}
+                return parsed2
             except json.JSONDecodeError:
                 pass
         return {"_parse_error": "JSON解析失败", "_raw": text[:500]}

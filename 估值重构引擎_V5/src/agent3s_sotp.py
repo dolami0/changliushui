@@ -36,6 +36,7 @@ from agent3_scenario_asymmetry import (
     _augment_trace_with_fixes,
     MODEL_NAMES,
     MODEL_FAMILIES,
+    MODEL_PARAM_NAMES_MAP,
 )
 
 # Volcengine 知识问答 (用于 SOTP 分部数据后备)
@@ -289,8 +290,11 @@ SOTP_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 | pipeline | pos_pct, peak_sales_yi, discount_rate_pct | `峰值销售 × PoS% / (1+折现率%)` |
 | dcf | segment_revenue_yi, stage1_growth_pct, stage1_years(默认5), roic_assumed_pct, terminal_pe, segment_net_margin_pct | 阶段1: NOPAT逐年复利增长→FCFF=NOPAT×(1-RR), RR=g/ROIC封顶[0.3,0.9]. 阶段2: NOPAT_N×terminal_PE. 全部折现到现值 |
 
-**dcf 锚适用场景**: revenue锚下，若火山数据显示产品级营收/毛利率可获取、ROIC改善路径可见、增长有产能/订单约束终局可预见，优先用dcf而非revenue——dcf能建模"增长→利润→现金流"的完整路径而非仅倍数。
-**dcf vs revenue选择**: 当你有产品级毛利率可推分部利润、且行业终局清晰（3-7年后增速回落至稳态）时选dcf。纯TAM故事/无利润路径时仍用revenue。
+**dcf 锚适用场景**: **仅限earnings锚分部使用**。适用于分部当前盈利(NOPAT>0.5亿且NOPAT/市值>0.8%)、高增长(>25%)、行业终局清晰(3-7年后增速回落+稳态PE可判断)的标的。dcf能建模"增长→利润→现金流"的完整路径。**revenue锚分部应使用revenue锚(PS+TAM)——dcf从NOPAT出发,revenue锚意味着利润路径不清晰,两者范式不可混淆。**
+**dcf vs revenue vs earnings选择**:
+- revenue锚分部 → 用revenue锚(PS公式),不要越界用dcf
+- earnings锚分部 + NOPAT充足 + 高增长 + 终局可见 → 用dcf(两阶段DCF)
+- earnings锚分部 + NOPAT不足或增速已放缓 → 用earnings锚(PE公式)
 
 注:
 - `segment_net_margin_pct` 是分部**净利润率**（净利润/收入），不是毛利率。参考公司整体净利率、行业可比公司净利率、或火山数据中的分部利润率来估算。如果分部未单独披露净利润，用公司整体净利率 ± 该分部相对于公司平均水平的调整。
@@ -353,8 +357,8 @@ SOTP_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 中间形状按线性插值。若证伪需要N个独立环节同时崩塌→联合概率自然更低。
 
 **bear 估值硬底**: 故事证伪不等于公司归零。自行选择适用底线:
-  - 盈利企业: bear mcap ≥ TTM净利 × 保守PE(行业底部,通常10-20x)
-  - 有硬资产: bear mcap ≥ 净资产 × 保守PB(通常0.8-1.2x)
+  - 盈利企业: bear mcap ≥ TTM净利 × 行业周期底部PE（凭行业知识判断——军工和化工的底部PE天差地别）
+  - 有硬资产: bear mcap ≥ 净资产 × 保守PB（与ROE匹配,ROE越低保值PB越低）
   - 纯故事型: bear mcap ≥ 净现金
 bear 不可推翻已发生的业务事实（如已出货产品→不应给0估值）。
 
@@ -461,16 +465,35 @@ bear 不可推翻已发生的业务事实（如已出货产品→不应给0估�
 
 **参数的经济含义——赋参前必须逐参数过这关:**
 
-PE: 不是抽象数字。PE=600x 需要极高增速支撑。bear（事件失败）的 PE 必须回到行业周期底部（通常 10-30x，不是 600x）。
+**PE/PS 的锚定法则: 用可比公司的实际交易数据,不用现价的缩放。禁止缩放——这是整个估值框架最核心的约束。**
 
-PS: 锚定该行业在稳态下的合理估值水平，不锚定当前市场价。当前 PS 是市场情绪和增长预期的混合产物——可能合理，也可能严重偏离。你的工作是运用行业知识判断合理 PS 在哪。
-  - base PS: 公司在稳定增长状态下，理性市场愿意支付的 PS。取决于行业增速、公司壁垒、利润率水平。与当前 PS 的差异反映了"市场定价"和"你的判断"之间的预期差——这个差异不需要被消灭，它本身就是估值结论的一部分。
-  - bull PS: 行业终局下赢家能拿到的天花板 PS。不是泡沫峰值——是 3 年后公司做到了行业最优，理性市场会给出的估值。可以用历史上同行业最优公司在稳态下的交易区间做参照。
-  - bear PS: 增长证伪后，市场回到对普通参与者的定价。
+估值倍数的唯一合法来源是**同行业、同生命周期阶段的公司在市场中实际交易的价格**。你给一个公司赋 PE=35x，必须有"这个行业的公司在稳态下确实交易在 30-40x"作为依据。
 
-PB: 与 ROE 匹配。ROE<5% 不应 >2x PB（除非隐蔽资产重估）。
+**缩放是估值里最常见的系统性错误**——"当前 PE 153x 太高了，base 给 35x"、"当前 PS 13x，bull 给 20x"。这些数字看起来合理，但它们的唯一依据是"比现值低/高"——不是任何经济现实。如果你说不出这个 PS/PE 对应的是哪家可比公司在什么时期的实际交易，你就是在缩放。
 
-EV/EBITDA: 与行业中枢的偏离幅度必须可解释。上行周期可高于中枢，下行周期应低于中枢。偏离的方向和幅度需与 3d 因果剧本一致。
+**赋 PE/PS 的三步法**:
+1. **找参照系**: 从火山数据、知识补充、行业研究中找 2-3 家与目标公司业务最接近、处于相似生命周期阶段的 A 股可比公司
+2. **读他们的数**: 这些可比公司当前交易的 PE/PS 是多少？它们历史上在稳态期（非泡沫、非危机）交易的区间是多少？
+3. **对标赋参**: 你的 bear/base/bull PE/PS 必须落在这个参照系的合理区间内——可以有溢价/折价,但必须有理由（壁垒更强、增速更高、赛道更优等）
+
+**PS 的参照框架**:
+- **不提供"通用合理区间"**。你根据自己对行业的了解来判断。
+- **锚定方法**: 凭行业知识回想同细分赛道的 A 股公司在**非泡沫非危机**的稳态期交易在什么估值水平。火山数据中的可比公司 PS/PE 是当前时点值——可能整个板块都在泡沫或恐慌中——仅供参考，不能直接照搬。
+- **Bull PS** = 行业领导者在稳态下的 PS。不是泡沫峰值。
+- **Base PS** = 中等偏上公司在稳态下的 PS。
+- **Bear PS** = commoditized 参与者或周期底部的 PS。不是危机恐慌低点——是"故事证伪后,市场在正常情况下持续交易该股票的底部区间"。恐慌低点可能只有几周,而 bear 情景是持续状态。
+- **可以突破参照系——但必须输出理由**: 如果你的 PS 超出了上述可比公司参照系的范围（如行业龙头稳态 PS 8x 你给 15x），在 reasoning_trace 中单独写一条"PS突破论证"，说明: (1)这家公司相比参照系中最好的公司，在哪一个维度上形成了降维打击级别的优势（技术独占/客户锁定/成本结构代差/赛道定义权）？(2)为什么这个优势在 3 年后不会被竞争或技术迭代消解？缺乏这两个问题的回答→禁止突破。
+
+**PE 的参照框架**:
+- PE 的锚定逻辑与 PS 相同: 凭行业知识判断同赛道可比公司在**非泡沫非危机**稳态期的 PE。火山数据仅供参考。
+- **Bull PE** = 行业领导者在稳态下的 PE。
+- **Bear PE** = 行业周期底部的 PE。故事证伪不等于公司归零。
+- PE > 60x: 只在"盈利低谷+增速即将爆发"的特殊阶段合理——分母(E)暂时被压制。必须注明是过渡期 PE 还是稳态 PE。
+- **可以突破参照系——但必须输出理由**: 同上,在 reasoning_trace 中写"PE突破论证"。
+
+**PB**: 与 ROE 匹配。ROE<5% 不应 >2x PB（除非隐蔽资产重估）。
+
+**EV/EBITDA**: 与行业中枢的偏离幅度必须可解释。上行周期可高于中枢，下行周期应低于中枢。
 
 ROIC: 故事里的事件节点驱动 ROIC 改善幅度。从叙事推演 ROIC 路径——毛利率修复到多少？规模效应何时释放？当前财务数据可能是周期底部（ROIC 被产能利用率压制）或转型前夜（旧业务低效、新业务尚未起量）。如果你的叙事指向需求爆发或效率跃迁，forward ROIC 必须反映事件后的改善幅度，不能锚定当前低谷值。滞后财务数据里的低 ROIC 是故事起点，不是终点。
 
@@ -508,9 +531,9 @@ CAGR/增速: 高增速必须匹配高再投资率（RR=g/ROIC）。增速和 RR 
 **其他业务** (is_primary=false): 事件催化剂只驱动叙事主线，不影响传统业务。因此其他业务不需要推演三情景——只需要判断它的合理估值是多少（一组 base 参数），bear/base/bull 三个情景都用这同一个估值。具体来说：
   - 如果火山数据或产品结构数据中有该分部的实际净利率 -> 引用为 segment_net_margin_pct
   - 如果没有 -> 用公司整体净利率 ± 该分部调整（毛利率高于公司平均→净利率也应高于平均），在 segment_rationale 中标注[估算]
-  - PE 取行业合理水平（参考 knowledge_supplement 中的行业中枢，通常 12-25x），PS 取合理值（与增速匹配，通常 1.0-3.0x），PB 取合理值（0.8-2.0x）
+  - PE/PS/PB 的锚定法则与主锚分部相同: 凭行业知识判断同赛道可比公司在**非泡沫非危机**稳态期的估值水平。火山数据中的当前倍数仅供参考。不提供"通用合理区间"——军工电子和通用机械的估值中枢天然不同,你自行判断。
   - 这不是精确估值——其他业务的作用是提供一个稳定的基准锚，防止叙事锚把整家公司高估或低估
-  - **关键**: 不要机械取最低值。取"这个业务如果单独上市，市场会给什么估值"。如果行业中枢 PE=20x，不要因为"保守"就给 10x
+  - **关键**: 取"这个业务如果单独上市，市场在稳态下会给什么估值"，不取当前可能泡沫化的市场价
 
 ### 禁止事项
 - 禁止三个情景共用同一套假设数字微调
@@ -842,8 +865,10 @@ def _build_product_mix_section(data_package: dict) -> str:
     if not mix:
         return "（无分产品数据）\n\n注: 分部毛利率请基于行业知识和公司整体毛利率估算，并在 segment_rationale 中标注[估算]。"
 
-    lines = ["| 产品 | 收入(亿) | 占比 | 毛利率 | 同比 |",
-             "|------|---------|------|--------|------|"]
+    lines = [
+        "| 产品 | 收入(亿) | 占比 | 毛利率 | 同比 | → 映射到哪个SOTP分部 |",
+        "|------|---------|------|--------|------|------------------------|",
+    ]
     for p in mix:
         rev = p.get("revenue", 0)
         share = p.get("revenue_share_pct", 0)
@@ -863,6 +888,8 @@ def _build_product_mix_section(data_package: dict) -> str:
         notes.append("含H2半年轨迹数据（年报-半年报推算下半年趋势）")
     if notes:
         lines.append(f"\n数据质量: {'; '.join(notes)}")
+
+    lines.append("\n> **分部映射要求**: 在reasoning_trace清单项3e中,逐产品说明你把它归入哪个SOTP分部、为什么。产品增速是赋CAGR的硬锚——新业务分部CAGR必须与该分部内产品的实际YoY增速一致,不得凭空取值。")
 
     # 毛利率结构分析
     margin = products.get("margin_structure", {}) or {}
@@ -912,11 +939,16 @@ def _build_recent_growth_row(core: dict) -> str:
     trend = et.get('trend_direction', '')
     trend_str = f' | {trend}' if trend else ''
     hint = (
-        '**最近季度营收同比增速**: ' +
+        '**最近季度营收同比增速(公司整体)**: ' +
         ' | '.join(parts) + trend_str + '\n'
-        '> 赋CAGR时必须对照以上实际增速。'
-        '若base CAGR与最近季度实际增速严重背离，'
-        '需在reasoning_trace中解释原因。'
+        '> **SOTP分部增速对照**: 上述增速是公司整体——老业务基数大会拖低整体增速。'
+        '赋CAGR前必须做两步:\n'
+        '> 1. 将上方"产品结构"中的各产品线映射到你的SOTP分部——哪些产品属于叙事主锚分部,哪些属于副锚\n'
+        '> 2. 用各产品的YoY增速校准对应分部的CAGR——老业务取老业务的实际增速,新业务取新业务的实际增速\n'
+        '> **关键**: 若产品表中新业务产品增速远高于公司整体(如44% vs 12%),'
+        '新业务分部CAGR应接近产品增速而非公司整体增速。'
+        '反之,若新业务产品Q1增速明显减速(如从40%降到12%),'
+        'CAGR必须反映这一趋势——不能假设减速会自动逆转。'
     )
     return hint
 
@@ -998,6 +1030,7 @@ def _fill_sotp_placeholders(prompt: str, agent2b_output: dict | None = None) -> 
         seg_model = "B"
 
     # 注入模型专属参数模板（复用 Agent-3 的详细定义）
+    # 注意: K/dcf的NOPAT量化校验在 SOTPScenarioAsymmetry.run() 中完成（有data_package可取值）
     schema = MODEL_PARAM_TEMPLATES.get(seg_model, MODEL_PARAM_TEMPLATES["B"])
     self_check = PARAM_SELF_CHECK_MAP.get(seg_model, PARAM_SELF_CHECK_MAP.get("B", ""))
     # 模型专属参数示例（SOTP 的 scenario_details 只存 prob+narrative，但示例要展示
@@ -1032,13 +1065,16 @@ def _fill_sotp_placeholders(prompt: str, agent2b_output: dict | None = None) -> 
         "{SEGMENT_PARAMS_EXAMPLE}": _seg_raw,
         "{VALIDATION_MODEL}": "自校验(SOTP无独立校验模型)",
         "{VALIDATION_MODEL_DESC}": "SOTP不分拆校验",
-        "{SCENARIO_PARAMS_EXAMPLE}": params_example_raw,
+        "{SCENARIO_PARAMS_EXAMPLE}": "{" + params_example_raw + "}",
         "{MODEL_PARAM_SCHEMA}": schema,
-        "{MODEL_PARAM_NAMES}": f"叙事主锚: {seg_model}模型参数; 其他业务: pe_target/segment_margin_pct(earnings)或target_ps(revenue)或target_pb(asset)",
+        "{MODEL_PARAM_NAMES}": (
+            f"叙事主锚({seg_model}模型): {MODEL_PARAM_NAMES_MAP.get(seg_model, 'probability, pe_target, ...')}\n"
+            f"其他业务(base only): pe_target+segment_net_margin_pct(earnings)或target_ps(revenue)或target_pb(asset)"
+        ),
         "{MODEL_PARAM_SELF_CHECK}": (
             f"- 叙事分部({seg_model}模型):\n{self_check}\n"
             "- 叙事分部参数单调递增(bear<base<bull)\n"
-            "- 其他业务参数取行业合理水平(非周期底部)\n"
+            "- 其他业务: PE/PS/PB与主锚分部相同的锚定法则——凭行业知识找可比公司稳态估值,不取当前市场价\n"
             "- Bull/base<=3x"
         ),
     }
@@ -1760,6 +1796,7 @@ class SOTPScenarioAsymmetry:
         agent2b_output: dict | None = None,
         event_data: dict | None = None,
         wacc_params: dict | None = None,
+        volc_data: dict | None = None,
         progress_cb=None,
     ) -> dict:
         """执行 SOTP 分部估值。
@@ -1779,14 +1816,35 @@ class SOTPScenarioAsymmetry:
         wacc_params = wacc_params or {}
         core = _get_core_fields(data_package)
 
-        # ── Step 0: 火山联网搜索分部数据（SOTP 路由即触发）──
-        cb(0.5, "火山搜索分部数据")
-        volc_data = _search_segment_data(
-            core.get("stock_name", ""), data_package.get("stock_code", ""),
-            data_package, agent2a_output,
-        )
-        if not volc_data:
-            print(f"  [SOTP] 火山搜索无结果，继续使用财报数据", flush=True)
+        # ── Step 0: 火山数据（orchestrator预取, 免重复搜索）──
+        if volc_data and volc_data.get("volc_text"):
+            print(f"  [SOTP] 使用预取火山数据 ({len(volc_data.get('volc_text',''))} chars)", flush=True)
+        else:
+            cb(0.5, "火山搜索分部数据")
+            volc_data = _search_segment_data(
+                core.get("stock_name", ""), data_package.get("stock_code", ""),
+                data_package, agent2a_output,
+            )
+            if not volc_data:
+                print(f"  [SOTP] 火山搜索无结果，继续使用财报数据", flush=True)
+
+        # ── K/dcf 护栏: SOTP内与标准管线同一规则 ──
+        # dcf从NOPAT出发,要求NOPAT>0.5亿且NOPAT/市值>0.8%
+        nopat_yi = core.get("nopat_yi", 0) or (core.get("net_profit_ttm_yi", 0) * 0.8)
+        mcap_yi = core.get("market_cap_yi", 100)
+        nopat_ratio = nopat_yi / max(mcap_yi, 1)
+        anchor_2a = (agent2a_output or {}).get("market_narrative", {}).get("primary_anchor", "earnings")
+        if agent2b_output:
+            rd_check = agent2b_output.get("routing_decision", {})
+            if isinstance(rd_check, dict):
+                sotp_model = rd_check.get("sotp_primary_segment_model", "B")
+                if sotp_model == "K" and (nopat_yi < 0.5 or nopat_ratio < 0.008):
+                    # K不适用: NOPAT起点过低,DCF退化为终值PE赌注
+                    fallback = "B" if anchor_2a == "revenue" else "A"
+                    print(f"  [SOTP] K blocked: NOPAT={nopat_yi:.2f}yi NOPAT/mcap={nopat_ratio*100:.2f}% < 0.8% → override to {fallback}", flush=True)
+                    rd_check["sotp_primary_segment_model"] = fallback
+                    rd_check["_sotp_k_blocked"] = True
+                    agent2b_output["routing_decision"] = rd_check
 
         # ── Step 1: LLM 推演分部参数 ──
         cb(1, "SOTP LLM分部推演")
@@ -1795,7 +1853,6 @@ class SOTPScenarioAsymmetry:
             volc_data=volc_data,
         )
 
-        # 替换 prompt 中的 Agent-3 占位符（SOTP 不需要模型选择，直接填 J/SOTP）
         prompt = _fill_sotp_placeholders(SOTP_SYSTEM_PROMPT, agent2b_output)
         try:
             result = call_deepseek(
@@ -1806,6 +1863,10 @@ class SOTPScenarioAsymmetry:
         except Exception as e:
             raise ScenarioError("E303", f"SOTP LLM调用失败: {e}")
 
+        # 防御: call_deepseek 通过 parse_json 可能返回非 dict（str/list/None）
+        if not isinstance(result, dict):
+            print(f"  [SOTP] LLM返回非dict type={type(result).__name__}", flush=True)
+            result = {}  # 触发下方 _parse_error 逻辑
         if "_parse_error" in result:
             # 重试一次
             try:
@@ -1814,13 +1875,16 @@ class SOTPScenarioAsymmetry:
                     temperature=0.1,
                     api_key=self.api_key,
                 )
+                if not isinstance(result, dict):
+                    result = {}
             except Exception:
                 pass
 
-        if "_parse_error" in result:
+        if not isinstance(result, dict) or "_parse_error" in result:
+            raw_info = str(result.get("_parse_error", ""))[:300] if isinstance(result, dict) else str(result)[:300]
             raise ScenarioError(
                 "E301", "SOTP LLM JSON解析失败",
-                {"raw": str(result.get("_parse_error", ""))[:300]},
+                {"raw": raw_info},
             )
 
         # ── Step 2: 代码计算 SOTP 加总 ──
@@ -1830,8 +1894,10 @@ class SOTPScenarioAsymmetry:
             sotp_computed = _compute_sotp_from_llm(result, core)
         except Exception as e:
             print(f"  [SOTP] _compute_sotp_from_llm崩溃: {e}", flush=True)
-            print(f"  [SOTP] result keys: {list(result.keys())[:20]}", flush=True)
-            print(f"  [SOTP] result seg字段: {result.get('segments', 'MISSING')}", flush=True)
+            print(f"  [SOTP] result type={type(result).__name__}", flush=True)
+            if isinstance(result, dict):
+                print(f"  [SOTP] result keys: {list(result.keys())[:20]}", flush=True)
+                print(f"  [SOTP] result seg字段: {result.get('segments', 'MISSING')}", flush=True)
             raise
 
         # ── Step 3: 修正交易标注（复用 Agent-3）──

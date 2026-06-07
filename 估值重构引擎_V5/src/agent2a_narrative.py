@@ -139,18 +139,50 @@ NARRATIVE_DIAGNOSIS_PROMPT = """你是估值叙事诊断师。你的职责不是
 - 如果研报语料在讲"利润/ROIC/拐点"故事，且公司确实盈利，锚是 earnings
 - 叙事方向比财务指标更权威——市场交易的是故事，不是财务报表
 
-## 1c. 指标验证 — 估值数据支持还是反驳？
+## 1c. 数字解读 — 用叙事去理解数字，不是用数字去验证叙事
 
-推断出锚后，用估值倍数数据做**验证**而非**判决**:
+**这是锚判断最关键的一步。** 1b 给了你一个假设的锚。现在停下来——不要急着"验证"它。先做一件事：
 
-- 推断锚对应的倍数是否确实在驱动市值？（如 revenue 锚→PS 是否处于历史极端位置？earnings 锚→PE 是否在驱动？）
-- 不一致时：分析原因。是"叙事领先指标"（新业务刚起步，收入爆发但利润未跟上）？还是"判断可能有误"？
-- 如果是叙事领先，在 anchor_conflict 中说明"估值指标滞后于叙事，这是合理的"
-- 如果是判断可能有误，在 anchor_conflict 中标注矛盾并说明哪种可能性更大
+**把用户消息中的"定量定价工具"表格读三遍。**
 
-**注意**: 指标验证是**最后一步**，不是第一步。不要因为 PE 低就判为利润锚——先看叙事在讲什么。
+那个表格告诉你：在当前市值下，每种锚各自隐含了什么预期。这是市场在用真金白银投票——比你从文本中猜的任何叙事都更诚实。
 
-## 1d. 产业语境 — 全行业在讲同样的故事吗？
+现在，把 1a 的叙事和这张表格放在一起解读：
+
+**解读框架——对每个锚问三个问题:**
+
+| 问题 | 例子(中国稀土) |
+|------|------|
+| 1. 这个锚下，市场隐含的预期是多少？ | earnings→PE 241x 隐含永续增速?% / revenue→PS 17.6x 隐含3y CAGR?% / asset→PB 11.7x 隐含ROE需改善到?% |
+| 2. 结合叙事，这个预期意味着什么？ | "稀土价格十年底部反转"→PE 241x 不是因为市场认为利润会永远高增长，而是因为**当前利润处于周期底部**——PE的分母被暂时压低了 |
+| 3. 这个锚的隐含预期是否合理？ | EV/EBITDA 102x → 意味着市场在定价"稀土价格从底部翻几倍"——这正是"底部反转"叙事的量化表达。所以 EV/EBITDA 102x 不是"太贵了"，而是"默认锚在周期底部失效了" |
+
+**常见误判——必须避免:**
+
+- 看到 PE 241x → "利润锚！市场在定价高增长！" → **错**。周期底部的 PE 虚高是因为分母被压制，不是因为有高增长。市场在定价的是"利润从底部恢复"，不是"利润永续高增长"。
+- 看到 PS 17.6x 处于历史高位 → "收入锚！市场不看利润！" → **错**。PS 高同样是因为周期底部收入也被压制了（稀土价格低→收入低）。不等于市场在用 PS 估值。
+- 看到 PB 11.7x → "资产重估！" → **可能对**。当利润/收入/EBITDA 全部被周期压制时，净资产反而最稳定。PB 极端高位时，市场在说"这家公司的资产账面值远远低于它的真实价值（储量/矿权/战略价值）"。
+
+**核心思维转换:**
+
+```
+旧的 1c: 推断锚 → 找数据支持 → 验证通过/失败
+新的 1c: 叙事 + 全锚定价工具 → 理解数字的含义 → 判断哪个锚能承载这个故事
+```
+
+**输出**: 在 reasoning_trace 中写一条"1c-数字解读"，包含：(1) 定价工具表格中哪个锚的隐含预期最极端？(2) 结合叙事，这个极端值意味着什么？(3) 这是否改变了你在 1b 的锚判断？
+
+## 1d. 周期位置 — 默认锚是否失效？
+
+基于 1c 的解读，判断行业默认锚是否被周期位置扭曲:
+
+- **周期底部**: EBITDA/利润/收入全部被压制 → 所有"流量指标"的倍数都虚高。转向**存量指标**——PB、NAV、储量价值。
+- **周期顶部**: 利润/EBITDA 被放大 → PE/EV低是陷阱。用周期中值而非当前值。
+- **正常位置**: 默认锚有效，叙事在锚内调节参数。
+
+**判定**: 在 reasoning_trace 中说明——1c 的定价工具解读是否表明默认锚处于周期极端？如果转向存量锚，最终 primary_anchor 是什么？
+
+## 1e. 产业语境 — 全行业在讲同样的故事吗？
 
 **检查"行业研究"和"知识补充"文本中的产业语境:**
 
@@ -158,18 +190,18 @@ NARRATIVE_DIAGNOSIS_PROMPT = """你是估值叙事诊断师。你的职责不是
 - 行业处于生命周期的哪个阶段？导入期看收入，成长期看利润，成熟期看资产
 - 如果全行业的叙事一致性很高，个体公司不能例外
 
-## 1e. 锚判断输出
+## 1f. 锚判断输出
 
-完成 1a-1d 后填写 market_narrative:
+完成 1a-1e 后填写 market_narrative:
 
 - `core_bet`: 1a 得出的核心赌注一句话
 - `narrative_lifecycle`: 1a 判定的生命周期阶段
-- `narrative_summary`: 完整的叙事总结，包含 1a 的叙事理解 + 1d 的产业语境，≥100字
-- `primary_anchor`: 1b 推断的锚
+- `narrative_summary`: 完整的叙事总结，包含 1a 的叙事理解 + 1e 的产业语境，≥100字
+- `primary_anchor`: 1b 推断的锚（受 1d 行业硬约束修正——如果公司属于 1d 表中的行业，忽略叙事推断，直接取固定锚）
 - `primary_anchor_evidence`: 双向引用——(1)1b 的叙事线索 (2)1c 的指标验证数据
 - `anchor_conflict`: 1c 中发现的矛盾（如有），无矛盾留空
 
-## 1f. 识别副锚（多业务/转型公司）——必须执行，不可跳过
+## 1g. 识别副锚（多业务/转型公司）——必须执行，不可跳过
 
 **核心规则**: 当 primary_anchor=revenue 时，绝大多数情况下公司都有不跟随叙事定价的存量业务。这些存量业务就是副锚。
 
@@ -195,25 +227,44 @@ NARRATIVE_DIAGNOSIS_PROMPT = """你是估值叙事诊断师。你的职责不是
 - 叙事在讲 AI/半导体/机器人新业务(revenue 锚) + 公司主要收入来自传统制造业 → 副锚=传统业务(earnings 锚)
 - 叙事在讲创新药管线(pipeline 锚) + 公司有稳定仿制药收入 → 副锚=仿制药(earnings 锚)
 
-## 1g. SOTP 触发判定
+## 1h. SOTP 触发判定
 
-**SOTP 解决的是"范式不同"问题，不是"参数不同"问题。** 如果两个业务都用 PE 估值——即使一个 PE=10x 另一个 PE=40x——也不需要 SOTP，只需要正确赋参数。SOTP 仅在业务之间需要完全不同的估值范式时才触发（如一个看 PS、一个看 PE）。
+**SOTP 解决的核心问题: 老业务基数污染。** 老业务收入基数大 + 新业务基数小但增速高 → LLM 把高增速套到总营收上 → 系统性格高估。SOTP 把两个分部拆开各自估值,防止基数污染。
 
-**触发条件——满足以下两条即设置 sotp_triggered=true:**
+如果两个业务都用同一锚（如都看 PE,只是倍数不同）——不需要 SOTP,赋不同参数即可。
+
+**触发条件——四个维度同时满足才设 sotp_triggered=true:**
 
 1. **估值范式冲突**: primary_anchor 和至少一个 secondary_anchor 分属**不同锚类型**。
    - 算冲突: earnings vs revenue, earnings vs pipeline, revenue vs asset 等
-   - **不算冲突**: 两个业务都是 earnings（只是 PE 倍数不同），两个业务都是 revenue（只是 PS 倍数不同）
+   - **不算冲突**: 两个都是 earnings,两个都是 revenue
 
-2. **副锚收入占比 ≥ 20%**: 非叙事驱动分部的收入占比。叙事分部没有下限——即使仅占 5%，只要副锚≥20%，不拆分就会用新业务锚给旧业务定价，造成系统性偏差。
+2. **老业务收入占比 ≥ 20%**: 老业务才是污染源——它基数大、增速低、利润率不同,混进总营收会稀释新业务的增速信号。看的是老业务占比,不是"副锚"占比。
+   - 例: 老业务占25% → 触发条件满足。老业务用 PE 15x 微利 vs 新业务用 PS 10x 高增长 → 混在一起 PS 会被老业务低增速拖低
+   - 反例: 新业务占0.2%、老业务99.8% → 不是"老污染新",老业务就是公司本身。整体用老业务锚 + 调高增速反映新业务贡献 + anchor_shift_potential 标注远期范式切换
 
-**不触发 SOTP 的仅有两种情况**: (1)公司为单一业务 pure-play，无第二业务线；(2)两个业务锚类型相同（都是 earnings 或都是 revenue，只是 PE/PS 倍数不同）。
+3. **分部经济学实质性分化** — 满足任一条:
+   - a) 毛利率差距 > 20pp（如 38% vs 3%）
+   - b) 增速差距 > 30pp（如 40% vs 5%）
+   - c) 净利率差距 > 10pp（如 12% vs 1%）
+   — 经济学不分化 → 混在一起不会系统性扭曲,正确赋参数即可
 
-**🚨 数据与 SOTP 触发完全无关。** 产品面板中是否列示了芯片电感、是否能拆分收入占比——这些都不影响 SOTP 判定。SOTP 只看锚类型是否冲突、副锚是否足够大。数据方面的问题会由后续管线通过火山搜索自动解决，这不是 Agent-2a 需要担心的。禁止在 sotp_rationale 中以"数据不足""产品未单列""缺乏分部数据"等理由为 sotp_triggered=false 辩护。
+4. **新业务有可独立估值的锚点** — 满足任一条:
+   - a) 已产生收入
+   - b) 有订单/产能/合同等可量化锚点
+   - c) 有可比公司估值参照
+   — 不满足 → 不触发 SOTP。用 anchor_shift_potential 标注"远期范式切换潜力"。没锚点的 SOTP 是猜两次而非算两次
 
-**副锚收入占比 < 20% 时**: 不触发 SOTP，走标准管线。单一锚 + anchor_shift_potential 已足够处理。
+**不触发 SOTP 的情况**:
+- 锚类型相同 → 赋不同参数即可
+- 老业务 < 20% → 污染源不够大
+- 分部经济学接近 → 混在一起不会系统性扭曲
+- 新业务无独立锚点 → anchor_shift_potential 处理
+- 老业务占绝对主导(>80%)且新业务体量微小 → 整体计价,调高增速反映新业务贡献
 
-## 1h. 范式切换潜力判断
+**注意**: rNPV/biotech 管线有独立的 pipeline 锚和 Agent-1r 数据——它们在 Agent-0 预路由阶段就被分流到 rNPV 管线,不会经过此处的 SOTP 判定。
+
+## 1i. 范式切换潜力判断
 
 SOTP 解决的是"同一时刻不同业务锚不同"的问题。范式切换解决的是"同一公司不同时刻锚变化"的问题。
 
@@ -341,7 +392,7 @@ SOTP 解决的是"同一时刻不同业务锚不同"的问题。范式切换解�
   - asset → asset_multiples (D/H)
   - resource → resource (E)
   - pipeline → pipeline (F)
-  - **SOTP 覆盖规则**: 若 sotp_triggered=true，model_family_constraint 必须 = "sotp"，无论 primary_anchor 是什么。因为当新旧业务锚不同、收入占比显著时，必须按 SOTP 分部估值，不能用单一锚。
+  - **SOTP 覆盖规则**: 若 sotp_triggered=true，model_family_constraint 必须 = "sotp"。分部估值是唯一能处理锚冲突的方案。
 
 - `event_nature`: 把事件分类透传给 2b（影响校验模型选择策略）
 - `pricing_bias`: 综合计价判断的输出
@@ -359,10 +410,27 @@ SOTP 解决的是"同一时刻不同业务锚不同"的问题。范式切换解�
 # 用户消息构建
 # ═══════════════════════════════════════
 
+def _build_volc_section(volc_data: dict | None) -> str:
+    """构建火山搜索段落——券商视角的分部数据, 用于2a锚判断+SOTP判定。"""
+    if not volc_data:
+        return ""
+    text = volc_data.get("volc_text", "")
+    if not text:
+        return ""
+    return f"""
+## 火山联网搜索 — 券商视角（分部收入拆分+可比估值+产品级数据）
+
+{text}
+
+> 以上数据来自券商研报和公司公告。在判断锚类型和SOTP触发时，优先参照券商对业务线的拆分方式、可比公司使用的估值锚——这比产品表的粗粒度分类更接近市场定价视角。
+"""
+
+
 def _build_narrative_user_message(
     data_package: dict,
     event_data: dict,
-    pricing_result: dict,
+    pricing_all: dict,
+    volc_data: dict | None = None,
 ) -> str:
     """构建 Agent-2a 的用户消息：注入全量数据。"""
     core = data_package.get("packages", {}).get("core", {}).get("fields", {})
@@ -425,12 +493,21 @@ def _build_narrative_user_message(
 
 {ew_text}
 
-## 定量定价工具结果
-方法: {pricing_result.get('method','?')}
-适用: {pricing_result.get('applicable', False)}
-指标: {pricing_result.get('implied_metric','?')} = {pricing_result.get('implied_value','?')}
-局限: {json.dumps(pricing_result.get('limitations',[]), ensure_ascii=False)}
-详情: {json.dumps(pricing_result.get('detail',{}), ensure_ascii=False)}
+## 定量定价工具 — 三个锚各自反推: 当前市值在定价什么？
+
+**用途**: 这是锚判断最关键的定量证据。对比三个锚的隐含预期——哪个锚下市场隐含的增速/改善最离谱,哪个就是市场在用的锚。最离谱的那个≠估值锚错了——它是市场叙事的方向标。
+
+| 锚 | 工具 | 适用 | 当前市值隐含什么？ |
+|----|------|:--:|------|
+| **earnings** | {pricing_all.get('earnings',{}).get('method','?')} | {pricing_all.get('earnings',{}).get('applicable',False)} | {pricing_all.get('earnings',{}).get('implied_metric','?')} = **{pricing_all.get('earnings',{}).get('implied_value','?')}** |
+| **revenue** | {pricing_all.get('revenue',{}).get('method','?')} | {pricing_all.get('revenue',{}).get('applicable',False)} | {pricing_all.get('revenue',{}).get('implied_metric','?')} = **{pricing_all.get('revenue',{}).get('implied_value','?')}** |
+| **asset** | {pricing_all.get('asset',{}).get('method','?')} | {pricing_all.get('asset',{}).get('applicable',False)} | {pricing_all.get('asset',{}).get('implied_metric','?')} = **{pricing_all.get('asset',{}).get('implied_value','?')}** |
+
+**判断指南**:
+- 如果 earnings 工具显示"隐含永续增速 45%"——这几乎不可能,说明市场不是在定价利润,earnings 锚可能不是主锚
+- 如果 revenue 工具显示"隐含 3y CAGR 25%"——在行业增速范围内,说明 revenue 锚是合理的
+- 如果 asset 工具显示"隐含 ROE 需从 5%→18%"——改善幅度巨大,说明市场在定价资产重估
+- **三个都离谱**: 公司在周期极端位置,所有利润/收入/资产指标都失真 → 考虑 resource 锚或周期调整后的估值
 
 ## 事件背景 (Agent-0)
 {event_data.get('raw_event_text','')}
@@ -455,9 +532,11 @@ def _build_narrative_user_message(
 ## 未来催化节点
 {event_data.get('future','')}
 
+{_build_volc_section(volc_data)}
+
 {build_forward_signal_panel(core)}
 
-请先通读上方"投资主题""事件推演""行业研究"三个语料区块，理解市场在讲什么故事。
+请先通读上方"投资主题""事件推演""行业研究"三个语料区块，理解市场在讲什么故事。火山联网搜索数据（如已注入）提供了券商视角的分部收入拆分、可比估值和产品级数据——这些是判断锚类型和SOTP是否触发的关键参照。
 锚判断必须从叙事出发——估值倍数数据用于验证叙事，而非替代叙事判断。
 然后按清单项 1→2→3→4 顺序完成诊断。输出纯 JSON。
 """
@@ -479,6 +558,7 @@ class NarrativeDiagnosis:
         data_package: dict,
         event_data: dict | None = None,
         wacc_params: dict | None = None,
+        volc_data: dict | None = None,
     ) -> dict:
         """
         执行叙事诊断。
@@ -486,21 +566,23 @@ class NarrativeDiagnosis:
         data_package: Agent-1 输出（含 event_window_prices）
         event_data: Coze Agent0 事件数据
         wacc_params: WACC 预计算参数（用于反向推算工具）
+        volc_data: V6.5 火山联网搜索预取数据（券商分部拆分+可比估值, 用于锚判断+SOTP判定）
 
         返回: {market_narrative, event_pricing, signal_audit, forward_to_routing}
         """
         event_data = event_data or {}
         core = data_package.get("packages", {}).get("core", {}).get("fields", {})
 
-        # ── Step 1: 定量定价工具计算 ──
-        anchor_hint = self._infer_anchor_hint(core)
-        pricing_result = compute_pricing_anchor(
-            anchor_hint, core, wacc_params
-        )
+        # ── Step 1: 定量定价工具计算(全锚) ──
+        # 为所有可能的锚都计算定价工具, LLM 对比判断哪个锚是市场在用的
+        pricing_all = {}
+        for a in ("earnings", "revenue", "asset"):
+            pricing_all[a] = compute_pricing_anchor(a, core, wacc_params)
 
         # ── Step 3: LLM 叙事诊断 ──
         user_msg = _build_narrative_user_message(
-            data_package, event_data, pricing_result,
+            data_package, event_data, pricing_all,
+            volc_data=volc_data,
         )
 
         result = call_deepseek(
@@ -518,10 +600,10 @@ class NarrativeDiagnosis:
             )
 
         if "_parse_error" in result:
-            return self._fallback_diagnosis(core, pricing_result)
+            return self._fallback_diagnosis(core, pricing_all)
 
         # 注入代码计算值（LLM 不能修改）
-        result["_pricing_tool"] = pricing_result
+        result["_pricing_tool"] = pricing_all
 
         return result
 
@@ -548,7 +630,7 @@ class NarrativeDiagnosis:
         return "earnings"
 
     @staticmethod
-    def _fallback_diagnosis(core: dict, pricing_result: dict) -> dict:
+    def _fallback_diagnosis(core: dict, pricing_all: dict | None = None) -> dict:
         """LLM 不可用时的纯代码 fallback。"""
         np = core.get("net_profit_ttm_yi", 0)
         roic = core.get("roic_pct", 0)
@@ -585,10 +667,10 @@ class NarrativeDiagnosis:
                     "shape_rationale": "LLM不可用,fallback使用默认中等分布"
                 },
                 "pricing_assessment": {
-                    "method": pricing_result.get("method", "qualitative"),
-                    "method_applicable": pricing_result.get("applicable", False),
-                    "method_limitations": pricing_result.get("limitations", []),
-                    "quantitative": {"implied_expectation": str(pricing_result.get("implied_value", "N/A"))},
+                    "method": (pricing_all or {}).get("earnings", {}).get("method", "qualitative"),
+                    "method_applicable": (pricing_all or {}).get("earnings", {}).get("applicable", False),
+                    "method_limitations": (pricing_all or {}).get("earnings", {}).get("limitations", []),
+                    "quantitative": {"implied_expectation": str((pricing_all or {}).get("earnings", {}).get("implied_value", "N/A"))},
                     "qualitative_factors": [],
                     "overall_priced_in": "unknown",
                     "priced_in_estimate": "无法判断(LLM不可用)",
@@ -609,7 +691,7 @@ class NarrativeDiagnosis:
                 "pricing_bias": "uncertain",
                 "key_risk_for_routing": "Fallback诊断,置信度极低",
             },
-            "_pricing_tool": pricing_result,
+            "_pricing_tool": pricing_all,
             "_fallback": True,
         }
 

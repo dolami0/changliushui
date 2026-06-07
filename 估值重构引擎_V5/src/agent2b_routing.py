@@ -114,22 +114,29 @@ routing_reason 必须引用: (1) 2a的叙事线索 (2) 具体财务数据。≥8
 **E (EV/EBITDA+资源)**: 拥有自然资源, 事件核心是资源量/价
 **H (NAV)**: 隐蔽资产型, 事件触发资产价值再发现
 **F (rNPV)**: 仅限创新药/biotech, 临床阶段管线
-**K (两阶段DCF)**: 当前高增长(>25%)且行业终局清晰(5年后增速必然回落)。与A/G的区别:
-  - K vs A: A假设ROIC和利润永续,K承认高增长不可持续→在第N年切换到终值PE
-  - K vs G: G用PEG封顶PE,K用折现反映增长价值→K对高增长标的更友好,不会被PEG压制
-  选择K的场景: 公司当前高增长(>25%)但行业终局清晰(5年后增速必然回落)
-  不选K的场景: 增速已放缓到行业水平→选A;增速波动大难以预测→选G
-  **K的revenue锚例外**: 即使primary_anchor=revenue、ROIC<8%，若同时满足以下三条，K优先于B:
-    (a) 产品级营收和毛利率可获取（Agent-1有分产品数据，非纯TAM故事）
-    (b) ROIC改善路径可见：毛利率扩张或规模效应→未来3-5年内ROIC可升至8%以上
-    (c) 增长有物理锚点：产能/出货量/订单约束增速上限，终局可预见
-    使用revenue锚例外时 constraint_override=true, routing_reason标注"revenue锚→K例外:可建模FCF路径"
-    不满足(a)(b)(c)则保持B(PS+TAM)——B是为"看不清利润路径"的故事准备的，不应用于"能建模但没建"的标的。
+**K (两阶段DCF)**: **仅限earnings_multiples族内选择**。适用于当前盈利、高增长(>25%)、行业终局清晰(5年后增速必然回落)、且**NOPAT起点可支撑DCF**的标的。与A/G/I的区别:
+  - K vs A: A假设ROIC和利润永续→适合稳态盈利公司; K承认高增长不可持续→在第N年切换到终值PE→适合"成长→成熟"过渡期
+  - K vs G: G用PEG封顶PE→适合增速波动大但PEG可锚定的标的; K用两阶段折现→适合增长路径可预见的标的
+  - K vs I: I假设利润波动是周期性的(均值回归)→适合周期股; K假设增长是结构性的(增速回落≠消失)→适合成长股
+  **选择K的充分条件**(缺一不可):
+    (a) NOPAT_TTM > 0.5亿 且 NOPAT/市值 > 0.8% — DCF需要NOPAT起点,否则退化为终值PE赌注
+    (b) 当前高增长(>25%)且可持续3-7年 — 有行业/产能/订单锚点约束增速上限
+    (c) 行业终局清晰 — 5-7年后增速回落到什么水平、稳态PE多少,可以基于行业历史判断
+  **不选K的场景**:
+    - NOPAT起点过低→选A(若ROIC>8%)或G(若增速可见)
+    - 增速已回落到行业水平→选A(永续DCF)
+    - 增速波动大、难以预测→选G(PEG锚定)
+    - primary_anchor=revenue→此标的属于revenue_multiples族,应选B; K仅限earnings_multiples族内使用
+  **注意**: K是earnings_multiples族内最"进取"的模型——它比A更友好(承认增长会回落),但比G更严格(要求终局可见)。不要因为K"看起来更精确"就选它——如果NOPAT起点或终局可见性不满足条件,K的DCF退化为终值PE赌注,不如坦诚用A或G。
 **J (SOTP)**: 2a已验证: 估值范式冲突 + 副锚占比≥20% + 数据可支撑SOTP。若sotp_triggered=false,跳过J,按主锚选模型。
   **SOTP的本质**: 防止用主锚去估"另一类业务"时产生系统性偏差。
   **SOTP估值方法**: 分部独立估(各用正确的倍数锚),加总。行业倍数参照来自knowledge_supplement。不要求分部利润精确。
   **数据不足时**: 2a会设置sotp_triggered=false,此时以主锚为准——宁可单锚近似,也不在无数据时强行SOTP。
-  **SOTP触发时必填字段**: 当主模型=J时，必须额外输出 `sotp_primary_segment_model`——为叙事主锚分部（2a的primary_anchor）选择最合适的模型。例如primary_anchor=revenue→选B(PS+TAM)；primary_anchor=earnings→选A/K(ROIC-DCF)。这个字段告诉SOTP Agent叙事分部该用什么参数体系。
+  **SOTP触发时必填字段**: 当主模型=J时，必须额外输出 `sotp_primary_segment_model`——为叙事主锚分部（2a的primary_anchor）选择最合适的模型。规则与标准管线一致：
+    - primary_anchor=revenue → **仅B(PS+TAM)**。即使产品数据可获取,也不选K——K是earnings模型,不跨界到revenue
+    - primary_anchor=earnings → A(ROIC-RR DCF)/K(两阶段DCF)/G(PEG)。选K必须满足:NOPAT>0.5亿、NOPAT/市值>0.8%、增速>25%、终局可见——不满足则选A或G
+    - primary_anchor=asset → D(PB-ROE)/H(NAV)
+    - 这个字段告诉SOTP Agent叙事分部该用什么参数体系
 
 # 输出格式
 
@@ -167,7 +174,7 @@ routing_reason 必须引用: (1) 2a的叙事线索 (2) 具体财务数据。≥8
 
 FAMILY_MODELS = {
     "earnings_multiples": "A(ROIC-RR DCF), C(DCF+拐点), G(PEG), I(盈利正常化), K(两阶段DCF)",
-    "revenue_multiples": "B(PS+TAM), K(两阶段DCF — 仅限revenue锚例外:产品数据可获取+ROIC改善可见+终局可预见)",
+    "revenue_multiples": "B(PS+TAM)",
     "asset_multiples": "D(PB-ROE), H(NAV)",
     "resource": "E(EV/EBITDA+资源)",
     "pipeline": "F(rNPV)",
@@ -177,6 +184,7 @@ FAMILY_MODELS = {
 MODEL_FAMILY_MAP = {
     "A": "earnings_multiples", "C": "earnings_multiples",
     "G": "earnings_multiples", "I": "earnings_multiples",
+    "K": "earnings_multiples",
     "B": "revenue_multiples",
     "D": "asset_multiples", "H": "asset_multiples",
     "E": "resource",
@@ -269,7 +277,7 @@ def _build_routing_user_message(
 ## 火山联网搜索 — 市场量化预期（产能/订单/券商预测/可比估值）
 {volc_data.get('volc_text', '') if volc_data else '（未触发火山搜索）'}
 
-请在指定模型族内完成路由判决。若primary_anchor=revenue且火山数据显示产能/订单/产品毛利率可获取，优先考虑K(两阶段DCF)而非B——参见系统提示词中K的revenue锚例外条件。输出纯 JSON。
+请在指定模型族内完成路由判决。注意: K(两阶段DCF)仅限earnings_multiples族内使用——revenue_multiples族应选B。输出纯 JSON。
 """
     return msg
 
@@ -290,6 +298,8 @@ FALLBACK_HARD_CONSTRAINTS = {
     "G": lambda c: c.get("roic_pct", 0) > 15,
     "H": lambda c: c.get("cash_yi", 0) > c.get("total_equity_yi", 0) * 0.5,
     "I": lambda c: c.get("pe_ttm", 0) > 80,
+    "K": lambda c: (c.get("nopat_yi", 0) or (c.get("net_profit_ttm_yi", 0) * 0.8)) > 0.5
+         and (c.get("nopat_yi", 0) or (c.get("net_profit_ttm_yi", 0) * 0.8)) / max(c.get("market_cap_yi", 1), 1) > 0.008,
 }
 
 FAMILY_TO_MODELS = {
@@ -374,6 +384,25 @@ class RouteJudgeV6:
                 "routing_decision": self._fallback_routing(data_package, agent2a_output),
                 "_fallback": True,
             }
+
+        # ── 代码层硬校验: K模型经济可行性 ──
+        # K(DCF)对NOPAT起点过低的标的会退化为"终值PE赌注"
+        # ——阶段1 FCFF≈0(RR封顶0.9), 终值被WACC折现杀穿
+        if routing.get("primary_model") == "K":
+            core_k = data_package.get("packages", {}).get("core", {}).get("fields", {})
+            nopat_k = core_k.get("nopat_yi", 0)
+            mcap_k = core_k.get("market_cap_yi", 100)
+            nopat_ratio = nopat_k / max(mcap_k, 1)
+            if nopat_k < 0.5 or nopat_ratio < 0.008:
+                # NOPAT起点过低, DCF不可行 → 回退到A(ROIC-RR DCF, 更保守的earnings模型)
+                print(f"  [RouteJudge] K blocked: NOPAT={nopat_k:.2f}yi NOPAT/mcap={nopat_ratio*100:.2f}% < 0.8%", flush=True)
+                routing["primary_model"] = "A"
+                routing["model_category"] = "Earnings Multiples"
+                routing["routing_reason"] = (
+                    routing.get("routing_reason", "") +
+                    f" [K不适用:NOPAT={nopat_k:.2f}亿/市值={nopat_ratio*100:.2f}%<0.8%,DCF退化为终值PE赌注→回退A]"
+                )
+                routing["_k_blocked_by_code"] = True
 
         return {"routing_decision": routing}
 
