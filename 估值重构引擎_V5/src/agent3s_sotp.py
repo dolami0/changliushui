@@ -986,16 +986,17 @@ def _format_pricing_tool(agent2a_output: dict) -> str:
 
 def _fill_sotp_placeholders(prompt: str, agent2b_output: dict | None = None) -> str:
     """替换 SOTP prompt 中残留的 Agent-3 占位符。"""
-    # 从 2b 取主锚分部模型
-    seg_model = "B"
+    # 从 2b 取主锚分部模型（若2b已跑）；否则默认K——LLM可根据数据选择dcf或B
+    # K是更丰富的模板：包含dcf参数体系，LLM若判定不满足dcf条件可回退选revenue锚
+    seg_model = "K"
     if agent2b_output:
         rd = agent2b_output.get("routing_decision", {})
         if isinstance(rd, dict):
-            seg_model = rd.get("sotp_primary_segment_model", "B")
+            seg_model = rd.get("sotp_primary_segment_model", "K")
     # 规范化: 取首字母，确保在已知模板中
-    seg_model = seg_model[0] if seg_model else "B"
+    seg_model = seg_model[0] if seg_model else "K"
     if seg_model not in MODEL_PARAM_TEMPLATES:
-        seg_model = "B"
+        seg_model = "K"
 
     # 注入模型专属参数模板（复用 Agent-3 的详细定义）
     schema = MODEL_PARAM_TEMPLATES.get(seg_model, MODEL_PARAM_TEMPLATES["B"])
