@@ -615,6 +615,14 @@ asymmetry_ratio = bull_upside / |bear_upside|
       "bull": {"revenue_growth_3y_cagr_pct": 50, "target_ps": 15}
     },
     {
+      "segment": "叙事主锚分部(dcf锚示例)",
+      "anchor": "dcf", "segment_revenue_yi": 14.2, "is_primary": true,
+      "segment_rationale": "产品毛利率可获取+ROIC改善可见+终局可预见，选dcf而非revenue",
+      "bear": {"stage1_growth_pct": 10, "roic_assumed_pct": 8, "stage1_years": 5, "terminal_pe": 15, "segment_net_margin_pct": 12},
+      "base": {"stage1_growth_pct": 35, "roic_assumed_pct": 15, "stage1_years": 5, "terminal_pe": 22, "segment_net_margin_pct": 15},
+      "bull": {"stage1_growth_pct": 55, "roic_assumed_pct": 22, "stage1_years": 7, "terminal_pe": 30, "segment_net_margin_pct": 18}
+    },
+    {
       "segment": "其他业务(副锚合并)",
       "anchor": "earnings", "segment_revenue_yi": 4.9, "is_primary": false,
       "segment_rationale": "<=60字，说明收入来源依据",
