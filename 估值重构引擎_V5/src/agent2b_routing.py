@@ -193,6 +193,7 @@ def _build_routing_user_message(
     data_package: dict,
     agent2a_output: dict,
     event_data: dict,
+    volc_data: dict | None = None,
 ) -> str:
     """构建 Agent-2b 用户消息：注入数据+约束。"""
     core = data_package.get("packages", {}).get("core", {}).get("fields", {})
@@ -262,10 +263,13 @@ def _build_routing_user_message(
 | 异常标记 | {json.dumps(core.get('caution_flags',[]), ensure_ascii=False)} |
 
 ## 事件背景
-{event_data.get('investment_theme','')[:500]}
-{event_data.get('event_deduction','')[:500]}
+{event_data.get('investment_theme','')}
+{event_data.get('event_deduction','')}
 
-请在指定模型族内完成路由判决。输出纯 JSON。
+## 火山联网搜索 — 市场量化预期（产能/订单/券商预测/可比估值）
+{volc_data.get('volc_text', '') if volc_data else '（未触发火山搜索）'}
+
+请在指定模型族内完成路由判决。若primary_anchor=revenue且火山数据显示产能/订单/产品毛利率可获取，优先考虑K(两阶段DCF)而非B——参见系统提示词中K的revenue锚例外条件。输出纯 JSON。
 """
     return msg
 
@@ -309,6 +313,7 @@ class RouteJudgeV6:
         data_package: dict,
         agent2a_output: dict,
         event_data: dict | None = None,
+        volc_data: dict | None = None,
     ) -> dict:
         """
         执行路由判决。
@@ -316,6 +321,7 @@ class RouteJudgeV6:
         data_package: Agent-1 输出
         agent2a_output: Agent-2a 输出（含 forward_to_routing 约束）
         event_data: Coze Agent0 事件数据
+        volc_data: V6.4 — 火山联网搜索补充（产能/订单/券商预测，用于K/B判定）
 
         返回: {routing_decision, ...}
         """
@@ -340,7 +346,7 @@ class RouteJudgeV6:
             "{PRICING_BIAS}", fwd.get("pricing_bias", "uncertain")
         )
 
-        user_msg = _build_routing_user_message(data_package, agent2a_output, event_data)
+        user_msg = _build_routing_user_message(data_package, agent2a_output, event_data, volc_data)
 
         # ── LLM 调用 ──
         result = call_deepseek(

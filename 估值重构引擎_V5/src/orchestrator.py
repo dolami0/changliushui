@@ -217,18 +217,6 @@ class Orchestrator:
                 state.pipeline_type = "rnpv"
                 return self._run_rnpv_pipeline(state, event_data, cb)
 
-            # ── Agent-2b: 路由判决 ──
-            cb("agent2b", 2, 2, "running", "路由判决(受2a约束)")
-            t0 = time.time()
-            state.agent2b_output = self._run_agent2b(
-                state.agent1_output, state.agent2a_output, event_data,
-            )
-            state.step_times["agent2b"] = round(time.time() - t0, 2)
-            rd = state.agent2b_output.get("routing_decision", {})
-            cc = rd.get("constraint_compliance", {})
-            override_str = "(override)" if cc.get("constraint_override") else ""
-            cb("agent2b", 2, 2, "done",
-               f"主:{rd.get('primary_model','?')} 校验:{rd.get('validation_models',[])} {override_str}")
 
             # ── SOTP 分叉 (V6.1): Agent-2a 判 sotp_triggered → 走 SOTP 分部估值 ──
             if a2a_mn.get("sotp_triggered") and _SOTP_AVAILABLE:
@@ -256,8 +244,8 @@ class Orchestrator:
                 ])
 
                 # 路由裁决（让Pro知道模型类型，针对性补数据）
-                rd = state.agent2b_output.get('routing_decision', {}) if state.agent2b_output else {}
-                route_info = f'主模型={rd.get("primary_model", "?")} 类别={rd.get("model_category", "?")} 理由={rd.get("routing_reason", "?")[:200]}'
+                a2a_anchor = a2a_mn.get("primary_anchor", "?")
+                route_info = f'主锚={a2a_anchor} 核心赌注={a2a_mn.get("core_bet", "?")[:150]}'
 
                 # system prompt = 角色+约束+全部上下文（Agent-0数据在此，不截断）
                 # user message = 仅触发词（SOTP验证过的模式，避免Pro被大文本淹没）
@@ -267,7 +255,7 @@ class Orchestrator:
 
 火山引擎是一个结构化知识问答系统。给它一个清晰的查询，它会从券商研报、公司公告、行业数据中提取结构化的答案。
 
-请审阅以下 Agent-0 完整研究资料，结合路由裁决的模型类型，找出研究资料中缺失的量化锚点，然后生成一个火山搜索query来补足这些缺失。
+请审阅以下 Agent-0 完整研究资料，找出研究资料中缺失的量化锚点，然后生成一个火山搜索query来补足这些缺失。重点关注：产能/出货量/订单（用于判断增速物理上限）、产品级毛利率（用于判断ROIC改善路径）、券商未来2-3年营收/利润预测。
 
 你应该覆盖但不限于：券商对未来2-3年营收/利润的一致预期、各业务线收入拆分及增速、可比A股公司当前PE/PS估值倍数、产能/出货量/订单等运营数据。
 
@@ -311,6 +299,20 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
                         print(f'  [Volc Std] query({len(query)}c) → volc {len(volc_result)} chars', flush=True)
             except Exception as e:
                 print(f'  [Volc Std] 跳过: {e}', flush=True)
+
+            # ── Agent-2b: 路由判决 ──
+            cb("agent2b", 2, 2, "running", "路由判决(受2a约束)")
+            t0 = time.time()
+            state.agent2b_output = self._run_agent2b(
+                state.agent1_output, state.agent2a_output, event_data,
+                volc_data=volc_data_std,
+            )
+            state.step_times["agent2b"] = round(time.time() - t0, 2)
+            rd = state.agent2b_output.get("routing_decision", {})
+            cc = rd.get("constraint_compliance", {})
+            override_str = "(override)" if cc.get("constraint_override") else ""
+            cb("agent2b", 2, 2, "done",
+               f"主:{rd.get('primary_model','?')} 校验:{rd.get('validation_models',[])} {override_str}")
 
             # ── Agent-3: 推演裁决 ──
             cb("agent3", 1, 1, "running", "推演裁决(三情景)")
@@ -382,10 +384,10 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
             )
 
     def _run_agent2b(self, data_package: dict, agent2a_output: dict,
-                     event_data: dict) -> dict:
+                     event_data: dict, volc_data: dict | None = None) -> dict:
         a2b = RouteJudgeV6(deepseek_key=self.api_key)
         try:
-            return a2b.run(data_package, agent2a_output, event_data)
+            return a2b.run(data_package, agent2a_output, event_data, volc_data)
         except Exception as e:
             print(f"  [Orchestrator] Agent-2b 异常, fallback: {e}", flush=True)
             return {
