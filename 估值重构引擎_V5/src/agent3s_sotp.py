@@ -1414,6 +1414,14 @@ def _compute_sotp_from_llm(
         if ps:
             segments = [ps]
             print(f"  [SOTP] LLM used old 'primary_segment' format", flush=True)
+        else:
+            # 诊断: LLM未输出segments, 打印顶层键以排查
+            print(f"  [SOTP] WARNING: LLM未输出segments! 顶层键: {list(llm_output.keys())[:20]}", flush=True)
+            # 尝试从scenario_valuation中提取
+            sv_test = llm_output.get("scenario_valuation", {})
+            if isinstance(sv_test, dict):
+                sd_test = sv_test.get("scenario_details", {})
+                print(f"  [SOTP] scenario_details type={type(sd_test).__name__} keys={list(sd_test.keys())[:5] if isinstance(sd_test, dict) else '?'}", flush=True)
     sv = llm_output.get("scenario_valuation", {})
     details_raw = sv.get("scenario_details", {})
 
@@ -1818,7 +1826,13 @@ class SOTPScenarioAsymmetry:
         # ── Step 2: 代码计算 SOTP 加总 ──
         cb(2, "SOTP代码加总")
         core['_wacc_decimal'] = wacc_params.get('wacc_pct', 10) / 100
-        sotp_computed = _compute_sotp_from_llm(result, core)
+        try:
+            sotp_computed = _compute_sotp_from_llm(result, core)
+        except Exception as e:
+            print(f"  [SOTP] _compute_sotp_from_llm崩溃: {e}", flush=True)
+            print(f"  [SOTP] result keys: {list(result.keys())[:20]}", flush=True)
+            print(f"  [SOTP] result seg字段: {result.get('segments', 'MISSING')}", flush=True)
+            raise
 
         # ── Step 3: 修正交易标注（复用 Agent-3）──
         cb(3, "修正交易标注")
