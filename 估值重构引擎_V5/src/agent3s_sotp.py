@@ -1351,7 +1351,7 @@ def _compute_sotp_total(
                 "source": "LLM(变参)" if is_primary else "LLM(base)",
             })
             if is_primary:
-                primary_val = seg_val
+                primary_val = (primary_val or 0) + seg_val
             else:
                 other_val += seg_val
 
@@ -1413,9 +1413,6 @@ def _compute_sotp_from_llm(
         target_mcap = sotp["total_mcap_yi"]
 
         prob = details.get(scenario_name, {}).get("probability", 0)
-        # 兜底: LLM 漏填 probability 时，从 reasoning_trace 或默认分配
-        if prob is None or prob == 0:
-            prob = details.get(scenario_name, {}).get("probability", None)
         if prob is None or prob == 0:
             # 保守兜底: 偏 base-dominant（15/70/15），避免尾巴概率被高估
             # 若 LLM 连概率都没输出 → 不确定性极高 → bull 不应有显著权重
@@ -1546,10 +1543,11 @@ def _validate_sotp_specific(
             continue
         anchor = seg.get("anchor", "")
         key_params = {
-            "earnings": ["pe_target", "segment_margin_pct"],
+            "earnings": ["pe_target", "segment_net_margin_pct"],
             "revenue": ["revenue_growth_3y_cagr_pct", "target_ps"],
             "asset": ["target_pb"],
             "pipeline": ["pos_pct", "peak_sales_yi"],
+            "dcf": ["stage1_growth_pct", "terminal_pe", "roic_assumed_pct"],
         }.get(anchor, [])
 
         for param_name in key_params:
