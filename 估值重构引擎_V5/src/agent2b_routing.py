@@ -114,11 +114,17 @@ routing_reason 必须引用: (1) 2a的叙事线索 (2) 具体财务数据。≥8
 **E (EV/EBITDA+资源)**: 拥有自然资源, 事件核心是资源量/价
 **H (NAV)**: 隐蔽资产型, 事件触发资产价值再发现
 **F (rNPV)**: 仅限创新药/biotech, 临床阶段管线
-**K (两阶段DCF)**: 盈利企业(ROIC>8%)且预期高增长持续3-7年后回落。与A/G的区别:
+**K (两阶段DCF)**: 当前高增长(>25%)且行业终局清晰(5年后增速必然回落)。与A/G的区别:
   - K vs A: A假设ROIC和利润永续,K承认高增长不可持续→在第N年切换到终值PE
   - K vs G: G用PEG封顶PE,K用折现反映增长价值→K对高增长标的更友好,不会被PEG压制
   选择K的场景: 公司当前高增长(>25%)但行业终局清晰(5年后增速必然回落)
   不选K的场景: 增速已放缓到行业水平→选A;增速波动大难以预测→选G
+  **K的revenue锚例外**: 即使primary_anchor=revenue、ROIC<8%，若同时满足以下三条，K优先于B:
+    (a) 产品级营收和毛利率可获取（Agent-1有分产品数据，非纯TAM故事）
+    (b) ROIC改善路径可见：毛利率扩张或规模效应→未来3-5年内ROIC可升至8%以上
+    (c) 增长有物理锚点：产能/出货量/订单约束增速上限，终局可预见
+    使用revenue锚例外时 constraint_override=true, routing_reason标注"revenue锚→K例外:可建模FCF路径"
+    不满足(a)(b)(c)则保持B(PS+TAM)——B是为"看不清利润路径"的故事准备的，不应用于"能建模但没建"的标的。
 **J (SOTP)**: 2a已验证: 估值范式冲突 + 副锚占比≥20% + 数据可支撑SOTP。若sotp_triggered=false,跳过J,按主锚选模型。
   **SOTP的本质**: 防止用主锚去估"另一类业务"时产生系统性偏差。
   **SOTP估值方法**: 分部独立估(各用正确的倍数锚),加总。行业倍数参照来自knowledge_supplement。不要求分部利润精确。
@@ -161,7 +167,7 @@ routing_reason 必须引用: (1) 2a的叙事线索 (2) 具体财务数据。≥8
 
 FAMILY_MODELS = {
     "earnings_multiples": "A(ROIC-RR DCF), C(DCF+拐点), G(PEG), I(盈利正常化), K(两阶段DCF)",
-    "revenue_multiples": "B(PS+TAM)",
+    "revenue_multiples": "B(PS+TAM), K(两阶段DCF — 仅限revenue锚例外:产品数据可获取+ROIC改善可见+终局可预见)",
     "asset_multiples": "D(PB-ROE), H(NAV)",
     "resource": "E(EV/EBITDA+资源)",
     "pipeline": "F(rNPV)",
