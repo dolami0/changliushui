@@ -756,7 +756,7 @@ def _map_tracking_from_coze(row: dict) -> dict:
     return {
         "stockCode": row.get("stock_code", ""),
         "stockName": row.get("stock_name", ""),
-        "direction": row.get("direction", ""),
+        "track_status": row.get("track_status", "active"),
         "thesis": row.get("thesis", ""),
         "conviction": int(row.get("conviction", 0) or 0),
         "decisionDate": row.get("decision_date", ""),
@@ -1570,7 +1570,7 @@ async def api_create_or_update_tracking(ticker: str, request: Request):
             "stock_code": ticker,
             "stock_name": str(body.get("stockName", "")),
             "file_name": f"{ticker}-{body.get('stockName', '')}.json",
-            "direction": str(body.get("direction", "")),
+            "track_status": str(body.get("track_status", "active")),
             "thesis": str(body.get("thesis", "")),
             "conviction": str(body.get("conviction", "")),
             "decision_date": str(body.get("decisionDate", "")),
