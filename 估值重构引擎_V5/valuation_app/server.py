@@ -838,21 +838,21 @@ def _map_lingguang_from_coze(row: dict) -> dict:
 
 @app.get("/api/tracking")
 async def api_tracking_list():
-    """返回所有追踪令列表 — 本地 JSON 为主数据源，Coze 为镜像"""
-    if _TRACKING_DIR.exists():
-        files = [f for f in _TRACKING_DIR.iterdir() if f.suffix == ".json" and f.stem != "_template"]
-        if files:
-            stocks = []
-            for fp in sorted(files):
-                data = _read_json(fp)
-                if data:
-                    stocks.append(data)
-            return JSONResponse(stocks)
-    # 本地无数据时回退 Coze
+    """返回所有追踪令列表，兼容前端 Tracking 页面的 /api/tracking 调用 — Coze 优先，本地回退"""
+    # 优先 Coze
     rows = _coze_query_all(COZE_TRACKING_TABLE)
     if rows:
         return JSONResponse([_map_tracking_from_coze(r) for r in rows])
-    return JSONResponse([])
+    # 本地回退
+    if not _TRACKING_DIR.exists():
+        return JSONResponse([])
+    files = [f for f in _TRACKING_DIR.iterdir() if f.suffix == ".json" and f.stem != "_template"]
+    stocks = []
+    for fp in sorted(files):
+        data = _read_json(fp)
+        if data:
+            stocks.append(data)
+    return JSONResponse(stocks)
 
 
 @app.patch("/api/tracking/{ticker}/status")
