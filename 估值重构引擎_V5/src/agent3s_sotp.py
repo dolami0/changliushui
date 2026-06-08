@@ -264,16 +264,23 @@ SOTP_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 你掌握 A/B/C/D/E/F/G/H/I/J/K 共 11 种估值模型。路由判官已选定最适合叙事主锚分部的模型（sotp_primary_segment_model），你的职责是在选定的模型框架内完成参数推演。
 
 本标的触发 SOTP 分部估值。公司将业务拆为两段：
-1. **叙事主锚分部**: 被事件因果链路催动的核心业务。推演 bear/base/bull 三情景参数
+1. **叙事主锚分部**: 被事件因果链路催动的核心业务 + 同一锚类型下未被事件催动的业务。推演 bear/base/bull 三情景参数
 2. **其他业务**: 副锚分部合并。**事件不催动此分部**——它的未来现金流与事件无关。
 
-**关键约束——主锚分部的参数自由、副锚分部的参数保守:**
+**关键约束——主锚内部异质性与参数混合:**
 
-主锚分部（事件催动）:
-- 增速/利润率/估值倍数**必须以事件数据为锚定基准**，从事件链路的推导范围出发
-- 正常推演 bear/base/bull 三情景
+SOTP 把多个副锚按锚类型合并。当主锚分部(revenue锚)内部混入了「事件催动」和「非事件催动」的子业务时——**你不能用同一套激进参数覆盖所有子业务**。
 
-副锚分部（事件不催动）:
+查看用户消息中「分部定义」表的"事件催动"列。若主锚分部的子业务中同时有 ✅是 和 ❌否：
+
+**参数必须按收入占比加权，不允许事件催动的7%业务绑定非事件催动的53%业务一起享受溢价:**
+
+1. **事件催动的子业务**: 增速/PS可以从事件信息推导，允许可比公司溢价
+2. **非事件催动的子业务**: 增速≤行业基线，PS≤行业可比中位数，**不得享受事件溢价**
+3. **加权计算**: 最终主锚的CAGR和PS = Σ(子业务收入占比% × 该子业务参数)。不能直接用最激进的那个子业务参数套到全部分部上。
+4. **Bear情景**: 必须假设事件叙事**证伪**——政策/订单/催化不兑现。事件催动的子业务增速回落至行业基线、PS退回行业地板。Bear 必须有实质性下跌（≥20%），不允许 Bear 情景涨幅为正。
+
+**副锚分部（事件不催动）:**
 - 参数来源是公司历史趋势/行业常识/LLM训练知识——不是事件信息
 - **增速**: ≤ 历史中枢 + 1σ，不得超过
 - **PS倍数**(若为revenue锚): ≤ 行业可比中位数，不得使用"范式切换"溢价
@@ -281,7 +288,10 @@ SOTP_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 - **严禁**: 将此分部的参数设得比主锚分部更激进——此分部不能主导最终估值
 - 推演一组 base 参数（三情景共用）
 
-**判断依据**: 参阅用户消息中"事件催动分部"标注——它明确指出了事件因果链路经过哪个分部。
+**Bear情景必须诚实——核心要求:**
+- 事件催动的增长故事在Bear中**不成立**。订单/政策/催化不兑现。
+- 非事件催动的成熟业务退回到**清算/地板估值**（PB≤1.2x或PE≤行业地板）。
+- **Bear 涨幅必须为负（≤-15%）**——如果算出来是正数，你的假设太乐观了。
 
 ## 估值输出必须包含
 
@@ -290,6 +300,18 @@ SOTP_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 3. **悲观估值（Bear Case）**: 叙事崩塌时的估值。
 
 **A 股适配**: base = 故事预期内兑现 + 估值锚跟随预期推移；bull = 场景超预期催化 + 估值范式跃迁 + 主题溢价充分体现；bear = 故事证伪 + 退回保守锚。政策壁垒视为临时优势（写明失效时间）。
+
+**Bear情景参数地板——故事证伪时倍数不得悬在半空:**
+
+Bear意味着事件叙事**不成立**——政策没落地/订单被抢/催化落空。此时估值逻辑退回事件前的状态:
+
+| 业务类型 | Bear PS地板 | Bear PE地板 | 逻辑 |
+|---------|------------|------------|------|
+| 事件催动的ToG/政策型业务 | **≤5x PS** | — | 政策落空→收入归零风险→PS必须压到地板 |
+| 非事件催动的成长型业务 | **≤行业25分位PS** | — | 回归事件前增速→市场不会给亏损/微利成长股溢价 |
+| 成熟/存量业务 | — | **≤行业地板PE(8-12x)** | 周期底部+无成长→退守清算估值 |
+
+**自检**: 如果你的Bear算出来涨幅≥-10%，逐一检查——哪个分部的参数设得太高了？
 
 # SOTP 两段式估值参数体系
 
@@ -824,26 +846,47 @@ def _build_segments_section(
     lines = ["| 分部 | 角色 | 锚 | 事件催动 | 收入占比 | 估算收入(亿) |",
              "|------|------|-----|---------|---------|-------------|"]
 
-    # 叙事主锚分部（事件驱动，三情景变参）
+    # 叙事主锚分部 — 合并所有与 primary_anchor 相同的副锚
+    primary_rev_segments = [sa for sa in secondary_anchors if sa.get("anchor") == primary_anchor]
+    other_segments = [sa for sa in secondary_anchors if sa.get("anchor") != primary_anchor]
+
     primary_label = market_narrative.get("core_bet", "叙事主线")[:20]
     primary_rev = total_rev * primary_share / 100
-    lines.append(f"| {primary_label} | 叙事主锚(变参) | {primary_anchor} | ✅是 | {primary_share:.1f}% | {primary_rev:.1f} |")
 
-    # 其他业务（合并所有副锚，基准不变）
-    other_share = secondary_total
+    # 主锚分部内部子业务明细（关键: 展示哪些子业务被事件催动、哪些不是）
+    if primary_rev_segments:
+        lines.append(f"| {primary_label} | 叙事主锚(变参) | {primary_anchor} | 见子业务 | {primary_share:.1f}% | {primary_rev:.1f} |")
+        for ps in primary_rev_segments:
+            driven = "✅是" if ps.get("is_event_driven") else "❌否"
+            ps_rev = total_rev * ps.get("revenue_share_pct", 0) / 100
+            lines.append(f"|   ↳ {ps.get('segment','?')} | 子业务 | {ps.get('anchor',primary_anchor)} | {driven} | {ps.get('revenue_share_pct',0):.1f}% | {ps_rev:.2f} |")
+    else:
+        lines.append(f"| {primary_label} | 叙事主锚(变参) | {primary_anchor} | ✅是 | {primary_share:.1f}% | {primary_rev:.1f} |")
+
+    # 其他业务（锚类型不同的副锚，基准不变）
+    other_share = sum(sa.get("revenue_share_pct", 0) for sa in other_segments)
     if other_share > 0:
         other_rev = total_rev * other_share / 100
-        # 副锚中可能有不同锚类型，取第一个作为"其他业务"的代表锚；若无副锚，用 earnings
-        other_anchor = secondary_anchors[0].get("anchor", "earnings") if secondary_anchors else "earnings"
-        other_names = " + ".join(sa.get("segment", "?") for sa in secondary_anchors)
-        # 检查是否有副锚被事件催动
-        any_driven = any(sa.get("is_event_driven") for sa in secondary_anchors)
+        other_anchor = other_segments[0].get("anchor", "earnings") if other_segments else "earnings"
+        other_names = " + ".join(sa.get("segment", "?") for sa in other_segments)
+        any_driven = any(sa.get("is_event_driven") for sa in other_segments)
         driven_mark = "✅是" if any_driven else "❌否"
         lines.append(f"| {other_names} | 其他业务(不变) | {other_anchor} | {driven_mark} | {other_share:.1f}% | {other_rev:.1f} |")
 
     # 如果没有任何副锚（100% 主锚），标注特殊处理
     if not secondary_anchors:
         lines.append("| （无其他业务，100%为叙事主锚分部） | — | — | — | — |")
+
+    # 主锚分部内部异质性提示 — 当主锚内混合了事件催动和非事件催动的子业务时
+    if primary_rev_segments:
+        driven_segs = [s for s in primary_rev_segments if s.get("is_event_driven")]
+        non_driven_segs = [s for s in primary_rev_segments if not s.get("is_event_driven")]
+        if driven_segs and non_driven_segs:
+            driven_share = sum(s.get("revenue_share_pct", 0) for s in driven_segs)
+            non_driven_share = sum(s.get("revenue_share_pct", 0) for s in non_driven_segs)
+            driven_names = "+".join(s.get("segment", "?") for s in driven_segs)
+            non_driven_names = "+".join(s.get("segment", "?") for s in non_driven_segs)
+            lines.append(f"\n> ⚠️ **主锚分部内部异质**: {driven_names}({driven_share:.0f}%,事件催动) 与 {non_driven_names}({non_driven_share:.0f}%,非事件催动) 被合并为同一个参数组。CAGR和PS必须按收入占比加权——非事件催动子业务不得享受事件溢价。")
 
     # ── 产品表交叉校验：Agent-2a 的分部占比是否与产品增速矛盾？──
     fw = core.get('_forward_looking', {}) or {}

@@ -514,7 +514,7 @@ PARAM_SELF_CHECK_MAP = {
     "C": "- ROIC: 拐点后ROIC改善幅度必须有时序节点对应(距拐点季度数)\n- PE: 拐点前PE可高于常规(买方为拐点付费),拐点后PE回归正常\n- 距拐点: 越远折现越大(每季度折6%),不应无限远",
     "G": "- earnings_growth_pct: 必须是盈利增速(EPS/净利润),不是收入增速\n- PE: 不能超过 PEG×earnings_growth, 否则违反PEG框架\n- PEG: 通常0.5-2.0,低于0.5=极度低估,高于2.0=增速不足以支持PE",
     "I": "- normalized_roic_pct: 正常化ROIC取5-10年行业中位数,不取当前极值\n- normalized_pe: 正常化PE取行业中位,不取当前畸高/畸低值",
-    "B": "- revenue_growth_3y_cagr_pct: 3年收入CAGR。必须用分部对应产品的实际YoY增速校准,不能凭空取值。若Q1增速显著减速,必须反映这一趋势\n- target_ps: **第3年(终端年)的PS**。必須从火山数据/知识补充中找2-3家同细分赛道的可比A股公司,用它们在稳态期的实际交易PS作为参照。不是当前PS的情绪缩放,也不是跨行业通用区间\n- 心算校验: TTM收入 x (1+CAGR%)^3 x target_ps ≈ 你剧本预期的目标市值吗？\n- tam_penetration_pct: 当前TAM渗透率。若<5%则PS可取上限,若>30%则PS应保守",
+    "B": "- revenue_growth_3y_cagr_pct: 3年收入CAGR。必须用分部对应产品的实际YoY增速校准,不能凭空取值。若Q1增速显著减速,必须反映这一趋势\n- target_ps: **第3年(终端年)的PS**。必須从火山数据/知识补充中找2-3家**同细分赛道**的可比A股公司,用它们在稳态期的实际交易PS作为参照。**同细分赛道=同客户类型+同商业模式+同利润池**,不是同行业标签。AI数据标注(服务大模型厂商)不能用大数据平台(服务政企)的PS——客户不同、毛利率不同、壁垒不同。如果找不到真正同赛道的可比公司,用更宽行业范围的中位数但要打7-8折,并在叙事中注明'无可比公司,使用打折后行业参照'\n- 心算校验: TTM收入 x (1+CAGR%)^3 x target_ps ≈ 你剧本预期的目标市值吗？\n- tam_penetration_pct: 当前TAM渗透率。若<5%则PS可取上限,若>30%则PS应保守",
     "D": "- target_roe_pct: ROE改善必须与PB修复联动(PB=ROE×权益乘数×PE的简化)。ROE从5%→15%可支撑PB从1x→3x\n- target_pb: PB不能远超ROE支撑的合理范围。ROE<5%不应>2x PB(除非隐蔽资产重估)",
     "E": "- ebitda_growth_pct: **一年期**EBITDA增速(%),不是多期累计。公式=EBITDA×(1+g/100)×EV/EBITDA。g=50表示EBITDA从5.6亿→8.4亿。\n- **经营杠杆换算（必须执行,不可跳过）**: 资源股的EBITDA增长≠商品价格涨幅。折旧/人工/摊销固定,涨价部分几乎全部→EBITDA。换算公式: **g_EBITDA% = ΔPrice% ÷ EBITDA率%**。步骤: (1)从上方财务数据取'EBITDA率'(已标注),取你的情景假设的商品价格涨幅ΔP%(如煤价+12%) (2)计算 g = ΔP% ÷ EBITDA率% (3)此g填入ebitda_growth_pct。例: EBITDA率14%,煤价涨12% → g=12%÷14%=85.7%,不是20%! 心算验证: 当前EBITDA×1.85≈你的预期值吗？\n- target_ev_ebitda: 资源溢价/折价直接反映在此倍数中。矿业通常6-10x,战略稀缺性可给更高,但需说明参照系",
     "H": "- nav_discount_pct: NAV折价必须反映资产流动性/变现难度。重资产折价20-40%,现金类资产折价0-10%",
@@ -1630,15 +1630,15 @@ def _compute_scenario_mcap(model: str, params: dict, core: dict) -> float | None
         roic_k = params.get("roic_assumed_pct", 0) / 100
         wacc_k = core.get("_wacc_decimal", 0.10)
 
-        if g1 <= 0 or term_pe <= 0 or roic_k <= 0:
+        if term_pe <= 0 or roic_k <= 0:
             return None
 
         nopat = core.get("nopat_yi", 0.01)
         pv_stage1 = 0.0
         for t in range(1, min(years, 10) + 1):
             nopat = nopat * (1 + g1)
-            rr = g1 / roic_k if roic_k > 0 else 0.5
-            rr = max(0.3, min(0.9, rr))  # RR in [30%, 90%]
+            rr = g1 / roic_k if roic_k > 0 else 0.0
+            rr = max(0.0, min(0.9, rr))  # RR in [0%, 90%]; g=0→RR=0(no reinvestment needed)
             fcff = nopat * (1 - rr)
             pv_stage1 += fcff / (1 + wacc_k) ** t
 
