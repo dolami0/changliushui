@@ -517,7 +517,7 @@ export function DingshuluPanel() {
 interface TrackingSummary {
   stockCode: string;
   stockName: string;
-  direction: 'long' | 'short';
+  trackStatus: 'active' | 'paused';
   conviction: number;
   convictionDelta: string;
   thesisStatus: string;
@@ -560,10 +560,11 @@ export function TrackingPanel() {
               if (aTriggered !== bTriggered) return bTriggered - aTriggered;
               return (a.date || '9999').localeCompare(b.date || '9999');
             });
+          if (d.track_status === 'paused') return null;
           return {
             stockCode: d.stockCode,
             stockName: d.stockName,
-            direction: d.direction || 'long',
+            trackStatus: d.track_status || 'active',
             conviction: d.conviction || 0,
             convictionDelta: latestTl?.delta || '0',
             thesisStatus: (d.pillars || []).some((p: any) => p.status === 'at_risk')
@@ -582,7 +583,7 @@ export function TrackingPanel() {
             verifiedCount: verifiedPillars.length,
             onTrackCount: onTrackPillars.length,
           };
-        });
+        }).filter(Boolean) as TrackingSummary[];
         summaries.sort((a, b) => {
           if (a.thesisStatus === 'at_risk' && b.thesisStatus !== 'at_risk') return -1;
           if (b.thesisStatus === 'at_risk' && a.thesisStatus !== 'at_risk') return 1;
