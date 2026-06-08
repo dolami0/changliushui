@@ -81,7 +81,7 @@ interface ThesisVersion {
 interface TrackingData {
   stockCode: string
   stockName: string
-  direction: 'long' | 'short'
+  track_status: 'active' | 'paused' | 'hidden'
   thesis: string
   conviction: number
   decisionDate: string
@@ -199,15 +199,20 @@ function ConvictionRing({ value }: { value: number }) {
   )
 }
 
-function DirectionBadge({ direction }: { direction: string }) {
-  const isLong = direction === 'long'
+function TrackStatusBadge({ status }: { status: string }) {
+  const meta: Record<string, { label: string; color: string; border: string; bg: string }> = {
+    active:  { label: '跟踪中', color: 'text-[#ADFF00]', border: 'border-[#ADFF00]/30', bg: 'bg-[#ADFF00]/5' },
+    paused:  { label: '已暂停', color: 'text-amber-400',  border: 'border-amber-400/30',  bg: 'bg-amber-400/5' },
+    hidden:  { label: '已隐藏', color: 'text-muted-foreground', border: 'border-white/10', bg: 'bg-white/5' },
+  }
+  const m = meta[status] ?? meta.active
   return (
     <span className={cn(
       'inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-sm font-medium border',
-      isLong ? 'text-[#ADFF00] border-[#ADFF00]/30 bg-[#ADFF00]/5' : 'text-red-400 border-red-400/30 bg-red-400/5'
+      m.color, m.border, m.bg
     )}>
-      {isLong ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-      {isLong ? '做多' : '做空'}
+      {status === 'active' ? <Activity size={12} /> : status === 'paused' ? <AlertTriangle size={12} /> : <X size={12} />}
+      {m.label}
     </span>
   )
 }
@@ -219,21 +224,24 @@ function DirectionBadge({ direction }: { direction: string }) {
 function StockListItem({ stock, isSelected, onClick }: {
   stock: TrackingData; isSelected: boolean; onClick: () => void
 }) {
+  const isPaused = stock.track_status === 'paused'
   return (
     <button
       onClick={onClick}
       className={cn(
         'w-full text-left p-4 border-b border-white/5 transition-colors',
         'hover:bg-white/[0.03] focus:outline-none',
-        isSelected && 'bg-white/[0.05] border-l-2 border-l-[#ADFF00]'
+        isSelected && 'bg-white/[0.05] border-l-2 border-l-[#ADFF00]',
+        isPaused && 'opacity-50'
       )}
     >
       <div className="flex items-center justify-between mb-1.5">
-        <div>
+        <div className="flex items-center gap-2">
           <span className="text-base font-semibold">{stock.stockName}</span>
-          <span className="text-sm text-muted-foreground ml-2 font-mono">{stock.stockCode}</span>
+          <span className="text-sm text-muted-foreground font-mono">{stock.stockCode}</span>
+          {isPaused && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-400 border border-amber-400/20">已暂停</span>}
         </div>
-        <DirectionBadge direction={stock.direction} />
+        <TrackStatusBadge status={stock.track_status} />
       </div>
       <div className="flex items-center gap-2 mt-2">
         <div className="flex-1">
@@ -779,7 +787,7 @@ export default function Tracking() {
           </div>
         ) : (
           <ScrollArea className="flex-1" style={{ minHeight: 0 }}>
-            {stocks.map(s => (
+            {stocks.filter(s => s.track_status !== 'hidden').map(s => (
               <StockListItem
                 key={s.stockCode}
                 stock={s}
@@ -813,7 +821,7 @@ export default function Tracking() {
                     <div className="flex items-center gap-2 mb-1">
                       <h1 className="text-2xl font-semibold">{selectedStock.stockName}</h1>
                       <span className="text-base font-mono text-muted-foreground">{selectedStock.stockCode}</span>
-                      <DirectionBadge direction={selectedStock.direction} />
+                      <TrackStatusBadge status={selectedStock.track_status} />
                     </div>
                     <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2">
                       <span>决议: {selectedStock.decisionDate}</span>

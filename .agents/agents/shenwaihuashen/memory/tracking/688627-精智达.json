@@ -1,9 +1,8 @@
 {
   "stockCode": "688627",
   "stockName": "精智达",
-  "direction": "long",
   "thesis": "长鑫IPO已提交注册，18GHz流片完成，半导体在手订单35亿+——催化剂全面提前。国内唯一DRAM/HBM全制程存储测试设备商，若注册批文Q3下发+长鑫首标份额>50%，则估值范式切换确立。",
-  "conviction": 60,
+  "conviction": 62,
   "decisionDate": "2026-05-28",
   "decision": "有条件通过",
   "recommendedPosition": 12,
@@ -16,11 +15,33 @@
       "expectation": "2026H1半导体收入>6亿(同比>80%)，收入占比>60%，毛利率>28%",
       "status": "pending",
       "verificationDate": "2026-08-31",
-      "lastChecked": "2026-05-28",
+      "lastChecked": "2026-06-08",
       "history": [
-        {"date": "2026-05-28", "actual": "FY2025半导体收入7.18亿(+151%)，Q1营收+119%", "trend": "up"},
-        {"date": "2026-05-28", "actual": "【巡检】广发机械研报：半导体订单35亿+，长鑫为主，武汉客户(长存)及H客户今年有望突破", "trend": "up"},
-        {"date": "2026-05-29", "actual": "【巡检】市场分析：长存上市→精智达从单引擎变双引擎。长存份额25%+/国产化率40%+。券商预期2026营收18-20亿/净利3.6-4.0亿(+80-100%)", "trend": "up"}
+        {
+          "date": "2026-05-28",
+          "actual": "FY2025半导体收入7.18亿(+151%)，Q1营收+119%",
+          "trend": "up"
+        },
+        {
+          "date": "2026-05-28",
+          "actual": "【巡检】广发机械研报：半导体订单35亿+，长鑫为主，武汉客户(长存)及H客户今年有望突破",
+          "trend": "up"
+        },
+        {
+          "date": "2026-05-29",
+          "actual": "【巡检】市场分析：长存上市→精智达从单引擎变双引擎。长存份额25%+/国产化率40%+。券商预期2026营收18-20亿/净利3.6-4.0亿(+80-100%)",
+          "trend": "up"
+        },
+        {
+          "date": "2026-06-05",
+          "actual": "【巡检】Q1营收+119%验证超预期增长。在手订单超20亿(1月斩获13.11亿大单)。长江存储IPO推进中→双引擎格局确立。股价从348反弹至388(+11.4%两日)",
+          "trend": "up"
+        },
+        {
+          "date": "2026-06-08",
+          "actual": "【巡检】6家机构一致买入/增持，2026E营收16.82亿/净利2.65亿(+70% YoY)。Q1营收+119%验证超预期。2026年1月斩获13.11亿大单。长鑫占新增订单80%+",
+          "trend": "up"
+        }
       ]
     },
     {
@@ -28,10 +49,28 @@
       "expectation": "2026年7月证监会正式下发长鑫IPO注册批文",
       "status": "on_track",
       "verificationDate": "2026-07-31",
-      "lastChecked": "2026-05-28",
+      "lastChecked": "2026-06-08",
       "history": [
-        {"date": "2026-05-28", "actual": "长鑫已提交注册，等待批文", "trend": "stable"},
-        {"date": "2026-05-28", "actual": "【巡检·WebSearch】5月17日更新招股书→5月27日上市委过会→当日晚间提交注册。距批文仅一步之遥", "trend": "up"}
+        {
+          "date": "2026-05-28",
+          "actual": "长鑫已提交注册，等待批文",
+          "trend": "stable"
+        },
+        {
+          "date": "2026-05-28",
+          "actual": "【巡检·WebSearch】5月17日更新招股书→5月27日上市委过会→当日晚间提交注册。距批文仅一步之遥",
+          "trend": "up"
+        },
+        {
+          "date": "2026-06-05",
+          "actual": "【巡检】5/27过会后等待证监会注册批文。市场预期6-7月下发。长鑫H1预计净利500-570亿，IPO估值2-3万亿。精智达DRAM老化修复测试份额~90%，直接受益",
+          "trend": "up"
+        },
+        {
+          "date": "2026-06-08",
+          "actual": "【巡检】5/27过会+提交注册后等待证监会批文。万得专题称'2万亿国产存储巨头IPO渐近'。市场预期6-7月下发。进度符合预期",
+          "trend": "up"
+        }
       ]
     },
     {
@@ -39,10 +78,28 @@
       "expectation": "2026年Q4完成18Gbps FT测试机验证，获客户认证+首批订单",
       "status": "pending",
       "verificationDate": "2026-12-31",
-      "lastChecked": "2026-05-28",
+      "lastChecked": "2026-06-08",
       "history": [
-        {"date": "2026-05-28", "actual": "技术跃迁的关键验证点", "trend": "stable"},
-        {"date": "2026-05-28", "actual": "【巡检·WebSearch】广发机械研报：18GHz存储测试芯片流片已完成。进度提前于Q4预期", "trend": "up"}
+        {
+          "date": "2026-05-28",
+          "actual": "技术跃迁的关键验证点",
+          "trend": "stable"
+        },
+        {
+          "date": "2026-05-28",
+          "actual": "【巡检·WebSearch】广发机械研报：18GHz存储测试芯片流片已完成。进度提前于Q4预期",
+          "trend": "up"
+        },
+        {
+          "date": "2026-06-05",
+          "actual": "【巡检】无新增技术进展。流片已完成是积极前置信号，HBM测试设备已全验证通过",
+          "trend": "up"
+        },
+        {
+          "date": "2026-06-08",
+          "actual": "【巡检】无新增技术进展。流片已完成是积极前置信号",
+          "trend": "up"
+        }
       ]
     },
     {
@@ -50,9 +107,23 @@
       "expectation": "2026H1扣非净利润同比恢复正增长(>+20%)，非经常性占比<15%",
       "status": "pending",
       "verificationDate": "2026-08-31",
-      "lastChecked": "2026-05-28",
+      "lastChecked": "2026-06-08",
       "history": [
-        {"date": "2026-05-28", "actual": "FY2025扣非5888万(-14.5%)，连续两年下滑。剔除股份支付后调整净利8611万(+4.8%)", "trend": "down"}
+        {
+          "date": "2026-05-28",
+          "actual": "FY2025扣非5888万(-14.5%)，连续两年下滑。剔除股份支付后调整净利8611万(+4.8%)",
+          "trend": "down"
+        },
+        {
+          "date": "2026-06-05",
+          "actual": "【巡检】Q1营收+119%预示扣非改善，但股份支付+研发费用仍吞噬利润。等待半年报验证",
+          "trend": "stable"
+        },
+        {
+          "date": "2026-06-08",
+          "actual": "【巡检】Q1营收+119%预示扣非改善，但股份支付+研发费用仍吞噬利润。券商预期2026归母2.65亿(+70%)",
+          "trend": "up"
+        }
       ]
     },
     {
@@ -60,19 +131,63 @@
       "expectation": "2026H1应收/营收从50.3%降至<40%，坏账率下降",
       "status": "pending",
       "verificationDate": "2026-08-31",
-      "lastChecked": "2026-05-28",
+      "lastChecked": "2026-06-08",
       "history": [
-        {"date": "2026-05-28", "actual": "FY2025应收5.67亿/营收11.28亿=50.3%，坏账3584万翻倍，前五大客户占93%", "trend": "stable"}
+        {
+          "date": "2026-05-28",
+          "actual": "FY2025应收5.67亿/营收11.28亿=50.3%，坏账3584万翻倍，前五大客户占93%",
+          "trend": "stable"
+        },
+        {
+          "date": "2026-06-05",
+          "actual": "【巡检】无新增数据。长江存储导入有望降低长鑫单客户集中度",
+          "trend": "stable"
+        },
+        {
+          "date": "2026-06-08",
+          "actual": "【巡检】无新增数据。长江存储IPO推进中→客户多元化逻辑强化",
+          "trend": "stable"
+        }
       ]
     }
   ],
   "risks": [
-    {"name": "PE 363x估值压缩", "probability": "高", "impact": "PE从363x回归过程中股价可能横盘或下跌", "monitoring": "每季PE变化+Forward PE"},
-    {"name": "单客户依赖(长鑫>50%)", "probability": "中", "impact": "第一大客户占53%，若长鑫资本开支延迟，收入将断崖", "monitoring": "长鑫IPO进展+长存导入进度"},
-    {"name": "长鑫IPO注册批文被否", "probability": "极低", "impact": "核心催化剂落空，bear概率上调至25%+", "monitoring": "2026年7月证监会批文公告 → 5/27已提交注册，风险大幅降低"},
-    {"name": "18Gbps验证失败/延期", "probability": "中", "impact": "技术跃迁证伪，PS可能从27x压缩至15x以下", "monitoring": "Q4验证进展公告"},
-    {"name": "12月科创板解禁", "probability": "中", "impact": "满3年解禁，大股东减持压力", "monitoring": "2026年11月起减持预披露公告"},
-    {"name": "增收不增利持续", "probability": "中", "impact": "股份支付+研发费用继续吞噬利润", "monitoring": "每季报扣非vs归母"}
+    {
+      "name": "PE 363x估值压缩",
+      "probability": "高",
+      "impact": "PE从363x回归过程中股价可能横盘或下跌",
+      "monitoring": "每季PE变化+Forward PE"
+    },
+    {
+      "name": "单客户依赖(长鑫>50%)",
+      "probability": "中",
+      "impact": "第一大客户占53%，若长鑫资本开支延迟，收入将断崖",
+      "monitoring": "长鑫IPO进展+长存导入进度"
+    },
+    {
+      "name": "长鑫IPO注册批文被否",
+      "probability": "极低",
+      "impact": "核心催化剂落空，bear概率上调至25%+",
+      "monitoring": "2026年7月证监会批文公告 → 5/27已提交注册，风险大幅降低"
+    },
+    {
+      "name": "18Gbps验证失败/延期",
+      "probability": "中",
+      "impact": "技术跃迁证伪，PS可能从27x压缩至15x以下",
+      "monitoring": "Q4验证进展公告"
+    },
+    {
+      "name": "12月科创板解禁",
+      "probability": "中",
+      "impact": "满3年解禁，大股东减持压力",
+      "monitoring": "2026年11月起减持预披露公告"
+    },
+    {
+      "name": "增收不增利持续",
+      "probability": "中",
+      "impact": "股份支付+研发费用继续吞噬利润",
+      "monitoring": "每季报扣非vs归母"
+    }
   ],
   "exitConditions": [
     "长鑫IPO注册批文被否 → 清仓",
@@ -83,19 +198,116 @@
     "PE回落至200x以下(Forward)但业绩持续兑现 → 可加仓至20%"
   ],
   "catalystCalendar": [
-    {"date": "2026-07", "event": "长鑫IPO注册批文", "type": "政策", "impact": "H", "bull": "证监会正式下发批文", "bear": "被否/长期停滞", "sourceLevel": "L5", "sourceDetail": "上交所/证监会公告", "sourceNote": "5/27已提交注册，距批文一步之遥", "status": "triggered"},
-    {"date": "2026-08", "event": "2026半年报", "type": "财报", "impact": "H", "bull": "营收>7亿+半导体占比>60%+合同负债跳升", "bear": "半导体增速<80%"},
-    {"date": "2026-Q4", "event": "18Gbps FT验证", "type": "公司", "impact": "H", "bull": "通过+获订单", "bear": "失败/延期"},
-    {"date": "2026-Q4", "event": "长鑫首批设备招标", "type": "行业", "impact": "H", "bull": "精智达份额>50%", "bear": "<30%或被长川抢单"},
-    {"date": "2026-H2", "event": "定增29.02亿审核", "type": "公司", "impact": "M", "bull": "上交所通过", "bear": "被问询/否决", "sourceLevel": "L5", "sourceDetail": "公司公告 2026-05-22", "sourceNote": "预案修订稿已发布，金额从29.6亿微调至29.02亿", "status": "pending"},
-    {"date": "2026-H2", "event": "长江存储IPO进展", "type": "政策", "impact": "M", "bull": "受理/过会", "bear": "中止"},
-    {"date": "2026-12", "event": "科创板解禁", "type": "市场", "impact": "M", "bull": "大股东不减持", "bear": "大规模减持"}
+    {
+      "date": "2026-07",
+      "event": "长鑫IPO注册批文",
+      "type": "政策",
+      "impact": "H",
+      "bull": "证监会正式下发批文",
+      "bear": "被否/长期停滞",
+      "sourceLevel": "L5",
+      "sourceDetail": "上交所/证监会公告",
+      "sourceNote": "5/27已过会(巡6/5确认)，等待证监会注册批文。Q1营收+119%/在手订单20亿+",
+      "status": "pending",
+      "note": "已过会+提交注册(巡2026-06-08确认)。等待证监会正式注册批文，预期6-7月。万得专题称2万亿存储巨头IPO渐近"
+    },
+    {
+      "date": "2026-08",
+      "event": "2026半年报",
+      "type": "财报",
+      "impact": "H",
+      "bull": "营收>7亿+半导体占比>60%+合同负债跳升",
+      "bear": "半导体增速<80%"
+    },
+    {
+      "date": "2026-Q4",
+      "event": "18Gbps FT验证",
+      "type": "公司",
+      "impact": "H",
+      "bull": "通过+获订单",
+      "bear": "失败/延期"
+    },
+    {
+      "date": "2026-Q4",
+      "event": "长鑫首批设备招标",
+      "type": "行业",
+      "impact": "H",
+      "bull": "精智达份额>50%",
+      "bear": "<30%或被长川抢单"
+    },
+    {
+      "date": "2026-H2",
+      "event": "定增29.02亿审核",
+      "type": "公司",
+      "impact": "M",
+      "bull": "上交所通过",
+      "bear": "被问询/否决",
+      "sourceLevel": "L5",
+      "sourceDetail": "公司公告 2026-05-22",
+      "sourceNote": "预案修订稿已发布，金额从29.6亿微调至29.02亿",
+      "status": "pending",
+      "note": "预案修订稿已发布(巡2026-06-08)，金额29.02亿，等待上交所审核"
+    },
+    {
+      "date": "2026-H2",
+      "event": "长江存储IPO进展",
+      "type": "政策",
+      "impact": "M",
+      "bull": "受理/过会",
+      "bear": "中止"
+    },
+    {
+      "date": "2026-12",
+      "event": "科创板解禁",
+      "type": "市场",
+      "impact": "M",
+      "bull": "大股东不减持",
+      "bear": "大规模减持"
+    }
   ],
   "basePrice": 395.89,
   "baseMarketCap": 372.64,
   "baseDate": "2026-05-28",
   "priceLog": [
-    {"date": "2026-05-28", "price": 395.89, "pe": 569.6, "mv_yi": 372.64, "return_pct": 0.0, "mv_change_pct": 0.0, "note": "建档基准价"}
+    {
+      "date": "2026-05-28",
+      "price": 395.89,
+      "pe": 569.6,
+      "mv_yi": 372.64,
+      "return_pct": 0.0,
+      "mv_change_pct": 0.0,
+      "note": "建档基准价"
+    },
+    {
+      "date": "2026-06-02",
+      "price": 348.19,
+      "pe": 500.98,
+      "mv_yi": 327.74,
+      "return_pct": -12.05,
+      "mv_change_pct": -12.05,
+      "pct_chg_daily": -0.4,
+      "note": "巡检: 建档后连续回调，PE从569x→501x"
+    },
+    {
+      "date": "2026-06-04",
+      "price": 388.01,
+      "pe": 558.27,
+      "mv_yi": 365.23,
+      "return_pct": -1.99,
+      "mv_change_pct": -1.99,
+      "pct_chg_daily": 9.14,
+      "note": "巡检: 强劲反弹+9.1%, 几乎收复建档后全部跌幅, PE回升至558x"
+    },
+    {
+      "date": "2026-06-05",
+      "price": 385.56,
+      "pe": 554.74,
+      "mv_yi": 362.92,
+      "return_pct": -2.61,
+      "mv_change_pct": -2.61,
+      "pct_chg_daily": -0.63,
+      "note": "巡检: 6/5微调-0.63%, PE 555x, 前日+9.1%反弹后正常消化。融资余额11.71亿(占市值3.2%), 无融券"
+    }
   ],
   "positionLog": [],
   "thesisLog": [
@@ -107,9 +319,16 @@
       "delta": "0",
       "trigger": "身外化身 7-Skill 流水线建档",
       "narrative": "精智达是国内唯一覆盖DRAM/HBM全制程的存储测试设备商。核心叙事围绕两个驱动力：(1)长鑫+长存双IPO驱动的国产存储扩产周期，带来测试设备采购350-430亿市场；(2)从显示检测商向半导体测试平台的估值范式切换。FY2025半导体收入7.18亿(+151%)已初步验证转型方向。但扣非连续两年下滑、应收/营收50.3%、前五大客户占93%是重大质量隐患。",
-      "verifiedAssumptions": ["半导体收入+151%已验证转型方向"],
+      "verifiedAssumptions": [
+        "半导体收入+151%已验证转型方向"
+      ],
       "invalidatedAssumptions": [],
-      "newUnknowns": ["长鑫IPO注册批文能否Q3下发", "18Gbps FT能否Q4通过", "长存能否成功导入", "扣非利润能否恢复增长"],
+      "newUnknowns": [
+        "长鑫IPO注册批文能否Q3下发",
+        "18Gbps FT能否Q4通过",
+        "长存能否成功导入",
+        "扣非利润能否恢复增长"
+      ],
       "narrativeTension": "stable"
     },
     {
@@ -120,22 +339,64 @@
       "delta": "+5",
       "trigger": "巡检WebSearch：长鑫5/27上市委过会→提交注册 + 广发研报披露半导体订单35亿+、18GHz流片完成 + 定增预案修订稿发布",
       "narrative": "原论点假设长鑫IPO在Q3获批，实际进度提前了2个月(5/27已提交注册)。18Gbps FT验证的前置步骤(芯片流片)已完成，技术路线确定性大幅提升。广发机械研报披露的在手订单35亿+远超我们Base情景的预期——这意味着2026年半导体收入可能冲击10亿+而非我们假设的6亿。定增29亿预案修订稿表明公司正在为更大规模的产能扩张做准备。叙事从'等待关键催化剂验证'转为'催化剂已部分触发，等待最终批文+财报确认'。",
-      "verifiedAssumptions": ["长鑫IPO推进进度", "18GHz技术路线可行性"],
+      "verifiedAssumptions": [
+        "长鑫IPO推进进度",
+        "18GHz技术路线可行性"
+      ],
       "invalidatedAssumptions": [],
-      "newUnknowns": ["注册批文实际下发时间(可能在6-7月)", "武汉客户/H客户导入的实际规模", "定增审核进度及对股价的影响"],
+      "newUnknowns": [
+        "注册批文实际下发时间(可能在6-7月)",
+        "武汉客户/H客户导入的实际规模",
+        "定增审核进度及对股价的影响"
+      ],
+      "narrativeTension": "rising"
+    },
+    {
+      "version": 3,
+      "date": "2026-06-08T09:07:00",
+      "thesis": "国内唯一DRAM/HBM全制程存储测试设备商，长鑫IPO已提交注册(5/27过会)，半导体在手订单35亿+超预期，6家机构一致买入/增持(2026E净利2.65亿/+70%)。若注册批文6-7月下发+长鑫首标份额>50%，估值范式切换确立。",
+      "conviction": 62,
+      "delta": "+2",
+      "trigger": "巡检: 6家机构一致买入确认(2026E净利2.65亿)+融资余额11.71亿(+3.2%)+长鑫2万亿IPO渐近(万得专题)+512GB DDR5进入验证",
+      "narrative": "本轮巡检强化了精智达叙事的机构共识面：(1)6家机构(中泰/东兴/东北/广发/中邮/华安)一致买入/增持评级，2026E营收16.82亿(+49%)、净利2.65亿(+70%)，增长逻辑得到专业验证。(2)长鑫2万亿IPO专题出现在万得终端——作为Wind核心用户的基金经理群体正在关注这条产业链。(3)融资余额11.71亿(占市值3.2%)、无融券——杠杆资金偏多但未到过热水平。(4)512GB DDR5 DRAM测试进入验证阶段(最新产品进展)。核心风险仍是PE 555x的高估值——如果批文延迟至8月后或半导体增速放缓，PE压缩风险显著。Conviction从60上调至62——机构共识+长鑫IPO专题传播扩大，确定性提升。",
+      "verifiedAssumptions": [
+        "长鑫IPO过会+提交注册(5/27)",
+        "6家机构一致买入/增持评级",
+        "在手订单35亿+/Q1营收+119%",
+        "512GB DDR5进入验证"
+      ],
+      "invalidatedAssumptions": [],
+      "newUnknowns": [
+        "注册批文实际下发时间(6-7月还是延迟)",
+        "长存导入的具体份额",
+        "12月科创板解禁→大股东态度"
+      ],
       "narrativeTension": "rising"
     }
   ],
   "aShareTracking": {
-    "pledgeCheck": {"lastChecked": "2026-05-28", "result": "双源确认无质押(tushare→investoday)"},
-    "unlockCheck": {"lastChecked": "2026-05-28", "result": "2026年12月科创板满3年解禁，关注减持公告"},
-    "marginCheck": {"lastChecked": "2026-05-28", "result": "待首次月度专检"},
-    "insiderTrading": {"lastChecked": "2026-05-28", "result": "待首次月度专检"}
+    "pledgeCheck": {
+      "lastChecked": "2026-05-28",
+      "result": "双源确认无质押(tushare→investoday)"
+    },
+    "unlockCheck": {
+      "lastChecked": "2026-05-28",
+      "result": "2026年12月科创板满3年解禁，关注减持公告"
+    },
+    "marginCheck": {
+      "lastChecked": "2026-06-08",
+      "result": "融资余额11.71亿(占市值362.9亿的3.2%), 无融券余额。6/3-5融资买入约3.1亿/日, 融资余额稳定在11-13亿区间, 无异常"
+    },
+    "insiderTrading": {
+      "lastChecked": "2026-05-28",
+      "result": "待首次月度专检"
+    }
   },
   "reviewSchedule": {
     "nextFullReview": "2026-08-31(半年报)",
-    "nextQuickCheck": "2026-05-29(明日巡检)",
-    "lastCheck": "2026-05-28(巡检+thesis v2)",
+    "nextQuickCheck": "2026-06-09(周二巡检)",
+    "lastCheck": "2026-06-08(巡检)",
     "patrolFrequency": "每个工作日 9:07"
-  }
+  },
+  "track_status": "active"
 }

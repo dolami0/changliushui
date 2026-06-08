@@ -1,0 +1,287 @@
+{
+  "stockCode": "688787",
+  "stockName": "海天瑞声",
+  "thesis": "AI数据要素产业化的核心受益标的——语音标注国内第一(市占~19%)+政企ToG数据要素先发卡位。国家数据局6/8政策打开了政府/国央企百亿级增量市场，2025年视觉+214%/应用服务+1300%验证需求爆发。核心验证点：视觉/应用服务GM能否随规模效应改善(视觉27.6%→30%+,应用21.0%→25%+)——低毛利ToG项目能否通过标准化变成可持续的高毛利产品。最大结构性问题：GM一年崩塌18ppt(66.5%→48.1%)，OCF恶化-93.8%。",
+  "conviction": 48,
+  "decisionDate": "2026-06-08",
+  "decision": "有条件通过",
+  "recommendedPosition": 5,
+  "actualPosition": 0,
+  "entryCondition": "回调至125-130元建3%观察仓；8月半年报GM>30%+境内收入>50%加至8%；6/8涨停后不追高",
+  "entryPriceTarget": 127.5,
+  "pillars": [
+    {
+      "name": "新业务毛利率随规模效应改善",
+      "expectation": "视觉GM从FY2025的27.6%→>30%(规模效应)，应用服务GM从21.0%→>25%，综合GM不低于FY2025的48.1%",
+      "quantifiedTarget": "视觉GM>30%，应用服务GM>25%，综合GM≥48%",
+      "status": "pending",
+      "verificationDate": "2026-08-31",
+      "lastChecked": "2026-06-08",
+      "history": [
+        {
+          "date": "2026-06-08",
+          "actual": "【建档】FY2025综合GM=48.1%(FY2024=66.5%,-18.4ppt)。Q1 2026 GM=56.4%回升但系季节性。视觉GM从FY2024 37.8%→FY2025 27.6%(规模翻倍但GM反降10ppt)。应用服务GM=21.0%。",
+          "trend": "down"
+        }
+      ]
+    },
+    {
+      "name": "境内ToG收入持续高增",
+      "expectation": "2026H1境内业务收入同比增速>50%，数据要素相关订单/合同金额显著增长(>1亿)",
+      "quantifiedTarget": "H1境内收入增速>50%，ToG订单>1亿",
+      "status": "on_track",
+      "verificationDate": "2026-08-31",
+      "lastChecked": "2026-06-08",
+      "history": [
+        {
+          "date": "2026-06-08",
+          "actual": "【建档】FY2025境内收入2.19亿(+77.7%)。2026Q1新签订单同比+100%(公司口径)。视觉+214.9%，应用服务+1300%。国家数据局6/8发布高质量数据集行动方案。",
+          "trend": "up"
+        }
+      ]
+    },
+    {
+      "name": "经营现金流改善",
+      "expectation": "2026H1经营性现金流净额扭正或同比大幅改善(>+50%)，OCF/NI>0.5x",
+      "quantifiedTarget": "H1 OCF>0且OCF/NI>0.5x",
+      "status": "pending",
+      "verificationDate": "2026-08-31",
+      "lastChecked": "2026-06-08",
+      "history": [
+        {
+          "date": "2026-06-08",
+          "actual": "【建档】FY2025 OCF同比-93.8%(公司解释为ToG业务结算周期)。Q1数据不完整但ToG回款慢是行业通病。这是本案除GM外的第二大风险指标",
+          "trend": "down"
+        }
+      ]
+    },
+    {
+      "name": "智能语音业务企稳",
+      "expectation": "2026H1智能语音收入降幅收窄至<5%(FY2025为-8.7%)，不再拖累整体PS",
+      "quantifiedTarget": "H1语音收入降幅<5% YoY",
+      "status": "pending",
+      "verificationDate": "2026-08-31",
+      "lastChecked": "2026-06-08",
+      "history": [
+        {
+          "date": "2026-06-08",
+          "actual": "【建档】FY2025智能语音1.50亿(-8.7%), GM 75.5%。以39.9%收入贡献62.6%毛利——利润支柱但在萎缩。若语音继续-10%则进一步拉低综合GM",
+          "trend": "down"
+        }
+      ]
+    },
+    {
+      "name": "政策→订单转化验证",
+      "expectation": "2026年底前至少3个数据标注创新试验区获得实质性订单(单笔>3000万)",
+      "quantifiedTarget": "≥3个试验区订单，单笔>3000万",
+      "status": "pending",
+      "verificationDate": "2026-12-31",
+      "lastChecked": "2026-06-08",
+      "history": [
+        {
+          "date": "2026-06-08",
+          "actual": "【建档】6/8国家数据局发布行动方案，引导地方建设数据标注创新试验区。首批7个试点地点/企业未公布。政策→订单转化周期通常3-6个月",
+          "trend": "stable"
+        }
+      ]
+    }
+  ],
+  "risks": [
+    {
+      "name": "GM结构性恶化(核心风险)",
+      "probability": "中-高",
+      "impact": "视觉+应用服务GM<30%拖累综合GM持续下行，利润增长持续低于收入增长，市场拒绝给予SOTP溢价。Bear触发→68亿(-19%)",
+      "monitoring": "每季报综合GM+分产品GM"
+    },
+    {
+      "name": "OCF持续为负(利润质量)",
+      "probability": "中",
+      "impact": "ToG业务回款慢→利润是账面数字。若H1 OCF无改善→触发清仓",
+      "monitoring": "每季报OCF+应收账款周转天数"
+    },
+    {
+      "name": "大股东质押+减持",
+      "probability": "中",
+      "impact": "实控人质押41.1%接近红线，连续两年减持(~3%/年)。若质押率升至>50%或新减持计划→一票否决/减仓",
+      "monitoring": "每月质押率+减持公告"
+    },
+    {
+      "name": "可比公司PS虚高误导估值",
+      "probability": "中",
+      "impact": "星环/拓尔思均亏损→PS不可比。若市场用'亏损成长股'给海天定价→PS压缩至15x以下",
+      "monitoring": "每季可比公司PS+自身PS趋势"
+    },
+    {
+      "name": "ToG政策落地不及预期",
+      "probability": "中",
+      "impact": "地方财政紧缩+本土保护→试点订单被地方国资瓜分，海天份额低于预期",
+      "monitoring": "订单公告+地方招标信息"
+    },
+    {
+      "name": "合成数据技术颠覆",
+      "probability": "低-中",
+      "impact": "3-5年内若合成数据大幅替代人工标注→行业逻辑重构",
+      "monitoring": "顶级AI会议论文+头部AI公司合成数据采用比例"
+    }
+  ],
+  "exitConditions": [
+    "半年报综合GM<25%或境内收入增速<30% → 清仓",
+    "半年报OCF无改善(仍大幅为负) → 减至2%或清仓",
+    "跌破110元(~66亿,独立Bear估值) → 止损清仓",
+    "实控人质押率升至>50% → 一票否决清仓",
+    "实控人公告新减持计划 → 减至2%",
+    "连续两个季度GM>35%+OCF为正 → 上调Conviction至60+,可加至12%"
+  ],
+  "catalystCalendar": [
+    {
+      "date": "2026-06-08",
+      "event": "国家数据局高质量数据集行动方案发布",
+      "type": "政策",
+      "impact": "H",
+      "bull": "政策正式出台",
+      "bear": "—",
+      "sourceLevel": "L5",
+      "sourceDetail": "国家数据局官网+央视新闻",
+      "sourceNote": "已触发✅ 6/8发布，当日股价+10.88%",
+      "status": "triggered"
+    },
+    {
+      "date": "2026-07-08前",
+      "event": "首批数据标注试验区订单公告",
+      "type": "公司",
+      "impact": "H",
+      "bull": "单笔>5000万",
+      "bear": "30天内无任何公告",
+      "sourceLevel": "L3",
+      "sourceDetail": "分析师推测时间窗口",
+      "sourceNote": "⚠️ 信源等级L3。公司未给出指引。政策→订单转化通常3-6个月",
+      "status": "pending"
+    },
+    {
+      "date": "2026-08",
+      "event": "2026半年报",
+      "type": "财报",
+      "impact": "H",
+      "bull": "境内收入>50%+GM>30%+OCF改善",
+      "bear": "境内<30%或GM<25%→清仓",
+      "sourceLevel": "L5",
+      "sourceDetail": "上交所定期报告",
+      "sourceNote": "🔴 Critical Catalyst——不可失败",
+      "status": "pending"
+    },
+    {
+      "date": "2026-08",
+      "event": "限售股解禁",
+      "type": "市场",
+      "impact": "M",
+      "bull": "规模小+无减持",
+      "bear": "规模>5%+公告减持",
+      "sourceLevel": "L5",
+      "sourceDetail": "公司公告",
+      "sourceNote": "规模待确认",
+      "status": "pending"
+    },
+    {
+      "date": "2026-10",
+      "event": "2026三季报",
+      "type": "财报",
+      "impact": "H",
+      "bull": "营收维持>50%+GM趋势向上+OCF为正",
+      "bear": "增速环比骤降或GM回落",
+      "sourceLevel": "L5",
+      "sourceDetail": "上交所定期报告",
+      "status": "pending"
+    },
+    {
+      "date": "2026-12",
+      "event": "10+城市数据标注基地落地目标",
+      "type": "公司",
+      "impact": "M",
+      "bull": "达成10+城",
+      "bear": "不及5城",
+      "sourceLevel": "L3",
+      "sourceDetail": "分析师推测+调研纪要",
+      "status": "pending"
+    },
+    {
+      "date": "2027-03",
+      "event": "2026年报",
+      "type": "财报",
+      "impact": "H",
+      "bull": "全年营收>6亿+GM>32%+OCF/NI>0.8x",
+      "bear": "营收<5亿或GM<28%",
+      "sourceLevel": "L5",
+      "sourceDetail": "上交所定期报告",
+      "status": "pending"
+    }
+  ],
+  "basePrice": 139.38,
+  "baseMarketCap": 84.1,
+  "basePE": 595.5,
+  "baseDate": "2026-06-08",
+  "priceLog": [
+    {
+      "date": "2026-06-08",
+      "price": 139.38,
+      "pe": 595.5,
+      "mv_yi": 84.1,
+      "return_pct": 0.0,
+      "mv_change_pct": 0.0,
+      "note": "建档基准价。当日+10.88%国家数据局政策催化涨停。6/5前收盘125.7"
+    }
+  ],
+  "positionLog": [],
+  "thesisLog": [
+    {
+      "version": 1,
+      "date": "2026-06-08T17:00:00",
+      "thesis": "AI数据要素产业化的核心受益标的——语音标注国内第一(市占~19%)+政企ToG数据要素先发卡位。国家数据局6/8政策打开了政府/国央企百亿级增量市场，2025年视觉+214%/应用服务+1300%验证需求爆发。核心验证点：视觉/应用服务GM能否随规模效应改善(视觉27.6%→30%+,应用21.0%→25%+)——低毛利ToG项目能否通过标准化变成可持续的高毛利产品。最大结构性问题：GM一年崩塌18ppt(66.5%→48.1%)，OCF恶化-93.8%。",
+      "conviction": 48,
+      "delta": "0",
+      "trigger": "身外化身 7-Skill 流水线建档 — 基于定数录估值报告",
+      "narrative": "海天瑞声正处于从'AI周期数据服务商'向'AI数据要素平台'的战略转型期。'三驾马车'格局：智能语音(39.9%收入,GM 75.5%)是利润支柱但在萎缩(-8.7%)；计算机视觉(39.2%收入,GM 27.6%)和应用服务(7.3%收入,GM 21.0%)是增长引擎但利润极薄；自然语言(13.6%,GM 41.4%)稳健增长。核心矛盾是GM结构性崩塌：综合GM一年内从66.5%跌至48.1%(-18.4ppt)——每1元高毛利语音收入被替代为1元低毛利视觉收入，公司损失约0.48元毛利。正面因素：2026Q1 GM回升至56.4%，新签订单+100%，国家数据局6/8政策打开ToG市场，市值84亿满足灵光'小市值'条件，Bear估值有语音利润+已签合同构成的硬底(~68亿)。负面因素：PE 596x起涨无案例库先例，可比公司星环/拓尔思均亏损导致PS虚高，OCF恶化-93.8%，实控人连续两年减持+质押41.1%。本案赌的是规模效应能否把低毛利ToG项目从21-28%GM推至30-35%——如果能，SOTP估值120-180亿合理；如果不能，这是一个'卖人头'的外包公司，68亿以下。独立概率加权+41.7%，不对称比6.0，Conviction 48/100。",
+      "verifiedAssumptions": [
+        "国家数据局政策正式发布(L5,6/8)",
+        "2026Q1新签订单+100%验证需求(L5)",
+        "视觉+214%/应用服务+1300%验证第二曲线(L5)"
+      ],
+      "invalidatedAssumptions": [
+        "定数录Bear=+3.1%——独立验证Bear≈-19%，'不亏钱'假设被推翻",
+        "星环/拓尔思作为可比公司——均亏损，PS不可比，应折价至20-25x"
+      ],
+      "newUnknowns": [
+        "2026H1 GM能否回升至30%+？",
+        "OCF能否在H1改善？",
+        "首批7个试点花落谁家？",
+        "视觉GM规模翻倍反降10ppt的原因？",
+        "限售股解禁具体规模？"
+      ],
+      "narrativeTension": "stable"
+    }
+  ],
+  "aShareTracking": {
+    "pledgeCheck": {
+      "lastChecked": "2026-06-08",
+      "result": "实控人质押41.1%(2026/4/17公司IR确认)。tushare返空。接近50%红线，每月监控"
+    },
+    "unlockCheck": {
+      "lastChecked": "2026-06-08",
+      "result": "2026年8月有限售股解禁，规模待确认（报告未提供具体数字）"
+    },
+    "marginCheck": {
+      "lastChecked": "2026-06-08",
+      "result": "待首次月度专检"
+    },
+    "insiderTrading": {
+      "lastChecked": "2026-06-08",
+      "result": "5位高管减持已完成(5/12-13,@145-150元,高于现价)。实控人减持计划5/23到期，声明'目前无新减持计划'。实控人连续两年减持(~3%/年)需持续关注"
+    }
+  },
+  "reviewSchedule": {
+    "nextFullReview": "2026-08-31(半年报)",
+    "nextQuickCheck": "2026-06-09(明日巡检)",
+    "lastCheck": "2026-06-08(建档)",
+    "patrolFrequency": "每个工作日 9:07"
+  },
+  "track_status": "active"
+}

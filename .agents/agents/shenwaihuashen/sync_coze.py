@@ -46,7 +46,7 @@ def upsert(tracking_file):
     update_fields = [
         {"field_name": "stock_code",         "value": s(d.get("stockCode"))},
         {"field_name": "stock_name",         "value": s(d.get("stockName"))},
-        {"field_name": "direction",          "value": s(d.get("direction", "long"))},
+        {"field_name": "track_status",      "value": s(d.get("track_status", "active"))},
         {"field_name": "conviction",         "value": s(d.get("conviction", 0))},
         {"field_name": "decision",           "value": s(d.get("decision", ""))},
         {"field_name": "decision_date",      "value": s(d.get("decisionDate", ""))},
@@ -82,7 +82,7 @@ def upsert(tracking_file):
         action = "updated"
     else:
         fields = {f["field_name"]: f["value"] for f in update_fields}
-        result = api("POST", "/records", {"records": [{"fields": fields}]})
+        result = api("POST", "/records", {"insert_rows": [fields]})
         action = "created"
 
     if result and result.get("code") == 0:

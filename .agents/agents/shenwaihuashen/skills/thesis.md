@@ -65,7 +65,7 @@ cd D:\长流水\.agents\agents\shenwaihuashen && python data_helper.py daily <co
 {
   "stockCode": "300617",
   "stockName": "安靠智电",
-  "direction": "long",
+  "track_status": "active",
   "thesis": "一句话核心投资逻辑（可证伪）",
   "conviction": 45,
   "decisionDate": "2026-05-28",
