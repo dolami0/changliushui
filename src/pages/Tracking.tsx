@@ -238,7 +238,6 @@ function StockListItem({ stock, isSelected, onClick }: {
         <div className="flex items-center gap-2">
           <span className="text-base font-semibold">{stock.stockName}</span>
           <span className="text-sm text-muted-foreground font-mono">{stock.stockCode}</span>
-          {isPaused && <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-400/10 text-amber-400 border border-amber-400/20">已暂停</span>}
         </div>
         <TrackStatusBadge status={stock.track_status} />
       </div>
