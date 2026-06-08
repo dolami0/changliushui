@@ -178,6 +178,8 @@ cd D:\长流水\.agents\agents\shenwaihuashen && python data_helper.py daily <co
 
 ### 3. 更新流程（每次追踪时）
 
+**Step 0 — 过滤暂停标的**：遍历 `memory/tracking/` 下所有 JSON 文件，跳过 `track_status` 为 `"paused"` 的标的。仅对 `track_status` 为 `"active"` 的标的执行后续 Step A-D。
+
 **读取** `tracking/{code}-{name}.json`
 
 **Step A — 拉取最新行情**：
