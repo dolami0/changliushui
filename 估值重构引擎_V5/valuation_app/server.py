@@ -855,6 +855,36 @@ async def api_tracking_list():
     return JSONResponse(stocks)
 
 
+@app.patch("/api/tracking/{ticker}/status")
+async def api_update_track_status(ticker: str, request: Request):
+    """更新单只标的跟踪状态 — 本地 JSON + Coze 双写"""
+    body = await request.json()
+    new_status = body.get("track_status", "active")
+    if new_status not in ("active", "paused", "hidden"):
+        return JSONResponse({"ok": False, "error": f"invalid status: {new_status}"}, status_code=400)
+
+    # 1. 本地 JSON 更新
+    updated_local = False
+    if _TRACKING_DIR.exists():
+        for fp in _TRACKING_DIR.iterdir():
+            if fp.suffix != ".json" or fp.stem == "_template":
+                continue
+            data = _read_json(fp)
+            if data and data.get("stockCode") == ticker:
+                data["track_status"] = new_status
+                _write_json(fp, data)
+                updated_local = True
+                break
+
+    # 2. Coze 同步更新
+    try:
+        _coze_update_by_stock(COZE_TRACKING_TABLE, ticker, {"track_status": new_status})
+    except Exception:
+        pass
+
+    return JSONResponse({"ok": updated_local, "ticker": ticker, "track_status": new_status})
+
+
 # ── V5 新增: 赔率排序 API ──────
 
 @app.get("/api/ranking")

@@ -822,6 +822,29 @@ export default function Tracking() {
                       <h1 className="text-2xl font-semibold">{selectedStock.stockName}</h1>
                       <span className="text-base font-mono text-muted-foreground">{selectedStock.stockCode}</span>
                       <TrackStatusBadge status={selectedStock.track_status} />
+                      <button
+                        onClick={async () => {
+                          const order: Array<'active' | 'paused' | 'hidden'> = ['active', 'paused', 'hidden']
+                          const idx = order.indexOf(selectedStock.track_status)
+                          const next = order[(idx + 1) % 3]
+                          try {
+                            const res = await fetch(`/api/tracking/${selectedStock.stockCode}/status`, {
+                              method: 'PATCH',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ track_status: next }),
+                            })
+                            if (res.ok) {
+                              const updated = { ...selectedStock, track_status: next }
+                              setSelected(updated)
+                              setStocks(prev => prev.map(s => s.stockCode === selectedStock.stockCode ? updated : s))
+                            }
+                          } catch { /* ignore */ }
+                        }}
+                        className="text-xs text-muted-foreground hover:text-[#ADFF00] transition-colors px-1.5 py-0.5 rounded border border-white/10 hover:border-[#ADFF00]/30"
+                        title="切换跟踪状态"
+                      >
+                        ⇄
+                      </button>
                     </div>
                     <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2">
                       <span>决议: {selectedStock.decisionDate}</span>
