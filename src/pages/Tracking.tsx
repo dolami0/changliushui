@@ -81,7 +81,7 @@ interface ThesisVersion {
 interface TrackingData {
   stockCode: string
   stockName: string
-  track_status: 'active' | 'paused' | 'hidden'
+  track_status: 'active' | 'paused'
   thesis: string
   conviction: number
   decisionDate: string
@@ -203,7 +203,6 @@ function TrackStatusBadge({ status }: { status: string }) {
   const meta: Record<string, { label: string; color: string; border: string; bg: string }> = {
     active:  { label: '跟踪中', color: 'text-[#ADFF00]', border: 'border-[#ADFF00]/30', bg: 'bg-[#ADFF00]/5' },
     paused:  { label: '已暂停', color: 'text-amber-400',  border: 'border-amber-400/30',  bg: 'bg-amber-400/5' },
-    hidden:  { label: '已隐藏', color: 'text-muted-foreground', border: 'border-white/10', bg: 'bg-white/5' },
   }
   const m = meta[status] ?? meta.active
   return (
@@ -211,7 +210,7 @@ function TrackStatusBadge({ status }: { status: string }) {
       'inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-sm font-medium border',
       m.color, m.border, m.bg
     )}>
-      {status === 'active' ? <Activity size={12} /> : status === 'paused' ? <AlertTriangle size={12} /> : <X size={12} />}
+      {status === 'active' ? <Activity size={12} /> : <AlertTriangle size={12} />}
       {m.label}
     </span>
   )
@@ -787,7 +786,7 @@ export default function Tracking() {
           </div>
         ) : (
           <ScrollArea className="flex-1" style={{ minHeight: 0 }}>
-            {stocks.filter(s => s.track_status !== 'hidden').map(s => (
+            {stocks.filter(s => s.track_status !== 'paused').map(s => (
               <StockListItem
                 key={s.stockCode}
                 stock={s}
@@ -824,9 +823,7 @@ export default function Tracking() {
                       <TrackStatusBadge status={selectedStock.track_status} />
                       <button
                         onClick={async () => {
-                          const order: Array<'active' | 'paused' | 'hidden'> = ['active', 'paused', 'hidden']
-                          const idx = order.indexOf(selectedStock.track_status)
-                          const next = order[(idx + 1) % 3]
+                          const next = selectedStock.track_status === 'active' ? 'paused' : 'active'
                           try {
                             const res = await fetch(`/api/tracking/${selectedStock.stockCode}/status`, {
                               method: 'PATCH',

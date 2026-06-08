@@ -860,7 +860,7 @@ async def api_update_track_status(ticker: str, request: Request):
     """更新单只标的跟踪状态 — 本地 JSON + Coze 双写"""
     body = await request.json()
     new_status = body.get("track_status", "active")
-    if new_status not in ("active", "paused", "hidden"):
+    if new_status not in ("active", "paused"):
         return JSONResponse({"ok": False, "error": f"invalid status: {new_status}"}, status_code=400)
 
     # 1. 本地 JSON 更新
