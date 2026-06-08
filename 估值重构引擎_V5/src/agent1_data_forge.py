@@ -273,14 +273,34 @@ def _extract_core_fields(raw_bundle: dict, stock_code: str) -> dict[str, Any]:
 
     # 衍生计算
 
-    # EBITDA 估算: fin_der_inds 返回最新单季数据，年化×4；API 不拆分 ebit 和 ebitda 时二者相等
-    raw_ebitda_q = _num(fd.get("ebitda")) / 1e8  # 单季，亿
-    ebitda_annual = raw_ebitda_q * 4
+    # EBITDA TTM 估算: op_TTM(真TTM) + 年折旧摊销
+    #   年折旧摊销 = FY_EBITDA(fina_indicator累计) − FY_经营利润(季度利润表累计)
+    #   假设年折旧摊销相对稳定（煤矿/重资产特征），TTM只需更新op部分
     op = fields["operating_profit_ttm_yi"]
-    if ebitda_annual < op and op > 0:
-        # 年化后仍小于经营利润=数据异常(可能不是单季)，用经营利润×1.15保守估计D&A
-        ebitda_annual = round(op * 1.15, 2)
-    fields["ebitda_ttm_yi"] = round(ebitda_annual, 2)
+    ts_trends = ts_fi.get("trends", [])
+    fy_ebitda = 0.0
+    for t in ts_trends:
+        ed = str(t.get("end_date", "")).replace(".0", "")
+        if ed.endswith("1231"):
+            fy_ebitda = (t.get("ebitda") or 0) / 1e8
+            break
+    # 从季度利润表取 FY 经营利润（累计值，end_date=1231的那条）
+    inc_q = r.get("ts_income_q", {}) or {}
+    fy_op = 0.0
+    for p in inc_q.get("periods", []):
+        ed = str(p.get("end_date", "")).replace(".0", "")
+        if ed.endswith("1231"):
+            fy_op = p.get("operate_profit", 0)
+            break
+    annual_da = fy_ebitda - fy_op
+    if annual_da > 0 and fy_op > 0:
+        ebitda_ttm = op + annual_da
+    elif op > 0:
+        # fallback: 典型重资产 D&A ≈ op 的 40-80%，取 60%
+        ebitda_ttm = op * 1.6
+    else:
+        ebitda_ttm = 0.0
+    fields["ebitda_ttm_yi"] = round(ebitda_ttm, 2)
 
     pbt = _num(inc.get("profit_before_tax")) / 1e8
     tax = _num(inc.get("income_tax")) / 1e8

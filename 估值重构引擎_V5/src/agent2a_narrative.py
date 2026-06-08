@@ -100,7 +100,8 @@ NARRATIVE_DIAGNOSIS_PROMPT = """你是估值叙事诊断师。你的职责不是
     "excluded_families": [],
     "distribution_shape": "narrow_concentrated",
     "pricing_bias": "undervalued | fairly_valued | overvalued | uncertain",
-    "key_risk_for_routing": "..."
+    "key_risk_for_routing": "...",
+    "event_driven_segment": "仅当sotp_triggered=true且仅有一个分部被事件催动时填写。格式: {\"segment\": \"分部名\", \"anchor\": \"锚类型\"}。若事件催动所有分部则留空对象{}"
   }
 }
 ```
@@ -222,6 +223,8 @@ NARRATIVE_DIAGNOSIS_PROMPT = """你是估值叙事诊断师。你的职责不是
 - `anchor`: 该业务的估值锚（存量盈利业务默认 earnings）
 - `revenue_share_pct`: 收入占比（估算即可）
 - `data_confidence`: 分部数据的可靠性 (low/medium/high)
+- `is_event_driven`: 事件的因果链路是否经过此分部（按1j判定）。true=事件为此分部提供了增量信息，false=事件不经过此分部
+- `non_driven_rationale`: 若 is_event_driven=false，说明为什么事件的因果链路不经过此分部（引用事件推演/投资主题中的具体文本）
 
 **常见模式（必须识别）**:
 - 叙事在讲 AI/半导体/机器人新业务(revenue 锚) + 公司主要收入来自传统制造业 → 副锚=传统业务(earnings 锚)
@@ -294,6 +297,40 @@ SOTP 解决的是"同一时刻不同业务锚不同"的问题。范式切换解�
 - `shift_timing`: 切换已发生（新业务收入已开始放量）/ 切换进行中（市场在重新定价但新业务尚未兑现）/ 切换尚未开始（催化剂未到）
 - `from_anchor→to_anchor`: 明确标注可能从哪个锚切换到哪个锚
 - 若无范式切换可能: shift_possible=false, 其余字段留空
+
+## 1j. 事件信息覆盖度 — SOTP 分部主次判定
+
+**仅当 sotp_triggered=true 时执行此步骤。**
+
+SOTP 把公司拆成多个分部各自估值——但并非所有分部都从当前事件中获得了增量信息。事件是催化剂，按特定因果链路传导。它只照亮链路经过的分部。
+
+**判定: 事件的因果链路催动了哪个分部？**
+
+重新通读"事件背景""事件推演""投资主题"三个语料。追溯事件的传导链，判断每个分部的参数设定**是否从事件中获得增量信息**:
+
+| 信号 | 被事件催动 | 未被事件催动 |
+|------|-----------|------------|
+| 事件的因果链路是否经过该分部？ | 是 | 否 |
+| 该分部的增速/利润率假设能否从事件信息中推导？ | 是 | 不能,来自历史趋势/行业常识 |
+| 该分部的估值倍数能否从事件信息中锚定？ | 是 | 不能,来自LLM训练知识/一般经验 |
+
+**被事件催动的分部**: 事件的因果链路为该分部提供了前瞻判断依据。标记为 `is_event_driven=true`。
+→ 在 Agent-3s 推演时，该分部的增速/倍数参数**必须以事件数据为锚定基准**，从事件能推导的范围出发。
+
+**未被事件催动的分部**: 事件对此分部没有增量信息。参数来源是公司历史/行业常识/LLM训练知识。标记为 `is_event_driven=false`。
+→ 在 Agent-3s 推演时，该分部的参数必须从保守端出发——增速≤历史中枢+1σ，PS≤行业可比中位数，PE≤行业周期中值。**不允许此分部主导最终估值。**
+
+**常见误判——必须避免:**
+- "公司有这个业务，事件对全公司都好" → 错。事件是催化剂，不是降雨。它按**特定因果链路**传导，只照亮链路途经的分部。
+- "非煤业务也在增长，所以事件催动了它" → 错。非煤的增长不是因为煤安事故。事件的因果链路（安监升级→煤矿买安全设备）不经过非煤业务。
+- "煤矿和非煤都涉及矿山，是同行业" → 错。行业标签相同≠事件催动相同。安监升级催动的是安全设备的**强制性采购**，不催动非煤矿山的**可选性智能化升级**。
+
+**输出**: 在 market_narrative 的 `secondary_anchors` 数组每个副锚标注 `is_event_driven: true/false`。
+若副锚的 `is_event_driven=false`，必须写 `non_driven_rationale`: 说明为什么事件的因果链路不经过此分部（引用事件推演/投资主题中的具体文本）。
+
+在 `forward_to_routing` 中新增 `event_driven_segment` 字段:
+- 当整个公司只有一个分部被事件催动(即主锚分部的锚类型与副锚不同,且副锚 is_event_driven=false)时写入: `{"segment": "被催动的分部名", "anchor": "该分部锚类型"}`
+- 当事件催动了所有分部 → 留空对象 `{}`
 
 # 清单项 2: 事件计价判断
 
@@ -690,6 +727,7 @@ class NarrativeDiagnosis:
                 "distribution_shape": "wide_unimodal",
                 "pricing_bias": "uncertain",
                 "key_risk_for_routing": "Fallback诊断,置信度极低",
+                "event_driven_segment": {},
             },
             "_pricing_tool": pricing_all,
             "_fallback": True,

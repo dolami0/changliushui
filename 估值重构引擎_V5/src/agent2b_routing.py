@@ -103,7 +103,25 @@ routing_reason 必须引用: (1) 2a的叙事线索 (2) 具体财务数据。≥8
 
 **A (ROIC-RR DCF)**: ROIC>8%, 净利润>0
 **C (DCF+拐点)**: 当前亏损/微利, 有可识别拐点时间节点
-**G (PEG)**: 利润增速>30%, 盈利为正
+**G (PEG)**: 利润增速>30%, 盈利为正。**PEG的本质是用增速锚定PE——这要求增速必须是结构性驱动而非均值回归。**
+
+**G的准入条件——两个前提必须同时满足:**
+
+1. **增长驱动必须是结构性而非周期回归**: 增速来自新产品/新市场/市占率提升/技术突破——而不是来自周期底部的低基数效应。区分方法:
+   - ✅ 结构性: "KRrF光刻胶通过验证,收入从0→1.5亿,增速200%"——新产品驱动,可持续
+   - ❌ 均值回归: "TTM净利13.3亿是煤价低谷,煤价回升后利润跳至30亿,增速+130%"——低基数驱动,不可持续
+   - **判定标准**: 如果当前TTM利润远低于过去3年中枢（<50%），且增速预测主要来自利润恢复而非新业务驱动，则增速不是结构性的 → G不适用。
+
+	2. **行业估值范式参照**: G(PEG)是成长股的估值范式——利润持续增长、PE随增速线性外推。不是所有行业的默认估值语言。
+	   - 周期行业（煤炭/有色/钢铁/化工）的默认范式是 EV/EBITDA 或盈利正常化——利润波动源于价格周期，均值回归不是"增长"。用 PEG 给周期股估值是范式错误。
+	   - 资源行业（矿业/石油）的默认范式是 EV/EBITDA 或 NAV——标的价值在资源储量和价格，不在盈利增速。
+	   - 金融行业（银行/保险）的默认范式是 PB-ROE——盈利增速受资本约束。
+	   - **判定**: 如果2a判定的锚类型与行业默认估值范式冲突（如周期行业判了earnings锚且准备用PEG），检查是否确有结构性转型（新产品/新市场）改变了公司的行业属性。若无，按行业默认范式选模型。
+
+**不选G的典型场景**:
+- 周期底部利润失真,增速来自低基数→选**I(盈利正常化)**。I的"正常化利润"可以包含供给侧改革的改善效果。
+- 有明确资源/资产锚且周期底部流量指标全部失真→选**E(资源/EV-EBITDA)**或**H(NAV)**做底线校验。
+- 增长虽高但波动剧烈、PEG难以锚定→选**I**做盈利中枢估计,比G的PEG锚定更可靠
 **I (盈利正常化)**: 利润波动源于行业周期, 无硬资产资源
 **B (PS+TAM)**: 叙事围绕收入/TAM。默认约束: 亏损/微利(ROIC<8%)。**转型例外**: 若2a的叙事诊断满足以下3条,允许盈利企业使用B:
   (a) 投资主题明确指向新业务的收入/TAM,非旧业务盈利增长
@@ -125,9 +143,9 @@ routing_reason 必须引用: (1) 2a的叙事线索 (2) 具体财务数据。≥8
   **不选K的场景**:
     - NOPAT起点过低→选A(若ROIC>8%)或G(若增速可见)
     - 增速已回落到行业水平→选A(永续DCF)
-    - 增速波动大、难以预测→选G(PEG锚定)
+    - 增速波动大、难以预测→选I(盈利正常化),比G的PEG锚定更可靠（若增速来自周期底部均值回归而非结构性增长,G不适用——参见G的准入条件）
     - primary_anchor=revenue→此标的属于revenue_multiples族,应选B; K仅限earnings_multiples族内使用
-  **注意**: K是earnings_multiples族内最"进取"的模型——它比A更友好(承认增长会回落),但比G更严格(要求终局可见)。不要因为K"看起来更精确"就选它——如果NOPAT起点或终局可见性不满足条件,K的DCF退化为终值PE赌注,不如坦诚用A或G。
+  **注意**: K是earnings_multiples族内最"进取"的模型——它比A更友好(承认增长会回落),但比G更严格(要求终局可见)。不要因为K"看起来更精确"就选它——如果NOPAT起点或终局可见性不满足条件,K的DCF退化为终值PE赌注,不如坦诚用A、I或G。
 **J (SOTP)**: 2a已验证: 估值范式冲突 + 副锚占比≥20% + 数据可支撑SOTP。若sotp_triggered=false,跳过J,按主锚选模型。
   **SOTP的本质**: 防止用主锚去估"另一类业务"时产生系统性偏差。
   **SOTP估值方法**: 分部独立估(各用正确的倍数锚),加总。行业倍数参照来自knowledge_supplement。不要求分部利润精确。
@@ -155,7 +173,8 @@ routing_reason 必须引用: (1) 2a的叙事线索 (2) 具体财务数据。≥8
       "override_rationale": ""
     },
     "anchor_shift_warning": "如果存在锚切换风险,标注在此",
-    "sotp_primary_segment_model": "仅当primary_model=J时填写,如B/A/K。为叙事主锚分部选模型"
+    "sotp_primary_segment_model": "仅当primary_model=J时填写,如B/A/K。为叙事主锚分部选模型",
+    "event_driven_segment": "透传自2a的forward_to_routing.event_driven_segment。{segment, anchor}或空对象{}"
   }
 }
 ```
@@ -244,6 +263,7 @@ def _build_routing_user_message(
 **锚冲突**: {mn.get('anchor_conflict','') or '无'}
 **SOTP触发**: {mn.get('sotp_triggered',False)}
 **SOTP理由**: {mn.get('sotp_rationale','') or '—'}
+**事件驱动分部** (2a-1j): {json.dumps(fwd.get('event_driven_segment', {}), ensure_ascii=False) if fwd.get('event_driven_segment') and isinstance(fwd.get('event_driven_segment'), dict) and fwd.get('event_driven_segment') else '事件催动所有分部/非SOTP路由'}
 
 **事件分布**: {epr.get('distribution_shape','?')} — {epr.get('shape_rationale','?')[:150]}
 **3D光谱**: 时点确定性{epr.get('timing_certainty','?')}/10 | 结果二元性{epr.get('outcome_binaryness','?')}/10 | 先例丰富度{epr.get('precedent_richness','?')}/10
@@ -404,6 +424,11 @@ class RouteJudgeV6:
                 )
                 routing["_k_blocked_by_code"] = True
 
+        # ── 注入事件驱动分部(代码层透传,不为LLM输出的兜底) ──
+        ed = (agent2a_output.get("forward_to_routing", {}) or {}).get("event_driven_segment")
+        if ed and isinstance(ed, dict) and ed:
+            routing["event_driven_segment"] = ed
+
         return {"routing_decision": routing}
 
     def _fallback_routing(self, data_package: dict,
@@ -453,10 +478,8 @@ class RouteJudgeV6:
                 "override_rationale": "",
             },
             "anchor_shift_warning": "",
+            "event_driven_segment": (agent2a_output.get("forward_to_routing", {}) or {}).get("event_driven_segment", {}),
         }
-
-
-# ── 便捷函数 ──
 
 def route_judge_v6(
     data_package: dict,

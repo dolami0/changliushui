@@ -264,8 +264,24 @@ SOTP_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 你掌握 A/B/C/D/E/F/G/H/I/J/K 共 11 种估值模型。路由判官已选定最适合叙事主锚分部的模型（sotp_primary_segment_model），你的职责是在选定的模型框架内完成参数推演。
 
 本标的触发 SOTP 分部估值。公司将业务拆为两段：
-1. **叙事主锚分部**: 事件驱动的核心业务。推演 bear/base/bull 三情景参数
-2. **其他业务**: 副锚分部合并。推演一组 base 参数（三情景共用，不受事件驱动）
+1. **叙事主锚分部**: 被事件因果链路催动的核心业务。推演 bear/base/bull 三情景参数
+2. **其他业务**: 副锚分部合并。**事件不催动此分部**——它的未来现金流与事件无关。
+
+**关键约束——主锚分部的参数自由、副锚分部的参数保守:**
+
+主锚分部（事件催动）:
+- 增速/利润率/估值倍数**必须以事件数据为锚定基准**，从事件链路的推导范围出发
+- 正常推演 bear/base/bull 三情景
+
+副锚分部（事件不催动）:
+- 参数来源是公司历史趋势/行业常识/LLM训练知识——不是事件信息
+- **增速**: ≤ 历史中枢 + 1σ，不得超过
+- **PS倍数**(若为revenue锚): ≤ 行业可比中位数，不得使用"范式切换"溢价
+- **PE倍数**(若为earnings锚): ≤ 行业周期中值
+- **严禁**: 将此分部的参数设得比主锚分部更激进——此分部不能主导最终估值
+- 推演一组 base 参数（三情景共用）
+
+**判断依据**: 参阅用户消息中"事件催动分部"标注——它明确指出了事件因果链路经过哪个分部。
 
 ## 估值输出必须包含
 
@@ -805,13 +821,13 @@ def _build_segments_section(
     secondary_total = sum(sa.get("revenue_share_pct", 0) for sa in secondary_anchors)
     primary_share = max(0, 100 - secondary_total)
 
-    lines = ["| 分部 | 角色 | 锚 | 收入占比 | 估算收入(亿) |",
-             "|------|------|-----|---------|-------------|"]
+    lines = ["| 分部 | 角色 | 锚 | 事件催动 | 收入占比 | 估算收入(亿) |",
+             "|------|------|-----|---------|---------|-------------|"]
 
     # 叙事主锚分部（事件驱动，三情景变参）
     primary_label = market_narrative.get("core_bet", "叙事主线")[:20]
     primary_rev = total_rev * primary_share / 100
-    lines.append(f"| {primary_label} | 叙事主锚(变参) | {primary_anchor} | {primary_share:.1f}% | {primary_rev:.1f} |")
+    lines.append(f"| {primary_label} | 叙事主锚(变参) | {primary_anchor} | ✅是 | {primary_share:.1f}% | {primary_rev:.1f} |")
 
     # 其他业务（合并所有副锚，基准不变）
     other_share = secondary_total
@@ -820,7 +836,10 @@ def _build_segments_section(
         # 副锚中可能有不同锚类型，取第一个作为"其他业务"的代表锚；若无副锚，用 earnings
         other_anchor = secondary_anchors[0].get("anchor", "earnings") if secondary_anchors else "earnings"
         other_names = " + ".join(sa.get("segment", "?") for sa in secondary_anchors)
-        lines.append(f"| {other_names} | 其他业务(不变) | {other_anchor} | {other_share:.1f}% | {other_rev:.1f} |")
+        # 检查是否有副锚被事件催动
+        any_driven = any(sa.get("is_event_driven") for sa in secondary_anchors)
+        driven_mark = "✅是" if any_driven else "❌否"
+        lines.append(f"| {other_names} | 其他业务(不变) | {other_anchor} | {driven_mark} | {other_share:.1f}% | {other_rev:.1f} |")
 
     # 如果没有任何副锚（100% 主锚），标注特殊处理
     if not secondary_anchors:
@@ -848,6 +867,51 @@ def _build_segments_section(
             lines.append(f'> 请以产品表的增速分组为准重新划分分部：高增速产品归入叙事主锚分部(revenue锚)，低增速/低毛利产品({low_growth_share:.0f}%)归入其他业务(earnings锚)。')
             lines.append(f'> 若2a的划分与产品表冲突，以产品表为准——2a没有产品级增速数据。')
 
+    return "\n".join(lines)
+
+
+def _build_event_driven_note(
+    rd_2b: dict,
+    secondary_anchors: list[dict],
+    primary_anchor: str,
+) -> str:
+    """构建事件催动分部标注——标注哪些分部参数受事件约束、哪些不受。"""
+    # 从2b的routing_decision中读取event_driven_segment
+    eds = rd_2b.get("event_driven_segment")
+    if not eds or not isinstance(eds, dict) or not eds:
+        return ""
+
+    driven_seg = eds.get("segment", "?")
+    driven_anchor = eds.get("anchor", primary_anchor)
+
+    # 找出未被事件催动的副锚
+    non_driven = [
+        sa for sa in secondary_anchors
+        if sa.get("is_event_driven") is False
+    ]
+
+    if not non_driven:
+        return f"\n**事件催动分部**: 全部 — 事件因果链路覆盖了所有SOTP分部。各分部参数均可从事件信息中锚定。\n"
+
+    lines = [f"\n## ⚠️ 事件催动分部标注 (Agent-2a 1j判定)\n"]
+    lines.append(f"**被事件催动的分部**: **{driven_seg}** ({driven_anchor}锚)")
+    lines.append(f"  - 事件的因果链路为该分部提供了前瞻判断依据")
+    lines.append(f"  - 此分部的参数(增速/利润率/倍数)必须以事件数据为锚定基准\n")
+
+    lines.append("**未被事件催动的分部**:")
+    for nd in non_driven:
+        nd_name = nd.get("segment", "?")
+        nd_anchor = nd.get("anchor", "?")
+        nd_rationale = nd.get("non_driven_rationale", "事件因果链路不经过此分部")
+        lines.append(f"  - **{nd_name}** ({nd_anchor}锚): {nd_rationale}")
+    lines.append("")
+    lines.append("**参数约束——对未被事件催动的分部**:")
+    lines.append("  - 增速: ≤ 历史中枢 + 1σ（不得用事件推导增速）")
+    if any(nd.get("anchor") == "revenue" for nd in non_driven):
+        lines.append("  - PS倍数: ≤ 行业可比中位数（不得用'范式切换'溢价）")
+    if any(nd.get("anchor") in ("earnings", "asset") for nd in non_driven):
+        lines.append("  - PE/PB倍数: ≤ 行业周期中值")
+    lines.append("  - **禁止**: 此分部的参数比主锚分部更激进, 此分部估值不得主导最终SOTP加总")
     return "\n".join(lines)
 
 
@@ -1140,6 +1204,8 @@ def _build_sotp_user_message(
     pb = core.get("pb", 0)
     ps = core.get("ps_ttm", 0)
     net_cash = cash - debt
+    ebitda = core.get("ebitda_ttm_yi", 0)
+    ebitda_margin = ebitda / max(rev, 1) * 100
 
     # ── 事件窗口价格 ──
     ew = _safe_dict(data_package.get("event_window_prices"))
@@ -1187,6 +1253,8 @@ def _build_sotp_user_message(
 
 {_build_segments_section(sas, primary, mn, core)}
 
+{_build_event_driven_note(rd_2b, sas, primary)}
+
 ## 二、硬数据 — 财报 + 代码预计算（可引用，不可修改）
 
 | 指标 | 数值 | 指标 | 数值 |
@@ -1194,6 +1262,7 @@ def _build_sotp_user_message(
 | 市值 | {mcap:.0f}亿 | PE(TTM) | {pe:.1f}x |
 | TTM营收 | {rev:.1f}亿 | PB | {pb:.1f}x |
 | TTM净利润 | {np:.1f}亿 | PS(TTM) | {ps:.1f}x |
+| EBITDA | {ebitda:.1f}亿 | EBITDA率 | {ebitda_margin:.1f}% |
 | ROIC | {roic:.1f}% | 毛利率 | {gm:.1f}% |
 | 净资产 | {equity:.0f}亿 | 净利率 | {nm:.1f}% |
 | 现金 | {cash:.1f}亿 | 有息负债 | {debt:.1f}亿 |
@@ -1998,7 +2067,7 @@ class SOTPScenarioAsymmetry:
             elif gap > 30:
                 print(f"  [SOTP crosscheck] 叙事依赖: gap={gap:.0f}%", flush=True)
             else:
-                print(f"  [SOTP crosscheck] ✓ 互相印证: gap={gap:.0f}%", flush=True)
+                print(f"  [SOTP crosscheck] OK gap={gap:.0f}%", flush=True)
 
         # ── Step 6: 注入 SOTP 特有字段 ──
         base_details_for_meta = sv.get("scenario_details", {}).get("base", {})

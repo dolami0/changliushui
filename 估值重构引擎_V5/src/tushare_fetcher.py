@@ -224,6 +224,7 @@ class TushareFetcher:
             'q_op_yoy', 'q_op_qoq',                      # 营业利润 单季度同比/环比
             'q_profit_yoy', 'q_profit_qoq',              # 净利润 单季度同比/环比
             'q_netprofit_yoy', 'q_netprofit_qoq',        # 归母净利润 单季度同比/环比
+            'ebitda', 'op_income',                        # EBITDA/营业利润(fina_indicator口径, 用于推算TTM)
         ]
         trends = []
         for _, row in df.iterrows():

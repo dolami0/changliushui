@@ -516,7 +516,7 @@ PARAM_SELF_CHECK_MAP = {
     "I": "- normalized_roic_pct: 正常化ROIC取5-10年行业中位数,不取当前极值\n- normalized_pe: 正常化PE取行业中位,不取当前畸高/畸低值",
     "B": "- revenue_growth_3y_cagr_pct: 3年收入CAGR。必须用分部对应产品的实际YoY增速校准,不能凭空取值。若Q1增速显著减速,必须反映这一趋势\n- target_ps: **第3年(终端年)的PS**。必須从火山数据/知识补充中找2-3家同细分赛道的可比A股公司,用它们在稳态期的实际交易PS作为参照。不是当前PS的情绪缩放,也不是跨行业通用区间\n- 心算校验: TTM收入 x (1+CAGR%)^3 x target_ps ≈ 你剧本预期的目标市值吗？\n- tam_penetration_pct: 当前TAM渗透率。若<5%则PS可取上限,若>30%则PS应保守",
     "D": "- target_roe_pct: ROE改善必须与PB修复联动(PB=ROE×权益乘数×PE的简化)。ROE从5%→15%可支撑PB从1x→3x\n- target_pb: PB不能远超ROE支撑的合理范围。ROE<5%不应>2x PB(除非隐蔽资产重估)",
-    "E": "- ebitda_growth_pct: **一年期**EBITDA增速(%),不是多期累计。公式=EBITDA×(1+g/100)×EV/EBITDA。g=50表示EBITDA从5.6亿→8.4亿。心算校验: 你的g%对应的EBITDA合理吗？\n- target_ev_ebitda: 资源溢价/折价直接反映在此倍数中。矿业通常6-10x,战略稀缺性可给更高,但需说明参照系",
+    "E": "- ebitda_growth_pct: **一年期**EBITDA增速(%),不是多期累计。公式=EBITDA×(1+g/100)×EV/EBITDA。g=50表示EBITDA从5.6亿→8.4亿。\n- **经营杠杆换算（必须执行,不可跳过）**: 资源股的EBITDA增长≠商品价格涨幅。折旧/人工/摊销固定,涨价部分几乎全部→EBITDA。换算公式: **g_EBITDA% = ΔPrice% ÷ EBITDA率%**。步骤: (1)从上方财务数据取'EBITDA率'(已标注),取你的情景假设的商品价格涨幅ΔP%(如煤价+12%) (2)计算 g = ΔP% ÷ EBITDA率% (3)此g填入ebitda_growth_pct。例: EBITDA率14%,煤价涨12% → g=12%÷14%=85.7%,不是20%! 心算验证: 当前EBITDA×1.85≈你的预期值吗？\n- target_ev_ebitda: 资源溢价/折价直接反映在此倍数中。矿业通常6-10x,战略稀缺性可给更高,但需说明参照系",
     "H": "- nav_discount_pct: NAV折价必须反映资产流动性/变现难度。重资产折价20-40%,现金类资产折价0-10%",
     "F": "- pos_pct: 成功率必须基于临床阶段(Phase1=10%,Phase2=30%,Phase3=60%)\n- peak_sales_yi: 峰值销售必须与TAM×市场份额一致\n- discount_rate_pct: 管线折现率通常12-20%(高于WACC,反映管线风险)",
     "J": "- target_mcap_yi: 必须是SOTP加总结果(各业务线独立估值+现金+投资-负债)",
@@ -1334,6 +1334,7 @@ def _call_llm_scenario(
 ## 财务数据
 - 市值: {core.get('market_cap_yi',0)}亿 营收TTM: {core.get('revenue_ttm_yi',0)}亿
 - 净利润: {core.get('net_profit_ttm_yi',0)}亿 经营利润: {core.get('operating_profit_ttm_yi',0)}亿
+- EBITDA: {core.get('ebitda_ttm_yi',0):.1f}亿 EBITDA率: {core.get('ebitda_ttm_yi',0)/max(core.get('revenue_ttm_yi',1),1)*100:.1f}%
 - ROIC: {core.get('roic_pct',0)}% 毛利率: {core.get('gross_margin_pct',0)}% 净利率: {core.get('net_margin_pct',0)}%
 	- 历史分位解读: 0=历史最高位(从未更贵), 50=中位, 100=历史最低位(从未更便宜)
 	- 盈利能力分位: ROIC分位={core.get('roic_historical_rank','?')} 毛利率分位={core.get('gross_margin_historical_rank','?')} 净利率分位={core.get('net_margin_historical_rank','?')} ROE分位={core.get('roe_historical_rank','?')} 综合得分={core.get('profitability_composite_score','?')}
