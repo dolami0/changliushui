@@ -786,7 +786,7 @@ export default function Tracking() {
           </div>
         ) : (
           <ScrollArea className="flex-1" style={{ minHeight: 0 }}>
-            {stocks.filter(s => s.track_status !== 'paused').map(s => (
+            {[...stocks].sort((a, b) => (a.track_status === 'paused' ? 1 : 0) - (b.track_status === 'paused' ? 1 : 0)).map(s => (
               <StockListItem
                 key={s.stockCode}
                 stock={s}
