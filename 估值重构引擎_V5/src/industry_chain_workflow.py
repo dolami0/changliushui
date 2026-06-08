@@ -50,6 +50,7 @@ LLM1_PROMPT = """你是产业链利润流分析师。你的任务是通过自主
 3. 竞争格局 — 各环节的集中度、头部公司市场份额
 4. 进入壁垒 — 认证周期、客户绑定、技术门槛
 5. 需求弹性 — 事件对哪个环节拉动最大
+6. 市场容量(TAM) — 每个节点的国内/全球市场规模，必须搜索到具体数字或合理估算
 
 搜索策略：
 - 先搜最关键的1-2个维度，读结果后判断是否还需补充
@@ -81,8 +82,8 @@ LLM1_PROMPT = """你是产业链利润流分析师。你的任务是通过自主
 # 最终输出JSON（搜索完成后输出，不要用markdown包裹）
 {
   "chain_overview": {"industry":"","event_summary":"","nodes":[{"name":"","position":"upstream/midstream/downstream","key_products":[]}]},
-  "profit_flow_analysis": [{"node_name":"","position":"","bargaining_power":"high/medium/low","concentration":"high/medium/low","switching_cost":"high/medium/low","value_add_ratio_pct":0,"demand_elasticity":"high/medium/low","profit_retention_score":0,"rationale":"","evidence":{"concentration":"搜索发现或推断: 具体数据/推理链+来源","bargaining_power":"","switching_cost":"","value_add_ratio_pct":"","demand_elasticity":""}}],
-  "top_two_nodes": [{"node_name":"","position":"","profit_retention_score":0,"justification":"","what_to_look_for":"此节点内什么特征的公司会胜出（必须结合此具体行业写，不要泛泛而谈）","key_risk":""}]
+  "profit_flow_analysis": [{"node_name":"","position":"","bargaining_power":"high/medium/low","concentration":"high/medium/low","switching_cost":"high/medium/low","value_add_ratio_pct":0,"demand_elasticity":"high/medium/low","profit_retention_score":0,"rationale":"","tam_estimate":"节点国内/全球市场规模(亿元)+数据年份+来源","evidence":{"concentration":"搜索发现或推断: 具体数据/推理链+来源","bargaining_power":"","switching_cost":"","value_add_ratio_pct":"","demand_elasticity":"","tam":"搜索发现或推断: 市场容量数据+来源"}}],
+  "top_two_nodes": [{"node_name":"","position":"","profit_retention_score":0,"tam_estimate":"","justification":"","what_to_look_for":"此节点内什么特征的公司会胜出（必须结合此具体行业写，不要泛泛而谈）","key_risk":""}]
 }"""
 
 # ═══════════════════════════════════════
@@ -210,16 +211,18 @@ V3速查表是历史经验的参考，不是必须匹配的模板：
 
    # ═══ TAM 校验：10x 终点能在多大市场里装下？ ═══
 
-   评分前必须评估：当前市值×10 是否能在该节点可触及的市场规模（TAM）内实现？
-   不设硬性公式——由你基于搜索数据判断，但必须在 rationale 中记录你的判断。
+   节点市场规模(TAM)已由上游分析提供（见评分节点头部的 TAM 数据），直接使用，无需重新搜索。
+
+   评分前必须评估：当前市值×10 是否能在该 TAM 内实现？
+   不设硬性公式——由你判断，但必须在 rationale 中记录。
 
    评估框架：
-   - 若能确认 TAM 且 TAM 明确小于 10x 目标市值（即使 100% 市占也不够）→ 你应在 rationale 中解释，并自行适当限制 impact
-   - 若 TAM 处于可触及与不可触及的灰色地带 → 标注「TAM 不确定」，正常评分但提示风险
+   - 若 TAM 明确小于 10x 目标市值（即使 100% 市占也不够）→ 在 rationale 中解释，自行适当限制 impact
+   - 若 TAM 处于灰色地带 → 标注「TAM 不确定」，正常评分但提示风险
    - 若 TAM 明确足够 → 标注「TAM 通过」
-   - 若搜索未找到 TAM 数据 → 标注「TAM 无数据」
+   - 若上游未提供 TAM → 标注「TAM 无数据」
 
-   例：某公司市值 29 亿，10x = 290 亿。若该节点全国市场规模仅 ~100 亿，则即使 100% 市占也无法实现 10x —— impact 不应给到 9 分。
+   例：某公司市值 29 亿，10x = 290 亿。若节点 TAM 标注为 ~100 亿，则即使 100% 市占也无法实现 10x —— impact 不应给到 9 分。
 
    TAM 校验完成后，按连续光谱给分：
 
@@ -913,10 +916,12 @@ class IndustryChainWorkflow:
     def _msg_score_single(node: dict, chain: dict, enriched: dict) -> str:
         """单节点评分：只有一个节点的候选股，简单评分"""
         node_name = node.get("node_name", "")
+        tam = node.get("tam_estimate", "")
         evt = chain.get("chain_overview", {}).get("event_summary", "")
 
         lines = [
             f"# 评分节点: {node_name}",
+            f"节点市场规模(TAM): {tam}" if tam else f"节点市场规模(TAM): 未提供",
             f"事件: {evt}",
             f"\n# 候选个股实时数据",
         ]
