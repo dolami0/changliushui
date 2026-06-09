@@ -223,12 +223,13 @@ async def view_report(filename: str):
     with open(json_path, encoding="utf-8") as f:
         payload = json.load(f)
     payload = _sanitize(payload)
-    event_meta = payload.get("event_meta", {})
+    event_meta = payload.get("event_meta") or payload.get("audit") or payload.get("agent0") or {}
+    baseline_report = payload.get("baseline_report", "")
     a1 = payload.get("agent1", {})
     a2 = payload.get("agent2", {})
     a3 = payload.get("agent3", {})
     a2a = payload.get("agent2a", {})
-    html = build_html_report(event_meta, a1, a2, a3, a2a)
+    html = build_html_report(event_meta, a1, a2, a3, a2a, baseline_report=baseline_report)
     return HTMLResponse(html)
 
 @app.get("/api/status")

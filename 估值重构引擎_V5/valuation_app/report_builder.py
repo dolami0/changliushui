@@ -240,8 +240,8 @@ def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict) -> str:
 # ═══════════════════════════════════════════════
 
 
-def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict, agent2a: dict | None = None) -> str:
-    """V6 完整估值报告 — 覆盖全部 JSON 字段，赛博仙门主题，大字体"""
+def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict, agent2a: dict | None = None, baseline_report: str = "") -> str:
+    """V7 完整估值报告 — 覆盖全部 JSON 字段，赛博仙门主题，大字体"""
     now = __import__('datetime').datetime.now().strftime("%Y-%m-%d %H:%M")
     cf = a1.get("clean_financials", {})
     va = a1.get("valuation_anchor", {})
@@ -288,8 +288,14 @@ def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict, agent2a
     # SOTP 分部明细
     sotp_bd = a3.get("_sotp_breakdown", {})
 
+    # V7: 投资地图 (baseline_report)
+    baseline_section = ""
+    if baseline_report and len(baseline_report) > 100:
+        baseline_section = _section("MAP", "投资地图 · Agent-Baseline", _md(baseline_report[:8000]))
+
     body = (
         _sec_header(stock_code, stock_name, now, primary, vr, industry, upside, asym)
+        + baseline_section
         + _sec_narrative_diagnosis(a2a_mn, a2a_ep, a2a_pr, a2a_pa, a2a_pt, sanity, cf)  # V6: 叙事诊断
         + _sec_routing(vr)
         + _sec_financials(cf, va, wacc)
