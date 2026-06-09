@@ -1,0 +1,242 @@
+{
+  "meta": {
+    "version": "1.0",
+    "total_cases": 42,
+    "pattern_clusters": 9,
+    "created": "2026-06-10",
+    "description": "42条十倍股案例的传导模式库。匹配逻辑：event_type + driver + anchor_shift_potential → 模式参考",
+    "usage": "Agent-3 清单项3d/3e 时注入匹配到的模式统计摘要，校准推演边界"
+  },
+
+  "patterns": [
+    {
+      "pattern_id": "tech_breakthrough_davis_double",
+      "label": "技术突破 → 戴维斯双击",
+      "cases": 9,
+      "gain_median": 8.9,
+      "gain_range": [4.7, 19.4],
+      "return_decomposition": {
+        "profit_contribution_median_pct": 70,
+        "multiple_contribution_median_pct": 30,
+        "anchor_shift_probability": 0.67,
+        "typical_anchor_path": "PE(低) → PE(高扩张), 锚类型不变但倍数大幅提升"
+      },
+      "representative_cases": ["300308 中际旭创", "300502 新易盛", "300476 胜宏科技", "603083 剑桥科技"],
+      "transmission_chain_template": [
+        "Stage1: 技术突破/产品验证 → 订单开始放量",
+        "Stage2: 产能利用率跳升 → 毛利率跃迁(+10-20pp)",
+        "Stage3: 业绩逐季加速 → 市场重新定价增长持续性",
+        "Stage4: PE从周期底部→成长溢价, 戴维斯双击完成"
+      ],
+      "common_catalyst_types": ["新产品通过大客户认证", "产能瓶颈突破", "行业标准/技术路线确立"],
+      "common_failure_modes": ["技术路线被替代", "大客户订单推迟/取消", "产能爬坡不及预期导致毛利率修复延迟"],
+      "key_warning_signs": ["毛利率改善后再次下滑", "研发费用率持续下降(吃老本)", "竞争对手拿到同等认证"]
+    },
+    {
+      "pattern_id": "business_model_upgrade_anchor_reconstruction",
+      "label": "商业模式升级 → 估值锚定重构",
+      "cases": 7,
+      "gain_median": 6.4,
+      "gain_range": [4.1, 14.4],
+      "return_decomposition": {
+        "profit_contribution_median_pct": 20,
+        "multiple_contribution_median_pct": 80,
+        "anchor_shift_probability": 0.86,
+        "typical_anchor_path": "PE(旧行业) → PS/PE(新赛道), 或亏损→主题估值"
+      },
+      "representative_cases": ["002779 中坚科技", "605255 天普股份", "688109 品茗科技", "688585 上纬新材"],
+      "transmission_chain_template": [
+        "Stage1: 宣布跨界/转型 → 市场开始用新赛道逻辑审视",
+        "Stage2: 顶级合作伙伴/投资背书 → 叙事可信度提升",
+        "Stage3: 定增/产能布局 → '从0到1'的产业化预期",
+        "Stage4: 锚完全切换到新赛道, 旧业务估值被忽略"
+      ],
+      "common_catalyst_types": ["投资/收购新赛道公司", "与头部企业(华为/英伟达/OpenAI)合作", "定增投向新业务", "指数基金被动配置"],
+      "common_failure_modes": ["新业务收入贡献迟迟为零", "合作伙伴关系松动", "定增方案被否或大幅缩水", "市场风格切换导致主题退潮"],
+      "key_warning_signs": ["新业务收入占比<5%但市值已按新赛道定价", "核心团队无新赛道背景", "研发投入与叙事不匹配"]
+    },
+    {
+      "pattern_id": "tech_breakthrough_profit_nuke",
+      "label": "技术突破 → 利润核弹",
+      "cases": 6,
+      "gain_median": 13.5,
+      "gain_range": [5.4, 18.2],
+      "return_decomposition": {
+        "profit_contribution_median_pct": 95,
+        "multiple_contribution_median_pct": 5,
+        "anchor_shift_probability": 0.17,
+        "typical_anchor_path": "PE保持或收缩(利润增速远超股价涨幅)"
+      },
+      "representative_cases": ["002432 九安医疗", "300308 中际旭创", "300779 惠城环保"],
+      "transmission_chain_template": [
+        "Stage1: 突破性产品/认证 → 独占性市场窗口打开",
+        "Stage2: 巨量订单/需求涌入 → 产能满负荷",
+        "Stage3: 利润爆发(季度利润=过去10年总和级别)",
+        "Stage4: PE反而收缩(利润跑得比股价快), 戴维斯单杀PE"
+      ],
+      "common_catalyst_types": ["FDA/工信部等监管认证", "政府/大客户巨额采购合同", "供需缺口导致价格暴涨"],
+      "common_failure_modes": ["窗口期关闭(政策/疫情结束)", "竞争涌入导致价格战", "订单交付后无后续(一次性暴利)"],
+      "key_warning_signs": ["单季度利润脉冲后环比断崖", "大客户集中度>80%", "产能利用率从100%回落"]
+    },
+    {
+      "pattern_id": "earnings_inflection_profit_nuke",
+      "label": "业绩拐点 → 利润核弹",
+      "cases": 6,
+      "gain_median": 8.1,
+      "gain_range": [4.7, 12.5],
+      "return_decomposition": {
+        "profit_contribution_median_pct": 90,
+        "multiple_contribution_median_pct": 10,
+        "anchor_shift_probability": 0.0,
+        "typical_anchor_path": "PE基本不变, 纯利润驱动"
+      },
+      "representative_cases": ["300100 双林股份", "300870 欧陆通", "601138 工业富联"],
+      "transmission_chain_template": [
+        "Stage1: 经营拐点出现 → 收入增速转正/毛利率触底回升",
+        "Stage2: 利润弹性释放 → 经营杠杆+费用控制→利润增速远超收入增速",
+        "Stage3: 市场逐步上调盈利预测 → 股价跟随利润上涨",
+        "Stage4: PE保持行业中枢附近, 回报=利润增长"
+      ],
+      "common_catalyst_types": ["产能利用率从底部回升", "产品结构升级(高端占比提升)", "原材料成本下降"],
+      "common_failure_modes": ["拐点被证伪(短暂改善后再度恶化)", "需求回暖不及预期", "固定成本过高导致经营杠杆反向伤害"],
+      "key_warning_signs": ["毛利率回升但收入未同步增长", "利润改善主要来自一次性收益", "经营现金流与利润背离"]
+    },
+    {
+      "pattern_id": "cyclical_upturn_profit_nuke",
+      "label": "景气上行 → 利润核弹",
+      "cases": 4,
+      "gain_median": 8.8,
+      "gain_range": [4.7, 9.6],
+      "return_decomposition": {
+        "profit_contribution_median_pct": 95,
+        "multiple_contribution_median_pct": 5,
+        "anchor_shift_probability": 0.0,
+        "typical_anchor_path": "PE收缩(周期股铁律: 利润高点给低PE)"
+      },
+      "representative_cases": ["000408 藏格矿业", "600301 华锡有色", "300641 正丹股份"],
+      "transmission_chain_template": [
+        "Stage1: 商品价格触底/供给出清 → 行业拐点信号",
+        "Stage2: 价格持续上涨 → 利润弹性极大(固定成本不变)",
+        "Stage3: 利润创历史新高 → PE压缩到周期低位",
+        "Stage4: 周期见顶信号出现 → 股价领先商品价格见顶"
+      ],
+      "common_catalyst_types": ["供给端重大出清(矿难/环保)", "需求端结构性变化(AI/新能源拉动)", "政策限制新增产能"],
+      "common_failure_modes": ["商品价格提前见顶(股价领先于价格)", "新增供给超预期涌入", "需求被高价抑制"],
+      "key_warning_signs": ["PE已降至历史低位(周期可能已到中后段)", "公司/同行宣布大幅扩产计划", "下游客户开始去库存"]
+    },
+    {
+      "pattern_id": "earnings_inflection_davis_double",
+      "label": "业绩拐点 → 戴维斯双击",
+      "cases": 4,
+      "gain_median": 7.9,
+      "gain_range": [4.5, 8.9],
+      "return_decomposition": {
+        "profit_contribution_median_pct": 55,
+        "multiple_contribution_median_pct": 45,
+        "anchor_shift_probability": 0.75,
+        "typical_anchor_path": "PE从周期底部扩张+利润改善双驱动"
+      },
+      "representative_cases": ["002270 华明装备", "300260 新莱应材", "300718 长盛轴承"],
+      "transmission_chain_template": [
+        "Stage1: 经营拐点+行业景气回升 → 收入利润同时改善",
+        "Stage2: ROIC从底部持续改善 → 市场重新评估护城河",
+        "Stage3: PE从周期底部向成长中枢移动 → 双击进行中",
+        "Stage4: 估值修复完成+利润持续增长 → 总回报=利润增长×PE扩张"
+      ],
+      "common_catalyst_types": ["下游需求复苏+公司份额提升", "新产品线开始贡献利润", "海外市场突破"],
+      "common_failure_modes": ["改善被证伪(仅是补库存脉冲)", "新业务增速不达预期", "毛利率改善幅度有限(竞争格局差)"],
+      "key_warning_signs": ["PE已超过历史中枢(双击可能已完成)", "ROIC改善停滞", "经营现金流恶化"]
+    },
+    {
+      "pattern_id": "earnings_inflection_anchor_reconstruction",
+      "label": "业绩拐点 → 估值锚定重构",
+      "cases": 3,
+      "gain_median": 6.0,
+      "gain_range": [5.2, 8.9],
+      "return_decomposition": {
+        "profit_contribution_median_pct": 30,
+        "multiple_contribution_median_pct": 70,
+        "anchor_shift_probability": 0.67,
+        "typical_anchor_path": "PE从小市值/周期→大市值/成长重定价"
+      },
+      "representative_cases": ["002384 东山精密", "300049 福瑞医科", "603009 北特科技"],
+      "transmission_chain_template": [
+        "Stage1: 业绩拐点+赛道升级 → 从旧行业归类中跳脱",
+        "Stage2: 新业务占比突破临界点(>30%) → 市场切换估值框架",
+        "Stage3: 锚从旧行业PE切换到新赛道PS/PE → 倍数跃升",
+        "Stage4: 利润改善+范式切换同步发生"
+      ],
+      "common_catalyst_types": ["新业务收入占比突破30%", "切入核心客户供应链", "技术升级使产品从低端→高端"],
+      "common_failure_modes": ["新业务增长放缓(占比不再提升)", "旧业务拖累整体利润率", "新赛道竞争加剧导致估值溢价消失"],
+      "key_warning_signs": ["新业务毛利率低于预期", "客户集中度在新业务中更高", "旧业务开始大幅亏损"]
+    },
+    {
+      "pattern_id": "composite_anchor_reconstruction",
+      "label": "综合驱动 → 估值锚定重构",
+      "cases": 2,
+      "gain_median": 29.1,
+      "gain_range": [6.7, 29.1],
+      "return_decomposition": {
+        "profit_contribution_median_pct": 5,
+        "multiple_contribution_median_pct": 95,
+        "anchor_shift_probability": 1.0,
+        "typical_anchor_path": "无利润→主题估值→指数基金被动定价"
+      },
+      "representative_cases": ["688256 寒武纪", "300436 广生堂"],
+      "transmission_chain_template": [
+        "Stage1: 宏大叙事确立(AI芯片/创新药) + 稀缺性被市场认知",
+        "Stage2: 指数基金被动配置+机构抱团 → 定价权从基本面投资者转移",
+        "Stage3: 利润从未兑现但市值持续膨胀 → 完全脱离基本面锚定",
+        "Stage4: 成为'赛道信仰'标的, 任何利好都被放大, 利空被忽略"
+      ],
+      "common_catalyst_types": ["纳入主流指数(上证50/沪深300)", "国际投行大幅上调目标价", "国家级政策加持", "竞争对手上市进一步提升稀缺性"],
+      "common_failure_modes": ["指数基金重新调出", "业绩长期无法兑现导致信仰崩塌", "替代标的出现(竞争对手上市)", "监管关注/问询"],
+      "key_warning_signs": ["市值/收入比>100x且收入增速<30%", "所有卖方都给出'买入'评级(无分歧=无增量买家)", "融资余额占比>10%"]
+    },
+    {
+      "pattern_id": "business_model_upgrade_davis_double",
+      "label": "商业模式升级 → 戴维斯双击",
+      "cases": 1,
+      "gain_median": 5.1,
+      "gain_range": [5.1, 5.1],
+      "return_decomposition": {
+        "profit_contribution_median_pct": 50,
+        "multiple_contribution_median_pct": 50,
+        "anchor_shift_probability": 0.5,
+        "typical_anchor_path": "商业模型升级带来利润+估值同步改善"
+      },
+      "representative_cases": ["300757 罗博特科"],
+      "transmission_chain_template": [
+        "Stage1: 商业模式从设备销售→平台/服务转型",
+        "Stage2: 收入质量改善(经常性收入占比提升)",
+        "Stage3: 利润稳定性增强+估值中枢上移",
+        "Stage4: 戴维斯双击: 利润增长+估值重定价"
+      ],
+      "common_catalyst_types": ["SaaS/平台化收入占比突破临界点", "客户留存率/复购率数据改善", "单位经济模型扭亏"],
+      "common_failure_modes": ["转型投入过大吞噬利润", "客户不接受新模式", "竞争对手免费/低价策略"],
+      "key_warning_signs": ["经常性收入占比停滞", "客户流失率上升", "获客成本持续攀升"]
+    }
+  ],
+
+  "integration_spec": {
+    "matching_logic": {
+      "description": "Agent-2a 输出 event_type, primary_anchor, anchor_shift_potential → 匹配最接近的模式",
+      "rules": [
+        "event_type 包含'技术突破/产品认证/国产替代' → 优先匹配 tech_breakthrough_* 模式",
+        "event_type 包含'商业模式切换/跨界/平台化' → 优先匹配 business_model_upgrade_* 模式",
+        "event_type 包含'供需缺口/涨价/景气回升' → 优先匹配 cyclical_upturn_* 模式",
+        "event_type 包含'经营拐点/利润率改善/扭亏' → 优先匹配 earnings_inflection_* 模式",
+        "anchor_shift_potential.shift_possible=true → 优先匹配 *_anchor_reconstruction 或 *_davis_double",
+        "anchor_shift_potential.shift_possible=false + profit_visible → 优先匹配 *_profit_nuke"
+      ]
+    },
+    "agent3_injection_format": {
+      "description": "注入 Agent-3 用户消息中, 放在清单项1 baseline消费路由表之后",
+      "template": "## 历史传导模式参考（{n}条匹配）\n\n### 模式 {pattern_id}: {label}（{cases}条案例, 涨幅中位{gain_median}x）\n- 锚切换概率: {anchor_shift_probability}\n- 典型路径: {transmission_chain}\n- 最常见失败模式: {common_failure_modes}\n- 关键预警信号: {key_warning_signs}\n\n使用规则:\n1. 你的 anchor_shift 判断不应与模式统计显著矛盾（若{n}条中{anchor_shift_count}条切换而你判断不切换，需写理由）\n2. 你的 bull 倍数扩张若远超模式范围（中位{multiple_contribution_pct}%），在'PE突破论证'中额外说明\n3. 你的 bear 证伪路径不应遗漏模式的常见失败模式\n4. 如果你认为该标的不属于任何匹配模式，在 reasoning_trace 中说明理由"
+    },
+    "confidence_dimension": {
+      "description": "在 Agent-3 清单项4e 置信度中新增 pattern_consistency 维度（1-10）",
+      "scoring": "推演的 anchor_shift/return_decomposition 与匹配模式的统计特征一致→≥7; 显著偏离但有理有据→4-6; 完全无视模式统计→1-3"
+    }
+  }
+}
