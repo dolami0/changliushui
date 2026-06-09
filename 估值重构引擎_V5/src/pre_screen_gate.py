@@ -162,7 +162,7 @@ def _evaluate_rules(
         return False, f"核心一拦截: 叙事-事件同源性={homology}/10，个股涨不涨不取决于我们分析的事件"
 
     # 核心二: 阶梯门槛 — 市值越大，通过的总分要求越高
-    thresholds = [(300, 20), (500, 28), (float('inf'), 30)]
+    thresholds = [(300, 20), (500, 28), (float('inf'), 28)]
     for cap, bar in thresholds:
         if market_cap_yi <= cap:
             if total >= bar:
