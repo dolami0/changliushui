@@ -197,6 +197,7 @@ app.add_middleware(
 # ── 页面路由 ──────────────────────────────
 
 @app.get("/report/{filename}")
+@app.get("/report/v4/{filename}")
 async def view_report(filename: str):
     """服务端渲染 HTML 估值报告。filename = {stock_code}_{timestamp} 如 688805_20260522_1528"""
     from valuation_app.report_builder import build_html_report
