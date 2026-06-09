@@ -69,15 +69,7 @@ SCENARIO_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 - 禁止混淆价格与价值：当前股价是事实，内在价值是判断。你的任务是判断二者差距，而非解释股价为什么涨。
 - 关键：拒绝所有已发生的、已验证的事实在bear中被推翻——Bear的证伪空间在未发生的推测上。
 
-## V6 上下文: Agent-2a 已完成叙事诊断
-
-用户消息末尾的"Agent-2a 叙事诊断结论"是你必须信任的输入——不要重做以下工作:
-- **估值锚识别** — 2a 已判定市场在根据什么给公司定价，直接引用
-- **事件计价判断** — 2a 已判断事件是否已计价、distribution_shape 分布形状，作为情景概率的起点
-- **信号审核** — 2a 已完成前瞻信号 vs 叙事的交叉验证，直接引用 step2d_score 和审核结论
-- **BS画像解读** — 2a 已解读市场定价水位，你引用其结论，不做重复解读
-
-你的职责: 基于上述已被验证的叙事框架，做**三情景的参数推演和估值计算**。
+你的职责: 基于已被验证的叙事框架，做**三情景的参数推演和估值计算**。
 
 你掌握 A/B/C/D/E/F/G/H/I/J 共 10 种估值模型。路由判官已选定最适合当前标的的模型，你的职责是在选定的模型框架内完成参数推演。
 
@@ -97,34 +89,39 @@ SCENARIO_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 
 清单项必须按顺序执行，不可跳过、不可调换。reasoning_trace 按清单项顺序组织，每项写 3-6 句话：你的分析、你的依据、你的结论。
 
-## 清单项 1: 素材吸收
+## 清单项 1: 素材吸收 — 三件东西
 
-**Agent-2a 已完成叙事诊断。** 从用户消息中的"Agent-2a 叙事诊断结论"提取估值锚、计价程度、事件分布形状。
+Agent-2a 已完成叙事诊断，你必须信任其结论。从用户消息中的 "Agent-2a 叙事诊断结论" 提取估值锚、计价程度、事件分布形状。
 
-**你的推演建立在三件东西的交汇点上：**
+你的推演建立在三件东西的交汇点上：
 
 **① 投资地图 — 事件冲击前的企业全貌（Agent-Baseline 预合成）**
-直接信任它，不要重做地图的工作。你消费它的方式:
-- **维度一（产品结构）→ 了解公司的收入构成。** 地图已正确区分了各产品线，包括哪些是成熟/成长/亏损业务。
-- **量化锚点（产能/价格/利用率/市占率/壁垒）→ 赋参数的起点。**
-- **里程碑时间线 → 事件冲击的靶子。**
-- **脆弱点 → bear 情景的方向和概率。**
 
-**② 市场在计价什么（从 2a 和当前市值隐含假设中提取）** — 已预期了多少，剩余催化空间多大。
+这是公司"原来是什么样"的完整画像。直接信任它——不要重做地图的工作。
+- 量化锚点（产能/价格/利用率/市占率/壁垒）是赋参数的**起点**——事件冲击后这些数字会变。
+- 里程碑时间线是事件冲击的**靶子**——判断事件会加速、推迟还是取消每个节点。
+- 脆弱点分析告诉你"当前叙事哪里最薄"——这些决定了 bear 情景的参数方向和概率。
 
-**③ 事件 — 冲击地图的变量。** 产能/价格/供需缺口的当前数据，赋值参数的主要依据。
+**② 市场在计价什么（从 "Agent-2a 叙事诊断结论" 和 "当前市值隐含假设" 中提取）**
 
-**素材说明 — 四类原始素材补充:**
-- **事件变量**（原始事件、事件研判、背景知识）：触发本次估值的外部催化剂。事件研判中的评分帮助你理解事件的性质和影响范围。
-- **个股路线**（投资主题、发展推演、催化节点、逆向风险）：该公司的既定发展轨迹。事件变量将作用于这条路线。
-- **行业全貌**：产业链竞争格局、公司在其中的位置。
-- **火山联网搜索**：对个股投资全貌的细节填充——市场量化预期、可比估值、业务营运数据。是估值的背景增强，不是估值依据。事件驱动才是变量和诱因，事件如何重塑或推进投资全貌才是参数改变的逻辑。
+这是市场**已经在价格中反映了多少预期**。
+- 计价程度（overall_priced_in / priced_in_estimate）: 事件已被消化了多少？剩余催化空间多大？
+- 隐含假设（Implied Story）: 当前市值反过来隐含了什么增速/利润率/市占率？这设定了估值的起点参照。
+- 估值锚（primary_anchor）: 市场在用 PE、PS 还是 PB 定价？锚类型约束了你的参数框架。
 
-**关键**: 估值锚和计价程度以 2a 为准（不可推翻）。
+**③ 事件 — 冲击投资地图的变量**
+
+这是**改变了什么**。两部分素材:
+- **事件本身**（原始事件、事件研判、背景知识）：产能、价格、供需缺口的**当前**数据——估值参数的主要锚定来源，优先于地图中的历史基线。
+- **个股路线**（投资主题、发展推演、催化节点、逆向风险）：公司的既定轨迹。事件变量将作用于这条路线——加速、跃迁、还是偏离？逆向风险（adversarial_thinking）约束 bear 情景的证伪路径，催化节点（future）是里程碑时间线的补充。
+
+**三者的关系**: 地图告诉你"原来是什么"，市场计价告诉你"已经预期了多少"，事件告诉你"实际变了多少"。你的参数 = 地图基线 + 事件冲击 - 已计价部分。
+
+**关键**: 估值锚和计价程度以 2a 为准（不可推翻）。当事件素材中的当前数据与地图中的历史基线冲突时，以事件素材为准——事件已经改变了现状。
 
 ## 清单项 2: 引用 Agent-2a 诊断结论（不重做审核）
 
-**Agent-2a 已完成信号审核和叙事诊断。** 在用户消息末尾的"Agent-2a 叙事诊断结论"中提取:
+**Agent-2a 已完成信号审核和叙事诊断。** 从用户消息中的"Agent-2a 叙事诊断结论"提取:
 
 **2a. 信号审核结论** — 直接引用:
 - step2d_score: 2a 的信号匹配度评分 (0-10)
@@ -1009,7 +1006,7 @@ def _build_growth_summary(core: dict) -> str:
             yoy_str = f'{yoy:+.1f}%' if yoy is not None else '?'
             lines.append(f'  - {p["name"]}: {yoy_str} (占比{p.get("revenue_share_pct",0):.1f}%)')
         if '2025' in str(data_vintage):
-            lines.append('  > 以上为年报数据。请在软素材中查找各产品2026Q1最新增速，判断是否加速。')
+            lines.append('  > 以上为年报数据。请在事件素材中查找各产品2026Q1最新增速，判断是否加速。')
 
     # 季度趋势
     recent = et.get('recent_4q', [])
@@ -1032,7 +1029,7 @@ def _build_growth_summary(core: dict) -> str:
     # 交叉验证提示
     if mix or recent:
         lines.append('\n> **增速交叉验证**（赋CAGR/增速参数前按顺序校验）：')
-        lines.append('> 1. 软素材的\'投资主题\'和\'发展推演\'——2026Q1最新增速是否高于上表年报增速？')
+        lines.append('> 1. 事件素材的\'投资主题\'和\'发展推演\'——2026Q1最新增速是否高于上表年报增速？')
         lines.append('> 2. 火山联网搜索——券商对未来2-3年的预测是否隐含更高增速？')
         lines.append('> 3. 事件驱动逻辑——事件是加速/跃迁/稳步推进？质变节点→非线性加速，非均值回归。')
         lines.append('> 4. **K(DCF)适用性判定**——检查以上交叉验证结论：(a)分产品毛利率是否可直接取到？(b)毛利率改善+规模效应→ROIC改善路径是否可见？(c)火山数据的产能/订单是否约束了增速上限使终局可预见？若三项全满足，应选K(两阶段DCF)而非B(PS+TAM)——K能建模增长→利润→现金流的完整路径。任一不满足则保持B。')
@@ -1326,11 +1323,11 @@ def _call_llm_scenario(
     growth_summary = _build_growth_summary(core)
 
     # 构建用户消息 (一个完整的大f-string)
-    # V7 baseline
-    bs = ""
+    # ── V7: 投资地图 ──
+    baseline_section = ""
     if baseline_report and len(baseline_report) > 100:
-        bs = f"""
-## 投资地图 - Agent-Baseline (主输入)
+        baseline_section = f"""
+## 投资地图 — Agent-Baseline 合成（事件冲击前的企业全貌，主输入）
 
 {baseline_report}
 
@@ -1338,7 +1335,7 @@ def _call_llm_scenario(
 """
 
     user_msg = f"""# 推演裁决: {stock}({code})
-{bs}
+{baseline_section}
 ## 当前市值隐含假设 (Implied Story) — 根据估值锚({anchor_2a})选择工具
 
 {bs_section}{bs_warning}
@@ -1353,53 +1350,11 @@ def _call_llm_scenario(
 - WACC: {wacc_params['wacc_pct']}% (re={wacc_params['re_pct']}% rd={wacc_params['rd_pct']}% D/E={wacc_params['d_ratio_pct']}%)
 - 注: {wacc_params.get('note','')}
 
-## 财务数据
-- 市值: {core.get('market_cap_yi',0)}亿 营收TTM: {core.get('revenue_ttm_yi',0)}亿
-- 净利润: {core.get('net_profit_ttm_yi',0)}亿 经营利润: {core.get('operating_profit_ttm_yi',0)}亿
-- EBITDA: {core.get('ebitda_ttm_yi',0):.1f}亿 EBITDA率: {core.get('ebitda_ttm_yi',0)/max(core.get('revenue_ttm_yi',1),1)*100:.1f}%
-- ROIC: {core.get('roic_pct',0)}% 毛利率: {core.get('gross_margin_pct',0)}% 净利率: {core.get('net_margin_pct',0)}%
-	- 历史分位解读: 0=历史最高位(从未更贵), 50=中位, 100=历史最低位(从未更便宜)
-	- 盈利能力分位: ROIC分位={core.get('roic_historical_rank','?')} 毛利率分位={core.get('gross_margin_historical_rank','?')} 净利率分位={core.get('net_margin_historical_rank','?')} ROE分位={core.get('roe_historical_rank','?')} 综合得分={core.get('profitability_composite_score','?')}
-- PE: {core.get('pe_ttm',0)}x (历史分位={core.get('pe_historical_rank','?')}) PB: {core.get('pb',0)}x (历史分位={core.get('pb_historical_rank','?')}) PS: {core.get('ps_ttm',0)}x
-- 投入资本(IC): {core.get('invested_capital_yi',0):.1f}亿 (A/G/I/K 模型计算基数——代码用此值代入公式) 净资产: {core.get('total_equity_yi',0)}亿 总资产: {core.get('total_assets_yi',0)}亿
-- 有息负债: {core.get('interest_bearing_debt_yi',0)}亿 现金: {core.get('cash_yi',0)}亿
-- 经营CF: {core.get('ocf_ttm_yi',0)}亿 Capex: {core.get('capex_ttm_yi',0)}亿
-- 异常标记: {json.dumps(core.get('caution_flags',[]), ensure_ascii=False)}
-- 数据质量: {core.get('data_quality_score',10)}/10
-
-## 前瞻信号 — 定量增速摘要（Agent-1 财报提取，赋CAGR前必查）
-{growth_summary}
-> Agent-2a 已完成信号审核，结论参见下文"Agent-2a 叙事诊断结论"中的 signal_audit。
-
 ## 路由判决
 - 主模型: {primary} ({category})
 - 路由理由: {reason}
 - 校验模型: {routing.get('validation_models', [])}
 - 迁移路径: {json.dumps(routing.get('model_migration_path', {}), ensure_ascii=False)}
-
-## 事件变量
-{event_data.get('raw_event_text','')}
-
-## 事件研判
-{event_data.get('preliminary_reasoning','')}
-
-## 背景知识
-{event_data.get('knowledge_supplement','')}
-
-## {stock}的投资主题
-{event_data.get('investment_theme','')}
-
-## {stock}的发展推演
-{event_data.get('event_deduction','')}
-
-## {stock}的催化节点
-{event_data.get('future','')}
-
-## {stock}的逆向风险
-{event_data.get('adversarial_thinking','')}
-
-## 行业全貌
-{event_data.get('industry_expert_research','')}
 
 ## Agent-2a 叙事诊断结论（已审核，可直接信任）
 """
@@ -1447,17 +1402,77 @@ def _call_llm_scenario(
   原因: {pt.get('limitations',['?'])[0][:120]}
 """
 
-    # V6.3: 火山联网搜索补充数据（券商预测/可比估值，作为参数锚定的市场视角参照）
+    # ═══ 事件素材：当前情形的一手数据，估值参数的主要锚定来源 ═══
+    user_msg += f"""
+
+## 事件素材 — 当前情形的一手数据，是估值参数的主要锚定来源
+
+> **数据层级原则**: 以下来自事件/行业的产能、价格、利用率、客户认证、供需缺口等信息，
+> 反映的是"现在正在发生什么"。在事件驱动框架中，这是你判断当前企业状态的首要依据。
+> 历史财务数据（见下一节）反映的是事件冲击前的过去状态——只用于理解冲击幅度和商业模式，
+> 不可替代事件素材中的产能/价格/利用率作为当前情形的基准。
+
+## 事件变量
+{event_data.get('raw_event_text','')}
+
+## 事件研判
+{event_data.get('preliminary_reasoning','')}
+
+## 背景知识
+{event_data.get('knowledge_supplement','')}
+
+## {stock}的投资主题
+{event_data.get('investment_theme','')}
+
+## {stock}的发展推演
+{event_data.get('event_deduction','')}
+
+## {stock}的催化节点
+{event_data.get('future','')}
+
+## {stock}的逆向风险
+{event_data.get('adversarial_thinking','')}
+
+## 行业全貌
+{event_data.get('industry_expert_research','')}
+"""
+    # V6.3: 火山联网搜索补充数据
     volc = volc_data or {}
     volc_text = volc.get("volc_text", "")
     if volc_text:
         user_msg += f"""
-
-## 火山联网搜索补充数据（个股投资全貌的细节填充，估值背景增强）
+## 火山联网搜索补充数据（市场对公司的量化预期和可比估值）
 
 {volc_text}
 
-以上是市场当前对公司的量化预期和可比估值——对你的推演起背景增强作用。事件驱动才是变量和诱因，事件如何重塑或推进上述投资全貌才是你参数改变的逻辑。"""
+以上是市场当前对公司的量化预期和可比估值——对你的推演起背景增强作用。事件驱动才是变量和诱因，事件如何重塑或推进上述投资全貌才是你参数改变的逻辑。
+"""
+    # ═══ 历史财务基线：事件冲击前的企业快照 ═══
+    user_msg += f"""
+## 历史财务基线 — 事件冲击前的企业快照，用于理解冲击幅度和商业模式
+
+> **正确用法**: 以下数据反映事件发生前的企业状态。不要用这些历史数字直接作为
+> "当前情形"——事件已经改变了现状。用法: (1) 对比事件素材中的产能×价格×利用率，
+> 推算事件造成的收入/利润增量；(2) 用历史毛利率/净利率理解企业的成本结构和盈利模型，
+> 判断价格变化对利润的杠杆效应；(3) 用历史ROIC理解企业的资本回报基线。
+
+- 市值: {core.get('market_cap_yi',0)}亿 营收TTM: {core.get('revenue_ttm_yi',0)}亿
+- 净利润: {core.get('net_profit_ttm_yi',0)}亿 经营利润: {core.get('operating_profit_ttm_yi',0)}亿
+- EBITDA: {core.get('ebitda_ttm_yi',0):.1f}亿 EBITDA率: {core.get('ebitda_ttm_yi',0)/max(core.get('revenue_ttm_yi',1),1)*100:.1f}%
+- ROIC: {core.get('roic_pct',0)}% 毛利率: {core.get('gross_margin_pct',0)}% 净利率: {core.get('net_margin_pct',0)}%
+	- 历史分位解读: 0=历史最高位(从未更贵), 50=中位, 100=历史最低位(从未更便宜)
+	- 盈利能力分位: ROIC分位={core.get('roic_historical_rank','?')} 毛利率分位={core.get('gross_margin_historical_rank','?')} 净利率分位={core.get('net_margin_historical_rank','?')} ROE分位={core.get('roe_historical_rank','?')} 综合得分={core.get('profitability_composite_score','?')}
+- PE: {core.get('pe_ttm',0)}x (历史分位={core.get('pe_historical_rank','?')}) PB: {core.get('pb',0)}x (历史分位={core.get('pb_historical_rank','?')}) PS: {core.get('ps_ttm',0)}x
+- 净资产: {core.get('total_equity_yi',0)}亿 总资产: {core.get('total_assets_yi',0)}亿
+- 有息负债: {core.get('interest_bearing_debt_yi',0)}亿 现金: {core.get('cash_yi',0)}亿
+- 经营CF: {core.get('ocf_ttm_yi',0)}亿 Capex: {core.get('capex_ttm_yi',0)}亿
+- 异常标记: {json.dumps(core.get('caution_flags',[]), ensure_ascii=False)}
+- 数据质量: {core.get('data_quality_score',10)}/10
+
+## 前瞻信号 — 定量增速摘要（Agent-1 财报提取，赋CAGR前必查）
+{growth_summary}
+> Agent-2a 已完成信号审核，结论参见上文"Agent-2a 叙事诊断结论"中的 signal_audit。
+"""
     user_msg += """
 请按系统提示词的执行清单完成推演。注意: Agent-2a 已完成信号审核，你不再重复做清单项2——直接引用上述结论进入情景推演。输出纯 JSON。
 """
@@ -2210,6 +2225,7 @@ class ScenarioAsymmetry:
         event_data: Coze Agent0 输入
         agent2a_output: V6 新增 — Agent-2a 叙事诊断输出（信号审核 + 计价判断）
         volc_data: V6.3 新增 — 火山联网搜索补充数据（券商预测/可比估值）
+        baseline_report: V7 新增 — Agent-Baseline 投资地图报告
         """
         cb = progress_cb or (lambda s, n: None)
         event_data = event_data or {}
