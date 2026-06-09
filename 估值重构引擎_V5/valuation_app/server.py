@@ -75,7 +75,7 @@ def _load_completed_from_disk(scheduler: Scheduler, max_age_days: int = 2):
                 continue
             with open(f, encoding="utf-8") as fh:
                 payload = json.load(fh)
-            a0 = payload.get("agent0", {})
+            a0 = payload.get("event_meta", {})
             a3 = payload.get("agent3", {})
             vs = a3.get("valuation_summary", {})
             loaded.append({
@@ -223,12 +223,12 @@ async def view_report(filename: str):
     with open(json_path, encoding="utf-8") as f:
         payload = json.load(f)
     payload = _sanitize(payload)
-    agent0 = payload.get("agent0", {})
+    event_meta = payload.get("event_meta", {})
     a1 = payload.get("agent1", {})
     a2 = payload.get("agent2", {})
     a3 = payload.get("agent3", {})
     a2a = payload.get("agent2a", {})
-    html = build_html_report(agent0, a1, a2, a3, a2a)
+    html = build_html_report(event_meta, a1, a2, a3, a2a)
     return HTMLResponse(html)
 
 @app.get("/api/status")
@@ -918,7 +918,7 @@ async def get_report_summaries(codes: str = ""):
             try:
                 with open(f, encoding="utf-8") as fh:
                     payload = json.load(fh)
-                a0 = payload.get("agent0", {})
+                a0 = payload.get("event_meta", {})
                 raw = a0.get("raw_event_text") or a0.get("investment_theme") or ""
                 result[code] = raw if raw else ""
             except Exception:

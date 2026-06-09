@@ -111,7 +111,8 @@ export default function ValuationReportMobile() {
   if (error) return <div style={{ padding: 80, textAlign: 'center', color: C.orange, fontSize: 16 }}>{error}</div>;
   if (!data) return null;
 
-  const a0 = (data.agent0 || {}) as Record<string,unknown>;
+  const a0 = (data.event_meta || data.agent0 || {}) as Record<string,unknown>;
+  const baselineReport = String(data?.baseline_report || '');
   const a1 = (data.agent1 || {}) as Record<string,unknown>;
   const a2 = (data.agent2 || {}) as Record<string,unknown>;
   const a3 = (data.agent3 || {}) as Record<string,unknown>;
@@ -239,12 +240,18 @@ export default function ValuationReportMobile() {
           </Accordion>
         )}
 
-        {/* ── Agent0 预路由 ── */}
-        {(Boolean(G(a0, 'investment_theme')) || Boolean(G(a0, 'event_deduction'))) && (
-          <Accordion title="事件分析" accent={C.green}>
-            {Boolean(G(a0, 'investment_theme')) && <MD text={String(G(a0, 'investment_theme')).slice(0, 2000)} maxH={300} />}
-            {Boolean(G(a0, 'event_deduction')) && <MD text={String(G(a0, 'event_deduction')).slice(0, 2000)} maxH={300} />}
-            {Boolean(G(a0, 'preliminary_reasoning')) && <MD text={String(G(a0, 'preliminary_reasoning')).slice(0, 1500)} maxH={200} />}
+        {/* ── 投资地图 ── */}
+        {(baselineReport || Boolean(G(a0, 'investment_theme')) || Boolean(G(a0, 'event_deduction'))) && (
+          <Accordion title="投资地图" accent={C.green}>
+            {baselineReport ? (
+              <MD text={baselineReport.slice(0, 6000)} maxH={400} />
+            ) : (
+              <>
+                {Boolean(G(a0, 'investment_theme')) && <MD text={String(G(a0, 'investment_theme')).slice(0, 2000)} maxH={300} />}
+                {Boolean(G(a0, 'event_deduction')) && <MD text={String(G(a0, 'event_deduction')).slice(0, 2000)} maxH={300} />}
+                {Boolean(G(a0, 'preliminary_reasoning')) && <MD text={String(G(a0, 'preliminary_reasoning')).slice(0, 1500)} maxH={200} />}
+              </>
+            )}
           </Accordion>
         )}
 

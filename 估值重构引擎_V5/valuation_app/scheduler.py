@@ -363,12 +363,14 @@ class Scheduler:
                 continue
             a3 = r.get("agent3", {})
             vs = a3.get("valuation_summary", {})
-            # 多路径提取 stock_code / stock_name（V5 V4 格式兼容）
-            a0 = r.get("agent0", {})
+            # 多路径提取 stock_code / stock_name（V5 V4 V7 格式兼容）
+            a0 = r.get("event_meta", {}) or r.get("agent0", {})
             a1 = r.get("agent1", {})
-            code = a1.get("stock_code", "") or a0.get("stock_code", "?")
+            audit = r.get("audit", {})
+            code = a1.get("stock_code", "") or a0.get("stock_code", "") or audit.get("stock_code", "?")
             name = (
                 a0.get("stock_name", "")
+                or audit.get("stock_name", "")
                 or a1.get("packages", {}).get("core", {}).get("fields", {}).get("stock_name", "")
                 or a1.get("clean_financials", {}).get("stock_name", "")
                 or code
@@ -474,8 +476,20 @@ class Scheduler:
         rd_raw_val = a2_raw.get("routing_decision", {}) if isinstance(a2_raw.get("routing_decision"), dict) else {}
         a2a_raw = result.get("agent2a", {}) if isinstance(result.get("agent2a"), dict) else {}
 
+        baseline_report = result.get("baseline_report", "")
+
         payload = {
-            "agent0": agent0_record,
+            "baseline_report": baseline_report,
+            "event_meta": {
+                "stock_code": stock_code,
+                "stock_name": stock_name,
+                "raw_event_text": agent0_record.get("raw_event_text", ""),
+                "investment_theme": agent0_record.get("investment_theme", ""),
+                "event_source": agent0_record.get("event_source", ""),
+                "response_level": agent0_record.get("response_level", ""),
+                "created_at": agent0_record.get("created_at", ""),
+                "bstudio_create_time": agent0_record.get("bstudio_create_time", ""),
+            },
             "agent1": self._serialize_agent_output(a1_raw),
             "agent2": self._serialize_agent_output(a2_raw),
             "agent2a": self._serialize_agent_output(a2a_raw) if a2a_raw else {},
@@ -539,7 +553,7 @@ class Scheduler:
         # ── 写入详情归档表（完整JSON，供深度回溯）──
         if self.detail_db_id:
             try:
-                _write_detail_row(self.detail_db_id, self.coze, agent0_record,
+                _write_detail_row(self.detail_db_id, self.coze, baseline_report,
                                   a1_raw, a2_raw, a2a_raw, a3, routing,
                                   pipeline_type, _rnpv_data, stock_code, stock_name, ts)
             except Exception as e:
@@ -581,7 +595,7 @@ class Scheduler:
 
 # ── 详情归档写入（模块级函数，供 _write_result_to_coze_v5 调用）──
 
-def _write_detail_row(detail_db_id: str, coze, agent0_record: dict,
+def _write_detail_row(detail_db_id: str, coze, baseline_report: str,
                       a1_raw: dict, a2_raw: dict, a2a_raw: dict,
                       a3: dict, routing: dict,
                       pipeline_type: str, _rnpv_data: dict,
@@ -625,7 +639,7 @@ def _write_detail_row(detail_db_id: str, coze, agent0_record: dict,
         "stock_name": stock_name,
         "json_filename": f"{stock_code}_{ts}",
         "processed_at": datetime.now(timezone.utc).isoformat(),
-        "agent0_json": json.dumps(serialize(agent0_record), ensure_ascii=False, default=str),
+        "baseline_report": baseline_report,
         "agent1_json": json.dumps(serialize(agent1_detail), ensure_ascii=False, default=str),
         "agent2_json": json.dumps(serialize(agent2_detail), ensure_ascii=False, default=str),
         "agent2a_json": json.dumps(serialize(agent2a_detail), ensure_ascii=False, default=str) if agent2a_detail else "",

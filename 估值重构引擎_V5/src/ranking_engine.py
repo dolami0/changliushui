@@ -29,7 +29,7 @@ def compute_ranking(results: list[dict], output_dir: str | None = None) -> dict:
             continue
         a3 = r.get("agent3", {})
         a1 = r.get("agent1", {})
-        a0 = r.get("agent0", {})
+        a0 = r.get("event_meta", {}) or r.get("agent0", {})  # V7: event_meta 优先, 兼容旧 agent0
 
         vs = a3.get("valuation_summary", {})
         ta = a3.get("trade_annotation", {})

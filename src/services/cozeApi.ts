@@ -302,7 +302,8 @@ export interface ReportV6Record {
   stock_code: string;
   stock_name: string;
   json_filename: string;
-  agent0_json: string;
+  agent0_json?: string;      // V5/V6 旧格式
+  baseline_report?: string;  // V7 新格式: 投资地图全文
   agent1_json: string;
   agent2_json: string;
   agent2a_json: string;
@@ -352,6 +353,11 @@ export async function fetchReportByFilename(filename: string): Promise<Record<st
 
 function reassembleReport(r: ReportV6Record): Record<string, unknown> {
   const report: Record<string, unknown> = {};
+  // V7: baseline_report 优先（投资地图全文）
+  if (r.baseline_report) {
+    report.baseline_report = r.baseline_report;
+  }
+  // V5/V6: agent0_json 兼容（旧格式 JSON）
   if (r.agent0_json) try { report.agent0 = JSON.parse(r.agent0_json); } catch { /* ignore */ }
   if (r.agent1_json) try { report.agent1 = JSON.parse(r.agent1_json); } catch { /* ignore */ }
   if (r.agent2_json) try { report.agent2 = JSON.parse(r.agent2_json); } catch { /* ignore */ }

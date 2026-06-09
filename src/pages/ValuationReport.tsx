@@ -213,7 +213,8 @@ export default function ValuationReport() {
   if (!data && !loading && !error) return null;
 
   // ── 数据解构 ──
-  const a0 = (data?.agent0 || {}) as Record<string,unknown>;
+  const a0 = (data?.event_meta || data?.agent0 || {}) as Record<string,unknown>;
+  const baselineReport = String(data?.baseline_report || '');
   const a1 = (data?.agent1 || {}) as Record<string,unknown>;
   const a2 = (data?.agent2 || {}) as Record<string,unknown>;
   const a3 = (data?.agent3 || {}) as Record<string,unknown>;
@@ -267,7 +268,7 @@ export default function ValuationReport() {
 
   const isPS = modelKey === 'B', isPE = ['A','C','G','I'].includes(modelKey), isPB = modelKey === 'D', isEV = modelKey === 'E';
 
-  const toc: Record<string,string> = { exec:'摘要', scenario:'情景', model:'路由', bs:'BS检测', financial:'财务', a0:'预路由', cases:'案例', signal:'信号', gap:'预期差', confidence:'置信', trade:'标注', crosscheck:'校验', kpi:'KPI', triggers:'触发', trace:'推理', narrative:'叙事' };
+  const toc: Record<string,string> = { exec:'摘要', scenario:'情景', model:'路由', bs:'BS检测', financial:'财务', a0:'地图', cases:'案例', signal:'信号', gap:'预期差', confidence:'置信', trade:'标注', crosscheck:'校验', kpi:'KPI', triggers:'触发', trace:'推理', narrative:'叙事' };
 
   return (
     <>
@@ -423,16 +424,22 @@ export default function ValuationReport() {
               ]} />
             </NeoSection>
 
-            {/* ═══════ 6. Agent0 预路由 ═══════ */}
-            <NeoSection mobile={mobile} id="a0" tag="A0" title="预路由 · 事件分析" accent={C.green} subtitle="Coze Agent0">
-              {Boolean(G(a0, 'investment_theme')) && <MD text={String(G(a0, 'investment_theme')).slice(0, 3000)} />}
-              {Boolean(G(a0, 'event_deduction')) && <MD text={String(G(a0, 'event_deduction'))} />}
-              {Boolean(G(a0, 'preliminary_reasoning')) && <MD text={String(G(a0, 'preliminary_reasoning'))} />}
-              {Boolean(G(a0, 'adversarial_thinking')) && <MD text={String(G(a0, 'adversarial_thinking')).slice(0, 1500)} />}
-              {Boolean(G(a0, 'knowledge_supplement')) && <MD text={String(G(a0, 'knowledge_supplement')).slice(0, 1500)} />}
-              {Boolean(G(a0, 'industry_expert_research')) && <MD text={String(G(a0, 'industry_expert_research')).slice(0, 2000)} />}
-              {Boolean(G(a0, 'future')) && <MD text={String(G(a0, 'future')).slice(0, 1000)} />}
-              {Boolean(G(a0, 'raw_event_text')) && <MD text={String(G(a0, 'raw_event_text')).slice(0, 1000)} />}
+            {/* ═══════ 6. 投资地图 / 预路由 ═══════ */}
+            <NeoSection mobile={mobile} id="a0" tag="MAP" title="投资地图" accent={C.green} subtitle={baselineReport ? 'Agent-Baseline V7' : 'Coze Agent0'}>
+              {baselineReport ? (
+                <MD text={baselineReport.slice(0, 10000)} />
+              ) : (
+                <>
+                  {Boolean(G(a0, 'investment_theme')) && <MD text={String(G(a0, 'investment_theme')).slice(0, 3000)} />}
+                  {Boolean(G(a0, 'event_deduction')) && <MD text={String(G(a0, 'event_deduction'))} />}
+                  {Boolean(G(a0, 'preliminary_reasoning')) && <MD text={String(G(a0, 'preliminary_reasoning'))} />}
+                  {Boolean(G(a0, 'adversarial_thinking')) && <MD text={String(G(a0, 'adversarial_thinking')).slice(0, 1500)} />}
+                  {Boolean(G(a0, 'knowledge_supplement')) && <MD text={String(G(a0, 'knowledge_supplement')).slice(0, 1500)} />}
+                  {Boolean(G(a0, 'industry_expert_research')) && <MD text={String(G(a0, 'industry_expert_research')).slice(0, 2000)} />}
+                  {Boolean(G(a0, 'future')) && <MD text={String(G(a0, 'future')).slice(0, 1000)} />}
+                  {Boolean(G(a0, 'raw_event_text')) && <MD text={String(G(a0, 'raw_event_text')).slice(0, 1000)} />}
+                </>
+              )}
             </NeoSection>
 
             {/* ═══════ 7. 案例比对 ═══════ */}

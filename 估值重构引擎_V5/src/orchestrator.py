@@ -476,6 +476,7 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
 
         return {
             "agent0": state.agent0_output or {},
+            "baseline_report": state.baseline_report or "",
             "agent1": state.agent1_output or {},
             "agent1r": pipeline_data,
             "agent2r": scenario_output,                # Agent-2r 完整输出（含 valuation_summary/scenarios）
@@ -541,6 +542,7 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
         # 组装结果（复用标准管线格式，兼容前端）
         return {
             "agent0": state.agent0_output or {},
+            "baseline_report": state.baseline_report or "",
             "agent1": state.agent1_output or {},
             "agent2": state.agent2b_output or {},   # 2b 路由决策, scheduler 提取 routing_decision
             "agent2a": state.agent2a_output or {},
@@ -567,6 +569,7 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
 
         result = {
             "agent0": state.agent0_output or {},
+            "baseline_report": state.baseline_report or "",
             "agent1": state.agent1_output or {},
             "agent2": a2b,   # 保持 agent2 键名向后兼容
             "agent2a": state.agent2a_output or {},  # V6 新增
