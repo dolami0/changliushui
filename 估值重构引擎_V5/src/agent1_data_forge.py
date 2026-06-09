@@ -119,6 +119,20 @@ def _fetch_core_bundle(fetcher: DataFetcher, stock_code: str) -> dict:
     return {"raw": results, "errors": errors}
 
 
+def _compute_capex_ttm(ts_cf_q: dict) -> float:
+    """从 tushare 季度现金流量表计算 TTM CAPEX。
+
+    investoday 的 capex_payments 字段口径不可靠（曾有 5.24亿 vs 真实 18.08亿 的偏差），
+    改用 tushare 季度数据滚动加总，与 forward_indicator_computer 保持一致。
+    """
+    periods = ts_cf_q.get("periods", []) or []
+    if not periods:
+        return 0.0
+    capex_vals = [p.get("c_pay_acq_const_fiolta", 0) or 0 for p in periods[:4]]
+    capex_sum = sum(capex_vals)
+    return round(capex_sum / 1e8, 2) if capex_sum > 0 else 0.0
+
+
 def _extract_core_fields(raw_bundle: dict, stock_code: str) -> dict[str, Any]:
     """从原始 API 结果中提取核心字段，单位统一为亿（比率除外）。"""
     r = raw_bundle["raw"]
@@ -221,7 +235,10 @@ def _extract_core_fields(raw_bundle: dict, stock_code: str) -> dict[str, Any]:
 
         # [IO] 现金流/资产负债表绝对值 — investoday TTM
         "ocf_ttm_yi": round(_num(cf.get("operating_cash_flow")) / 1e8, 2),
-        "capex_ttm_yi": round(_num(cf.get("capex_payments")) / 1e8, 2),
+
+        # [TS] CAPEX TTM — tushare 季度现金流加总（investoday capex_payments 口径不可靠）
+        "capex_ttm_yi": _compute_capex_ttm(r.get("ts_cf_q", {})),
+
         "net_debt_yi": round(
             (_num(fd.get("interest_bearing_debt")) - _num(bal.get("cash_equivalents"))) / 1e8, 1
         ),

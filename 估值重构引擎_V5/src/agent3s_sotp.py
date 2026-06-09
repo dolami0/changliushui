@@ -1418,7 +1418,7 @@ def _compute_segment_value(
         peak = params.get("peak_sales_yi", 0)
         rate = params.get("discount_rate_pct", 15)
         if peak > 0 and pos > 0 and rate > 0:
-            return round(peak * pos / (1 + rate / 100), 1)
+            return round(peak * pos / 100 / (1 + rate / 100), 1)
         return None
 
     elif anchor == "dcf":

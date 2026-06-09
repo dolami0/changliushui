@@ -264,9 +264,9 @@ def _compute_demand_reality(bs: dict | None, core: dict) -> dict:
     ar_series = [p.get('accounts_receiv') for p in ps]
     ar_qoq = _qoq(ar_cur, prev.get('accounts_receiv'))
 
-    # 应收/营收比（季度折算）
-    ar_ratio = round(ar_cur / (rev_ttm / 4), 2) if ar_cur and rev_ttm > 1 else None
-    ar_ratio_series = [p.get('accounts_receiv') / (rev_ttm / 4)
+    # 应收/营收比（TTM口径，不是季度折算）
+    ar_ratio = round(ar_cur / rev_ttm, 2) if ar_cur and rev_ttm > 1 else None
+    ar_ratio_series = [p.get('accounts_receiv') / rev_ttm
                        for p in ps if p.get('accounts_receiv') and rev_ttm > 1]
     ar_anomaly = _anomaly(ar_ratio, ar_ratio_series)
 

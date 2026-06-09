@@ -74,6 +74,7 @@ class PipelineState:
     agent2b_output: dict | None = None   # V6 改名: 路由判决
     pre_screen_result: PreScreenResult | None = None  # V6.2 灵光预筛
     agent3_output: dict | None = None
+    baseline_report: str | None = None   # V7: Agent-Baseline 投资地图报告
 
     # 增量补取
     incremental_fetch_count: int = 0
@@ -262,12 +263,35 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
             except Exception as e:
                 print(f'  [Volc] 跳过: {e}', flush=True)
 
-            # ── Agent-2a: 叙事诊断 (火山数据已注入, 用于锚判断+SOTP判定) ──
+            # ── Agent-Baseline: 投资地图绘制 (V7: 合成预研语料+财务数据+火山搜索 → 六维地图) ──
+            cb("baseline", 0, 0, "running", "投资地图绘制")
+            t0 = time.time()
+            try:
+                from agent_baseline import BaselineMapDrawer
+                _drawer = BaselineMapDrawer(api_key=self.api_key)
+                _bl_result = _drawer.run(
+                    stock_code, stock_name,
+                    state.agent0_output, state.agent1_output,
+                    volc_data=volc_data_std,
+                )
+                state.baseline_report = _bl_result.get("baseline_report", "")
+                state.step_times["baseline"] = round(time.time() - t0, 2)
+                cb("baseline", 0, 0, "done",
+                   f"地图{len(state.baseline_report)}字 "
+                   f"latency={_bl_result.get('latency_s',0)}s")
+            except Exception as e:
+                print(f'  [Baseline] 地图绘制失败, 继续管线: {e}', flush=True)
+                state.baseline_report = ""
+                state.step_times["baseline"] = round(time.time() - t0, 2)
+                cb("baseline", 0, 0, "done", f"失败: {str(e)[:40]}")
+
+            # ── Agent-2a: 叙事诊断 (火山数据+投资地图已注入) ──
             cb("agent2a", 1, 2, "running", "叙事诊断(锚+计价+信号审核)")
             t0 = time.time()
             state.agent2a_output = self._run_agent2a(
                 state.agent1_output, event_data, wacc_params,
                 volc_data=volc_data_std,
+                baseline_report=state.baseline_report,
             )
             state.step_times["agent2a"] = round(time.time() - t0, 2)
             a2a_mn = state.agent2a_output.get("market_narrative", {})
@@ -289,6 +313,7 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
             state.agent2b_output = self._run_agent2b(
                 state.agent1_output, state.agent2a_output, event_data,
                 volc_data=volc_data_std,
+                baseline_report=state.baseline_report,
             )
             state.step_times["agent2b"] = round(time.time() - t0, 2)
             rd = state.agent2b_output.get("routing_decision", {})
@@ -311,6 +336,7 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
                 state.agent1_output, state.agent2b_output,
                 event_data, state.agent2a_output,
                 volc_data=volc_data_std,
+                baseline_report=state.baseline_report,
             )
             state.step_times["agent3"] = round(time.time() - t0, 2)
             vs = state.agent3_output.get("valuation_summary", {})
@@ -362,10 +388,12 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
         return forge.run(pre_routing)
 
     def _run_agent2a(self, data_package: dict, event_data: dict,
-                     wacc_params: dict, volc_data: dict | None = None) -> dict:
+                     wacc_params: dict, volc_data: dict | None = None,
+                     baseline_report: str | None = None) -> dict:
         a2a = NarrativeDiagnosis(deepseek_key=self.api_key)
         try:
-            return a2a.run(data_package, event_data, wacc_params, volc_data=volc_data)
+            return a2a.run(data_package, event_data, wacc_params,
+                          volc_data=volc_data, baseline_report=baseline_report)
         except Exception as e:
             print(f"  [Orchestrator] Agent-2a 异常, fallback: {e}", flush=True)
             return a2a._fallback_diagnosis(
@@ -373,10 +401,12 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
             )
 
     def _run_agent2b(self, data_package: dict, agent2a_output: dict,
-                     event_data: dict, volc_data: dict | None = None) -> dict:
+                     event_data: dict, volc_data: dict | None = None,
+                     baseline_report: str | None = None) -> dict:
         a2b = RouteJudgeV6(deepseek_key=self.api_key)
         try:
-            return a2b.run(data_package, agent2a_output, event_data, volc_data)
+            return a2b.run(data_package, agent2a_output, event_data, volc_data,
+                          baseline_report=baseline_report)
         except Exception as e:
             print(f"  [Orchestrator] Agent-2b 异常, fallback: {e}", flush=True)
             return {
@@ -386,7 +416,8 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
 
     def _run_agent3(self, data_package: dict, agent2b_output: dict,
                     event_data: dict, agent2a_output: dict,
-                    volc_data: dict | None = None) -> dict:
+                    volc_data: dict | None = None,
+                    baseline_report: str | None = None) -> dict:
         a3 = ScenarioAsymmetry(deepseek_key=self.api_key)
         rd = agent2b_output.get("routing_decision", {})
 
@@ -395,6 +426,7 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
                 data_package, rd, event_data,
                 agent2a_output=agent2a_output,
                 volc_data=volc_data,
+                baseline_report=baseline_report,
             )
         except ScenarioError as e:
             if e.code in ("E301", "E302", "E303"):
@@ -402,6 +434,7 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
                     return a3.run(
                         data_package, rd, event_data,
                         agent2a_output=agent2a_output,
+                        baseline_report=baseline_report,
                     )
                 except ScenarioError:
                     pass
@@ -489,7 +522,8 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
             agent2b_output=state.agent2b_output,
             event_data=event_data,
             wacc_params=wacc_params,
-            volc_data=volc_data,  # orchestrator预取
+            volc_data=volc_data,
+            baseline_report=state.baseline_report,
             progress_cb=lambda step, msg: cb("agent3s", 1, 1, "running", msg),
         )
 

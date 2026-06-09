@@ -161,18 +161,14 @@ def _evaluate_rules(
     if homology < 4:
         return False, f"核心一拦截: 叙事-事件同源性={homology}/10，个股涨不涨不取决于我们分析的事件"
 
-    # 核心二: 大市值(>500亿)需更高总分门槛
-    # 注意: 弹性维度已综合评估市值+经营杠杆+流通盘，此处不再设四维底线
-    if market_cap_yi > 500:
-        if total < 28:
-            return False, f"核心二拦截: 市值{market_cap_yi:.0f}亿>500亿但总分{total}/40<28，大市值需全方位契合"
-        return True, f"通过(大市值{market_cap_yi:.0f}亿+总分{total}/40≥28)"
-
-    # 核心二: 中小市值
-    if total >= 20:
-        return True, f"通过(总分{total}/40≥20)"
-    else:
-        return False, f"核心二拦截: 总分{total}/40<20，弹性/暴露度不足"
+    # 核心二: 阶梯门槛 — 市值越大，通过的总分要求越高
+    thresholds = [(300, 20), (500, 28), (float('inf'), 30)]
+    for cap, bar in thresholds:
+        if market_cap_yi <= cap:
+            if total >= bar:
+                return True, f"通过(市值{market_cap_yi:.0f}亿≤{cap}亿+总分{total}/40≥{bar})"
+            else:
+                return False, f"核心二拦截: 市值{market_cap_yi:.0f}亿≤{cap}亿但总分{total}/40<{bar}，弹性/暴露度不足"
 
 
 # ═══════════════════════════════════════

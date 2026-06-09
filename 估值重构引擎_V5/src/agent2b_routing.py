@@ -33,12 +33,21 @@ ROUTING_V6_PROMPT = """你是估值路由判官。叙事诊断师(Agent-2a)已�
 
 # 输入解读
 
-用户消息中包含 Agent-2a 的完整叙事诊断结论。在开始硬约束筛选之前，先理解叙事：
+用户消息最前面是 **投资地图**（Agent-Baseline 预合成的公司全貌），然后是 Agent-2a 的叙事诊断结论，最后是原始财务数据和事件素材。
+
+**使用投资地图理解公司** — 地图已替你完成了"这家公司是谁"的认知工作:
+- **生命周期与业务结构**（地图维度一+四）: 公司处于什么阶段？新旧业务如何拆分？这直接影响 SOTP 判定。
+- **财务基线**（地图维度二）: ROIC vs WACC、毛利率结构、现金跑道——这些是模型硬约束的输入。
+- **量化锚点**（地图维度六）: 产能、价格、市占率——这些决定增长假设的物理上限。
+- **脆弱点**（地图维度五）: 当前叙事的薄弱环节——如果脆弱度高，路由应倾向于保守模型。
+
+**然后参考 2a 判定** — 2a 已完成锚识别和事件计价:
 
 **1. 理解市场在赌什么 (core_bet + narrative_lifecycle)**
 - 导入期/成长期公司 → 模型应更宽松(允许亏损,允许高PS),因为财务指标滞后于叙事
 - 成熟期公司 → 模型应更严格(要求盈利,要求ROIC),因为财务指标应已兑现叙事
 - 转型期公司 → 注意 anchor_conflict: 旧业务盈利不代表新业务锚。若 SOTP 触发,直接用 J
+- **交叉验证**: 地图中的生命周期判定可能比 2a 更详细——当地图标注"转型期+周期型混合"时，路由需要考虑双重属性。
 
 **2. 理解锚冲突 (anchor_conflict)**
 - 若 2a 标注了锚冲突(如"PE中位但PS极端高位"),说明估值指标与叙事方向不一致
@@ -225,6 +234,7 @@ def _build_routing_user_message(
     agent2a_output: dict,
     event_data: dict,
     volc_data: dict | None = None,
+    baseline_report: str | None = None,
 ) -> str:
     """构建 Agent-2b 用户消息：注入数据+约束。"""
     core = data_package.get("packages", {}).get("core", {}).get("fields", {})
@@ -254,7 +264,19 @@ def _build_routing_user_message(
     family_models = FAMILY_MODELS.get(family, "A/C/G/I")
     sas = mn.get("secondary_anchors", [])
 
+    # ── V7: 投资地图 ──
+    baseline_section = ""
+    if baseline_report and len(baseline_report) > 100:
+        baseline_section = f"""
+## 投资地图 — Agent-Baseline 合成（事件冲击前的企业全貌）
+
+{baseline_report}
+
+---
+"""
+
     msg = f"""# 路由任务: {stock}({code})
+{baseline_section}
 
 ## 叙事诊断 (Agent-2a 完整结论)
 
@@ -348,6 +370,7 @@ class RouteJudgeV6:
         agent2a_output: dict,
         event_data: dict | None = None,
         volc_data: dict | None = None,
+        baseline_report: str | None = None,
     ) -> dict:
         """
         执行路由判决。
@@ -356,6 +379,7 @@ class RouteJudgeV6:
         agent2a_output: Agent-2a 输出（含 forward_to_routing 约束）
         event_data: Coze Agent0 事件数据
         volc_data: V6.4 — 火山联网搜索补充（产能/订单/券商预测，用于K/B判定）
+        baseline_report: V7 Agent-Baseline 投资地图报告
 
         返回: {routing_decision, ...}
         """
@@ -380,7 +404,8 @@ class RouteJudgeV6:
             "{PRICING_BIAS}", fwd.get("pricing_bias", "uncertain")
         )
 
-        user_msg = _build_routing_user_message(data_package, agent2a_output, event_data, volc_data)
+        user_msg = _build_routing_user_message(data_package, agent2a_output, event_data, volc_data,
+                                                baseline_report=baseline_report)
 
         # ── LLM 调用 ──
         result = call_deepseek(

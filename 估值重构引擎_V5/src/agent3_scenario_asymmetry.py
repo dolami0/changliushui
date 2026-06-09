@@ -1339,7 +1339,7 @@ def _call_llm_scenario(
 	- 历史分位解读: 0=历史最高位(从未更贵), 50=中位, 100=历史最低位(从未更便宜)
 	- 盈利能力分位: ROIC分位={core.get('roic_historical_rank','?')} 毛利率分位={core.get('gross_margin_historical_rank','?')} 净利率分位={core.get('net_margin_historical_rank','?')} ROE分位={core.get('roe_historical_rank','?')} 综合得分={core.get('profitability_composite_score','?')}
 - PE: {core.get('pe_ttm',0)}x (历史分位={core.get('pe_historical_rank','?')}) PB: {core.get('pb',0)}x (历史分位={core.get('pb_historical_rank','?')}) PS: {core.get('ps_ttm',0)}x
-- 净资产: {core.get('total_equity_yi',0)}亿 总资产: {core.get('total_assets_yi',0)}亿
+- 投入资本(IC): {core.get('invested_capital_yi',0):.1f}亿 (A/G/I/K 模型计算基数——代码用此值代入公式) 净资产: {core.get('total_equity_yi',0)}亿 总资产: {core.get('total_assets_yi',0)}亿
 - 有息负债: {core.get('interest_bearing_debt_yi',0)}亿 现金: {core.get('cash_yi',0)}亿
 - 经营CF: {core.get('ocf_ttm_yi',0)}亿 Capex: {core.get('capex_ttm_yi',0)}亿
 - 异常标记: {json.dumps(core.get('caution_flags',[]), ensure_ascii=False)}
