@@ -553,7 +553,7 @@ class Scheduler:
         # ── 写入详情归档表（完整JSON，供深度回溯）──
         if self.detail_db_id:
             try:
-                _write_detail_row(self.detail_db_id, self.coze, baseline_report,
+                _write_detail_row(self.detail_db_id, self.coze, agent0_record, baseline_report,
                                   a1_raw, a2_raw, a2a_raw, a3, routing,
                                   pipeline_type, _rnpv_data, stock_code, stock_name, ts)
             except Exception as e:
@@ -595,7 +595,7 @@ class Scheduler:
 
 # ── 详情归档写入（模块级函数，供 _write_result_to_coze_v5 调用）──
 
-def _write_detail_row(detail_db_id: str, coze, baseline_report: str,
+def _write_detail_row(detail_db_id: str, coze, agent0_record: dict, baseline_report: str,
                       a1_raw: dict, a2_raw: dict, a2a_raw: dict,
                       a3: dict, routing: dict,
                       pipeline_type: str, _rnpv_data: dict,
@@ -639,7 +639,8 @@ def _write_detail_row(detail_db_id: str, coze, baseline_report: str,
         "stock_name": stock_name,
         "json_filename": f"{stock_code}_{ts}",
         "processed_at": datetime.now(timezone.utc).isoformat(),
-        "baseline_report": baseline_report,
+        "agent0_json": json.dumps(serialize(agent0_record), ensure_ascii=False, default=str),  # V5/V6 兼容
+        "baseline_report": baseline_report,                                                    # V7 投资地图
         "agent1_json": json.dumps(serialize(agent1_detail), ensure_ascii=False, default=str),
         "agent2_json": json.dumps(serialize(agent2_detail), ensure_ascii=False, default=str),
         "agent2a_json": json.dumps(serialize(agent2a_detail), ensure_ascii=False, default=str) if agent2a_detail else "",
