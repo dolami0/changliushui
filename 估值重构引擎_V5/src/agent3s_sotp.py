@@ -347,23 +347,31 @@ Bear意味着事件叙事**不成立**——政策没落地/订单被抢/催化�
 
 ## 清单项 1: 素材吸收
 
-**Agent-2a 已完成叙事诊断。** 从用户消息末尾的"Agent-2a 叙事诊断结论"中提取:
-- 估值锚: 2a 判定的 primary_anchor 和 evidence
-- 计价程度: 2a 判定的 overall_priced_in 和 residual_catalyst
-- 事件分布形状: distribution_shape — 决定概率分布的形状和宽度
+**Agent-2a 已完成叙事诊断。** 从用户消息中的"Agent-2a 叙事诊断结论"提取估值锚、计价程度、事件分布形状。
 
-**素材说明** — 用户消息中包含四类素材:
+**你的推演建立在三件东西的交汇点上：**
+
+**① 投资地图 — 事件冲击前的企业全貌（Agent-Baseline 预合成）**
+直接信任它，不要重做地图的工作。你消费它的方式:
+- **维度一（产品结构）→ 产品→分部映射。** 地图已正确区分了各产品线。产品表中的每个产品名是财报独立列示的分部。"功能性薄膜材料"≠"高分子薄膜材料"——名称相似但不同。segment_revenue_yi 直接从产品表取值，不从火山搜索推算。
+- **量化锚点 → 赋 CAGR/PS/PE 的起点。** 事件冲击后这些数字会变，但基线是已知的。
+- **里程碑时间线 → 事件冲击的靶子。**
+- **脆弱点 → bear 情景的方向和概率。**
+
+**② 市场在计价什么（从 2a 和隐含假设中提取）** — 已预期了多少。
+
+**③ 事件 — 冲击地图的变量。** 产能/价格/供需缺口的当前数据，赋值增长率/利润率的主要依据。
+
+**素材说明 — 四类原始素材补充:**
 - **事件变量**（原始事件、事件研判、背景知识）：触发本次估值的外部催化剂。
 - **个股路线**（投资主题、发展推演、催化节点、逆向风险）：该公司的既定发展轨迹。事件变量将作用于这条路线。
 - **行业全貌**：产业链竞争格局、公司在其中的位置。
 - **火山联网搜索**（SOTP 分部数据补充）：券商研报中的各产品线收入/毛利率/增速预测、可比公司估值倍数、产能投产进度。**这是你的 segment_revenue_yi 和 CAGR/PS/PE 参数的主要数据来源。不要因为财报面板中缺少分部列示而降级使用粗粒度数据——火山数据已经替你做了拆分。**
 
 **数据信任层级**（优先级从高到低）:
-1. 火山联网搜索 — 最新研报数据，最接近市场定价视角。**直接取用其中的产品收入作为 segment_revenue_yi，最新季度增速校准 CAGR，可比公司 PE/PS 校准 target 倍数。**
-2. 公司财报 — 审计数据但有时滞，且可能合并产品线
-3. Investoday/Tushare API — 粗粒度分类，仅作交叉参考
-
-如果火山数据给出了更细的产品线拆分，**必须**以火山数据为准赋参数。不要因为"财报未单列"而保守估算——火山数据的存在就是为了解决这个问题。
+1. **投资地图的维度一 + 用户消息中的"产品结构数据"表** — 年报审计数据，经 Agent-1 代码提取，产品收入数字是准确的。**segment_revenue_yi 必须直接从产品表中取该分部所包含产品的收入之和——这是唯一正确的来源。** 注意区分名称相似的产品（"功能性薄膜材料"≠"高分子薄膜材料"≠"薄膜包装材料"）。
+2. 火山联网搜索 — 最新研报的增速预测、可比估值倍数。用于校准 CAGR 和 target PS/PE，不用于替代产品表中的收入数字。
+3. 公司财报原始数据 — 交叉校验产品表数字。当财报与产品表冲突时，以产品表为准（产品表是 Agent-1 从财报中提取的分部数据）。
 
 **关键**: 估值锚和计价程度以 2a 为准（不可推翻）。
 
@@ -476,6 +484,25 @@ bear 不可推翻已发生的业务事实（如已出货产品→不应给0估�
 **重要: 永远不要"凑"概率**——bear 需要 N 个独立环节同时崩塌 → 联合概率自然就是小概率。
 
 **参数-叙事一致性**: 赋完参数后，回顾 3d 因果剧本和风险映射。参数是叙事的数字表达——如果剧本中指出了一个风险或约束但参数中看不到对应影响，必须在 scenario_narrative 中解释原因。参数和推理链不可以各说各话。
+
+### 3d+. 产品→分部映射（赋参前硬步骤，不可跳过）
+
+**投资地图的维度一已完成了产品结构分析。** 在赋 segment_revenue_yi 之前，你必须逐产品声明映射关系——这是防止"把 A 产品的收入当成 B 产品的收入"的唯一方法。
+
+**从用户消息的"产品结构数据"表中，逐产品声明:**
+
+| 产品 | 财报收入(亿) | 归入哪个SOTP分部 | is_event_driven | 判定依据 |
+|------|------------|-----------------|:--:|---------|
+| 电子级胶粘材料 | 15.61 | 其他业务(earnings) | 否 | 事件因果链路不经过OCA |
+| 功能性薄膜材料 | 5.16 | **叙事主锚分部(revenue)** | **是** | MLCC离型膜在此分部 |
+| 薄膜包装材料 | 4.93 | 其他业务(earnings) | 否 | ... |
+
+**硬规则:**
+- 产品表中的每个产品必须出现在映射表中，不得遗漏
+- 事件催动的产品归入叙事主锚分部，其余归入其他业务
+- **注意名称相似的产品**: "功能性薄膜材料" ≠ "高分子薄膜材料" ≠ "薄膜包装材料"——它们是财报中独立列示的不同分部，不得混淆
+- segment_revenue_yi = 该分部下所有产品的收入之和（直接从产品表中取，不是从火山数据或事件素材中推算）
+- 此映射必须在 reasoning_trace 中以 "清单项3d+-产品分部映射: ..." 开头输出
 
 ### 3e. 分部赋参
 
@@ -1217,6 +1244,7 @@ def _build_sotp_user_message(
     event_data: dict,
     wacc_params: dict,
     volc_data: dict | None = None,
+    baseline_report: str | None = None,
 ) -> str:
     """构建 SOTP Agent 用户消息——注入分部数据、财务数据、叙事诊断、事件背景、2b路由。"""
     core = _get_core_fields(data_package)
@@ -1272,8 +1300,19 @@ def _build_sotp_user_message(
     # 路由信息
     rd_2b = (agent2b_output or {}).get("routing_decision", {}) if isinstance(agent2b_output, dict) else {}
 
-    msg = f"""# SOTP 分部估值: {stock}({code})
+    # V7 baseline
+    bs = ""
+    if baseline_report and len(baseline_report) > 100:
+        bs = f"""
+## 投资地图 - Agent-Baseline (主输入)
 
+{baseline_report}
+
+---
+"""
+
+    msg = f"""# SOTP 分部估值: {stock}({code})
+{bs}
 ## 一、前置裁决 — Agent-2a 叙事诊断 + Agent-2b 路由（已审核，可直接信任，不可推翻）
 
 - 主锚: {primary}
@@ -1909,6 +1948,7 @@ class SOTPScenarioAsymmetry:
         event_data: dict | None = None,
         wacc_params: dict | None = None,
         volc_data: dict | None = None,
+        baseline_report: str | None = None,
         progress_cb=None,
     ) -> dict:
         """执行 SOTP 分部估值。
@@ -1963,6 +2003,7 @@ class SOTPScenarioAsymmetry:
         user_msg = _build_sotp_user_message(
             data_package, agent2a_output, agent2b_output, event_data, wacc_params,
             volc_data=volc_data,
+            baseline_report=baseline_report,
         )
 
         prompt = _fill_sotp_placeholders(SOTP_SYSTEM_PROMPT, agent2b_output)

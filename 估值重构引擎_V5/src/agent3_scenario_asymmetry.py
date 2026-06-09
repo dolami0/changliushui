@@ -99,12 +99,22 @@ SCENARIO_SYSTEM_PROMPT = """# 你是达摩达兰式的估值重构师
 
 ## 清单项 1: 素材吸收
 
-**Agent-2a 已完成叙事诊断。** 从用户消息末尾的"Agent-2a 叙事诊断结论"中提取:
-- 估值锚: 2a 判定的 primary_anchor 和 evidence
-- 计价程度: 2a 判定的 overall_priced_in 和 residual_catalyst
-- 事件分布形状: distribution_shape — 决定概率分布的形状和宽度
+**Agent-2a 已完成叙事诊断。** 从用户消息中的"Agent-2a 叙事诊断结论"提取估值锚、计价程度、事件分布形状。
 
-**素材说明** — 用户消息中包含四类素材:
+**你的推演建立在三件东西的交汇点上：**
+
+**① 投资地图 — 事件冲击前的企业全貌（Agent-Baseline 预合成）**
+直接信任它，不要重做地图的工作。你消费它的方式:
+- **维度一（产品结构）→ 了解公司的收入构成。** 地图已正确区分了各产品线，包括哪些是成熟/成长/亏损业务。
+- **量化锚点（产能/价格/利用率/市占率/壁垒）→ 赋参数的起点。**
+- **里程碑时间线 → 事件冲击的靶子。**
+- **脆弱点 → bear 情景的方向和概率。**
+
+**② 市场在计价什么（从 2a 和当前市值隐含假设中提取）** — 已预期了多少，剩余催化空间多大。
+
+**③ 事件 — 冲击地图的变量。** 产能/价格/供需缺口的当前数据，赋值参数的主要依据。
+
+**素材说明 — 四类原始素材补充:**
 - **事件变量**（原始事件、事件研判、背景知识）：触发本次估值的外部催化剂。事件研判中的评分帮助你理解事件的性质和影响范围。
 - **个股路线**（投资主题、发展推演、催化节点、逆向风险）：该公司的既定发展轨迹。事件变量将作用于这条路线。
 - **行业全貌**：产业链竞争格局、公司在其中的位置。
@@ -1263,8 +1273,9 @@ def _call_llm_scenario(
     event_data: dict,
     agent2a_output: dict | None = None,
     volc_data: dict | None = None,
+    baseline_report: str | None = None,
 ) -> dict:
-    """单次 LLM 调用：完整推演裁决（V6: 信任 Agent-2a 诊断结论）。"""
+    """单次 LLM 调用：完整推演裁决（V7: 投资地图 + V6: 信任 Agent-2a 诊断结论）。"""
 
     core = data_package.get("packages", {}).get("core", {}).get("fields", {})
     stock = core.get("stock_name", data_package.get("stock_name", ""))
@@ -1315,8 +1326,19 @@ def _call_llm_scenario(
     growth_summary = _build_growth_summary(core)
 
     # 构建用户消息 (一个完整的大f-string)
-    user_msg = f"""# 推演裁决: {stock}({code})
+    # V7 baseline
+    bs = ""
+    if baseline_report and len(baseline_report) > 100:
+        bs = f"""
+## 投资地图 - Agent-Baseline (主输入)
 
+{baseline_report}
+
+---
+"""
+
+    user_msg = f"""# 推演裁决: {stock}({code})
+{bs}
 ## 当前市值隐含假设 (Implied Story) — 根据估值锚({anchor_2a})选择工具
 
 {bs_section}{bs_warning}
@@ -2178,6 +2200,7 @@ class ScenarioAsymmetry:
         progress_cb: Callable[[int, str], None] | None = None,
         agent2a_output: dict | None = None,
         volc_data: dict | None = None,
+        baseline_report: str | None = None,
     ) -> dict:
         """
         执行完整推演裁决。
@@ -2208,6 +2231,7 @@ class ScenarioAsymmetry:
                 routing_decision, event_data,
                 agent2a_output=agent2a_output,
                 volc_data=volc_data,
+                baseline_report=baseline_report,
             )
         except ScenarioError as e:
             cb(3, f"LLM故障: {e.code}")
@@ -2218,6 +2242,7 @@ class ScenarioAsymmetry:
                         routing_decision, event_data,
                         agent2a_output=agent2a_output,
                         volc_data=volc_data,
+                        baseline_report=baseline_report,
                     )
                 except ScenarioError:
                     raise

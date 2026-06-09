@@ -123,22 +123,15 @@ NARRATIVE_DIAGNOSIS_PROMPT = """你是估值叙事诊断师。你的职责不是
   - **转型期**: 旧业务+新业务并行，不同业务不同锚——需考虑 SOTP
 - **市值-叙事匹配**: 查看用户消息中的市值数据。小市值(<100亿)+大TAM叙事→市场在定价远期预期；大市值(>500亿)+同样叙事→市场在定价执行确定性。同样的故事在不同市值下含义不同。
 
-## 1a+. 事件类型强制分类 —— 在任何锚推断之前执行
+## 1a+. pipeline 事件硬性优先 —— 在任何锚推断之前执行
 
-**阅读原始事件文本。** 事件属于以下哪一种？这是硬分类，只取决于事件本身是什么——不取决于公司当前的财务状态。
+**仅适用于管线事件。** 阅读原始事件文本——如果是药物获批/新适应症获批/临床数据读出/监管里程碑/BD授权交易，primary_anchor **必须是 pipeline**。这个判断只取决于事件本身——**无论公司当前是否盈利、PE 多少、ROIC 多高**。公司现有的药品销售收入是"旧故事"——事件在改变的是管线的远期价值，不是已上市产品的近期利润。看到公司盈利就切到 earnings 锚，等于用旧故事覆盖了新事件。
 
-| 事件类型 | 强制锚 | 判定条件 |
-|---------|:------:|------|
-| **管线事件** | **pipeline** | 药物获批/新适应症获批/临床数据读出/监管里程碑/BD授权交易——即使公司已有商业产品且盈利丰厚 |
-| **收入爆发事件** | **revenue** | TAM扩张/国产替代/产能释放/客户导入/市占率提升——即使公司当前盈利 |
-| **盈利拐点事件** | **earnings** | 利润率修复/扭亏/ROIC改善/降本增效/周期底部利润回升 |
-| **资产事件** | **asset** | 资产重估/隐蔽资产/NAV/清算价值/资源储量发现 |
-
-**执行力**: 从原始事件文本中直接判断事件类型，填入对应强制锚。这个判断发生在读取任何财务数据之前。1b 的锚映射表只用于交叉验证，不能推翻 1a+ 的强制分类。后续的 1c（数字解读）不能改变由事件类型决定的锚。
+对其他事件类型（收入爆发/盈利拐点/周期/资产等），不设强制分类——回到 1b 的多因素分析。
 
 ## 1b. 锚推断 — 叙事语义到锚的映射
 
-基于 1a 的叙事理解，用下表交叉验证 1a+ 的强制分类。这是语义映射，不是关键词匹配。
+基于 1a 的叙事理解，推断市场在用哪个锚。这是语义映射，不是关键词匹配。
 
 | 叙事主题 | → 锚 | 典型场景 |
 |---------|------|---------|
@@ -149,7 +142,7 @@ NARRATIVE_DIAGNOSIS_PROMPT = """你是估值叙事诊断师。你的职责不是
 | "多业务分拆+新老业务估值范式不同" | **sotp** | 不能用单一锚，需分部估值 |
 
 **关键判定**:
-- 1a+ 的强制分类是主锚。1b 的映射表只用于确认"事件类型和叙事主题是否一致"。如果不一致（如事件是管线但语料大谈利润），以 1a+ 为准。
+- 如果是管线事件，1a+ 的 pipeline 判定不可被推翻。1b/1c/1d 的分析不能改变 pipeline 锚。
 - 如果研报语料在讲"收入/TAM/市占率"故事，即使公司盈利，市场也可能在定价收入——因为旧业务盈利不代表新叙事
 - 如果研报语料在讲"利润/ROIC/拐点"故事，且公司确实盈利，锚是 earnings
 - 叙事方向比财务指标更权威——市场交易的是故事，不是财务报表
@@ -485,6 +478,7 @@ def _build_narrative_user_message(
     event_data: dict,
     pricing_all: dict,
     volc_data: dict | None = None,
+    baseline_report: str | None = None,
 ) -> str:
     """构建 Agent-2a 的用户消息：注入全量数据。"""
     core = data_package.get("packages", {}).get("core", {}).get("fields", {})
@@ -523,8 +517,19 @@ def _build_narrative_user_message(
 | 事件后 | {post.get('avg_close','?')} | {post.get('first_date','?')}~{post.get('last_date','?')} | {post.get('num_days','?')} |
 | 最新 | {cur.get('close','?')} ({cur.get('date','?')}) | — | — |"""
 
-    msg = f"""# 叙事诊断: {stock}({code})
+    # V7 baseline
+    bs = ""
+    if baseline_report and len(baseline_report) > 100:
+        bs = f"""
+## 投资地图 - Agent-Baseline (主输入)
 
+{baseline_report}
+
+---
+"""
+
+    msg = f"""# 叙事诊断: {stock}({code})
+{bs}
 ## 估值倍数全矩阵
 | 倍数 | 当前值 | 历史分位(0=最高,100=最低) | 含义 |
 |------|--------|--------------------------|------|
@@ -613,6 +618,7 @@ class NarrativeDiagnosis:
         event_data: dict | None = None,
         wacc_params: dict | None = None,
         volc_data: dict | None = None,
+        baseline_report: str | None = None,
     ) -> dict:
         """
         执行叙事诊断。
@@ -620,7 +626,8 @@ class NarrativeDiagnosis:
         data_package: Agent-1 输出（含 event_window_prices）
         event_data: Coze Agent0 事件数据
         wacc_params: WACC 预计算参数（用于反向推算工具）
-        volc_data: V6.5 火山联网搜索预取数据（券商分部拆分+可比估值, 用于锚判断+SOTP判定）
+        volc_data: V6.5 火山联网搜索预取数据
+        baseline_report: V7 Agent-Baseline 投资地图报告
 
         返回: {market_narrative, event_pricing, signal_audit, forward_to_routing}
         """
@@ -637,6 +644,7 @@ class NarrativeDiagnosis:
         user_msg = _build_narrative_user_message(
             data_package, event_data, pricing_all,
             volc_data=volc_data,
+            baseline_report=baseline_report,
         )
 
         result = call_deepseek(
