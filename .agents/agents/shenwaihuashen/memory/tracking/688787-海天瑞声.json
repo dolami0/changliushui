@@ -14,14 +14,19 @@
       "name": "新业务毛利率随规模效应改善",
       "expectation": "视觉GM从FY2025的27.6%→>30%(规模效应)，应用服务GM从21.0%→>25%，综合GM不低于FY2025的48.1%",
       "quantifiedTarget": "视觉GM>30%，应用服务GM>25%，综合GM≥48%",
-      "status": "pending",
+      "status": "on_track",
       "verificationDate": "2026-08-31",
-      "lastChecked": "2026-06-08",
+      "lastChecked": "2026-06-10",
       "history": [
         {
           "date": "2026-06-08",
           "actual": "【建档】FY2025综合GM=48.1%(FY2024=66.5%,-18.4ppt)。Q1 2026 GM=56.4%回升但系季节性。视觉GM从FY2024 37.8%→FY2025 27.6%(规模翻倍但GM反降10ppt)。应用服务GM=21.0%。",
           "trend": "down"
+        },
+        {
+          "date": "2026-06-10",
+          "actual": "Q1 GM=56.4%，环比改善明显(系智能语音季节性)。智能语音GM从FY2024 37.8%降至FY2025 27.6%，结构切换仍在进行。",
+          "trend": "up"
         }
       ]
     },
@@ -31,11 +36,16 @@
       "quantifiedTarget": "H1境内收入增速>50%，ToG订单>1亿",
       "status": "on_track",
       "verificationDate": "2026-08-31",
-      "lastChecked": "2026-06-08",
+      "lastChecked": "2026-06-10",
       "history": [
         {
           "date": "2026-06-08",
           "actual": "【建档】FY2025境内收入2.19亿(+77.7%)。2026Q1新签订单同比+100%(公司口径)。视觉+214.9%，应用服务+1300%。国家数据局6/8发布高质量数据集行动方案。",
+          "trend": "up"
+        },
+        {
+          "date": "2026-06-10",
+          "actual": "ToG Q1新签合同+100%，智能语音+214.9%，应用服务+1300%。6/8算法备案新规落地，7月首批名单是关键。",
           "trend": "up"
         }
       ]
@@ -46,12 +56,17 @@
       "quantifiedTarget": "H1 OCF>0且OCF/NI>0.5x",
       "status": "pending",
       "verificationDate": "2026-08-31",
-      "lastChecked": "2026-06-08",
+      "lastChecked": "2026-06-10",
       "history": [
         {
           "date": "2026-06-08",
           "actual": "【建档】FY2025 OCF同比-93.8%(公司解释为ToG业务结算周期)。Q1数据不完整但ToG回款慢是行业通病。这是本案除GM外的第二大风险指标",
           "trend": "down"
+        },
+        {
+          "date": "2026-06-10",
+          "actual": "FY2025 OCF同比-93.8%(公司归因ToG回款周期)。Q1数据待半年报验证。",
+          "trend": "flat"
         }
       ]
     },
@@ -59,13 +74,18 @@
       "name": "智能语音业务企稳",
       "expectation": "2026H1智能语音收入降幅收窄至<5%(FY2025为-8.7%)，不再拖累整体PS",
       "quantifiedTarget": "H1语音收入降幅<5% YoY",
-      "status": "pending",
+      "status": "at_risk",
       "verificationDate": "2026-08-31",
-      "lastChecked": "2026-06-08",
+      "lastChecked": "2026-06-10",
       "history": [
         {
           "date": "2026-06-08",
           "actual": "【建档】FY2025智能语音1.50亿(-8.7%), GM 75.5%。以39.9%收入贡献62.6%毛利——利润支柱但在萎缩。若语音继续-10%则进一步拉低综合GM",
+          "trend": "down"
+        },
+        {
+          "date": "2026-06-10",
+          "actual": "传统业务FY2025 -8.7% YoY，GM 75.5%支撑毛利润。H1数据待验证。",
           "trend": "down"
         }
       ]
@@ -74,14 +94,19 @@
       "name": "政策→订单转化验证",
       "expectation": "2026年底前至少3个数据标注创新试验区获得实质性订单(单笔>3000万)",
       "quantifiedTarget": "≥3个试验区订单，单笔>3000万",
-      "status": "pending",
+      "status": "on_track",
       "verificationDate": "2026-12-31",
-      "lastChecked": "2026-06-08",
+      "lastChecked": "2026-06-10",
       "history": [
         {
           "date": "2026-06-08",
           "actual": "【建档】6/8国家数据局发布行动方案，引导地方建设数据标注创新试验区。首批7个试点地点/企业未公布。政策→订单转化周期通常3-6个月",
           "trend": "stable"
+        },
+        {
+          "date": "2026-06-10",
+          "actual": "6/8国家网信办算法备案新规发布，地方7月首批备案启动。公司申报中，3-6个月审核周期。",
+          "trend": "up"
         }
       ]
     }
@@ -143,7 +168,8 @@
       "sourceLevel": "L5",
       "sourceDetail": "国家数据局官网+央视新闻",
       "sourceNote": "已触发✅ 6/8发布，当日股价+10.88%",
-      "status": "triggered"
+      "status": "triggered",
+      "lastChecked": "2026-06-10"
     },
     {
       "date": "2026-07-08前",
@@ -155,7 +181,8 @@
       "sourceLevel": "L3",
       "sourceDetail": "分析师推测时间窗口",
       "sourceNote": "⚠️ 信源等级L3。公司未给出指引。政策→订单转化通常3-6个月",
-      "status": "pending"
+      "status": "pending",
+      "lastChecked": "2026-06-10"
     },
     {
       "date": "2026-08",
@@ -167,7 +194,8 @@
       "sourceLevel": "L5",
       "sourceDetail": "上交所定期报告",
       "sourceNote": "🔴 Critical Catalyst——不可失败",
-      "status": "pending"
+      "status": "pending",
+      "lastChecked": "2026-06-10"
     },
     {
       "date": "2026-08",
@@ -179,7 +207,8 @@
       "sourceLevel": "L5",
       "sourceDetail": "公司公告",
       "sourceNote": "规模待确认",
-      "status": "pending"
+      "status": "pending",
+      "lastChecked": "2026-06-10"
     },
     {
       "date": "2026-10",
@@ -190,7 +219,8 @@
       "bear": "增速环比骤降或GM回落",
       "sourceLevel": "L5",
       "sourceDetail": "上交所定期报告",
-      "status": "pending"
+      "status": "pending",
+      "lastChecked": "2026-06-10"
     },
     {
       "date": "2026-12",
@@ -201,7 +231,8 @@
       "bear": "不及5城",
       "sourceLevel": "L3",
       "sourceDetail": "分析师推测+调研纪要",
-      "status": "pending"
+      "status": "pending",
+      "lastChecked": "2026-06-10"
     },
     {
       "date": "2027-03",
@@ -212,7 +243,20 @@
       "bear": "营收<5亿或GM<28%",
       "sourceLevel": "L5",
       "sourceDetail": "上交所定期报告",
-      "status": "pending"
+      "status": "pending",
+      "lastChecked": "2026-06-10"
+    },
+    {
+      "date": "2026-06-08",
+      "event": "国家网信办算法备案新规发布",
+      "type": "政策",
+      "impact": "H",
+      "bull": "公司7月首批入选备案名单",
+      "bear": "备案审核周期延长或未入选",
+      "sourceLevel": "L5",
+      "sourceDetail": "2026-06-08 国家网信办公告",
+      "sourceNote": "已发布。7月地方首批备案启动。",
+      "status": "triggered"
     }
   ],
   "basePrice": 139.38,
@@ -228,6 +272,15 @@
       "return_pct": 0.0,
       "mv_change_pct": 0.0,
       "note": "建档基准价。当日+10.88%国家数据局政策催化涨停。6/5前收盘125.7"
+    },
+    {
+      "date": "2026-06-10",
+      "price": 158.02,
+      "pe": 675.4,
+      "mv_yi": 95.35,
+      "return_pct": 13.4,
+      "mv_change_pct": 13.4,
+      "note": "巡检。MV +13.4%，AI数据要素政策催化密集。7/8首批算法备案名单+8月半年报为关键验证点。"
     }
   ],
   "positionLog": [],
@@ -257,6 +310,26 @@
         "限售股解禁具体规模？"
       ],
       "narrativeTension": "stable"
+    },
+    {
+      "version": 2,
+      "date": "2026-06-10T09:07:00",
+      "thesis": "AI数据要素产业化的核心受益标的——语音标注国内第一(市占~19%)+政企ToG数据要素先发卡位。国家数据局6/8政策打开了政府/国央企百亿级增量市场，2025年视觉+214%/应用服务+1300%验证需求爆发。核心验证点：视觉/应用服务GM能否随规模效应改善(视觉27.6%→30%+,应用21.0%→25%+)——低毛利ToG项目能否通过标准化变成可持续的高毛利产品。最大结构性问题：GM一年崩塌18ppt(66.5%→48.1%)，OCF恶化-93.8%。",
+      "conviction": 48,
+      "delta": "6/8算法备案新规落地。Q1新签合同+100%。AI数据要素政策催化密集。",
+      "trigger": "每日巡检",
+      "narrative": "6/8算法备案新规落地。Q1新签合同+100%。AI数据要素政策催化密集。",
+      "verifiedAssumptions": [
+        "Q1 ToG合同+100%",
+        "6/8算法备案新规发布"
+      ],
+      "invalidatedAssumptions": [],
+      "newUnknowns": [
+        "7月首批备案名单是否入选",
+        "半年报OCF是否转正",
+        "智能语音GM是否触底"
+      ],
+      "narrativeTension": "easing"
     }
   ],
   "aShareTracking": {
@@ -279,9 +352,9 @@
   },
   "reviewSchedule": {
     "nextFullReview": "2026-08-31(半年报)",
-    "nextQuickCheck": "2026-06-09(明日巡检)",
-    "lastCheck": "2026-06-08(建档)",
-    "patrolFrequency": "每个工作日 9:07"
+    "nextQuickCheck": "2026-06-11(明日巡检)",
+    "lastCheck": "2026-06-10(巡检)",
+    "patrolFrequency": "每日 22:00"
   },
   "track_status": "active"
 }

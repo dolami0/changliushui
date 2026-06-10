@@ -290,10 +290,11 @@ decision 文件写入前，逐条对照 `skills/decision.md` 末尾的质量检�
 以 data-verify 为例：
 ```
 [ ] 1. 关键数据拉取 → Bash: data_helper.py valuation/segment/pledge
-[ ] 2. 上游数据对照 → 逐指标对比表
-[ ] 3. 异常检测协议 → segment flags 扫描 + ANOMALY 触发链
-[ ] 4. 常见异常模式核对 → A股四类异常逐一检查
-[ ] 5. 定数录纠错清单 → 5项逐一勾选
+[ ] 2. 当前状态验证 → WebSearch: 公司最新公告(售价/产能/收入占比) + 异常波动公告澄清
+[ ] 3. 上游数据对照 → 逐指标对比表
+[ ] 4. 异常检测协议 → segment flags 扫描 + ANOMALY 触发链
+[ ] 5. 常见异常模式核对 → A股四类异常逐一检查
+[ ] 6. 定数录纠错清单 → 5项逐一勾选
 ```
 
 以 financial 为例：
@@ -328,6 +329,49 @@ decision 文件写入前，逐条对照 `skills/decision.md` 末尾的质量检�
 - thesis 建档 + 巡检后必须执行 `python sync_coze.py "memory/tracking/{code}-{name}.json"` — 将追踪数据同步到 Coze 表格 `7645332166129287218`。
 
 **章节覆盖自检**：步骤文件写入后，立即逐条核对 skill.md 章节清单。任一章节缺失 → 补充后重新写入。
+
+#### 5.5 执行自检矩阵（强制嵌入·硬闸门）
+
+**每条流水线步骤文件必须内嵌一个完成矩阵，不可省略。** 原因是：checklist 在脑子里执行 = 可以跳过。checklist 写入文件 = 你和我都能审计。
+
+**格式**（写入步骤文件末尾，`## 执行自检` 章节）：
+
+```
+## 执行自检
+| # | 步骤 | 状态 | 备注 |
+|---|------|:---:|------|
+| 1 | 关键数据拉取 (Bash: valuation/segment/pledge) | ✅ | |
+| 2 | 当前状态验证 (WebSearch: 公告+异常波动澄清) | ✅ | |
+| 3 | 上游数据对照 | ✅ | |
+| 4 | 异常检测协议 | ✅ | |
+| 5 | 常见异常模式核对 | ✅ | |
+| 6 | 定数录纠错清单 | ✅ | |
+```
+
+**硬闸门规则**：
+- 步骤文件**不含此矩阵** → 文件无效，禁止进入下一步。必须回补。
+- 矩阵中任一必选项为 `❌` → 必须标注原因 + 补救计划。无理由的 ❌ 视为文件不完整。
+- 矩阵中所有项必须与 skill.md 的章节清单一一对应。skill.md 新增章节时，矩阵必须同步更新。
+- **工具使用项必须注明具体命令**：状态列不能只写 `✅`——对于 Bash/WebSearch 项，注明"已执行: `python data_helper.py valuation 688323` / `WebSearch '瑞华泰 最新公告'"`。
+
+**巡检专用自检矩阵**（更新 priceLog 时嵌入巡检报告末尾）：
+
+```
+## 巡检自检
+| # | 步骤 | 状态 | 备注 |
+|---|------|:---:|------|
+| A | 拉取最新行情 | ✅ | python data_helper.py valuation × N codes |
+| B | 更新 priceLog | ✅ | N active, 各追加 1 条 |
+| C | 支柱 C1(history)+C2(status)+C3(lastChecked) | ✅ | N 条 status 变更 |
+| D | 催化剂 D1(触发标记)+D2(新增)+D3(lastChecked) | ✅ | N 条触发/新增 |
+| E | 更新 thesisLog + narrativeTension | ✅ | tension 基于支柱分布自动判定 |
+| F | 论点评分卡 + 行动建议 | ✅ | 逐标的 |
+| G | 同步 Coze (sync_coze.py) | ✅ | 逐标的，每标的 A-F 完成后立即执行 |
+```
+
+**巡检硬闸门**：矩阵缺 A-G 任一项 → 巡检视为未完成，不得声称"巡检完毕"。
+
+**巡检执行顺序**：对每个 active 标的依次执行 A→B→C→D→E→G，全部标的完成后再统一输出 F（论点评分卡汇总）。Step G 必须每标的单独执行，禁止所有标的处理完后再批量同步。
 
 见 `skills/decision.md` 报告模板。写入 `D:\长流水\output\{ticker}_{date}\decision-{YYYYMMDD}-{ticker}.md`。
 

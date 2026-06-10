@@ -28,6 +28,7 @@ from valuation_utils import call_deepseek, build_forward_signal_panel, fmt_pct
 from agent3_scenario_asymmetry import (
     ScenarioError,
     _validate_output,
+    _mandatory_cross_validation,
     MODEL_PARAM_TEMPLATES,
     PARAM_SELF_CHECK_MAP,
     SCENARIO_PARAMS_MAP,
@@ -2158,6 +2159,17 @@ class SOTPScenarioAsymmetry:
         sv_details = sv.get("scenario_details", {})
         sotp_warnings = _validate_sotp_specific(result, sv_details, core)
         validation_warnings.extend(sotp_warnings)
+
+        # ── 强制跨族底线校验 (与标准Agent-3一致) ──
+        mandatory_xcheck = _mandatory_cross_validation(
+            core, result, agent2b_output or {},
+        )
+        if mandatory_xcheck:
+            existing_xcheck = result.get("validation_crosscheck", {})
+            if existing_xcheck and existing_xcheck.get("validation_strategy") == "self_validation":
+                mandatory_xcheck["_overrides_llm_selfcheck"] = True
+            result["_code_cross_validation"] = mandatory_xcheck
+
         if validation_warnings:
             codes = [w["code"] for w in validation_warnings]
             print(f"  [SOTP validation] warnings: {codes}", flush=True)

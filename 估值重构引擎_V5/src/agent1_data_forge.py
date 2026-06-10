@@ -325,9 +325,19 @@ def _extract_core_fields(raw_bundle: dict, stock_code: str) -> dict[str, Any]:
     eir = max(0.10, min(0.25, eir))
     ebit = fields["operating_profit_ttm_yi"] + fields["interest_expense_yi"]
     nopat = ebit * (1 - eir)
-    ic = fields["total_equity_yi"] + fields["interest_bearing_debt_yi"]
-    fields["invested_capital_yi"] = round(ic, 1)
-    fields["roic_pct"] = round(nopat / ic * 100, 2) if ic > 0 else 0
+    ic_raw = fields["total_equity_yi"] + fields["interest_bearing_debt_yi"]
+
+    # ── 闲置现金扣除：现金超过营收×15%或3亿的部分视为冗余，不参与经营 ──
+    # 问题: ROIC分母包含闲置现金会系统性低估资本回报（如新洁能16亿现金拉低ROIC 3.6pp）
+    # 逻辑: Fabless设计公司/轻资产公司只需少量营运现金，多余现金相当于低收益理财
+    op_cash_need = max(fields.get("revenue_ttm_yi", 0) * 0.15, 3.0)
+    excess_cash = max(0, fields.get("cash_yi", 0) - op_cash_need)
+    ic_operating = max(ic_raw * 0.3, ic_raw - excess_cash)  # IC不低于原始值30%（防御）
+
+    fields["invested_capital_yi"] = round(ic_raw, 1)
+    fields["_excess_cash_yi"] = round(excess_cash, 1)
+    fields["_ic_operating_yi"] = round(ic_operating, 1)
+    fields["roic_pct"] = round(nopat / ic_operating * 100, 2) if ic_operating > 0 else 0
     fields["nopat_yi"] = round(nopat, 2)
     fields["effective_tax_rate"] = round(eir, 2)
 

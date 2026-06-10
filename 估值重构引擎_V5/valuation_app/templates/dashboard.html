@@ -773,7 +773,7 @@ function renderDetail(code) {
   html += '<span>耗时: ' + (job.elapsed_s > 0 ? job.elapsed_s.toFixed(1) + 's' : '--') + '</span>';
   if (job.errors > 0) html += '<span style="color:var(--loss-red)">错误: ' + job.errors + '</span>';
   if (job.status === 'done') {
-    html += '<a href="/report/' + encodeURIComponent(code) + '" target="_blank" class="btn-report-link">📄 查看完整报告 →</a>';
+    html += '<a href="http://localhost:5173/report/v4/' + encodeURIComponent(code) + '" target="_blank" class="btn-report-link">📄 查看完整报告 →</a>';
   }
   html += '</div></div>';
 

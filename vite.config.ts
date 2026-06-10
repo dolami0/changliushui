@@ -16,12 +16,15 @@ export default defineConfig({
     proxy: {
       // ── 只读数据: api-server (Coze) → :3001 ──
       '/api/tracking': { target: 'http://localhost:3001', changeOrigin: true },
-      '/api/report': { target: 'http://localhost:3001', changeOrigin: true },
-      '/api/reports': { target: 'http://localhost:3001', changeOrigin: true },
-      '/api/ranking': { target: 'http://localhost:3001', changeOrigin: true },
-      '/api/industry-chain': { target: 'http://localhost:3001', changeOrigin: true },
-      '/api/status': { target: 'http://localhost:3001', changeOrigin: true },
-      // ── 写入 + 管线控制: Python → :8080 ──
+      // ── 只读数据: api-server (Coze) → :3001 ──
+      '/api/tracking': { target: 'http://localhost:3001', changeOrigin: true },
+      // ── 报告/状态/排行: Python → :8080 ──
+      '/api/report': { target: 'http://localhost:8080', changeOrigin: true },
+      '/api/reports': { target: 'http://localhost:8080', changeOrigin: true },
+      '/api/ranking': { target: 'http://localhost:8080', changeOrigin: true },
+      '/api/industry-chain': { target: 'http://localhost:8080', changeOrigin: true },
+      '/api/status': { target: 'http://localhost:8080', changeOrigin: true },
+      // ── 其他 API: Python → :8080 ──
       '/api': { target: 'http://localhost:8080', changeOrigin: true },
       '/review': { target: 'http://localhost:8080', changeOrigin: true },
       '/investoday-market': {

@@ -178,39 +178,145 @@ cd D:\长流水\.agents\agents\shenwaihuashen && python data_helper.py daily <co
 
 ### 3. 更新流程（每次追踪时）
 
-**Step 0 — 过滤暂停标的**：遍历 `memory/tracking/` 下所有 JSON 文件，跳过 `track_status` 为 `"paused"` 的标的。仅对 `track_status` 为 `"active"` 的标的执行后续 Step A-D。
+**Step 0 — 过滤暂停标的**：遍历 `memory/tracking/` 下所有 JSON 文件，跳过 `track_status` 为 `"paused"` 的标的。仅对 `track_status` 为 `"active"` 的标的执行后续 Step A-G。
 
-**读取** `tracking/{code}-{name}.json`
+---
 
-**Step A — 拉取最新行情**：
+#### Step A — 拉取最新行情
+
 ```bash
-python data_helper.py daily <code> <前一交易日> <今日>
-python data_helper.py valuation <code>     # 取当前 PE + 市值
+python data_helper.py valuation <code>     # 取当前 PE/PB/市值/GM
 ```
-取最近交易日收盘价和市值，计算：
-- `return_pct = (最新价 - basePrice) / basePrice × 100`
-- `mv_change_pct = (最新市值 - baseMarketCap) / baseMarketCap × 100`
-- 对比 priceLog 上一条，计算 `pct_chg_since_last`
 
-**Step B — 更新价格日志**：
+取最近交易日数据，计算：
+- `return_pct = (最新市值 - baseMarketCap) / baseMarketCap × 100`
+- `mv_change_pct` 同上
+- 对比 priceLog 上一条，计算单日变化
+
+---
+
+#### Step B — 更新价格日志
+
+对每个 active 标的，追加一条 priceLog：
+
 ```json
-{"date": "2026-06-15", "price": 68.5, "pe": 70.2, "mv_yi": 282.1, "return_pct": 8.4, "mv_change_pct": 8.3, "note": "..."}
+{"date": "2026-06-10", "price": 68.5, "pe": 70.2, "mv_yi": 282.1, "return_pct": 8.4, "mv_change_pct": 8.3, "note": "巡检。简要说明当日变化。"}
 ```
 
-**Step C — 更新支柱状态**：对照最新财报/公告，更新每个 pillar
-**Step D — 更新催化剂日历**：标记已落地的事件，添加新发现的事件
+---
 
-**输出论点评分卡**：
+#### Step C — 更新支柱状态（逐柱操作）
 
+对每个 pillar 执行以下三项操作，**一项不可少**：
+
+| 操作 | JSON 字段 | 说明 |
+|------|----------|------|
+| **C1. 追加 history** | `pillars[].history` | 新增一条 `{date, actual, trend}`。`actual` 写当前实际数据，`trend` 取 `up`/`flat`/`down` |
+| **C2. 重评 status** | `pillars[].status` | 对照最新数据判断：`on_track`（达标或超前）、`pending`（数据不足）、`at_risk`（偏离目标） |
+| **C3. 更新 lastChecked** | `pillars[].lastChecked` | 设为巡检日期 |
+
+**status 判定标准**：
+
+| 条件 | status |
+|------|:---:|
+| quantifiedTarget 已达成，或趋势明确向好且距 deadline 尚远 | `on_track` |
+| 无新增数据，或距 verificationDate 尚远 | `pending` |
+| 趋势恶化、或距 deadline 不足 1 月且未达标、或出现负面催化剂 | `at_risk` |
+| quantifiedTarget 已实现且经公告/财报确认 | `verified` |
+
+---
+
+#### Step D — 更新催化剂日历（逐条操作）
+
+对每条 catalyst 执行：
+
+| 操作 | JSON 字段 | 说明 |
+|------|----------|------|
+| **D1. 标记已触发的** | `catalystCalendar[].status` | `pending` → `triggered`（事件已发生）或 `missed`（窗口期已过未发生） |
+| **D2. 添加新发现的** | `catalystCalendar[]` | 新增事件，含 date/event/type/impact/bull/bear/sourceLevel/sourceDetail/status |
+| **D3. 更新 lastChecked** | `catalystCalendar[].lastChecked` | 设为巡检日期 |
+
+**触发判定**：如果催化剂的事件已经实际发生（如"6/8 新规发布"、"Q1 GM 公布"），将 status 从 `pending` 改为 `triggered`。
+
+---
+
+#### Step E — 更新 thesisLog
+
+追加一条论点版本记录：
+
+```json
+{
+  "version": <上一条+1>,
+  "date": "<巡检时间ISO>",
+  "thesis": "<当前thesis原文>",
+  "conviction": <当前conviction>,
+  "delta": "<本轮巡检发现的关键变化，1-2句话>",
+  "trigger": "每日巡检",
+  "narrative": "<delta 同内容>",
+  "verifiedAssumptions": ["<本轮确认的假设>"],
+  "invalidatedAssumptions": ["<本轮推翻的假设>"],
+  "newUnknowns": ["<本轮新增的不确定性>"],
+  "narrativeTension": "<rising|stable|easing|breaking>"
+}
+```
+
+**narrativeTension 判定**：基于支柱分布自动判断
+
+| 条件 | tension |
+|------|:---:|
+| 全部 on_track/verified，无非 pending | `rising` |
+| on_track 占多数，1-2 个 pending | `stable` |
+| 出现 1 个 at_risk | `easing` |
+| ≥2 个 at_risk 或 1 个 broken | `breaking` |
+
+---
+
+#### Step F — 输出论点评分卡
+
+对每个 active 标的输出表格：
+
+```
 | Pillar | 期望 | 实际 | 状态 | 趋势 |
-|--------|------|------|------|------|
-| | | | on_track / behind / broken | → / ↑ / ↓ |
+|--------|------|------|:---:|:---:|
+| 支柱名 | quantifiedTarget | history最新条actual | on_track/at_risk/pending | ↑/→/↓ |
+```
 
-**行动建议**：
+**行动建议**（逐标的）：
 - 维持 → 论点完好，继续持有/等待
 - 加仓 → 论点强化 + 催化剂正面
 - 减仓 → 某个支柱弱化但论点尚未破裂
 - 清仓 → 核心支柱 broken 或 exit condition 触发
+
+---
+
+#### Step G — 同步 Coze（强制·不可跳过）
+
+**每个标的执行完 A-F 后立即同步，不同步 = 巡检白做。**
+
+```bash
+cd D:\长流水\.agents\agents\shenwaihuashen && python sync_coze.py "memory/tracking/{stockCode}-{stockName}.json"
+```
+
+> Coze 表 ID: `7645332166129287218`。前端读取 Coze，不同步 = 前端看不到巡检结果。
+
+---
+
+#### 巡检自检矩阵（写入巡检报告末尾·硬闸门）
+
+```
+## 巡检自检
+| # | 步骤 | 状态 | 备注 |
+|---|------|:---:|------|
+| A | 拉取最新行情 | ✅ | python data_helper.py valuation × N codes |
+| B | 更新 priceLog | ✅ | N active stocks, 各追加 1 条 |
+| C | 支柱 history + status 重评 | ✅ | C1/C2/C3 三项，N 条 status 变更 |
+| D | 催化剂触发 + 新增 | ✅ | N 条触发，N 条新增 |
+| E | 更新 thesisLog + tension | ✅ | N stocks, tension 基于支柱分布 |
+| F | 论点评分卡 + 行动建议 | ✅ | 见上表 |
+| G | 同步 Coze | ✅ | N/N sync_coze.py 全部 OK |
+```
+
+**矩阵缺任一项 → 巡检未完成，不得结束。**
 
 ### 4. 论点审查（每季度）
 

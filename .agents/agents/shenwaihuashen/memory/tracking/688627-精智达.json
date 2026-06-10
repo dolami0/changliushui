@@ -307,6 +307,15 @@
       "mv_change_pct": -2.61,
       "pct_chg_daily": -0.63,
       "note": "巡检: 6/5微调-0.63%, PE 555x, 前日+9.1%反弹后正常消化。融资余额11.71亿(占市值3.2%), 无融券"
+    },
+    {
+      "date": "2026-06-10",
+      "price": 403.01,
+      "pe": 579.8,
+      "mv_yi": 379.34,
+      "return_pct": 1.8,
+      "mv_change_pct": 1.8,
+      "note": "巡检更新"
     }
   ],
   "positionLog": [],
@@ -394,9 +403,9 @@
   },
   "reviewSchedule": {
     "nextFullReview": "2026-08-31(半年报)",
-    "nextQuickCheck": "2026-06-09(周二巡检)",
-    "lastCheck": "2026-06-08(巡检)",
-    "patrolFrequency": "每个工作日 9:07"
+    "nextQuickCheck": "2026-06-11(明日巡检)",
+    "lastCheck": "2026-06-10(巡检)",
+    "patrolFrequency": "每日 22:00"
   },
-  "track_status": "active"
+  "track_status": "paused"
 }

@@ -243,16 +243,22 @@ def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict) -> str:
 def build_html_report(agent0_record: dict, a1: dict, a2: dict, a3: dict, agent2a: dict | None = None, baseline_report: str = "") -> str:
     """V7 完整估值报告 — 覆盖全部 JSON 字段，赛博仙门主题，大字体"""
     now = __import__('datetime').datetime.now().strftime("%Y-%m-%d %H:%M")
-    cf = a1.get("clean_financials", {})
-    va = a1.get("valuation_anchor", {})
-    vr = a1.get("valuation_routing", {})
-    sanity = a1.get("market_sanity", {})
-    fw = a1.get("forward_looking", {})
+    # 兼容新旧 Agent-1 输出格式: new=packages.core.fields, old=clean_financials
+    pkgs = a1.get("packages", {}) if isinstance(a1, dict) else {}
+    core_fields = pkgs.get("core", {}).get("fields", {}) if isinstance(pkgs, dict) else {}
+    cf = a1.get("clean_financials", {}) if isinstance(a1, dict) else {}
+    # 如果 clean_financials 为空，回退到 core.fields
+    if not cf or len(cf) < 5:
+        cf = core_fields or cf
+    va = a1.get("valuation_anchor", {}) if isinstance(a1, dict) else {}
+    vr = a1.get("valuation_routing", {}) if isinstance(a1, dict) else {}
+    sanity = a1.get("market_sanity", {}) if isinstance(a1, dict) else {}
+    fw = a1.get("forward_looking", {}) if isinstance(a1, dict) else {}
 
     stock_code = agent0_record.get("stock_code", cf.get("stock_code", "?"))
     stock_name = agent0_record.get("stock_name", cf.get("stock_name", "?"))
     primary = vr.get("primary_model", "?")
-    industry = cf.get("industry_sw_l1", "") + " / " + cf.get("industry_sw_l2", "")
+    industry = (cf.get("industry_sw_l1") or "") + " / " + (cf.get("industry_sw_l2") or "")
 
     # Agent-2a V6 narrative diagnosis
     a2a = agent2a or {}

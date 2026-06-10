@@ -196,6 +196,79 @@ bear 不可推翻已发生的业务事实（如已出货产品→不应给0估�
 引用 2a 的 primary_anchor 和 priced_in_estimate，结合事件变量和个股路线，写 1 句"如果-那么"命题。
 拆命题为因果环节，标注证实/证伪条件。
 
+### 3c-补充. 增长路径拆解 (CAGR Decomposition)
+
+**目的**: 3c 的投资命题给出了一个总 CAGR。拆解表强制你把这个数字分解为可独立验证的驱动力, 并诚实标注每个驱动力背后的信息质量。不做机械打折——不确定性的处理交给概率分布和置信度。拆解表的价值在于**透明**: 让阅读者看到你的 CAGR 是从哪里来的, 哪部分扎实、哪部分是推断。
+
+**拆解规则**:
+
+**第一步: 驱动力分解**
+
+将 base 的 revenue CAGR 拆解为三个互不重叠的驱动力:
+
+  CAGR = 量增(%) + 纯涨价(%) + 结构升级(%)
+
+- **量增**: 物理销量变化对收入的贡献。**如果公司存在多条产品线且增速差异 >15pp, 必须分产品线给出量增。** 各产品线量增按当前收入占比加权后应等于全公司量增。
+- **纯涨价**: 同产品、同规格、同客户的净价格上涨。不含产品结构变化。
+- **结构升级**: 高单价/高毛利产品占比提升带来的均价上升。结构升级 = 全公司均价变化 - 纯涨价。
+
+**禁止的做法**:
+- X 结构升级的红利归入量增
+- X 结构升级的红利归入纯涨价 ("均价从33万到80万所以价增30%", 其中22pp其实是结构升级)
+- X 全公司平均量增掩盖产品线增速分化 (电子级CAGR 60% vs 热控5% 不能混成"全公司量增25%")
+- X 量增和价增之间存在隐含重叠
+
+**非主锚产品线的处理**:
+
+事件素材通常只覆盖叙事主线产品。其他产品线的数据往往缺失——你需要自行给出假设, 但必须:
+
+1. **显式标注**: 对缺乏素材支撑的产品线, 标注 `[自行假设]`, 后跟 1-2 句逻辑依据。
+2. **写入 data_gaps**: "非主锚产品线[名称]: 缺少[具体数据], 当前假设[X%增速]基于[逻辑依据]"
+3. **一致性防火墙**: 非主锚产品线的增速不能与 baseline 历史趋势矛盾。若偏离历史趋势, 必须说明原因。
+
+**第二步: 信息质量标注 (仅标注, 不打折)**
+
+对每个驱动力, 标注信息来源的质量。这**不影响**估值计算中的 CAGR 数值——CAGR 用你的最佳估计。标注的目的是让阅读者知道哪些数字是硬的、哪些是软的。
+
+  [硬数据]:   有 L4-L5 数据直接支撑, 或已有合同/公告/产能硬证
+  [强推断]:   有 L2-L3 多个独立信息源可交叉验证, 逻辑链完整
+  [弱推断]:   仅有单一 L2-L3 信息源, 或存在未验证的关键假设
+  [推测]:     纯靠行业常识和方向判断, 无具体数据, 但方向合理
+  [自行假设]: 连行业参考都缺乏, 基于保守原则填的占位数字
+
+不确定性通过三情景概率分布和置信度来表达, 不通过对 CAGR 的机械打折来表达。
+
+**输出格式**:
+
+```
+清单项3c-补充-增长路径拆解:
+
+[产品线结构] (如有多条产品线且增速差异>15pp, 先列出)
+  产品线A (当前占比X%): 量增CAGR=+A%, 纯涨价=+B%
+  产品线B (当前占比Y%): 量增CAGR=+C%, 纯涨价=+D% [自行假设]
+  全公司量增加权: +E%
+
+| 驱动力 | 贡献 | 信息质量 | 信息来源 | 信息缺口 |
+|--------|------|---------|---------|---------|
+| 量增: [分产品线描述] | +E% | [硬数据/强推断/弱推断/推测/自行假设] | [来源] | [缺失什么] |
+| 纯涨价: [描述] | +F% | [同上] | [来源] | [缺失什么] |
+| 结构升级: [描述] | +G% | [同上] | [来源] | [缺失什么] |
+| 合计 (你的最佳估计) | +N% | | | |
+```
+
+**内部一致性校验** (输出前自检):
+
+1. (1+E%)×(1+F%)×(1+G%) - 1 ≈ N% (允许 ±3pp 交互项)
+2. 分产品线量增加权应等于全公司量增
+3. 结构升级贡献应与产品线占比变化的数学结果自洽
+
+**使用规则**:
+
+1. base scenario 的 revenue_growth_3y_cagr_pct = 你的最佳估计 (+N%)。不打折。
+2. 信息缺口标注写入 `data_gaps`——这些是预研探针的改进方向。
+3. 在 `reasoning_trace` 中新增 "清单项3c-补充-增长路径拆解" 条。
+4. 如果某个驱动力属于 `[自行假设]` 且你对其完全没有信心, 可以在 bear 概率或 base 概率中体现这种不确定性——但不要在 CAGR 数字上打折。
+
 ### 3d. 因果剧本（先写故事，不赋参数）
 
 **前置: 风险映射** — 分两步:
@@ -400,6 +473,7 @@ asymmetry_ratio = bull_upside / |bear_upside|
 - reasoning_trace 按清单项顺序组织。清单项3 必须包含以下子项（各写一条 trace，不可合并）:
   "清单项3a-分布形状+投资命题: ..."
   "清单项3b-计价天花板: ..."
+  "清单项3c-补充-增长路径拆解: ..."  ← 拆解CAGR驱动+标注支撑等级+计算有效CAGR
   "清单项3c-风险映射: ..."  ← 逐条列出风险及其约束的情景
   "清单项3d-因果剧本(bear/base/bull各一段): ..."
   "清单项3e-约束确认: ..."  ← 赋参数前，确认风险约束如何在参数中体现
@@ -420,7 +494,21 @@ asymmetry_ratio = bull_upside / |bear_upside|
 # 共享输出 Schema（字段顺序 = 清单项推理顺序）:
 
 {
-  "reasoning_trace": ["清单项1-素材吸收(引用2a锚+计价): ...", "清单项2-引用2a审核结论(step2d=X): ...", "清单项3a-分布形状+投资命题: ...", "清单项3b-计价天花板(还剩下多少没计价): ...", "清单项3d-因果剧本(bear/base/bull各一段): ...", "清单项3e-赋参数: ...", "清单项4a-一致性校验: ...", "清单项4b-计价验证(按锚选工具): ...", "清单项4c-校验交叉: ...", "清单项4d-非对称: ...", "清单项4e-置信度: ..."],
+  "reasoning_trace": ["清单项1-素材吸收(引用2a锚+计价): ...", "清单项2-引用2a审核结论(step2d=X): ...", "清单项3a-分布形状+投资命题: ...", "清单项3b-计价天花板(还剩下多少没计价): ...", "清单项3c-补充-增长路径拆解(量增/价增/结构, 最佳估计CAGR=X%): ...", "清单项3d-因果剧本(bear/base/bull各一段): ...", "清单项3e-赋参数: ...", "清单项4a-一致性校验: ...", "清单项4b-计价验证(按锚选工具): ...", "清单项4c-校验交叉: ...", "清单项4d-非对称: ...", "清单项4e-置信度: ..."],
+  "growth_path_decomposition": {
+    "_description": "CAGR拆解表。不打折——信息质量仅标注, 不确定性通过概率分布和置信度表达。",
+    "product_lines": [
+      {"name": "产品线A", "current_revenue_share_pct": 30, "volume_cagr_pct": 59, "pure_price_cagr_pct": 5, "comment": "若仅一条产品线或增速差异<15pp则此项为空数组[]"},
+      {"name": "产品线B", "current_revenue_share_pct": 70, "volume_cagr_pct": 5, "pure_price_cagr_pct": 3, "is_self_assumed": true, "assumption_basis": "历史增速延续, 无事件素材覆盖"}
+    ],
+    "drivers": [
+      {"driver": "量增: [分产品线描述]", "contribution_pct": 18, "info_quality": "强推断", "source": "公司产能规划(L3)", "gap": "无季度爬坡计划、良率曲线未知"},
+      {"driver": "纯涨价: [描述]", "contribution_pct": 12, "info_quality": "弱推断", "source": "海外涨价30-50%(L2)", "gap": "国产跟涨幅度未知"},
+      {"driver": "结构升级: [描述]", "contribution_pct": 15, "info_quality": "弱推断", "source": "客户验证中(L2)", "gap": "无订单承诺/时间表"}
+    ],
+    "best_estimate_cagr_pct": 45,
+    "consistency_check": "(1+0.18)x(1+0.12)x(1+0.15)-1=52.0%, 与best_estimate偏差7pp(交互项)。产品线加权量增=0.30x59%+0.70x5%=21.2%, 与全公司量增18%偏差3pp(可接受)。结构升级+15%对应电子级占比从30%升至~45%, 与量增中电子级CAGR 59%一致。"
+  },
   "signal_audit": {
     "step2a_restate": ["[合同负债] 当前值=0.13亿 (↑1.1σ, 历史均值=0.08亿)", "..."],
     "step2b_match": [
@@ -630,7 +718,15 @@ def _build_model_aware_prompt(primary_model, validation_model=""):
 
 
 def _fetch_bond_yields(fetcher: DataFetcher) -> dict:
-    """获取国债收益率。投资API不提供时用默认值1.75%。"""
+    """获取10年期国债收益率。优先用 DataFetcher 内置方法，失败回退默认值。"""
+    try:
+        bonds = fetcher.fetch_bond_yields()
+        y10 = bonds.get("yield_10y")
+        if y10 and 0 < y10 < 10:
+            return {"yield_10y": y10, "source": f"investoday API ({bonds.get('date', '')})"}
+    except Exception:
+        pass
+    # 备用: 尝试旧端点
     try:
         raw = fetcher._cli("macro/bond-yields", method="POST",
                           beginDate=(datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"),
@@ -638,8 +734,8 @@ def _fetch_bond_yields(fetcher: DataFetcher) -> dict:
                           pageNum=1, pageSize=1)
         item = fetcher._first(raw)
         y10 = fetcher._num(item.get("yield10Y"))
-        if y10 and 0 < y10 < 10:  # 合理的国债收益率区间
-            return {"yield_10y": y10, "source": "investoday API"}
+        if y10 and 0 < y10 < 10:
+            return {"yield_10y": y10, "source": "investoday API (旧端点)"}
     except Exception:
         pass
     return {"yield_10y": 1.75, "source": "默认值(API不可用)"}
@@ -735,7 +831,7 @@ def _calculate_erp(fetcher: DataFetcher) -> dict:
 
     if recent_vol > 0 and hist_vol > 0:
         adj = (recent_vol / hist_vol - 1.0) * 5.0
-        erp = max(5.0, min(9.0, base_erp + adj))
+        erp = max(4.0, min(12.0, base_erp + adj))
         method = f"动态ERP(基准6.0%+波动率调整{adj:+.1f}%)"
     else:
         erp = base_erp
@@ -1828,6 +1924,148 @@ def _fix_trade_annotation(ta: dict, weighted_upside: float, asymmetry: float,
 
 
 # ═══════════════════════════════════════
+# Step 1.7: ROIC-CAGR 一致性审计 (Q2)
+# ═══════════════════════════════════════
+
+def _audit_roic_consistency(llm_output: dict, core: dict, wacc_params: dict) -> list[dict]:
+    """检查 base 的 CAGR 和 ROIC 恢复路径是否自洽。
+
+    不约束当期 ROIC（滞后财务数据不应误杀反转故事），
+    但要求 LLM 在自己选择的 CAGR 和 ROIC 目标之间保持逻辑一致性。
+    """
+    warnings = []
+    sv = llm_output.get("scenario_valuation", {})
+    details_raw = sv.get("scenario_details", {})
+    if isinstance(details_raw, list):
+        details = {item.get("scenario", ""): item for item in details_raw}
+    else:
+        details = details_raw
+
+    base = details.get("base", {})
+    narrative = base.get("scenario_narrative", "")
+
+    # 提取 base CAGR: 不同模型族字段名不同
+    base_cagr = base.get("revenue_growth_3y_cagr_pct") or base.get("stage1_growth_pct") or 0
+    wacc_pct = wacc_params.get("wacc_pct", 10)
+
+    if base_cagr <= 20:
+        return warnings  # 低增速不需要审计
+
+    # 检查 ROIC 相关关键词是否出现在 base 叙事中
+    roic_keywords = ["ROIC", "roic", "投入资本回报", "资本回报", "覆盖WACC", "覆盖资金成本",
+                      "价值创造", "回报率改善", "利润率提升至"]
+    has_roic_path = any(kw in narrative for kw in roic_keywords)
+
+    if not has_roic_path and base_cagr > 30:
+        warnings.append({
+            "code": "E308", "severity": "warning",
+            "message": (f"Base CAGR={base_cagr}%但场景叙事未说明ROIC恢复路径。"
+                       f"高增长+低资本回报的组合意味着增长在加速价值毁灭。"
+                       f"请在scenario_narrative中补充: ROIC如何从当前水平改善至覆盖WACC({wacc_pct}%)？"),
+            "action": "降置信度一档(若财报可行性评分>=7则强制降至<=6)",
+        })
+
+    # 交叉检查: 如果叙事中提到毛利率修复但没提 ROIC
+    gm_keywords = ["毛利率", "净利率", "利润率", "gross margin", "net margin"]
+    has_gm_path = any(kw in narrative.lower() for kw in gm_keywords)
+    if has_gm_path and not has_roic_path and base_cagr > 25:
+        warnings.append({
+            "code": "E308b", "severity": "warning",
+            "message": (f"Base叙事讨论了利润率修复但未涉及ROIC改善。"
+                       f"利润率改善不一定意味着ROIC改善（若IC同步膨胀）。"
+                       f"请确认: 增长是否需要大量资本投入？若是，ROIC路径是什么？"),
+            "action": "提示供人工审阅，不自动降级",
+        })
+
+    return warnings
+
+
+# ═══════════════════════════════════════
+# Step 1.8: 强制跨族底线校验 (Q1)
+# ═══════════════════════════════════════
+
+def _mandatory_cross_validation(core: dict, llm_output: dict,
+                                 routing: dict | None = None) -> dict | None:
+    """无论 LLM 选了什么校验策略，代码层强制运行资产族底线校验。
+
+    针对重资产/高负债的亏损公司——即使叙事是 revenue 驱动的，
+    PB-ROE 也应作为独立底线参照，防止 PS 模型无限上浮。
+    """
+    total_assets = core.get("total_assets_yi", 0)
+    total_equity = core.get("total_equity_yi", 1)
+    if total_assets / max(total_equity, 1) <= 1.5:
+        return None  # 非重资产公司，不适用
+
+    bps = core.get("bps", 0)
+    total_shares = core.get("total_shares_yi", 1)
+    book_value_bps = bps * total_shares if bps > 0 else 0
+    # 取较大值防御数据不一致（bps×股数 vs 净资产总额可能因口径不同有差异）
+    book_value = max(book_value_bps, total_equity) if book_value_bps > 0 else total_equity
+
+    # PB底线: 制造业重资产公司熊市PB参考 (1.0-1.5x)
+    debt_ratio = core.get("debt_to_assets_pct", 50)
+    roic = core.get("roic_pct", 0)
+
+    # 根据负债率和ROIC分层确定保守PB
+    if debt_ratio > 65 and roic < 0:
+        floor_pb = 1.0   # 高负债+亏损 → 资产清算价值
+    elif debt_ratio > 50 or roic < 5:
+        floor_pb = 1.5   # 中等风险 → 略高于账面
+    else:
+        floor_pb = 2.0   # 相对健康
+
+    floor_mcap = book_value * floor_pb
+
+    # 取主模型 base target
+    sv = llm_output.get("scenario_valuation", {})
+    details_raw = sv.get("scenario_details", {})
+    if isinstance(details_raw, list):
+        details = {item.get("scenario", ""): item for item in details_raw}
+    else:
+        details = details_raw
+    base_mcap = details.get("base", {}).get("target_mcap_yi", 0)
+
+    if base_mcap <= 0 or floor_mcap <= 0:
+        return None
+
+    ratio = base_mcap / floor_mcap
+
+    result = {
+        "_code_enforced": True,
+        "validation_model": "D(PB-ROE)",
+        "validation_paradigm": "资产底线",
+        "base_target_mcap_yi": base_mcap,
+        "validation_mcap_yi": round(floor_mcap, 1),
+        "gap_pct": round((base_mcap - floor_mcap) / floor_mcap * 100, 1),
+        "detail": {
+            "book_value_yi": round(book_value, 1),
+            "floor_pb": floor_pb,
+            "debt_ratio_pct": debt_ratio,
+            "roic_pct": roic,
+            "mcap_to_book_ratio": round(base_mcap / book_value, 1) if book_value > 0 else 0,
+        },
+    }
+
+    if ratio > 3.0:
+        result.update({
+            "gap_direction": "主模型显著高估(>3x净资产底线)",
+            "assessment": "严重偏离: 主模型base估值为净资产底线的{:.0f}倍，PS框架可能过度膨胀。请重新审视PS倍数的合理性。".format(ratio),
+        })
+    elif ratio > 2.0:
+        result.update({
+            "gap_direction": "主模型偏高(>2x净资产底线)",
+            "assessment": "存在分歧: 主模型base估值为净资产底线的{:.0f}倍。若叙事破裂，估值可能向资产价值回归。".format(ratio),
+        })
+    else:
+        result.update({
+            "gap_direction": "基本一致",
+            "assessment": "主模型与资产底线估值在合理范围内。",
+        })
+
+    return result
+
+
+# ═══════════════════════════════════════
 # Step 2: 代码校验
 # ═══════════════════════════════════════
 
@@ -2202,6 +2440,7 @@ def _assemble_final_output(
         },
         "reverse_dcf": rd,
         "validation_crosscheck": vx,
+        "_code_cross_validation": llm_output.get("_code_cross_validation"),
         "expectation_gap": llm_output.get("expectation_gap", {}),
         "confidence": confidence,
         "trade_annotation": ta,
@@ -2216,6 +2455,7 @@ def _assemble_final_output(
         "risk_triggers": llm_output.get("risk_triggers", {}),
         "narrative": llm_output.get("narrative", ""),
         "data_gaps": llm_output.get("data_gaps", []),
+        "growth_path_decomposition": llm_output.get("growth_path_decomposition"),
         "signal_audit": llm_output.get("signal_audit", {}),
         "scenarios": scenarios,
         "case_comparison_summary": llm_output.get("case_comparison_summary", {}),
@@ -2332,10 +2572,32 @@ class ScenarioAsymmetry:
             computed["asymmetry_ratio"], bear_u, bull_u,
         )
 
+        # ── Step 1.7: ROIC-CAGR 一致性审计 ──
+        cb(3.7, "ROIC-CAGR审计")
+        roic_warnings = _audit_roic_consistency(llm_output, core_fields, wacc_params)
+        if roic_warnings:
+            codes = [w["code"] for w in roic_warnings]
+            print(f"  [Agent3 roic-audit] warnings: {codes}", flush=True)
+
+        # ── Step 1.8: 强制跨族底线校验 ──
+        cb(3.8, "跨族底线校验")
+        mandatory_xcheck = _mandatory_cross_validation(
+            core_fields, llm_output, routing_decision,
+        )
+        if mandatory_xcheck:
+            # 合并到 llm_output 的 validation_crosscheck 中
+            existing_xcheck = llm_output.get("validation_crosscheck", {})
+            if existing_xcheck and existing_xcheck.get("validation_strategy") == "self_validation":
+                # LLM自校验被代码层跨族校验覆盖
+                mandatory_xcheck["_overrides_llm_selfcheck"] = True
+            llm_output["_code_cross_validation"] = mandatory_xcheck
+
         # ── Step 2: 代码校验 ──
         cb(4, "一致性校验")
         validation_warnings = _validate_output(llm_output, bs_profile, wacc_params)
         validation_warnings = [w for w in validation_warnings if not w.get("code", "").startswith("E306")]
+        # 合并 ROIC 审计 warnings
+        validation_warnings.extend(roic_warnings)
         if validation_warnings:
             codes = [w["code"] for w in validation_warnings]
             print(f"  [Agent3 validation] warnings: {codes}", flush=True)
