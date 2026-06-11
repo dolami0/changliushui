@@ -28,7 +28,6 @@ from valuation_utils import call_deepseek, build_forward_signal_panel, fmt_pct
 from agent3_scenario_asymmetry import (
     ScenarioError,
     _validate_output,
-    _mandatory_cross_validation,
     MODEL_PARAM_TEMPLATES,
     PARAM_SELF_CHECK_MAP,
     SCENARIO_PARAMS_MAP,
@@ -38,12 +37,6 @@ from agent3_scenario_asymmetry import (
     MODEL_NAMES,
     MODEL_FAMILIES,
     MODEL_PARAM_NAMES_MAP,
-    # V8: LLM-2 基础设施
-    _call_llm2,
-    _call_volc_search,
-    _extract_search_queries,
-    _merge_llm_outputs,
-    LLM2_SYSTEM_PROMPT as SHARED_LLM2_PROMPT,
 )
 
 # Volcengine 知识问答 (用于 SOTP 分部数据后备)
@@ -274,11 +267,11 @@ Agent-2a 已完成叙事诊断，你必须信任其结论。从用户消息中�
 
 **① 投资地图 — 事件冲击前的企业全貌（Agent-Baseline 预合成）**
 
-直接信任它——不要重做地图的工作。你消费它的方式:
-- **维度一（产品结构）→ 产品→分部映射。** 地图已正确区分各产品线。完成 3d+ 映射步骤时，产品表中的收入数字是 segment_revenue_yi 的直接来源——不需要从火山搜索或事件素材推算。注意名称相似的产品不是同一业务（"功能性薄膜材料"≠"高分子薄膜材料"）。
-- **量化锚点 → 赋 CAGR/PS/PE 的起点。**
-- **里程碑时间线 → 事件冲击的靶子。**
-- **脆弱点 → bear 情景的方向和概率。**
+直接信任它——不要重做地图的工作。
+- 量化锚点（产能/价格/利用率/市占率/壁垒）是赋 segment_revenue_yi 的起点。
+- 里程碑时间线是事件冲击的靶子。
+- 脆弱点分析决定了 bear 情景的参数方向和概率。
+- **地图的分部收入是事件前的历史值。** 事件催动的主锚分部，segment_revenue_yi 必须以事件素材中的产能×价格×利用率推算。
 
 **② 市场在计价什么（从 "Agent-2a 叙事诊断结论" 和 "当前市值隐含假设" 中提取）**
 
@@ -294,22 +287,9 @@ Agent-2a 已完成叙事诊断，你必须信任其结论。从用户消息中�
 
 **三者的关系**: 地图告诉你"原来是什么"，市场计价告诉你"已经预期了多少"，事件告诉你"实际变了多少"。分部参数 = 地图基线 + 事件冲击 - 已计价部分。
 
-**数据信任层级**: 事件素材 > baseline/火山数据（同为参考输入，互相印证）> 财报（仅交叉校验）。
+**数据信任层级**: 事件素材+地图锚点 > 火山联网搜索 > 财报（仅交叉校验）。
 
 **关键**: 估值锚和计价程度以 2a 为准（不可推翻）。
-
-**baseline 六维度消费路由——每个维度必须在 SOTP 推演中显式使用:**
-
-| 地图维度 | 消费步骤 | SOTP 具体用途 |
-|---------|:---:|------|
-| 公司身份与收入结构 | 3d+ | 产品线→分部映射的直接输入；收入拆分决定哪些分部是事件催动、哪些是稳态 |
-| 财务基线 | 3e | 各分部 segment_revenue_yi 的**起点值** + 公司整体净利率/ROIC 基线 → segment_net_margin_pct 的参照 |
-| 产业位置 | 3e | 每个分部的可比公司+市占率+竞争位势→各分部 PE/PS/PB 锚定的参照系来源 |
-| 增长轨迹与里程碑 | 3d | 产能节点/产品管线/客户认证时间线→bear"哪个分部崩塌"/bull"哪个分部加速"的分叉点 |
-| 投资主线与脆弱点 | 3d | **直接输入风险映射**——脆弱点=约束各分部 base/bull 的已知风险，主线=事件加强了哪个分部 |
-| 量化锚点 | 3e | 各分部可比 PE/PS/PB 中位数+历史 PE band→赋各分部参数的**起点**，赋完后交叉校验（见3e末尾） |
-
-**消费闭环要求**: reasoning_trace 的每个分部参数必须能追溯到"这个判断来自地图哪个维度"。如果某个维度在整条推理链中从未出现，re-trace 你的步骤——你漏了东西。
 
 ## SOTP 分部估值规则
 
@@ -391,24 +371,6 @@ Bear意味着事件叙事**不成立**——政策没落地/订单被抢/催化�
 注:
 - `segment_net_margin_pct` 是分部**净利润率**（净利润/收入），不是毛利率。参考公司整体净利率、行业可比公司净利率、或火山数据中的分部利润率来估算。SOTP 用收入×净利率估算分部利润（分部投入资本无法拆分），不需要 roic_assumed_pct。dcf锚需要roic_assumed_pct——这是阶段1的ROIC假设，用于计算再投资率(RR=g/ROIC)。
 
-**各分部 PE/PS/PB 锚定 — baseline 和火山数据都是参考输入:**
-
-你在赋各分部的 target_ps / pe_target / target_pb 时，可利用:
-- baseline「产业位置」维度: 各业务线对应的可比公司+市场地位
-- baseline「量化锚点」+ 火山数据: 可比 PE/PS/PB 中位数
-
-以上都是参考，不替代你的行业判断。
-
-**分部门槛规则:**
-- **事件催动分部**: PE/PS 可超出可比中位数但应有合理上限（行业领导者的历史峰值可作为参考上限）
-- **非事件催动分部**: PE/PS ≤ 可比中位数
-- **Bear 分部门槛**: 按上文 Bear 地板表执行
-
-**赋完各分部参数后做参照系交叉校验:**
-- 各分部 base PE/PS 与可比中位数的偏差 → 事件催动分部可以有溢价但要写理由
-- 各分部 bull PE/PS 是否远超可比公司在非泡沫期的交易峰值？检查是否合理
-- SOTP 加总与当前市值的差距方向是否与 2a 的计价程度一致
-
 # 执行清单
 
 以下清单项是递进步骤。清单项必须按顺序执行，不可跳过、不可调换。
@@ -440,7 +402,7 @@ Bear意味着事件叙事**不成立**——政策没落地/订单被抢/催化�
 | narrow_base_dominant | 8% | 趋势有惯性→逆转是小概率 |
 中间形状按线性插值。若证伪需要N个独立环节同时崩塌→联合概率自然更低。
 
-**bear 估值硬底**: 故事证伪不等于公司归零。从 baseline「财务基线」维度获取当前净利/净资产/净现金数据，选择适用底线:
+**bear 估值硬底**: 故事证伪不等于公司归零。自行选择适用底线:
   - 盈利企业: bear mcap ≥ TTM净利 × 行业周期底部PE（凭行业知识判断——军工和化工的底部PE天差地别）
   - 有硬资产: bear mcap ≥ 净资产 × 保守PB（与ROE匹配,ROE越低保值PB越低）
   - 纯故事型: bear mcap ≥ 净现金
@@ -476,11 +438,11 @@ bear 不可推翻已发生的业务事实（如已出货产品→不应给0估�
 
 ### 3b. 计价程度→upside 天花板
 
-**你在清单项1中已消化的 2a 计价结论现在派上用场:**
+**bull 的 upside 受计价程度的约束:**
 
-2a 的 priced_in 告诉你市场已经消化了多少事件价值。剩余未计价的空间越大，bull 的理论上限越高；已充分计价的标的，bull 只能来自"比市场预期的还要好"——即二阶导数变化。
+2a 的 priced_in 告诉你市场已经消化了多少事件价值。剩余未计价的空间越大，bull 的理论上限越高；已充分计价的标的，bull 只能来自"比市场预期的还要好"——即二阶导数变化（增速超预期、时间超前、利润率更高）。
 
-**bear 的 downside 则相反:** 计价越多，逆转伤害越大。未计价的标的，bear 仅回到事件前估值范式；充分计价的标的，预期逆转叠加估值范式降级。
+**bear 的 downside 则相反:** 计价越多，逆转伤害越大。未计价的标的，bear 仅回到事件前估值范式（损失时间成本）；充分计价的标的，预期逆转叠加估值范式降级（损失信仰溢价）。
 
 ### 3c. 投资命题 + 因果分叉点
 
@@ -489,15 +451,7 @@ bear 不可推翻已发生的业务事实（如已出货产品→不应给0估�
 
 ### 3d. 因果剧本（先写故事，不赋参数）
 
-**前置: 风险映射** — 分两步:
-
-**第一步: 引用 baseline 脆弱点** — 从投资地图的「投资主线与脆弱点」维度提取已识别风险。逐条声明: 该风险在 baseline 中的原始表述、主要约束哪个情景（bear/base/bull）、在各分部参数中如何体现（降概率/压倍数/限增速/调利润率）。
-
-**第二步: 补充事件特有风险** — 事件素材中的逆向风险（adversarial_thinking）和个股路线中的催化风险。检查是否有 baseline 未覆盖的风险维度。
-
-**风险分类规则**: 涉及已发生负面事实的风险→同时约束 base 和 bull；涉及未发生潜在威胁的风险→主要约束 bear 的证伪路径。如果你认为某条风险不影响任何情景，在 reasoning_trace 中写一句理由。
-
-**不要再扫一遍财务数据找负面信号**——baseline 的脆弱点分析已经做了这件事。你的工作是引用 + 补充，不是重做。
+**前置: 风险映射** — 逐条阅读逆向风险，同时结合财务数据观察是否有文本未提及但数据中可见的负面事实（如 *ST、持续亏损、大股东减持、ROIC 长期低于 WACC 等）。每条风险主要约束哪个情景？在写剧本之前先明确: 涉及已发生负面事实的风险→同时约束 base 和 bull；涉及未发生潜在威胁的风险→主要约束 bear 的证伪路径。 如果你认为某条风险不影响任何情景，在 reasoning_trace 中写一句理由。
 
 然后写三情景剧本:
 - **bear**: 证伪路径必须区分两件事:
@@ -529,44 +483,13 @@ bear 不可推翻已发生的业务事实（如已出货产品→不应给0估�
 
 **重要: 永远不要"凑"概率**——bear 需要 N 个独立环节同时崩塌 → 联合概率自然就是小概率。
 
-**参数-叙事一致性**: 赋完参数后，回顾 3d 因果剧本和风险映射。
-
-### 3d+. 产品→分部映射（赋参前硬步骤，不可跳过）
-
-**在赋 segment_revenue_yi 之前，逐产品声明映射关系。** 火山数据中的产品名可能与财报产品表中名称相似但不同——这是最常见的错误来源。
-
-从用户消息的"产品结构数据"表中逐产品声明:
-| 产品 | 财报收入(亿) | 归入哪个SOTP分部 | is_event_driven | 判定依据 |
-
-**硬规则:**
-- 产品表中每个产品必须出现在映射表中
-- 事件催动的产品→叙事主锚分部，其余→其他业务
-- **名称相似的产品不是同一业务**: "功能性薄膜材料"≠"高分子薄膜材料"≠"薄膜包装材料"
-- segment_revenue_yi = 该分部所有产品收入之和（直接从产品表取）
-- 此映射写入 reasoning_trace，以 "清单项3d+-产品分部映射: ..." 开头
+**参数-叙事一致性**: 赋完参数后，回顾 3d 因果剧本和风险映射。参数是叙事的数字表达——如果剧本中指出了一个风险或约束但参数中看不到对应影响，必须在 scenario_narrative 中解释原因。参数和推理链不可以各说各话。
 
 ### 3e. 分部赋参
 
 **叙事主锚分部** (is_primary=true): bear/base/bull 三组参数。
 
 **你的模型**: 2b路由判官已将叙事主锚分部模型选定为 **{PRIMARY_MODEL} ({MODEL_DESC})**，参数族为 {MODEL_FAMILY}。你的 `anchor` 字段必须设为 `{SEGMENT_ANCHOR}`，bear/base/bull 参数必须严格使用以下参数体系——不允许使用其他模型的参数名。
-
-**赋参框架: 分部参数 = 理解起点（baseline）+ 事件冲击（event）**
-
-两个信息来源，分工不同:
-
-**Baseline（理解起点——告诉你"从哪出发"，不限制"能到哪"）**:
-- 财务基线: 当前 ROIC/毛利率/净利率/营收——理解成本结构和经营杠杆。**不是参数上限**。
-- 量化锚点: 当前产能/价格/市占率——验证事件的起点对不对。
-- 脆弱点: 约束 bear 的下跌空间，不约束 bull 的上限。
-- 产业位置: 可比公司是参考不是牢笼。没有可比公司就凭行业知识判断。
-
-**事件锚（变数——告诉你"往哪走、走多远"）**:
-- 事件中的新价格/新产能/新客户——变化方向和幅度。
-- 按来源置信度打折: 公司公告 <10%，专家纪要 10-30%，分析师测算 20-40%。
-- 打折必须显式标注: 锚点原文→来源→置信度→打折幅度→打折后数字→理由。
-
-**两者的关系**: Baseline 让你理解商业模式，事件让你知道基本面变了多少。参数最终位置由你的独立判断决定——baseline 是理解工具，不是约束工具。
 
 赋参数的起点是 3d 的因果剧本。思考事件变量作用于个股路线的方式——这决定了三情景参数的方向和幅度。然后用 3a 的分布形状和 3b 的计价天花板做约束。在此基础上，用以下参数规则校准具体数值。
 
@@ -600,14 +523,15 @@ bear 不可推翻已发生的业务事实（如已出货产品→不应给0估�
 3. **对标赋参**: 你的 bear/base/bull PE/PS 必须落在这个参照系的合理区间内——可以有溢价/折价,但必须有理由（壁垒更强、增速更高、赛道更优等）
 
 **PS 的参照框架**:
-- **锚定方法**: 凭行业知识判断同细分赛道的 A 股公司在**非泡沫非危机**的稳态期交易在什么估值水平。baseline 量化锚点和火山数据中的可比公司 PS/PE 是当前时点值——可能整个板块都在泡沫或恐慌中——仅供参考，不能直接照搬。
+- **不提供"通用合理区间"**。你根据自己对行业的了解来判断。
+- **锚定方法**: 凭行业知识回想同细分赛道的 A 股公司在**非泡沫非危机**的稳态期交易在什么估值水平。火山数据中的可比公司 PS/PE 是当前时点值——可能整个板块都在泡沫或恐慌中——仅供参考，不能直接照搬。
 - **Bull PS** = 行业领导者在稳态下的 PS。不是泡沫峰值。
 - **Base PS** = 中等偏上公司在稳态下的 PS。
 - **Bear PS** = commoditized 参与者或周期底部的 PS。不是危机恐慌低点——是"故事证伪后,市场在正常情况下持续交易该股票的底部区间"。恐慌低点可能只有几周,而 bear 情景是持续状态。
 - **可以突破参照系——但必须输出理由**: 如果你的 PS 超出了上述可比公司参照系的范围（如行业龙头稳态 PS 8x 你给 15x），在 reasoning_trace 中单独写一条"PS突破论证"，说明: (1)这家公司相比参照系中最好的公司，在哪一个维度上形成了降维打击级别的优势（技术独占/客户锁定/成本结构代差/赛道定义权）？(2)为什么这个优势在 3 年后不会被竞争或技术迭代消解？缺乏这两个问题的回答→禁止突破。
 
 **PE 的参照框架**:
-- PE 的锚定逻辑与 PS 相同: 凭行业知识判断同赛道可比公司在**非泡沫非危机**稳态期的 PE。baseline 和火山数据仅供参考。
+- PE 的锚定逻辑与 PS 相同: 凭行业知识判断同赛道可比公司在**非泡沫非危机**稳态期的 PE。火山数据仅供参考。
 - **Bull PE** = 行业领导者在稳态下的 PE。
 - **Bear PE** = 行业周期底部的 PE。故事证伪不等于公司归零。
 - PE > 60x: 只在"盈利低谷+增速即将爆发"的特殊阶段合理——分母(E)暂时被压制。必须注明是过渡期 PE 还是稳态 PE。
@@ -653,7 +577,7 @@ CAGR/增速: 高增速必须匹配高再投资率（RR=g/ROIC）。增速和 RR 
 **其他业务** (is_primary=false): 事件催化剂只驱动叙事主线，不影响传统业务。因此其他业务不需要推演三情景——只需要判断它的合理估值是多少（一组 base 参数），bear/base/bull 三个情景都用这同一个估值。具体来说：
   - 如果火山数据或产品结构数据中有该分部的实际净利率 -> 引用为 segment_net_margin_pct
   - 如果没有 -> 用公司整体净利率 ± 该分部调整（毛利率高于公司平均→净利率也应高于平均），在 segment_rationale 中标注[估算]
-  - PE/PS/PB 的锚定法则与主锚分部相同: 凭行业知识判断同赛道可比公司在**非泡沫非危机**稳态期的估值水平。baseline 和火山数据中的当前倍数仅供参考——行业间估值中枢天然不同，你自行判断。
+  - PE/PS/PB 的锚定法则与主锚分部相同: 凭行业知识判断同赛道可比公司在**非泡沫非危机**稳态期的估值水平。火山数据中的当前倍数仅供参考。不提供"通用合理区间"——军工电子和通用机械的估值中枢天然不同,你自行判断。
   - 这不是精确估值——其他业务的作用是提供一个稳定的基准锚，防止叙事锚把整家公司高估或低估
   - **关键**: 取"这个业务如果单独上市，市场在稳态下会给什么估值"，不取当前可能泡沫化的市场价
 
@@ -730,17 +654,14 @@ asymmetry_ratio = bull_upside / |bear_upside|
 - `preflight_check` 逐项自检格式: ["[OK] 清单项1素材吸收完成", "[OK] 清单项2引用2a审核结论完成", "[OK] 清单项3a-3e完成(含风险映射+约束确认+叙事一致性检查)", "[OK] 概率和=1.00", "[OK] upside单调递增,全参数经济含义自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
 - 输出纯 JSON，不要用 markdown 代码块包裹
 
-# 参数锚定法则
-
-你的 PE/PS/PB 锚定的是【可比公司 + 行业稳态中枢】，不是当前市值。当前市值只是一个事实标签，不是你赋参数的靶子。赋完参数后不要心算估值——代码会算。
-
 # 核心约束
 1. WACC 不可修改（代码预计算）
 2. 三情景概率之和 = 1.0
-3. bear 参数 < base 参数 < bull 参数（逐级递增）
-4. 输出纯 JSON，不要用 markdown 代码块包裹
+3. bear_upside < base_upside < bull_upside
+4. BS画像是起点，bull必须超越市场已定价的增长才有upside
+5. 输出纯 JSON
 
-# LLM-1 SOTP 输出 Schema（仅参数，不含市值/upside）:
+# 共享输出 Schema（字段顺序 = 清单项推理顺序）:
 
 {
   "reasoning_trace": ["清单项1-素材吸收(引用2a锚+计价): ...", "清单项2-引用2a审核结论(step2d=X): ...", "清单项3a-分布形状+投资命题: ...", "清单项3b-计价天花板(还剩下多少没计价): ...", "清单项3d-因果剧本(bear/base/bull各一段): ...", "清单项3e-赋参数: ...", "清单项4a-一致性校验: ...", "清单项4b-计价验证(按锚选工具): ...", "清单项4c-校验交叉: ...", "清单项4d-非对称: ...", "清单项4e-置信度: ..."],
@@ -775,90 +696,61 @@ asymmetry_ratio = bull_upside / |bear_upside|
     "probability_weighted_upside_pct": XX,
     "asymmetry_ratio": X.X
   },
+  "reverse_dcf": {
+    "applicable": true,
+    "market_implied_g_pct": "代码预计算(earnings锚=反向DCF的g, revenue锚=隐含CAGR, asset锚=隐含ROE改善)",
+    "my_implied_g_pct": "基于中性情景推演的对应指标(earnings锚=利润增速, revenue锚=收入CAGR, asset锚=ROE改善)",
+    "expectation_gap_pct": "market_implied - my_implied 的差距",
+    "gap_direction": "市场低估|市场高估|基本公允|无法计算",
+    "gap_magnitude": "显著|中等|轻微|不适用",
+    "applicable_note": "若 applicable=false，说明原因"
+  },
+  "validation_crosscheck": {
+    "validation_model": "{VALIDATION_MODEL}",
+    "validation_paradigm": "盈利视角|收入视角|资产视角|资源视角|管线视角|分拆视角|与主模型相同",
+    "base_target_mcap_yi": "代码填充",
+    "validation_mcap_yi": "校验模型粗估市值(亿元人民币)",
+    "gap_pct": "代码填充",
+    "gap_direction": "主模型高估|主模型低估|基本一致",
+    "assessment": "互相印证|存在分歧|严重冲突"
+  },
+  "expectation_gap": {
+    "level": "市场显著低估|市场中等低估|基本公允|市场高估|无法计算",
+    "note": "预期差说明。level必须与4b分析的结论一致(不硬绑reverse_dcf)",
+  "confidence": {
+    "overall_score": 1-10,
+    "overall_label": "高|中|低",
+    "dimensions": {
+      "info_quality": {"score": 1-10, "label": "信息质量", "note": "说明评分依据"},
+      "financial_feasibility": {"score": 1-10, "label": "财务可行性", "note": "说明评分依据"},
+      "valuation_safety": {"score": 1-10, "label": "估值安全边际", "note": "说明评分依据"},
+      "historical_precedent": {"score": 1-10, "label": "历史案例匹配", "note": "说明评分依据"}
+    }
+  },
+  "trade_annotation": {
+    "tier": "★★★ 高赔率机会|★★☆ 中等赔率|★☆☆ 低赔率机会|☆☆☆ 规避",
+    "total_score": "X/10",
+    "dimension_scores": {"odds_quality": 0-3, "pricing_headroom": 0-3, "transmission_confidence": 0-3, "model_consistency": 0-3},
+    "alignment_signals": ["信号描述"],
+    "tier_note": "交易标注核心理由",
+    "suggested_action": "建议操作"
+  },
+  "monitoring_kpis": {
+    "financial_verification_kpis": [{"name":"", "baseline":"", "target":"", "frequency":"季度", "verifies":""}],
+    "event_milestone_kpis": [{"name":"", "expected_timing":"", "significance":"", "verification_source":""}],
+    "competition_signal_kpis": [{"name":"", "current_state":"", "trigger":"", "action_if_triggered":""}],
+    "risk_trigger_kpis": [{"name":"", "linked_to":"", "severity":"high|medium|low", "monitor":""}]
+  },
+  "risk_triggers": {
+    "bull_trigger": "触发条件说明",
+    "bear_trigger": "触发条件说明",
+    "monitoring_frequency": "季度(与财报同步验证)"
+  },
+  "narrative": "投资叙事",
   "data_gaps": ["无缺口则写空数组[]。有缺口格式: 缺少[具体数据]，导致[具体判断]置信度下降"],
-  "change_request": [{"query": "搜索查询", "purpose": "填补什么数据缺口"}],
-  "preflight_check": ["[OK] 清单项1完成", "[OK] 清单项2a-2d完成", "[OK] 清单项3a-3e完成", "[OK] 概率和=1.00", "[OK] 参数逐级递增,全参数自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
+  "probability_rationale": "bear: [环节1(概率X%) + 环节2(概率Y%) + ... → 联合概率Z%]. bull: [超预期事件1(概率X%) + 超预期事件2(概率Y%) + ... → 联合概率Z%]. base: 100% - bear - bull = Z%",
+  "preflight_check": ["[OK] 清单项1完成", "[OK] 清单项2a-2d完成", "[OK] 清单项3a-3e完成", "[OK] 概率和=1.00", "[OK] upside单调递增,全参数自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
 }"""
-
-
-# ═══════════════════════════════════════
-# SOTP LLM-2 系统提示词 — 审阅分部参数 + 最终报告
-# ═══════════════════════════════════════
-
-SOTP_LLM2_PROMPT = """# 你是 SOTP 估值审阅官
-
-你的职责是审阅 LLM-1 的分部参数推演，对照代码计算的 SOTP 加总结果，补充缺失数据，纠正错误，输出完整最终报告。
-
-## 多轮对话与搜索（同标准管线，每轮最多 2 条搜索）
-
-格式: `"search_requests": [{"query": "...", "purpose": "..."}]`。最终报告不输出 search_requests。
-
-## 任务
-
-### 任务0: 事件锚点对照表 —— 最先执行，必须输出 event_anchor_audit
-
-从事件素材中提取所有量化锚点（价格、产能、时间节点、客户、毛利率目标），与 LLM-1 的各分部参数做逐项对照。
-
-**输出字段 event_anchor_audit**（必须包含在 JSON 中，不能为空）:
-```json
-"event_anchor_audit": {
-  "anchors_extracted": [{"anchor": "...", "source": "事件原文/专家纪要/分析师测算", "llm1_param": "对应参数值", "gap": "差距描述", "discount_reasonable": true/false}],
-  "anchor_to_param_gap_analysis": "一句话总结最大的锚点-参数差距",
-  "anchors_discounted_reasonably": true/false,
-  "anchors_ignored": ["列出被LLM-1忽略的事件锚点"]
-}
-```
-
-**收入校验（必须执行）**: 从事件锚点推算各分部收入，与 LLM-1 隐含收入对比:
-1. 算差距: 事件推算 vs LLM-1，差距多少%
-2. 判合理性: LLM-1 是否有 source 标注+置信度打折+理由？
-3. 做结论: 合理→discounted_reasonably=true；不合理→change_log 修正
-- 收入差距本身不是问题——问题是差距没有解释
-- **不能 0 条 change_log 但 event_anchor_audit 显示大差距——两者必须自洽**
-
-### 任务 1: 数据补充 — LLM-1 的 data_gaps 和 change_request 是必搜清单
-
-逐条生成 search_request，火山支持自然语言查询。volc 预搜索结果如已覆盖可跳过。
-
-### 任务 2: 逻辑审查 — 从 LLM-1 的 reasoning_trace 逐条追溯
-
-每个参数赋值在推理链里有依据吗？引用的数据和 baseline 一致吗？风险映射在参数里有体现吗？三情景逻辑分叉和参数差异对应吗？
-
-常规检查: 分部参数内部矛盾？可比公司选错？分部锚选择合理？
-
-**⚠️ 数据时效性铁律: 事件 > 一切。** 事件是唯一最新情报。券商预测、历史财务、火山搜索结果都可能是事件前的旧数据。矛盾时以事件为准——券商预测没反映涨价 → 券商预测过时，不是事件错了。
-
-### 任务 3: 参数修改 — 发现问题就必须改
-
-**修正铁律: 沿事件因果链走，不能跳过事件套历史数据。** 事件改变了什么 → 参数如何反映 → LLM-1 偏差是高估还是低估事件 → 往哪个方向调。禁止用当前 ROIC/历史 PE 做机械对标——它们是事件冲击前的基本面快照。
-
-每个修改附理由+证据。
-
-### 任务 4: 最终判断 — 基于代码计算的 SOTP 加总数字:
-- 置信度、交易标注、预期差、监测 KPI、最终叙事
-
-## 输出 Schema — 完整最终报告
-
-你在 LLM-1 的输出基础上审阅修改，输出完整报告。包含 LLM-1 的所有字段 + 你的审阅追加:
-
-{
-  "segments": [{ "同 LLM-1，参数可能被修改" }],
-  "scenario_valuation": { "scenario_details": { "bear/base/bull": { "完整参数" } } },
-  "reasoning_trace": ["LLM-1: ...", "LLM-2: 审查-..."],
-  "change_log": [{"path": "segments.0.base.target_ps", "old_value": 12, "new_value": 8, "reason": "...", "evidence": "..."}],
-  "confidence": { "overall_score": 1-10, "overall_label": "高|中|低", "dimensions": { "info_quality": {"score": 1-10, "label": "信息质量", "note": "..."}, "financial_feasibility": {"score": 1-10, "label": "财务可行性", "note": "..."}, "valuation_safety": {"score": 1-10, "label": "估值安全边际", "note": "..."}, "historical_precedent": {"score": 1-10, "label": "历史案例匹配", "note": "..."} } },
-  "trade_annotation": { "tier": "★★★ 高赔率机会|★★☆ 中等赔率|★☆☆ 低赔率机会|☆☆☆ 规避", "total_score": "X/10", "dimension_scores": {"odds_quality": 0-3, "pricing_headroom": 0-3, "transmission_confidence": 0-3, "model_consistency": 0-3}, "tier_note": "...", "suggested_action": "..." },
-  "monitoring_kpis": { "financial_verification_kpis": [{"name":"","baseline":"","target":"","frequency":"季度","verifies":""}], "event_milestone_kpis": [{"name":"","expected_timing":"","significance":"","verification_source":""}], "competition_signal_kpis": [{"name":"","current_state":"","trigger":"","action_if_triggered":""}], "risk_trigger_kpis": [{"name":"","linked_to":"","severity":"high|medium|low","monitor":""}] },
-  "risk_triggers": {},
-  "narrative": "...",
-  "expectation_gap": { "level": "市场更乐观|市场更悲观|预期相近|无法解码", "note": "..." },
-  "validation_crosscheck": {}
-}
-
-核心约束: WACC 不可改 / 概率和=1.0 / 参数修改必须有证据 / 输出纯 JSON / **禁止在 narrative 中写任何市值数字——估值由代码计算，你不应该自己估算**
-
-**⚠️ 关键铁律: change_log 不能为空。** 如果你的 narrative 里写了"分部PS太高"、"低毛利分部不应享受高PS"、"可比公司选错了"，你必须在 change_log 里给出对应的参数修改。narrative 里的每个审阅发现都必须能在 change_log 里找到对应的条目。只有一种情况 change_log 可以为空：你确认 LLM-1 的每个分部参数都完美无误。但这种情况下你的 narrative 也不应该包含任何批评。
-"""
 
 
 # ═══════════════════════════════════════
@@ -954,24 +846,80 @@ def _build_segments_section(
     market_narrative: dict,
     core: dict,
 ) -> str:
-    """构建分部信息——列出各分部名称、锚类型、是否事件催动。
+    """构建两段式分部信息——叙事主锚 + 其他业务（合并所有副锚）。"""
+    total_rev = core.get("revenue_ttm_yi", 1)
+    secondary_total = sum(sa.get("revenue_share_pct", 0) for sa in secondary_anchors)
+    primary_share = max(0, 100 - secondary_total)
 
-    LLM-1 根据此表和 product_mix 数据自行判定 segment_revenue_yi。
-    不在此处做任何算术——revenue_share_pct 可能为字符串，不可靠。
-    """
-    lines = ["| 分部 | 锚 | 事件催动 |",
-             "|------|-----|---------|"]
+    lines = ["| 分部 | 角色 | 锚 | 事件催动 | 收入占比 | 估算收入(亿) |",
+             "|------|------|-----|---------|---------|-------------|"]
 
-    for sa in secondary_anchors:
-        seg_name = sa.get("segment", "?")[:40]
-        anchor = sa.get("anchor", "?")
-        driven = "✅是" if sa.get("is_event_driven") else "❌否"
-        lines.append(f"| {seg_name} | {anchor} | {driven} |")
+    # 叙事主锚分部 — 合并所有与 primary_anchor 相同的副锚
+    primary_rev_segments = [sa for sa in secondary_anchors if sa.get("anchor") == primary_anchor]
+    other_segments = [sa for sa in secondary_anchors if sa.get("anchor") != primary_anchor]
 
+    primary_label = market_narrative.get("core_bet", "叙事主线")[:20]
+    primary_rev = total_rev * primary_share / 100
+
+    # 主锚分部内部子业务明细（关键: 展示哪些子业务被事件催动、哪些不是）
+    if primary_rev_segments:
+        lines.append(f"| {primary_label} | 叙事主锚(变参) | {primary_anchor} | 见子业务 | {primary_share:.1f}% | {primary_rev:.1f} |")
+        for ps in primary_rev_segments:
+            driven = "✅是" if ps.get("is_event_driven") else "❌否"
+            ps_rev = total_rev * ps.get("revenue_share_pct", 0) / 100
+            lines.append(f"|   ↳ {ps.get('segment','?')} | 子业务 | {ps.get('anchor',primary_anchor)} | {driven} | {ps.get('revenue_share_pct',0):.1f}% | {ps_rev:.2f} |")
+    else:
+        lines.append(f"| {primary_label} | 叙事主锚(变参) | {primary_anchor} | ✅是 | {primary_share:.1f}% | {primary_rev:.1f} |")
+
+    # 其他业务（锚类型不同的副锚，基准不变）
+    other_share = sum(sa.get("revenue_share_pct", 0) for sa in other_segments)
+    if other_share > 0:
+        other_rev = total_rev * other_share / 100
+        other_anchor = other_segments[0].get("anchor", "earnings") if other_segments else "earnings"
+        other_names = " + ".join(sa.get("segment", "?") for sa in other_segments)
+        any_driven = any(sa.get("is_event_driven") for sa in other_segments)
+        driven_mark = "✅是" if any_driven else "❌否"
+        lines.append(f"| {other_names} | 其他业务(不变) | {other_anchor} | {driven_mark} | {other_share:.1f}% | {other_rev:.1f} |")
+
+    # 如果没有任何副锚（100% 主锚），标注特殊处理
     if not secondary_anchors:
-        lines.append("| （单一分部，无需拆分） | — | — |")
+        lines.append("| （无其他业务，100%为叙事主锚分部） | — | — | — | — |")
 
-    return chr(10).join(lines)
+    # 主锚分部内部异质性提示 — 当主锚内混合了事件催动和非事件催动的子业务时
+    if primary_rev_segments:
+        driven_segs = [s for s in primary_rev_segments if s.get("is_event_driven")]
+        non_driven_segs = [s for s in primary_rev_segments if not s.get("is_event_driven")]
+        if driven_segs and non_driven_segs:
+            driven_share = sum(s.get("revenue_share_pct", 0) for s in driven_segs)
+            non_driven_share = sum(s.get("revenue_share_pct", 0) for s in non_driven_segs)
+            driven_names = "+".join(s.get("segment", "?") for s in driven_segs)
+            non_driven_names = "+".join(s.get("segment", "?") for s in non_driven_segs)
+            lines.append(f"\n> ⚠️ **主锚分部内部异质**: {driven_names}({driven_share:.0f}%,事件催动) 与 {non_driven_names}({non_driven_share:.0f}%,非事件催动) 被合并为同一个参数组。CAGR和PS必须按收入占比加权——非事件催动子业务不得享受事件溢价。")
+
+    # ── 产品表交叉校验：Agent-2a 的分部占比是否与产品增速矛盾？──
+    fw = core.get('_forward_looking', {}) or {}
+    cats = fw.get('categories', {}) or {}
+    products = (cats.get('earnings_elasticity', {}) or {}).get('products', {}) or {}
+    mix = products.get('product_mix', []) or []
+    if mix:
+        # 产品按增速分组：>30%为高增长(revenue锚候选)，<20%为低增长(earnings锚候选)
+        high_growth_share = sum(
+            p.get('revenue_share_pct', 0) for p in mix
+            if (p.get('revenue_yoy_pct') or 0) > 30
+        )
+        low_growth_share = sum(
+            p.get('revenue_share_pct', 0) for p in mix
+            if (p.get('revenue_yoy_pct') or 0) < 20
+        )
+        # Agent-2a 主锚占比 vs 产品高增长占比
+        gap = high_growth_share - primary_share
+        if abs(gap) > 15:
+            lines.append(f'\n> **分部定义纠偏**：产品表中高增速(>30% YoY)产品合计占{high_growth_share:.0f}%，但Agent-2a判定的叙事主锚分部仅占{primary_share:.0f}%，偏差{gap:.0f}ppt。')
+            lines.append(f'> 请以产品表的增速分组为准重新划分分部：高增速产品归入叙事主锚分部(revenue锚)，低增速/低毛利产品({low_growth_share:.0f}%)归入其他业务(earnings锚)。')
+            lines.append(f'> 若2a的划分与产品表冲突，以产品表为准——2a没有产品级增速数据。')
+
+    return "\n".join(lines)
+
 
 def _build_event_driven_note(
     rd_2b: dict,
@@ -2102,79 +2050,7 @@ class SOTPScenarioAsymmetry:
                 print(f"  [SOTP] result seg字段: {result.get('segments', 'MISSING')}", flush=True)
             raise
 
-        # ── Step 2a: volc 预搜索（从 LLM-1 的 data_gaps 提取）──
-        cb(2.5, "volc 预搜索")
-        pre_search_queries = _extract_search_queries(result)
-        volc_pre_search = ""
-        if pre_search_queries:
-            volc_results = []
-            for q in pre_search_queries:
-                try:
-                    res = _call_volc_search(q)
-                    volc_results.append(f"查询: {q}\n结果: {res}")
-                except Exception:
-                    volc_results.append(f"查询: {q}\n结果: 搜索失败")
-            volc_pre_search = "\n\n".join(volc_results)
-
-        # ── Step 2b: LLM-2 多轮搜索审阅 ──
-        cb(2.7, "LLM-2 审阅")
-        try:
-            # 构建 LLM-2 输入: LLM-1 输出 + 代码计算结果 + 完整上下文
-            llm2_result = _call_llm2(
-                result, sotp_computed,
-                {"pe_ttm": core.get("pe_ttm", 0), "pb": core.get("pb", 0),
-                 "implied_g_pct": 0, "market_premium_pct": 0, "ev_yi": 0,
-                 "nopat_yi": 0, "roic_pct": 0, "wacc_simple_pct": wacc_params.get("wacc_pct", 10)},
-                wacc_params, data_package,
-                agent2b_output or {}, event_data,
-                agent2a_output=agent2a_output,
-                baseline_report=baseline_report,
-                volc_pre_search=volc_pre_search,
-                system_prompt=SOTP_LLM2_PROMPT,
-            )
-        except Exception:
-            print("  [SOTP] LLM-2 故障，降级为 LLM-1 + 代码修正模式", flush=True)
-            import traceback
-            traceback.print_exc()
-            llm2_result = {}
-
-        # ── Step 2.5: 合并 LLM-1 + LLM-2，LLM-2 为主体 ──
-        cb(2.8, "合并输出")
-        # 保护 LLM-1 的 segments 数据
-        llm1_segments = result.get("segments", [])
-        result = _merge_llm_outputs(result, llm2_result)
-        if not result.get("segments"):
-            result["segments"] = llm1_segments
-
-        # 应用 change_log 中的参数修改
-        changes = result.get("change_log", [])
-        if changes:
-            segments = result.get("segments", [])
-            for c in changes:
-                path = c.get("path", "")
-                parts = path.split(".")
-                new_val = c.get("new_value")
-                # path like "segments.0.base.target_ps" or "segments.1.bull.revenue_growth_3y_cagr_pct"
-                if parts[0] == "segments" and len(parts) >= 4:
-                    idx = int(parts[1])
-                    if idx < len(segments):
-                        target = segments[idx]
-                        for p in parts[2:-1]:
-                            target = target.get(p, {})
-                        c["old_value"] = target.get(parts[-1])
-                        target[parts[-1]] = new_val
-            if changes:
-                print(f"  [SOTP] 应用了 {len(changes)} 条参数修改", flush=True)
-
-        # 在 LLM-2 的参数上重新计算
-        sotp_computed = _compute_sotp_from_llm(result, core)
-        sv = result.get("scenario_valuation", {})
-        sv["probability_weighted_upside_pct"] = sotp_computed["weighted_upside_pct"]
-        sv["probability_weighted_mcap_yi"] = sotp_computed["weighted_mcap_yi"]
-        sv["asymmetry_ratio"] = sotp_computed["asymmetry_ratio"]
-        sv["_computed_by_code"] = True
-
-        # ── Step 3: 修正交易标注 ──
+        # ── Step 3: 修正交易标注（复用 Agent-3）──
         cb(3, "修正交易标注")
         ta = result.get("trade_annotation", {})
         sv = result.get("scenario_valuation", {})
@@ -2230,17 +2106,6 @@ class SOTPScenarioAsymmetry:
         sv_details = sv.get("scenario_details", {})
         sotp_warnings = _validate_sotp_specific(result, sv_details, core)
         validation_warnings.extend(sotp_warnings)
-
-        # ── 强制跨族底线校验 (与标准Agent-3一致) ──
-        mandatory_xcheck = _mandatory_cross_validation(
-            core, result, agent2b_output or {},
-        )
-        if mandatory_xcheck:
-            existing_xcheck = result.get("validation_crosscheck", {})
-            if existing_xcheck and existing_xcheck.get("validation_strategy") == "self_validation":
-                mandatory_xcheck["_overrides_llm_selfcheck"] = True
-            result["_code_cross_validation"] = mandatory_xcheck
-
         if validation_warnings:
             codes = [w["code"] for w in validation_warnings]
             print(f"  [SOTP validation] warnings: {codes}", flush=True)
@@ -2297,10 +2162,6 @@ class SOTPScenarioAsymmetry:
             "scenario_details": sv.get("scenario_details", {}),
             "capital_structure": capital_diag,
         }
-        # 前端可读的 segments
-        output["segments"] = result.get("segments", [])
-        output["llm2_change_log"] = result.get("_llm2_change_log", result.get("change_log", []))
-        output["llm_split_version"] = result.get("_llm_split_version", "1-call")
 
         cb(6, "SOTP估值完成")
         return output

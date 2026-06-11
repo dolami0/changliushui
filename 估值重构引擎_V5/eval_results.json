@@ -1,0 +1,154 @@
+{
+  "summary": {
+    "eval_mode": "pure_reasoning (no web search)",
+    "cases_count": 5,
+    "avg_total": 0.57,
+    "avg_chain_match": 0.9,
+    "avg_node_hit": 0.9,
+    "avg_top_pick_hit": 0.3,
+    "avg_any_hit": 0.3,
+    "avg_elapsed_sec": 549.0
+  },
+  "details": [
+    {
+      "id": "eval-001",
+      "chain_true": "AI算力-高速光互连",
+      "chain_pred": "AI算力-高速光互连产业链",
+      "nodes_pred": [
+        "高速DSP电芯片（数通光互联）",
+        "高速光芯片（EML/DFB/CW激光器芯片，数通光互联）"
+      ],
+      "nodes_true": [
+        "高速光芯片（EML/硅光）",
+        "高速光模块制造"
+      ],
+      "top_pick_code": "",
+      "top_pick_name": "无高赔率标的",
+      "top_pick_node": "",
+      "runner_up_code": "",
+      "runner_up_name": "无高赔率标的",
+      "runner_up_node": "",
+      "scores": {
+        "chain_match": 1.0,
+        "node_hit_rate": 1.0,
+        "top_pick_hit": 0.0,
+        "any_hit": 0,
+        "no_pick_valid": 0.0,
+        "total": 0.4
+      },
+      "elapsed": 390
+    },
+    {
+      "id": "eval-002",
+      "chain_true": "商业航天",
+      "chain_pred": "商业航天",
+      "nodes_pred": [
+        "火箭发动机系统（上游核心动力系统）",
+        "卫星通信载荷（上游核心电子载荷）"
+      ],
+      "nodes_true": [
+        "宇航级核心芯片与元器件",
+        "火箭发动机制造与测试"
+      ],
+      "top_pick_code": "001270",
+      "top_pick_name": "铖昌科技",
+      "top_pick_node": "卫星通信载荷（上游核心电子载荷）",
+      "runner_up_code": "688270",
+      "runner_up_name": "ST臻镭",
+      "runner_up_node": "卫星通信载荷（上游核心电子载荷）",
+      "scores": {
+        "chain_match": 1.0,
+        "node_hit_rate": 1.0,
+        "top_pick_hit": 1.0,
+        "any_hit": 1.0,
+        "no_pick_valid": 1.0,
+        "total": 1.0
+      },
+      "elapsed": 643
+    },
+    {
+      "id": "eval-003",
+      "chain_true": "光伏",
+      "chain_pred": "光伏产业",
+      "nodes_pred": [
+        "光伏高纯石英砂（上游辅材环节）",
+        "光伏TOPCon电池银浆（上游辅材环节）"
+      ],
+      "nodes_true": [
+        "TOPCon电池及组件制造",
+        "光伏逆变器及储能系统"
+      ],
+      "top_pick_code": "",
+      "top_pick_name": "无高赔率标的",
+      "top_pick_node": "",
+      "runner_up_code": "",
+      "runner_up_name": "无高赔率标的",
+      "runner_up_node": "",
+      "scores": {
+        "chain_match": 1.0,
+        "node_hit_rate": 1.0,
+        "top_pick_hit": 0.0,
+        "any_hit": 0,
+        "no_pick_valid": 0.0,
+        "total": 0.4
+      },
+      "elapsed": 733
+    },
+    {
+      "id": "eval-004",
+      "chain_true": "人形机器人",
+      "chain_pred": "人形机器人",
+      "nodes_pred": [
+        "谐波减速器（人形机器人旋转关节精密传动）",
+        "六维力传感器（人形机器人力觉感知核心部件）"
+      ],
+      "nodes_true": [
+        "精密减速器（谐波/RV）",
+        "力传感器与执行器"
+      ],
+      "top_pick_code": "002896",
+      "top_pick_name": "中大力德",
+      "top_pick_node": "谐波减速器（人形机器人旋转关节精密传动）",
+      "runner_up_code": "300503",
+      "runner_up_name": "昊志机电",
+      "runner_up_node": "谐波减速器（人形机器人旋转关节精密传动）",
+      "scores": {
+        "chain_match": 1.0,
+        "node_hit_rate": 1.0,
+        "top_pick_hit": 0.5,
+        "any_hit": 0.5,
+        "no_pick_valid": 1.0,
+        "total": 0.7500000000000001
+      },
+      "elapsed": 371
+    },
+    {
+      "id": "eval-005",
+      "chain_true": "AI算力-光芯片国产替代",
+      "chain_pred": "AI算力-光通信产业链",
+      "nodes_pred": [
+        "高速EML光芯片（电吸收调制激光器芯片）",
+        "磷化铟衬底（化合物半导体衬底材料）"
+      ],
+      "nodes_true": [
+        "高速EML光芯片设计与制造",
+        "硅光集成与CPO封装"
+      ],
+      "top_pick_code": "002023",
+      "top_pick_name": "海特高新",
+      "top_pick_node": "磷化铟衬底（化合物半导体衬底材料）",
+      "runner_up_code": "600206",
+      "runner_up_name": "有研新材",
+      "runner_up_node": "磷化铟衬底（化合物半导体衬底材料）",
+      "scores": {
+        "chain_match": 0.5,
+        "node_hit_rate": 0.5,
+        "top_pick_hit": 0.0,
+        "any_hit": 0.0,
+        "no_pick_valid": 1.0,
+        "total": 0.30000000000000004
+      },
+      "elapsed": 606
+    }
+  ]
+}

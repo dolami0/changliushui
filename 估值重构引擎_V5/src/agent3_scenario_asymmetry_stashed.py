@@ -102,11 +102,12 @@ Agent-2a 已完成叙事诊断，你必须信任其结论。从用户消息中�
 - 里程碑时间线是事件冲击的**靶子**——判断事件会加速、推迟还是取消每个节点。
 - 脆弱点分析告诉你"当前叙事哪里最薄"——这些决定了 bear 情景的参数方向和概率。
 
-**② 市场在用什么模型定价（从 "Agent-2a 叙事诊断结论" 中提取）**
+**② 市场在计价什么（从 "Agent-2a 叙事诊断结论" 和 "当前市值隐含假设" 中提取）**
 
-这是市场**用什么框架理解这家公司**。
-- 估值锚（primary_anchor）: 市场在用 PE、PS 还是 PB 定价？锚类型决定了参数体系——你的参数必须与锚匹配。
-- 锚的合理性: 这个锚是出于"盈利可见度高"（合理）还是"亏损/微利无PE可看"（被迫）？理解锚的成因比锚本身更重要。
+这是市场**已经在价格中反映了多少预期**。
+- 计价程度（overall_priced_in / priced_in_estimate）: 事件已被消化了多少？剩余催化空间多大？
+- 隐含假设（Implied Story）: 当前市值反过来隐含了什么增速/利润率/市占率？这设定了估值的起点参照。
+- 估值锚（primary_anchor）: 市场在用 PE、PS 还是 PB 定价？锚类型约束了你的参数框架。
 
 **③ 事件 — 冲击投资地图的变量**
 
@@ -114,51 +115,9 @@ Agent-2a 已完成叙事诊断，你必须信任其结论。从用户消息中�
 - **事件本身**（原始事件、事件研判、背景知识）：产能、价格、供需缺口的**当前**数据——估值参数的主要锚定来源，优先于地图中的历史基线。
 - **个股路线**（投资主题、发展推演、催化节点、逆向风险）：公司的既定轨迹。事件变量将作用于这条路线——加速、跃迁、还是偏离？逆向风险（adversarial_thinking）约束 bear 情景的证伪路径，催化节点（future）是里程碑时间线的补充。
 
-**三者的关系**: 地图告诉你"事件冲击前的基本面"，事件告诉你"基本面变了多少"，你的参数 = 地图财务基线 + 事件冲击带来的基本面变化。估值锚由 2a 确定，不可推翻。
+**三者的关系**: 地图告诉你"原来是什么"，市场计价告诉你"已经预期了多少"，事件告诉你"实际变了多少"。你的参数 = 地图基线 + 事件冲击 - 已计价部分。
 
 **关键**: 估值锚和计价程度以 2a 为准（不可推翻）。当事件素材中的当前数据与地图中的历史基线冲突时，以事件素材为准——事件已经改变了现状。
-
-**⚠️ 事件量化锚点——赋值前必须提取并回应:**
-
-读完事件素材后，从三个来源提取量化锚点: ①事件原文 ②背景知识 ③baseline（注意 baseline 可能有滞后）。在 reasoning_trace 的"清单项1"末尾列出。格式:
-
-```
-[事件量化锚点 — 含来源标注]
-- 收入/产能/时间: (来源: 事件正文/背景知识/行业全貌, 如 3000吨×200万/吨=60亿)
-- 价格: (来源: ...)
-- 利润率: (来源: ...)
-- 估值倍数: (来源: ...)
-```
-
-**数据优先级——时间戳 > 一切**: 事件是唯一最新情报。去年的公司公告（哪怕 L5）不如上个月的事件纪要（哪怕 L2）更能反映当前现实。产能从 2700 吨变到 5000 吨？除非有证据推翻事件的更新，否则以事件为准。在事件内部，找不出来源冲突时，取最新的、取最具体的。
-
-**操作化——防止滞后财务数据覆盖事件新数据**:
-1. 赋 PS 时: 如果当前毛利率 17% 但事件描述涨价 30-50%+产品结构升级 → 毛利率目标 25%+，PS 应以改善后的毛利率为基准，不以当前 17% 为基准。低毛利是过渡态，不是稳态。
-2. 赋 CAGR 时——从事件锚点出发，根据来源置信度打折:
-   a) 从事件锚点提取: 产能×利用率×价格 = 事件隐含收入。分别算各产品线。
-   b) 用事件隐含收入 / 当前收入 = 隐含增长倍数。年化: CAGR = (倍数)^(1/年数)-1。
-   c) 这是你的起点。打折是允许的——但必须根据来源置信度，不能拍脑袋:
-      - 公司公告的产能/价格: 不打折或<10%（已执行或已公告的可信度高）
-      - 行业专家纪要/券商预测: 10-30% 折扣（有行业验证但非公司确认）
-      - 分析师空间测算/目标利润率: 20-40% 折扣（方向对但数字粗）
-   d) 每条打折必须在 reasoning_trace 中显式标注: 锚点原文→置信度→打折幅度→打折后数字→理由。不允许综合一句"更保守"覆盖所有打折。
-   e) 示例: "事件锚: 3000吨(专家纪要,置信度中→打8折=2400吨)×150万/吨(海外价一半,置信度中→打85折=128万)×75%利用率=23亿; 当前4亿→CAGR=79%。进一步打折: 产能爬坡曲线第一年只到60%→下调到55%。"
-3. 对每个参数自问: "这个数字反映的是事件冲击前还是冲击后的状态？" 如果是冲击前，重新赋。
-
-这些数字是你赋参数时必须**显式回应**的。偏离必须说明理由和打折幅度。**不能不给理由就偏离。**
-
-**baseline 六维度消费路由——每个维度必须在下游清单项中显式使用:**
-
-| 地图维度 | 消费清单项 | 具体用途 |
-|---------|:---:|------|
-| 公司身份与收入结构 | 3d | 产品线拆分→事件驱动的收入增量分配; 收入结构决定不同产品线对事件冲击的弹性差异 |
-| 财务基线 | 3e | ROIC/净利/营收/毛利率的**推演起点值**——不是终点，是事件冲击前的基线 |
-| 产业位置 | 3e | 可比公司列表+市占率+竞争位势→PE/PS锚定的参照系来源 |
-| 增长轨迹与里程碑 | 3d | 产能节点/产品管线/客户认证时间线→bear"哪个环节崩塌"/bull"哪个节点加速"的分叉点 |
-| 投资主线与脆弱点 | 3d | **直接输入风险映射**——脆弱点=约束base/bull的已知风险，主线=事件加强了哪条路径 |
-| 量化锚点 | 3e | 可比PE/PS/PB中位数+历史PE band→赋参数的**起点**，赋完参数后与起点交叉校验（见3e末尾） |
-
-**消费闭环要求**: reasoning_trace 的每条参数推演必须能追溯到"这个判断来自地图哪个维度"。如果某个维度在整条推理链中从未出现，re-trace 你的步骤——你漏了东西。
 
 ## 清单项 2: 引用 Agent-2a 诊断结论（不重做审核）
 
@@ -177,7 +136,7 @@ Agent-2a 已完成叙事诊断，你必须信任其结论。从用户消息中�
 - 2a 的 step2d_score 告诉你前瞻信号对叙事的数据支撑程度，在概率推演时作为参考——不是模板，不是上限
 - base = 100% - bull - bear
 
-**bear 估值硬底**: 故事证伪不等于公司归零。从 baseline「财务基线」维度获取当前净利/净资产/净现金数据，自行选择适用底线:
+**bear 估值硬底**: 故事证伪不等于公司归零。自行选择适用底线:
   - 盈利企业: bear mcap ≥ TTM净利 × 行业周期底部PE（凭行业知识判断这个"底部"是多少——不同行业的底部PE天差地别）
   - 有硬资产: bear mcap ≥ 净资产 × 保守PB（与ROE匹配,ROE越低保值PB越低）
   - 纯故事型: bear mcap ≥ 净现金
@@ -194,6 +153,7 @@ bear 不可推翻已发生的业务事实（如已出货产品→不应给0估�
 |---------|------|---------|
 | 信号匹配度 (step2d) | 2a signal_audit | **基础展宽** — 信号越好, bull 概率上限越高 |
 | 分布形状 (distribution_shape) | 2a event_profile | **分布形状** — bimodal→宽双峰, unimodal→宽单峰, narrow→窄集中 |
+| 计价程度 (priced_in %) | 2a event_pricing | **偏斜方向 + upside 天花板** |
 
 ### 3a. 事件性质→分布形状
 
@@ -210,130 +170,31 @@ bear 不可推翻已发生的业务事实（如已出货产品→不应给0估�
 
 **关键**: 不要用旧的 sudden/ongoing 概念。直接根据 2a 给出的 `distribution_shape` 选择对应的行。
 
-### 3b. 事件冲击量级→参数幅度
+### 3b. 计价程度→upside 天花板
 
-你在清单项1中已理解了事件改变了什么。现在将事件的冲击量级转化为参数幅度:
+**bull 的 upside 受计价程度的约束:**
 
-**事件改变基本面的三种方式及对应的参数体现:**
+2a 的 priced_in 告诉你市场已经消化了多少事件价值。剩余未计价的空间越大，bull 的理论上限越高；已充分计价的标的，bull 只能来自"比市场预期的还要好"——即二阶导数变化（增速超预期、时间超前、利润率更高）。
 
-| 事件类型 | 改变的参数 | 关键约束 |
-|---------|-----------|---------|
-| 涨价/降本 | NOPAT 起点（一次性跳升）、毛利率 | 区分一次性跳升 vs 持续改善；跳升后增速应回落至有机增长水平 |
-| 放量/产能扩张 | 量增 CAGR（持续性增长）、再投资率 RR | 产能上限约束量增；CAPEX/折旧比佐证产能扩张节奏 |
-| 新市场/新产品 | 结构升级（mix shift）、终端市占率 | 认证周期/客户导入时间线约束节奏；非主锚产品线增速不可等于主锚线 |
-
-**赋参时逐条追问**: 事件改变了哪个财务变量？改变的量级是多少？这个量级在参数里是起点跳升还是持续增速？
+**bear 的 downside 则相反:** 计价越多，逆转伤害越大。未计价的标的，bear 仅回到事件前估值范式（损失时间成本）；充分计价的标的，预期逆转叠加估值范式降级（损失信仰溢价）。
 
 ### 3c. 投资命题 + 因果分叉点
 
 引用 2a 的 primary_anchor 和 priced_in_estimate，结合事件变量和个股路线，写 1 句"如果-那么"命题。
 拆命题为因果环节，标注证实/证伪条件。
 
-### 3c-补充. 增长路径拆解 (CAGR Decomposition)
-
-**目的**: 3c 的投资命题给出了一个总 CAGR。拆解表强制你把这个数字分解为可独立验证的驱动力, 并诚实标注每个驱动力背后的信息质量。不做机械打折——不确定性的处理交给概率分布和置信度。拆解表的价值在于**透明**: 让阅读者看到你的 CAGR 是从哪里来的, 哪部分扎实、哪部分是推断。
-
-**拆解规则**:
-
-**第一步: 驱动力分解**
-
-将 base 的 revenue CAGR 拆解为三个互不重叠的驱动力:
-
-  CAGR = 量增(%) + 纯涨价(%) + 结构升级(%)
-
-- **量增**: 物理销量变化对收入的贡献。**如果公司存在多条产品线且增速差异 >15pp, 必须分产品线给出量增。** 各产品线量增按当前收入占比加权后应等于全公司量增。
-- **纯涨价**: 同产品、同规格、同客户的净价格上涨。不含产品结构变化。
-- **结构升级**: 高单价/高毛利产品占比提升带来的均价上升。结构升级 = 全公司均价变化 - 纯涨价。
-
-**禁止的做法**:
-- X 结构升级的红利归入量增
-- X 结构升级的红利归入纯涨价 ("均价从33万到80万所以价增30%", 其中22pp其实是结构升级)
-- X 全公司平均量增掩盖产品线增速分化 (电子级CAGR 60% vs 热控5% 不能混成"全公司量增25%")
-- X 量增和价增之间存在隐含重叠
-
-**非主锚产品线的处理**:
-
-事件素材通常只覆盖叙事主线产品。其他产品线的数据往往缺失——你需要自行给出假设, 但必须:
-
-1. **显式标注**: 对缺乏素材支撑的产品线, 标注 `[自行假设]`, 后跟 1-2 句逻辑依据。
-2. **写入 data_gaps**: "非主锚产品线[名称]: 缺少[具体数据], 当前假设[X%增速]基于[逻辑依据]"
-3. **一致性防火墙**: 非主锚产品线的增速不能与 baseline 历史趋势矛盾。若偏离历史趋势, 必须说明原因。
-
-**分部数据完全缺失时的处理**:
-
-如果 Agent-1 的产品 mix 为空（`product_mix: []`），无法做分产品线拆解——此时从事件素材中提取产品级描述来构建全局综合假设:
-
-1. 事件素材中通常有产品级的价格/结构描述（如"电子级占比60%、均价150万/吨"、"热控占比40%、均价12万/吨"）——从中推导加权综合 CAGR 和毛利率。
-2. 综合 CAGR = Σ(各产品线收入占比 × 各产品线增速)。增速从事件的"量增+涨价+结构升级"描述推导。
-3. 综合毛利率 = Σ(各产品线收入占比 × 各产品线毛利率)。各产品线毛利率从事件的价格描述和 baseline 的成本结构推导。
-4. 无法区分时，在 data_gaps 标注"缺少产品级收入拆分，CAGR/毛利率为全局综合估算"。
-
-**第二步: 信息质量标注 (仅标注, 不打折)**
-
-对每个驱动力, 标注信息来源的质量。这**不影响**估值计算中的 CAGR 数值——CAGR 用你的最佳估计。标注的目的是让阅读者知道哪些数字是硬的、哪些是软的。
-
-  [硬数据]:   有 L4-L5 数据直接支撑, 或已有合同/公告/产能硬证
-  [强推断]:   有 L2-L3 多个独立信息源可交叉验证, 逻辑链完整
-  [弱推断]:   仅有单一 L2-L3 信息源, 或存在未验证的关键假设
-  [推测]:     纯靠行业常识和方向判断, 无具体数据, 但方向合理
-  [自行假设]: 连行业参考都缺乏, 基于保守原则填的占位数字
-
-不确定性通过三情景概率分布和置信度来表达, 不通过对 CAGR 的机械打折来表达。
-
-**输出格式**:
-
-```
-清单项3c-补充-增长路径拆解:
-
-[产品线结构] (如有多条产品线且增速差异>15pp, 先列出)
-  产品线A (当前占比X%): 量增CAGR=+A%, 纯涨价=+B%
-  产品线B (当前占比Y%): 量增CAGR=+C%, 纯涨价=+D% [自行假设]
-  全公司量增加权: +E%
-
-| 驱动力 | 贡献 | 信息质量 | 信息来源 | 信息缺口 |
-|--------|------|---------|---------|---------|
-| 量增: [分产品线描述] | +E% | [硬数据/强推断/弱推断/推测/自行假设] | [来源] | [缺失什么] |
-| 纯涨价: [描述] | +F% | [同上] | [来源] | [缺失什么] |
-| 结构升级: [描述] | +G% | [同上] | [来源] | [缺失什么] |
-| 合计 (你的最佳估计) | +N% | | | |
-```
-
-**内部一致性校验** (输出前自检):
-
-1. (1+E%)×(1+F%)×(1+G%) - 1 ≈ N% (允许 ±3pp 交互项)
-2. 分产品线量增加权应等于全公司量增
-3. 结构升级贡献应与产品线占比变化的数学结果自洽
-
-**使用规则**:
-
-1. base scenario 的 revenue_growth_3y_cagr_pct = 你的最佳估计 (+N%)。不打折。
-2. 信息缺口标注写入 `data_gaps`——这些是预研探针的改进方向。
-3. 在 `reasoning_trace` 中新增 "清单项3c-补充-增长路径拆解" 条。
-4. 如果某个驱动力属于 `[自行假设]` 且你对其完全没有信心, 可以在 bear 概率或 base 概率中体现这种不确定性——但不要在 CAGR 数字上打折。
-
 ### 3d. 因果剧本（先写故事，不赋参数）
 
-**前置: 风险映射** — 分两步:
-
-**第一步: 引用 baseline 脆弱点** — 从投资地图的「投资主线与脆弱点」维度提取已识别风险。这些是预研阶段已确认的风险，不需要重新判断。逐条声明:
-- 该风险在 baseline 中的原始表述
-- 主要约束哪个情景（bear/base/bull）
-- 在参数中如何体现（降概率/压倍数/限增速/调利润率）
-
-**第二步: 补充事件特有风险** — 事件素材中的逆向风险（adversarial_thinking）和个股路线中的催化风险。检查是否有 baseline 未覆盖的风险维度（如事件带来的新竞争威胁、政策窗口期等）。
-
-**风险分类规则**:
+**前置: 风险映射** — 逐条阅读逆向风险，同时结合财务数据观察是否有文本未提及但数据中可见的负面事实（如 *ST、持续亏损、大股东减持、ROIC 长期低于 WACC 等）。每条风险主要约束哪个情景？在写剧本之前先明确:
 - 涉及已发生负面事实的风险（如内部人减持、客户集中度高、产能不足、*ST状态）→ 同时约束 base 和 bull。base 参数不能建立在"这些问题不存在"的假设上；bull 需要说明这些问题如何被克服。
 - 涉及未发生潜在威胁的风险（如技术替代、政策变化）→ 主要约束 bear 的证伪路径。
 - 如果你认为某条风险不影响任何情景，在 reasoning_trace 中写一句理由。
-
-**不要再扫一遍财务数据找负面信号**——baseline 的脆弱点分析已经做了这件事。你的工作是引用 + 补充，不是重做。
 
 然后写三情景剧本:
 - **bear**: 证伪路径必须区分两件事:
     **已发生的事实**（认证通过、已签合同、已投产产能）→ bear 不能"反悔"这些，只能假设后续执行恶化
     **未发生的推测**（远期订单、产能爬坡、市场份额）→ 这才是 bear 的证伪空间
-    传导链从哪里崩塌？市场退回什么模型？注意：bear 不可推翻已发生的业务事实（如已出货产品→不应给0估值）。
+    传导链从哪里崩塌？市场退回什么模型？当前已计价程度意味着下跌空间多大？
 - **base**: 哪些证实信号按预期兑现？估值锚如何推移？注意：风险映射中约束 base 的风险，必须在 base 叙事中有对应体现。
 - **bull**: 哪些催化超预期？注意：风险映射中约束 bull 的风险，若在 bull 中被克服，必须说明克服路径和确定性；若无法克服，bull 概率或幅度应下调。
 
@@ -363,23 +224,6 @@ bear 不可推翻已发生的业务事实（如已出货产品→不应给0估�
 
 ### 3e. 赋参数
 
-**赋参框架: 参数 = 理解起点（baseline）+ 事件冲击（event）**
-
-参数有两个信息来源，分工不同:
-
-**Baseline（理解起点——告诉你"从哪出发"，不限制"能到哪"）**:
-- 财务基线（维度二）: 当前 ROIC/毛利率/净利率/营收——理解成本结构、经营杠杆、商业模式。**不是参数上限**——十倍股的本质就是摆脱当前财务数据的引力。如果事件说涨价 30-50%+产能翻倍，ROIC 从 -1.5%→18% 不是问题——问题是事件有没有提供这个改善路径的具体机制。
-- 量化锚点（维度六）: 当前产能/价格/市占率——验证事件的起点对不对。事件说产能从 2700→5000 吨，baseline 确认当前就是 2700 吨——起点对上了，变化幅度由事件决定。
-- 脆弱点（维度五）: 什么假设最容易崩塌——约束 bear 的下跌空间。不约束 bull 的上限——十倍股的 bull case 本就应该"离谱"。
-- 产业位置（维度三）: 可比公司是参考不是牢笼。没有可比公司就凭行业知识判断——产业链利润池、技术壁垒、国产替代空间这些定性判断比机械对标更可靠。
-
-**事件锚（变数——告诉你"往哪走、走多远"）**:
-- 事件中的新价格/新产能/新客户/新技术——变化方向和幅度。
-- 按来源置信度打折: 公司公告 <10%，专家纪要 10-30%，分析师测算 20-40%。
-- 打折必须显式标注: 锚点原文→来源→置信度→打折幅度→打折后数字→理由。不允许综合一句"更保守"覆盖所有打折。
-
-**两者的关系**: Baseline 让你理解商业模式和判断事件冲击的合理性（涨价 30%→毛利率从 17%→?% 是否和成本结构自洽？）。事件让你知道基本面变了多少。参数最终位置由你的独立判断决定——baseline 是理解工具，不是约束工具。
-
 在动手赋参数之前，先确认两件事:
 1. 风险映射中标注了"约束 base"或"约束 bull"的风险——这些风险在参数中如何体现？如果一条约束不在参数中反映，现在就说为什么，不要等赋完参数再补理由。
 2. 事件变量作用于个股路线的方式——加速、跃迁、还是稳步推进？这决定了三情景参数的相对方向和幅度。
@@ -404,38 +248,21 @@ bear 不可推翻已发生的业务事实（如已出货产品→不应给0估�
 
 **缩放是估值里最常见的系统性错误**——"当前 PE 153x 太高了，base 给 35x"、"当前 PS 13x，bull 给 20x"。这些数字的唯一依据是"比现值低/高"——不是任何经济现实。如果你说不出这个 PS/PE 对应的是哪家可比公司在什么时期的实际交易，你就是在缩放。
 
-**无直接可比公司时的替代参照**: 当公司是细分赛道唯一标的、无可比公司时（如 A 股唯一 PI 薄膜公司、唯一某类新材料公司），"找不到可比"不是给通用制造业 PS 的借口。替代参照系:
-1. **事件叙事中的供需格局**: 全球产能缺口、下游需求增速、供给刚性程度 → 缺口越大/供给越刚性 → PS 溢价越高
-2. **技术壁垒和客户认证**: 认证周期、国产替代进度、客户绑定深度 → 壁垒越高 → PS 越接近海外龙头
-3. **涨价和毛利率改善路径**: 事件中描述的涨价幅度和毛利率目标 → 改善越确定 → PS 越高
-4. **海外对标**: 海外同赛道龙头（如杜邦、钟渊）的估值水平可作为参照——A 股稀缺标的通常享受溢价
-
-**锚-事件冲突处理——赋参数前的必经关卡**:
-
-事件素材里经常出现和分析师用 PE 讨论估值、但路由判了你用 PS（或反之）。这不是 bug——这是你必须显式处理的核心张力。
-
-当事件中的估值语言（PE/PS/PB）与路由判的锚不一致时，在 reasoning_trace 的"清单项3e-约束确认"中必须回答:
-1. 路由为什么判这个锚？（ROIC 太低不配 PE？亏损没 PE 可看？）——引用路由理由
-2. 事件中的 PE/PS 论证说明了什么？——提炼事件想表达的估值逻辑
-3. 你的 PS/PE 参数如何回应了事件中的论证？——不是照搬事件的数字，而是把事件逻辑转化成你这套参数的依据
-
-例: "事件讨论 30 倍 PE 隐含 450 亿市值，反映的是分析师对电子级 PI 盈利弹性的乐观预期。路由判 revenue 锚，因为 ROIC -1.5% 不配 PE。我的 base PS=4x 对应: 电子级 PI 未来占比 40%+ 时，综合净利率达 15%+，4x PS 实际上等于 27 倍隐含 PE——与事件逻辑方向一致但更保守。"
-
 **赋 PE/PS 的三步法**:
-1. **找参照系**: 从 baseline「产业位置」和「量化锚点」中获取可比公司列表和 PE/PS 中位数——这是第一步参照。火山数据中的可比公司估值也一并参考。
-2. **读他们的数**: 这些可比公司当前交易的 PE/PS 是多少？历史上在稳态期交易的区间是多少？baseline 和火山数据都是参考输入，不替代你的判断。
-3. **对标赋参**: 你的 bear/base/bull PE/PS 必须能追溯到某个参照系依据——可以是 baseline 数据、火山数据、或你的行业知识。超出参照系范围时,写"PE突破论证"或"PS突破论证"。
+1. **找参照系**: 从火山数据、知识补充、行业研究中找 2-3 家与目标公司业务最接近、处于相似生命周期阶段的 A 股可比公司
+2. **读他们的数**: 这些可比公司当前交易的 PE/PS 是多少？它们历史上在稳态期（非泡沫、非危机）交易的区间是多少？
+3. **对标赋参**: 你的 bear/base/bull PE/PS 必须落在这个参照系的合理区间内——可以有溢价/折价,但必须有理由
 
 **PS 的参照框架**:
-- **锚定方法**: 凭行业知识判断同细分赛道的 A 股公司在**非泡沫非危机**的稳态期交易在什么估值水平。baseline 量化锚点和火山数据中的可比公司 PS/PE 是当前时点值——可能整个板块都在泡沫或恐慌中——仅供参考，不能直接照搬。
+- **不提供"通用合理区间"**。你根据自己对行业的了解来判断。
+- **锚定方法**: 凭行业知识回想同细分赛道的 A 股公司在**非泡沫非危机**的稳态期交易在什么估值水平。火山数据中的可比公司 PS/PE 是当前时点值——可能整个板块都在泡沫或恐慌中——仅供参考，不能直接照搬。
 - **Bull PS** = 行业领导者在稳态下的 PS。不是泡沫峰值。
 - **Base PS** = 中等偏上公司在稳态下的 PS。
 - **Bear PS** = commoditized 参与者或周期底部的 PS。不是危机恐慌低点——是"故事证伪后,市场在正常情况下持续交易该股票的底部区间"。
-- **可以突破参照系——但必须输出理由**: 若 PS 超出可比公司参照系范围，在 reasoning_trace 中单独写一条"PS突破论证"。
 - **可以突破参照系——但必须输出理由**: 若 PS 超出可比公司参照系范围，在 reasoning_trace 中单独写一条"PS突破论证"，说明: (1)这家公司相比参照系中最好的公司，在哪一个维度形成了降维打击级别的优势？(2)为什么这个优势在 3 年后不会被竞争或技术迭代消解？缺乏回答→禁止突破。
 
 **PE 的参照框架**:
-- 与 PS 相同: 凭行业知识判断同赛道可比公司在**非泡沫非危机**稳态期的 PE。baseline 和火山数据中的当前 PE 仅供参考。
+- 与 PS 相同: 凭行业知识判断同赛道可比公司在**非泡沫非危机**稳态期的 PE。火山数据中的当前 PE 仅供参考。
 - **Bull PE** = 行业领导者在稳态下的 PE。
 - **Bear PE** = 行业周期底部的 PE。
 - PE > 60x: 只在"盈利低谷+增速即将爆发"的特殊阶段合理——分母(E)暂时被压制。必须注明是过渡期 PE 还是稳态 PE。
@@ -454,14 +281,6 @@ CAGR/增速: 高增速必须匹配高再投资率（RR=g/ROIC）。增速和 RR 
 - PE/PS/PB 的升降方向必须与因果剧本一致
 - 概率不由模板决定——由因果链条环节数推导。bear 需要 N 个独立环节同时崩塌→联合概率就是小概率，不需要"凑"到某个数字
 
-**赋参数后做参照系交叉校验:**
-
-赋完三情景 PE/PS/PB 后，回看 baseline「量化锚点」和火山数据中的可比数据作为参考:
-- 你的 **base PE/PS** 与可比中位数的偏差是否在合理范围？超出→在 scenario_narrative 中写一句理由
-- 你的 **bull PE/PS** 是否远超可比公司在非泡沫期的历史交易峰值？如果是→检查是否合理
-- 你的 **bear PE/PS** 是否与可比公司周期底部的交易水平大致匹配？
-- 如果三情景的倍数都系统性偏离参照系→你可能在用缩放而非锚定。重新走三步法
-
 **注意: 你只输出参数假设。所有估值数字由代码统一计算:**
 
 | 模型 | 代码公式 | 你控制的参数 |
@@ -478,72 +297,169 @@ CAGR/增速: 高增速必须匹配高再投资率（RR=g/ROIC）。增速和 RR 
 | J | 保留你的估值 | target_mcap |
 | K | `Σ[FCFF_t/(1+WACC)^t] + NOPAT_N×PE/(1+WACC)^N` | stage1_growth(高增长NOPAT年增速), stage1_years, ROIC(→RR=g/ROIC→FCFF), terminal_PE | 代码逐年折现,NOPAT逐年复利增长,RR封顶[0.3,0.9] |
 
-**赋参数后做参数-叙事一致性检查**: 回看你的因果剧本——bear 的ROIC恶化是不是叙事里写的那个机制？bull 的增速跳升与叙事中的催化剂幅度是否匹配？参数是叙事的数字表达，它们必须指向同一个故事。这不涉及估值数字——只检查方向、量级、逻辑的自洽。
+**赋参数时反向验证: 用上表公式心算一遍，你的参数产出的数字和你因果剧本应得的估值是否匹配？**
 
 ### 禁止事项
 - 禁止三个情景共用同一套假设数字微调
 - 禁止 bear 使用"宏观经济衰退"作为触发条件（除非传导链明确依赖宏观）
 - 禁止对所有标的使用相同概率分布模板
 
-# LLM-1 专属结尾
+## 清单项 4: 校验与评分
 
-## 参数锚定法则
+**4a. 一致性校验**
+- [增长-ROIC] 高增速低ROIC→是烧钱换增长还是效率驱动？narrative 必须明确
+- [再投资率] 高增速必须匹配高 RR (RR=g/ROIC)
+- [估值-增长] 估值倍数与增长阶段不能错配（平台期+50x PE=错配）
+- [全参数] ROIC改善幅度/PS增速匹配/PB-ROE匹配/EV-EBITDA行业中枢——逐项自检
+- [概率自洽] 三情景概率之和=1.0
 
-你的 PE/PS/PB 锚定的是【可比公司 + 行业稳态中枢】，不是当前市值。
+**4b. 计价验证→预期差（根据估值锚选择工具）**
 
-- 当前 PE 117x → 不意味着你的 base PE "应该低于它"或"应该接近它"——这只是市场今天愿意付的价格。
-- 当前市值 646 亿 → 这只是公司此刻的规模标签，不是你赋参数的目标。
-- 隐含增速 g=10.8% → 这只是市场在想什么，不是你的参数输入。
-- **赋完参数后不要心算估值**——代码会算。你的任务是把基本面判断转化为参数假设。如果赋完参数后你很好奇估值是多少——忍住。那是审查 LLM 的任务。
+根据 2a 的 primary_anchor 选择对应的反向推算工具做预期差分析:
 
-## 未来审查轮次
+| 锚 | 工具 | 反解的问题 |
+|----|------|-----------|
+| **earnings** | 反向 DCF (g vs WACC) | 当前市值隐含 NOPAT 需要多高永续增速？ |
+| **revenue** | 隐含收入 CAGR (PS→增速) | 当前 PS 隐含 3 年收入需要多高 CAGR？ |
+| **asset** | 隐含 ROE 改善 (PB→ROE) | 当前 PB 隐含 ROE 需要改善到多少？ |
 
-在你输出参数后，代码将用你的参数计算估值结果。然后，一个审查 LLM 将:
-1. 将你的参数与代码计算的市值/upside 数字进行交叉验证
-2. 搜索你标记为缺失的数据
-3. 可能以书面理由修改参数
+**收入锚公司禁止使用反向DCF**——NOPAT 是利润锚的工具。收入锚公司应分析: 当前 PS 隐含的收入 CAGR 与 base 情景推演的 CAGR 之间的差距。
 
-因此，在 `data_gaps` 和 `change_request` 中诚实标注你的不确定性。如果某个参数高度不确定，点名具体缺失的数据——审查 LLM 会基于搜索到的信息来调整。
+聚焦"差距意味着什么"，不重复 applicable 状态。
 
-## 核心约束
+如果隐含 CAGR 与 base CAGR 差距 >30%，必须在 expectation_gap.note 中解释：这个差距是因为你对终点倍数的判断不同于市场吗？你的 terminal PS/PE 假设的依据是什么？不同的 terminal 假设会产生截然不同的"市场预期"。
+
+`expectation_gap.level` 必须与你 4b 分析的结论一致（不硬绑 reverse_dcf——收入锚走隐含 CAGR，资产锚走隐含 ROE）:
+- 隐含期望远高于推演 → level="市场高估"
+- 隐含期望远低于推演 → level="市场显著低估"
+- 基本接近 → level="基本公允"
+- 工具不适用 → level="无法计算"
+
+**4c. 校验交叉验证**
+主模型 {PRIMARY_MODEL} ({MODEL_FAMILY}) vs 校验模型 {VALIDATION_MODEL} ({VALIDATION_MODEL_DESC})。
+用校验模型范式粗估 base 估值，与主模型 base 目标市值对比:
+- 差异<20%: 互相印证
+- 差异20-40%: 存在分歧，需在置信度中反映
+- 差异>40%: 严重冲突，必须在 assessment 中解释原因
+
+**自校验降级规则**: 若主模型=校验模型（即所有其他校验候选均被硬约束排除），意味着无法获得独立范式交叉验证。此时:
+- 交叉验证仅能检验"参数自洽性"而非"范式独立性"
+- assessment 必须降一档: "互相印证"→"存在分歧(同模型自校验)", "存在分歧"→"严重冲突(同模型自校验)", "严重冲突"→"严重冲突(同模型自校验,缺乏独立验证)"
+- assessment 中必须包含短语"同模型自校验——缺乏独立范式验证，本次交叉验证价值有限"
+- validation_paradigm 设为"与主模型相同({MODEL_FAMILY})"
+
+**4d. 非对称评分**
+asymmetry_ratio = bull_upside / |bear_upside|
+
+**4e. 置信度(4维, 每维1-10)**
+- info_quality: 信息来源可靠性。硬证据≥2环(订单/产能/专利/政策)→≥7; 纯主题无锚点→1-3。**强制降级: 清单项2c标注"事件-产品映射失败"→info_quality≤5**
+- financial_feasibility: 财务假设可行性。参数改善幅度有逻辑支撑→≥7; 凭空跳变→≤5
+- valuation_safety: 估值安全边际。bear 下行≤50%→≥7; bear 下行>90%→≤4。注意: valuation_safety 的结论必须与 4b 的 expectation_gap.level 逻辑一致。如果 expectation_gap 说"基本公允"但 valuation_safety≤3，在 note 中解释为什么一个"公允"的东西同时"不安全"。
+- historical_precedent: 参照 2a 的 precedent_richness。先例丰富(P≥8)→≥7; 史无前例(P≤3)→≤4
+
+## 清单项 5: 交易标注 + KMI + 风险触发器
+- 交易标注: 4维(每维0-3) — odds_quality/pricing_headroom/transmission_confidence/model_consistency
+- 监测KPI: financial_verification/event_milestone/competition_signal/risk_trigger 四类
+- 风险触发器: bull_trigger/bear_trigger + 监测频率
+- 投资叙事: 1-2句总结
+
+## 清单项 6: 输出
+
+- reasoning_trace 按清单项顺序组织。清单项3 必须包含以下子项（各写一条 trace，不可合并）:
+  "清单项3a-分布形状+投资命题: ..."
+  "清单项3b-计价天花板: ..."
+  "清单项3c-风险映射: ..."  ← 逐条列出风险及其约束的情景
+  "清单项3d-因果剧本(bear/base/bull各一段): ..."
+  "清单项3e-约束确认: ..."  ← 赋参数前，确认风险约束如何在参数中体现
+  "清单项3e-赋参数: ..."
+  "清单项3e-叙事一致性检查: ..."  ← 赋参数后，检查参数与推理链是否闭合
+- `signal_audit`: **直接复制 2a 的 signal_audit 结论**（你不再做信号审核，只透传）
+- `data_gaps` 标注缺失的数据，引用 2a 已标注的数据异常。格式: "缺少[具体数据]，导致[具体判断]置信度下降"
+- `preflight_check` 逐项自检格式: ["[OK] 清单项1素材吸收完成", "[OK] 清单项2引用2a审核结论完成", "[OK] 清单项3a-3e完成(含风险映射+约束确认+叙事一致性检查)", "[OK] 概率和=1.00", "[OK] upside单调递增,全参数经济含义自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
+- 输出纯 JSON，不要用 markdown 代码块包裹
+
+# 核心约束
 1. WACC 不可修改（代码预计算）
 2. 三情景概率之和 = 1.0
-3. bear 参数 < base 参数 < bull 参数（ROIC/增速/PE/PS等逐级递增）
-4. 输出纯 JSON，不要用 markdown 代码块包裹
+3. bear_upside < base_upside < bull_upside
+4. BS画像是起点，bull必须超越市场已定价的增长才有upside
+5. 输出纯 JSON
 
-# LLM-1 输出 Schema（仅参数推演部分）
+# 共享输出 Schema（字段顺序 = 清单项推理顺序）:
 
 {
-  "reasoning_trace": ["清单项1-素材吸收(引用2a锚): ...", "清单项2-引用2a审核结论(step2d=X): ...", "清单项3a-分布形状+投资命题: ...", "清单项3b-事件冲击量级→参数幅度: ...", "清单项3c-补充-增长路径拆解(量增/价增/结构, 最佳估计CAGR=X%): ...", "清单项3c-风险映射: ...", "清单项3d-因果剧本(bear/base/bull各一段): ...", "清单项3e-约束确认: ...", "清单项3e-赋参数: ...", "清单项3e-叙事一致性检查: ..."],
-  "growth_path_decomposition": {
-    "_description": "CAGR拆解表。不打折——信息质量仅标注, 不确定性通过概率分布和置信度表达。",
-    "product_lines": [
-      {"name": "产品线A", "current_revenue_share_pct": 30, "volume_cagr_pct": 59, "pure_price_cagr_pct": 5, "comment": "若仅一条产品线或增速差异<15pp则此项为空数组[]"},
-      {"name": "产品线B", "current_revenue_share_pct": 70, "volume_cagr_pct": 5, "pure_price_cagr_pct": 3, "is_self_assumed": true, "assumption_basis": "历史增速延续, 无事件素材覆盖"}
-    ],
-    "drivers": [
-      {"driver": "量增: [分产品线描述]", "contribution_pct": 18, "info_quality": "强推断", "source": "公司产能规划(L3)", "gap": "无季度爬坡计划、良率曲线未知"},
-      {"driver": "纯涨价: [描述]", "contribution_pct": 12, "info_quality": "弱推断", "source": "海外涨价30-50%(L2)", "gap": "国产跟涨幅度未知"},
-      {"driver": "结构升级: [描述]", "contribution_pct": 15, "info_quality": "弱推断", "source": "客户验证中(L2)", "gap": "无订单承诺/时间表"}
-    ],
-    "best_estimate_cagr_pct": 45,
-    "consistency_check": "(1+0.18)x(1+0.12)x(1+0.15)-1=52.0%, 与best_estimate偏差7pp(交互项)。产品线加权量增=0.30x59%+0.70x5%=21.2%, 与全公司量增18%偏差3pp(可接受)。结构升级+15%对应电子级占比从30%升至~45%, 与量增中电子级CAGR 59%一致。"
-  },
+  "reasoning_trace": ["清单项1-素材吸收(引用2a锚+计价): ...", "清单项2-引用2a审核结论(step2d=X): ...", "清单项3a-分布形状+投资命题: ...", "清单项3b-计价天花板(还剩下多少没计价): ...", "清单项3d-因果剧本(bear/base/bull各一段): ...", "清单项3e-赋参数: ...", "清单项4a-一致性校验: ...", "清单项4b-计价验证(按锚选工具): ...", "清单项4c-校验交叉: ...", "清单项4d-非对称: ...", "清单项4e-置信度: ..."],
   "signal_audit": {
-    "step2a_restate": ["[合同负债] ..."],
-    "step2b_match": [],
-    "step2c_product_restate": "产品线重述",
+    "step2a_restate": ["[合同负债] 当前值=0.13亿 (↑1.1σ, 历史均值=0.08亿)", "..."],
+    "step2b_match": [
+      {"signal": "合同负债", "match": "支撑", "source_level": "L4", "basis": "合同负债跳升验证订单落地——行业数据(L4)与财务数据同向"},
+      {"signal": "化合物半导体材料毛利率", "match": "时序错位", "source_level": "L3", "basis": "FY2025年报GM=23.2%远低于叙事宣称75%+(L3:券商研报)。数据截止早于事件窗口，不判为矛盾"},
+      {"signal": "业绩预告(FY2025预减)", "match": "削弱", "source_level": "L5", "basis": "公司公告(L5)预减。预告窗口与事件窗口有时序差异，不构成证伪，但揭示bull利润弹性依赖极大基数效应"}
+    ],
+    "step2c_product_restate": "化合物半导体材料: 收入1.38亿(占12.9%,同比+146%),GM=23.2%(vs公司整体20.3%)",
     "step2d_score": 6,
-    "score_rationale": "..."
+    "score_rationale": "合同负债+在建工程支撑,预告预减(时序错位)不扣分,化合物半导体GM与叙事存在差距但属时序错位"
   },
   "scenario_valuation": {
-    "scenario_details": {SCENARIO_PARAMS_EXAMPLE}
+    "scenario_details": {SCENARIO_PARAMS_EXAMPLE},
+    "probability_weighted_mcap_yi": XX,
+    "probability_weighted_upside_pct": XX,
+    "asymmetry_ratio": X.X
   },
+  "reverse_dcf": {
+    "applicable": true,
+    "market_implied_g_pct": "代码预计算(earnings锚=反向DCF的g, revenue锚=隐含CAGR, asset锚=隐含ROE改善)",
+    "my_implied_g_pct": "基于中性情景推演的对应指标(earnings锚=利润增速, revenue锚=收入CAGR, asset锚=ROE改善)",
+    "expectation_gap_pct": "market_implied - my_implied 的差距",
+    "gap_direction": "市场低估|市场高估|基本公允|无法计算",
+    "gap_magnitude": "显著|中等|轻微|不适用",
+    "applicable_note": "若 applicable=false，说明原因"
+  },
+  "validation_crosscheck": {
+    "validation_model": "{VALIDATION_MODEL}",
+    "validation_paradigm": "盈利视角|收入视角|资产视角|资源视角|管线视角|分拆视角|与主模型相同",
+    "base_target_mcap_yi": "代码填充",
+    "validation_mcap_yi": "校验模型粗估市值(亿元人民币)",
+    "gap_pct": "代码填充",
+    "gap_direction": "主模型高估|主模型低估|基本一致",
+    "assessment": "互相印证|存在分歧|严重冲突"
+  },
+  "expectation_gap": {
+    "level": "市场显著低估|市场中等低估|基本公允|市场高估|无法计算",
+    "note": "预期差说明。level必须与4b分析的结论一致(不硬绑reverse_dcf)",
+  "confidence": {
+    "overall_score": 1-10,
+    "overall_label": "高|中|低",
+    "dimensions": {
+      "info_quality": {"score": 1-10, "label": "信息质量", "note": "说明评分依据"},
+      "financial_feasibility": {"score": 1-10, "label": "财务可行性", "note": "说明评分依据"},
+      "valuation_safety": {"score": 1-10, "label": "估值安全边际", "note": "说明评分依据"},
+      "historical_precedent": {"score": 1-10, "label": "历史案例匹配", "note": "说明评分依据"}
+    }
+  },
+  "trade_annotation": {
+    "tier": "★★★ 高赔率机会|★★☆ 中等赔率|★☆☆ 低赔率机会|☆☆☆ 规避",
+    "total_score": "X/10",
+    "dimension_scores": {"odds_quality": 0-3, "pricing_headroom": 0-3, "transmission_confidence": 0-3, "model_consistency": 0-3},
+    "alignment_signals": ["信号描述"],
+    "tier_note": "交易标注核心理由",
+    "suggested_action": "建议操作"
+  },
+  "monitoring_kpis": {
+    "financial_verification_kpis": [{"name":"", "baseline":"", "target":"", "frequency":"季度", "verifies":""}],
+    "event_milestone_kpis": [{"name":"", "expected_timing":"", "significance":"", "verification_source":""}],
+    "competition_signal_kpis": [{"name":"", "current_state":"", "trigger":"", "action_if_triggered":""}],
+    "risk_trigger_kpis": [{"name":"", "linked_to":"", "severity":"high|medium|low", "monitor":""}]
+  },
+  "risk_triggers": {
+    "bull_trigger": "触发条件说明",
+    "bear_trigger": "触发条件说明",
+    "monitoring_frequency": "季度(与财报同步验证)"
+  },
+  "narrative": "投资叙事",
   "data_gaps": ["无缺口则写空数组[]。有缺口格式: 缺少[具体数据]，导致[具体判断]置信度下降"],
-  "change_request": [
-    {"query": "具体搜索查询", "purpose": "填补哪个数据缺口/验证哪个假设"}
-  ],
-  "preflight_check": ["[OK] 清单项1完成", "[OK] 清单项2a-2d完成", "[OK] 清单项3a-3e完成", "[OK] 概率和=1.00", "[OK] 参数逐级递增,全参数自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
+  "probability_rationale": "bear: [环节1(概率X%) + 环节2(概率Y%) + ... → 联合概率Z%]. bull: [超预期事件1(概率X%) + 超预期事件2(概率Y%) + ... → 联合概率Z%]. base: 100% - bear - bull = Z%",
+  "preflight_check": ["[OK] 清单项1完成", "[OK] 清单项2a-2d完成", "[OK] 清单项3a-3e完成", "[OK] 概率和=1.00", "[OK] upside单调递增,全参数自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
 }
 """
 
@@ -676,230 +592,13 @@ def _build_model_aware_prompt(primary_model, validation_model=""):
         "{MODEL_PARAM_NAMES}", param_names
     )
 
-
 # ═══════════════════════════════════════
-# LLM-2 系统提示词 — 审查 + 搜索 + 最终报告
+# Step 0: WACC 预计算
 # ═══════════════════════════════════════
-
-LLM2_SYSTEM_PROMPT = """# 你是估值审阅官
-
-你的职责不是重新估值，而是**审阅 LLM-1 的参数推演，对照代码计算出的估值结果，补充缺失数据，纠正错误，输出最终报告**。
-
-## 输入
-
-你收到四部分信息:
-- **A 部分: LLM-1 的完整参数输出** — reasoning_trace、三情景参数、CAGR拆解、data_gaps、change_request
-- **B 部分: 代码计算的估值结果** — 每个情景的实际目标市值、upside%、概率加权值、ROIC审计警告、跨族校验结果
-- **C 部分: 当前市场定价数据** — 市值、PE、PS、PB、隐含增速、BS画像——此时可见
-- **D 部分: 完整上下文** — baseline报告、事件数据、2a诊断结论、财务数据
-
-## 多轮对话与搜索工具
-
-你和一个更大的对话系统在进行**多轮对话**——不是一次性问答。
-
-**对话机制**:
-- 第 1 轮: 你收到完整上下文（A/B/C/D 部分），开始审阅
-- 如果你需要搜索: 在 JSON 输出中包含 `search_requests` 字段。代码会执行搜索（并行），然后将你的本轮输出作为 assistant 消息、搜索结果作为 user 消息追加到对话历史
-- 第 2 轮: 你收到完整的对话历史（第 1 轮的上下文 + 你的输出 + 搜索结果），可以基于新信息继续审阅
-- 第 3 轮: 同上，最多 3 轮，**每轮最多 2 条搜索**——精炼查询，确保每条带来可操作的增量信息
-- 当你不再需要搜索时: **不输出 search_requests 字段**，直接输出最终报告。对话结束。
-
-**search_requests 格式**（每轮最多 2 条）:
-```json
-"search_requests": [
-  {"query": "精炼的搜索查询", "purpose": "要填补什么/验证什么"}
-]
-```
-
-**搜索范围限制**: 只搜 data_gaps 和 change_request 中列出的具体信息缺口。禁止搜索任何公司的 PE/PS/PB 估值倍数——可比公司信息来自 baseline 产业位置和你的行业知识，不来自火山搜索。
-
-**搜索的第一优先级——验证事件锚点**: 事件中的量化锚点（价格、产能、时间节点）可能是分析师推断，不是事实。每条锚点都要搜一下: 当前真实报价是多少？产能建设进度到哪了？趋势是加速还是延迟？用搜索到的当前数据来校准 LLM-1 对事件的打折幅度——如果搜索证实涨价确实在进行、产能确实在推进，你就不能无理由地大幅打折。
-
-## 任务（按顺序）
-
-### 任务0: 事件锚点对照表 —— 最先执行，必须输出 event_anchor_audit
-
-从事件素材中提取所有量化锚点，与 LLM-1 的参数做逐项对照。这不是"检查"——这是**赋值前必须完成的对表**。
-
-**输出字段 event_anchor_audit**（必须包含在 JSON 中）:
-```json
-"event_anchor_audit": {
-  "anchors_extracted": [
-    {"anchor": "海外电子级PI 300万/吨", "source": "事件原文", "llm1_param": "PS=4x", "gap": "PS=4x隐含均价约80万/吨，与事件锚点差距大", "action": "若事件锚点可信，PS应上调"}
-  ],
-  "anchor_to_param_gap_analysis": "一句话总结最大的锚点-参数差距",
-  "anchors_discounted_reasonably": true/false,
-  "anchors_ignored": ["列出被LLM-1忽略的事件锚点"]
-}
-```
-
-**执行规则**:
-- 事件素材中每个硬数字（价格、产能、时间节点、客户、毛利率目标）都要提取
-- 区分"硬数据"（已公告产能/已执行价格）和"分析师推断"（空间测算/目标利润率）
-- 逐条对照 LLM-1 的参数: 这个参数是否回应了事件锚点？偏离了多少？偏离理由充分吗？
-- **收入校验（必须执行）**: 从事件锚点推算 3 年后收入（产能×价格×利用率，可加你的置信度打折），与 LLM-1 的 CAGR 隐含收入对比。做三件事:
-  1. 算差距: 事件推算收入 vs LLM-1 隐含收入，差距多少%
-  2. 判合理性: LLM-1 的偏离是否有 source 标注+置信度打折+理由？打折来源和幅度是否合理？
-  3. 做结论: 合理→在 event_anchor_audit 中标注 "discounted_reasonably: true"；不合理→必须在 change_log 中修正对应参数
-- 收入差距本身不是问题——问题是差距没有解释。LLM-1 如果有显式的"产能打8折+价格打85折→CAGR 79%→再因爬坡降至55%"这样的链条，就是合理的。如果只有一句"更保守"没有任何数学，就是不合格的。
-- 不能输出空表。不能输出 0 条 change_log 但 event_anchor_audit 显示大差距——两者必须自洽。
-
-### 任务 1: 数据补充——必搜清单
-
-LLM-1 输出的 data_gaps 和 change_request 不是参考——是**必搜清单**。每条都必须通过 search_requests 向火山引擎发起搜索。火山支持自然语言查询，直接用 data_gaps 原文即可。
-
-**执行规则**:
-- 逐条读取 LLM-1 的 data_gaps，每条生成一个 search_request
-- 逐条读取 LLM-1 的 change_request，每条生成一个 search_request
-- volc 预搜索结果（D 部分）如果已覆盖某条缺口，可跳过
-- 搜索结果返回后，分析是否填补了缺口，在 supplemented_data 中记录
-
-### 任务 2: 逻辑审查——从推理链找问题
-
-**不要重做 LLM-1 的工作。** 你的起点是 LLM-1 的 reasoning_trace——这是 LLM-1 自述的完整推理链。逐条追溯:
-
-1. LLM-1 的每个参数赋值，在 reasoning_trace 里能找到对应的依据吗？找不到 → 这是拍脑袋的参数
-2. LLM-1 引用的数据，和 baseline 里的数字一致吗？不一致 → 数据引用错误
-3. LLM-1 的风险映射结论，在参数里有体现吗？没体现 → 风险被选择性忽略
-4. LLM-1 三段因果剧本（bear/base/bull）的逻辑分叉点，在参数差异里有对应吗？没有 → 叙事和数字脱节
-
-**⚠️ 事件量化锚点校验——LLM-2 的第一优先级检查:**
-
-LLM-1 的 reasoning_trace 开头应该列出了事件的量化锚点（收入/产能/价格/利润率/PE/时间节点）。逐条检查:
-- LLM-1 的营收 CAGR 隐含的终局收入，和事件锚点差了多少？为什么差？时间节点对得上吗？
-- LLM-1 的 PS/PE，和事件锚点差了多少？为什么差？
-- 锚点是否区分了硬数据（已公告产能）和分析师推断（空间测算）？
-- 偏离必须有理有据。无理由的巨大偏离（如事件说 2026E 60 亿，参数隐含 3 年后 13 亿）→ 必须在 change_log 中修正。不能默许。
-
-常规检查:
-- **参数内部矛盾**: ROIC 8% 但 PE 50x？CAGR 30% 但再投资率 RR 为零？
-- **叙事与数字矛盾**: 风险映射说"零部件毛利率极低是主要拖累"，但 bull 假设毛利率跳升至 20%+？
-- **模型选择不当**: 路由选的模型是否真的适合当前事件结构？
-- **数据滞后误解**: 是否把涨价前的毛利率当成了稳态？
-- **禁止搜索可比公司**: 不要向火山搜索可比公司 PE/PS——搜索结果不可靠。可比公司判断只依赖 baseline 的产业位置和你的行业知识。
-
-**⚠️ 数据时效性铁律: 事件 > 一切。** 事件是唯一最新情报。券商预测、历史财务、火山搜索结果都可能是事件前的旧数据。当你发现矛盾时: 事件说什么就是什么——券商预测没反映涨价 → 券商预测过时，不是事件错了。只有在事件完全没有涉及某个数据点时，才用其他来源。
-
-### 任务 3: 参数修改——发现问题就必须改，不能只写"置信度低"了事
-
-**这是你最重要的职责。** 如果你在任务 2 中发现了问题，不能只写在 confidence note 里了就过关。你必须把纠正落实到参数上。
-
-**修正的铁律——沿事件因果链走，不能跳过事件套历史数据:**
-
-事件是第一性输入。你的修正必须从事件的因果链出发: 事件改变了什么 → 参数应该如何反映这个改变 → LLM-1 的偏差是低估了还是高估了事件冲击 → 往哪个方向调。
-
-反例（禁止）: "ROIC -1.5%，可比公司 ROIC 15%+，因此 PS 应该是 3x 而非 7x"——这句话跳过了事件。正确的分析是: "事件描述了全球 PI 缺口 1-1.2 万吨、杜邦/钟渊零新增产能、公司是唯一国产替代标的——这种结构性格局质变不能用当前 ROIC 做机械对标。ROIC 是事件冲击前的基本面快照，不是事件冲击后的估值锚。LLM-1 的 PS 7x 可能偏高，但下调的依据应该是产能天花板/客户验证节奏/涨价传导速度——这些来自事件描述——而非当前 ROIC。"
-
-常见场景及对应的修改义务:
-
-| 发现的问题 | 必须做的修改 | 不改的后果 |
-|-----------|------------|-----------|
-| PS/PE 假设与事件的供需格局/竞争位势不匹配 | 按事件描述的行业格局调 PS/PE，不是按当前 ROIC 对标 | 估值忽略了结构性变化 |
-| 全公司用 PS 估值，但低毛利分部不该享受高 PS | 拆分分部、或下调整体 PS 反映低毛利拖累。**例外: 事件素材中明确描述了涨价、产品结构升级、产能利用率提升等毛利率改善路径时，当前低毛利是过渡态而非稳态——应以事件驱动的改善后毛利率为基准赋PS，不应以当前低毛利为由压PS。** | 低质量收入被高估 / 毛利率改善被忽略 |
-| 净利率/毛利率改善路径缺乏事件支撑 | 下调 ROIC 改善假设，或在 narrative 中标注不确定性 | 盈利预测悬空 |
-| 产能天花板假设远超已建成产能且无硬证据 | 下调 volume growth 至已建成产能可支撑范围 | 增速假设无法落地 |
-| 路由选择了 PS 模型但公司盈利业务占比 >60% | 考虑切换为 earnings 锚或至少大幅下调 PS | 模型与业务实质不匹配 |
-
-**禁止**: 发现问题后只在 confidence 里写"PS假设缺乏支撑"然后不改参数。你不改，这个问题就会被带入最终估值。
-
-change_log 每条格式:
-- path: 参数路径（如 "base.target_ps"）
-- old_value: 原值
-- new_value: 新值
-- reason: 修改原因
-- evidence: 支撑证据（搜索来源或逻辑推理）
-
-- **禁止**: 为"让数字更好看"或"让数字更难看"而修改参数。参数应该反映事件驱动的实际判断，不应偏向任何方向。如果事件证据支持上调 PS，就和下调一样有义务修改。
-- 代码会重新计算修改后的估值。
-
-### 任务 4: 最终判断
-基于代码计算出的 **实际 upside 数字**（而非你的心算）:
-- 赋值四维置信度（各 1-10）
-- 赋值交易标注（tier + 四维 0-3 打分）
-- 编写 probability_rationale（引用实际 upside 和 asymmetry_ratio）
-- 做预期差分析（市场隐含预期 vs 你的 base 推演）
-- **关键**: 如果概率加权 upside 是 -54.7%，你不能写"基本公允"——数字和结论必须一致
-- 定义监测 KPI 和风险触发器
-- 写最终投资叙事（可引用具体 upside 数字——这些是代码算的，不是心算）
-
-## 核心约束
-1. WACC 不可修改
-2. 三情景概率之和 = 1.0
-3. 参数修改必须有可验证的证据
-4. 输出纯 JSON，不要用 markdown 代码块包裹
-
-# 输出 Schema——你输出的是**完整的最终报告**
-
-你的输出将直接替代 LLM-1 的输出成为最终报告。继承 LLM-1 的字段（不做修改的照抄），覆盖修改过的字段。以下是必须包含的全部字段：
-
-{
-  "scenario_valuation": {
-    "scenario_details": {
-      "bear": {"probability": 0.20, "target_ps": 4.0, "revenue_growth_3y_cagr_pct": 10, "...": "照抄 LLM-1 或修改"},
-      "base": {"probability": 0.60, "target_ps": 8.0, "revenue_growth_3y_cagr_pct": 25, "...": "照抄 LLM-1 或修改"},
-      "bull": {"probability": 0.20, "target_ps": 12.0, "revenue_growth_3y_cagr_pct": 35, "...": "照抄 LLM-1 或修改"}
-    }
-  },
-  "growth_path_decomposition": { "照抄 LLM-1，如修改了增速参数则更新" },
-  "signal_audit": { "照抄 LLM-1" },
-  "reasoning_trace": [
-    "LLM-1: 清单项1-素材吸收: ...",
-    "...": "保留 LLM-1 的完整 reasoning_trace，在末尾追加你的审阅条目",
-    "LLM-2: 审查-数据补充: ...",
-    "LLM-2: 审查-参数修改: 将 base.target_ps 从 12x 降至 8x，因...(理由)",
-    "LLM-2: 审查-置信度: ..."
-  ],
-  "data_gaps": ["补充后的缺口列表"],
-  "change_log": [
-    {"path": "base.target_ps", "old_value": 12, "new_value": 8, "reason": "ROIC 6.2%<WACC 10%，不配行业龙头PS", "evidence": "有研新材当前PS=3.2x；A股半导体材料中位数PS=5.1x"}
-  ],
-  "confidence": {
-    "overall_score": 1-10,
-    "overall_label": "高|中|低",
-    "dimensions": {
-      "info_quality": {"score": 1-10, "label": "信息质量", "note": "评分依据"},
-      "financial_feasibility": {"score": 1-10, "label": "财务可行性", "note": "评分依据"},
-      "valuation_safety": {"score": 1-10, "label": "估值安全边际", "note": "评分依据"},
-      "historical_precedent": {"score": 1-10, "label": "历史案例匹配", "note": "评分依据"}
-    }
-  },
-  "trade_annotation": { "tier": "★★★ 高赔率机会|★★☆ 中等赔率|★☆☆ 低赔率机会|☆☆☆ 规避", "total_score": "X/10", "dimension_scores": {"odds_quality": 0-3, "pricing_headroom": 0-3, "transmission_confidence": 0-3, "model_consistency": 0-3}, "alignment_signals": ["信号"], "tier_note": "理由", "suggested_action": "建议" },
-  "monitoring_kpis": {
-    "financial_verification_kpis": [{"name": "KPI名称", "baseline": "当前值", "target": "目标值", "frequency": "季度", "verifies": "验证什么假设"}],
-    "event_milestone_kpis": [{"name": "里程碑名称", "expected_timing": "预计时间", "significance": "为什么重要", "verification_source": "信息来源"}],
-    "competition_signal_kpis": [{"name": "信号名称", "current_state": "当前状态", "trigger": "触发条件", "action_if_triggered": "应对措施"}],
-    "risk_trigger_kpis": [{"name": "风险名称", "linked_to": "关联指标", "severity": "high|medium|low", "monitor": "监控频率"}]
-  },
-  "risk_triggers": { "bull_trigger": "...", "bear_trigger": "...", "monitoring_frequency": "季度" },
-  "narrative": "照抄 LLM-1 的原始叙事——这是 LLM-1 从事件到参数的核心故事线，不要改写。如果你有修正意见，写在 _review_note 字段里。",
-  "probability_rationale": "概率推导",
-  "expectation_gap": { "level": "市场更乐观|市场更悲观|预期相近|无法解码", "note": "..." },
-  "validation_crosscheck": { "validation_model": "...", "assessment": "..." },
-  "data_gaps": ["缺口格式: [已搜索:查询词] 原标题 — 搜索结果摘要"],
-  "reasoning_trace": ["LLM-1: ...", "LLM-2: 审查-数据补充: 对N条缺口逐一搜索，结果如下...", "LLM-2: 审查-逻辑审查: ...", "LLM-2: 审查-参数修改: ...", "LLM-2: 审查-置信度: ...", "LLM-2: 审查-最终叙事: ..."]
-}
-
-**注意**:
-- search_requests 字段仅在需要搜索时输出。最终报告不输出 search_requests。
-- scenario_details 里的参数体系由路由定的模型决定——如果你修改了参数，输出修改后的完整 scenario_details。
-- reasoning_trace: 保留 LLM-1 的全部 reasoning_trace，末尾追加你的审阅条目（以"LLM-2: 审查-XXX"开头）。
-
-**⚠️ 关键铁律 #1: 禁止在 narrative 中写市值数字。** 估值由代码计算，不是由你估算。不要说"修正后市值约XX亿"或"公允价值约XX亿"——你写的数字和代码算出的必然不一致，会污染最终报告。写参数为什么这么设、逻辑为什么这么推演，让代码说话。
-
-**⚠️ 关键铁律 #2: change_log 不能为空。** 如果你的 narrative 里写了"XX参数缺乏支撑"、"YY被低估"、"ZZ假设不合理"，你必须在 change_log 里给出对应的参数修改。narrative 里的每个审阅发现都必须能在 change_log 里找到对应的条目。只有一种情况 change_log 可以为空：你确认 LLM-1 的每个参数都完美无误。但这种情况下你的 narrative 也不应该包含任何批评。
-"""
 
 
 def _fetch_bond_yields(fetcher: DataFetcher) -> dict:
-    """获取10年期国债收益率。优先用 DataFetcher 内置方法，失败回退默认值。"""
-    try:
-        bonds = fetcher.fetch_bond_yields()
-        y10 = bonds.get("yield_10y")
-        if y10 and 0 < y10 < 10:
-            return {"yield_10y": y10, "source": f"investoday API ({bonds.get('date', '')})"}
-    except Exception:
-        pass
-    # 备用: 尝试旧端点
+    """获取国债收益率。投资API不提供时用默认值1.75%。"""
     try:
         raw = fetcher._cli("macro/bond-yields", method="POST",
                           beginDate=(datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d"),
@@ -907,8 +606,8 @@ def _fetch_bond_yields(fetcher: DataFetcher) -> dict:
                           pageNum=1, pageSize=1)
         item = fetcher._first(raw)
         y10 = fetcher._num(item.get("yield10Y"))
-        if y10 and 0 < y10 < 10:
-            return {"yield_10y": y10, "source": "investoday API (旧端点)"}
+        if y10 and 0 < y10 < 10:  # 合理的国债收益率区间
+            return {"yield_10y": y10, "source": "investoday API"}
     except Exception:
         pass
     return {"yield_10y": 1.75, "source": "默认值(API不可用)"}
@@ -1004,7 +703,7 @@ def _calculate_erp(fetcher: DataFetcher) -> dict:
 
     if recent_vol > 0 and hist_vol > 0:
         adj = (recent_vol / hist_vol - 1.0) * 5.0
-        erp = max(4.0, min(12.0, base_erp + adj))
+        erp = max(5.0, min(9.0, base_erp + adj))
         method = f"动态ERP(基准6.0%+波动率调整{adj:+.1f}%)"
     else:
         erp = base_erp
@@ -1126,18 +825,18 @@ def _compute_reverse_dcf(nopat: float, ev: float, wacc: float) -> dict:
 def _bs_level_from_g_wacc(implied_g_pct: float, wacc_pct: float) -> str:
     """用 g/WACC 比值判定 BS 水位等级。"""
     if implied_g_pct is None or implied_g_pct <= 0:
-        return f"隐含g({implied_g_pct}%)为负，市场定价低于零增长"
+        return f"折价: 隐含g({implied_g_pct}%)为负，市场定价低于零增长"
     g_ratio = implied_g_pct / wacc_pct * 100 if wacc_pct > 0 else 0
     if g_ratio > 90:
-        return f"隐含g/WACC={g_ratio:.0f}%: 隐含g({implied_g_pct}%)逼近WACC({wacc_pct}%)上限"
+        return f"极高溢价: 隐含g({implied_g_pct}%)逼近WACC({wacc_pct}%)上限，g/WACC={g_ratio:.0f}%"
     elif g_ratio > 60:
-        return f"隐含g/WACC={g_ratio:.0f}%: 市场定价了显著改善预期"
+        return f"高溢价: 市场定价了显著改善预期，g/WACC={g_ratio:.0f}%"
     elif g_ratio > 35:
-        return f"隐含g/WACC={g_ratio:.0f}%: 市场定价了部分改善"
+        return f"中等溢价: 市场定价了部分改善，g/WACC={g_ratio:.0f}%"
     elif g_ratio > 15:
-        return f"隐含g/WACC={g_ratio:.0f}%: 市场定价接近当前盈利能力"
+        return f"低溢价: 市场定价接近当前盈利能力，g/WACC={g_ratio:.0f}%"
     else:
-        return f"隐含g/WACC={g_ratio:.0f}%: 隐含g({implied_g_pct}%)远低于WACC"
+        return f"折价: 隐含g({implied_g_pct}%)远低于WACC，市场可能过度悲观"
 
 
 def precompute_bs_profile(primary_model: str, data_package: dict,
@@ -1597,7 +1296,7 @@ def _call_llm_scenario(
 - 隐含永续增速 g = {bs_profile.get('implied_g_pct',0)}% (WACC={wacc_params['wacc_pct']}%)
 - g/WACC比值 = {bs_profile.get('implied_g_pct',0) / max(wacc_params['wacc_pct'], 1) * 100:.0f}%
 - EV: {bs_profile['ev_yi']}亿 NOPAT: {bs_profile['nopat_yi']}亿 ROIC: {bs_profile['roic_pct']}%
-""" + (f"- 市值/代码基准比值: {bs_profile['market_premium_pct']}%\n" if bs_profile.get('market_premium_pct', 0) < 999 else "") + (f"- 辅助指标: {bs_profile['bs_secondary']}\n" if bs_profile.get('bs_secondary') else "")
+""" + (f"- 市场溢价: {bs_profile['market_premium_pct']}%\n" if bs_profile.get('market_premium_pct', 0) < 999 else "") + (f"- 辅助指标: {bs_profile['bs_secondary']}\n" if bs_profile.get('bs_secondary') else "")
         bs_warning = ""
     elif anchor_2a == "revenue":
         if pt_full and pt_full.get("applicable"):
@@ -1637,7 +1336,7 @@ def _call_llm_scenario(
 
     user_msg = f"""# 推演裁决: {stock}({code})
 {baseline_section}
-## 市场定价数据 (供清单项4b预期差分析参考，非参数输入)
+## 当前市值隐含假设 (Implied Story) — 根据估值锚({anchor_2a})选择工具
 
 {bs_section}{bs_warning}
 - PE: {bs_profile['pe_ttm']}x PB: {bs_profile['pb']}x
@@ -1671,6 +1370,8 @@ def _call_llm_scenario(
 - 锚证据: {mn.get('primary_anchor_evidence','?')[:200]}
 - SOTP触发: {mn.get('sotp_triggered', False)}
 - 事件分布形状: {ep.get('event_profile',{}).get('distribution_shape','?')} — {ep.get('event_profile',{}).get('shape_rationale','?')[:150]}
+- 计价程度: {pa.get('overall_priced_in','?')} ({pa.get('priced_in_estimate','?')})
+- 剩余催化: {pa.get('residual_catalyst','?')[:200]}
 - 信号评分: {sa.get('step2d_score','?')}/10 — {sa.get('score_rationale','?')[:200]}
 - 信号审核结论: {json.dumps(sa.get('step2a_restate',[])[:3], ensure_ascii=False)}
 - 交叉验证摘要: {json.dumps([str(m)[:120] for m in sa.get('step2b_match',[])[:3]], ensure_ascii=False)}
@@ -1686,7 +1387,20 @@ def _call_llm_scenario(
   时机: {asp.get('shift_timing','?')}
   先例: {asp.get('precedent','?')[:150]}
 """
-        # (定价工具详情保留给 LLM-2，LLM-1 不需要)
+        # 注入计价工具的量化结果（完整细节，LLM据此做4b分析）
+        pt = agent2a_output.get("_pricing_tool", {})
+        if pt and pt.get("applicable"):
+            user_msg += f"""
+- 定价工具详情: {pt.get('method','?')}
+  隐含指标: {pt.get('implied_metric','?')} = {pt.get('implied_value','?')}
+  局限: {json.dumps(pt.get('limitations',[]), ensure_ascii=False)}
+  详情: {json.dumps({k: v for k, v in pt.get('detail',{}).items() if k not in ('wacc_pct', 'current_ps', 'current_pb', 'market_cap_yi', 'equity_yi', 'revenue_ttm_yi')}, ensure_ascii=False)}
+"""
+        elif pt and not pt.get("applicable"):
+            user_msg += f"""
+- 定价工具: {pt.get('method','?')} — 不适用
+  原因: {pt.get('limitations',['?'])[0][:120]}
+"""
 
     # ═══ 事件素材：当前情形的一手数据，估值参数的主要锚定来源 ═══
     user_msg += f"""
@@ -1737,16 +1451,10 @@ def _call_llm_scenario(
     user_msg += f"""
 ## 历史财务基线 — 事件冲击前的企业快照，用于理解冲击幅度和商业模式
 
-> **⚠️ 数据时效性声明**: 以下财务数据的时间戳是"事件发生前"。ROIC、毛利率、净利率反映的是**旧现实**。
-> 如果事件素材描述了涨价、产品升级、产能利用率提升，那么未来的毛利率/净利率/ROIC
-> 由事件决定，不由下表决定。下表只用来理解成本结构和经营杠杆——不直接用于赋 PS/PE。
-
-> **正确用法**: (1) 对比事件素材中的产能×价格×利用率，推算事件造成的收入/利润增量；
-> (2) 用历史毛利率/净利率理解成本结构和盈利模型，判断价格变化对利润的杠杆效应；
-> (3) 用历史ROIC理解资本回报基线——但赋 PS/PE 时，锚定的是事件改善后的状态，不是当前状态。
-
-> **最常见错误——禁止**: 看到当前毛利率 17%、ROIC -1.5%，就给 PS=4x。"低毛利→低PS"只在低毛利是**稳态**时成立。
-> 如果事件描述涨价 30-50%+产品结构升级 → 毛利率目标 25%+，应以改善后的毛利率为基准赋 PS。
+> **正确用法**: 以下数据反映事件发生前的企业状态。不要用这些历史数字直接作为
+> "当前情形"——事件已经改变了现状。用法: (1) 对比事件素材中的产能×价格×利用率，
+> 推算事件造成的收入/利润增量；(2) 用历史毛利率/净利率理解企业的成本结构和盈利模型，
+> 判断价格变化对利润的杠杆效应；(3) 用历史ROIC理解企业的资本回报基线。
 
 - 市值: {core.get('market_cap_yi',0)}亿 营收TTM: {core.get('revenue_ttm_yi',0)}亿
 - 净利润: {core.get('net_profit_ttm_yi',0)}亿 经营利润: {core.get('operating_profit_ttm_yi',0)}亿
@@ -1854,299 +1562,6 @@ def _parse_json(text: str) -> dict:
             except json.JSONDecodeError:
                 pass
         raise ScenarioError("E301", "JSON解析失败", {"raw": text[:500]})
-
-
-# ═══════════════════════════════════════
-# LLM-2 调用 — 多轮搜索 + 审阅 + 最终报告
-# ═══════════════════════════════════════
-
-def _call_llm2(
-    llm1_output: dict,
-    computed: dict,
-    bs_profile: dict,
-    wacc_params: dict,
-    data_package: dict,
-    routing: dict,
-    event_data: dict,
-    agent2a_output: dict | None = None,
-    baseline_report: str | None = None,
-    roic_warnings: list | None = None,
-    mandatory_xcheck: dict | None = None,
-    volc_pre_search: str = "",
-    max_rounds: int = 3,
-    system_prompt: str | None = None,
-) -> dict:
-    """LLM-2: 多轮搜索审阅 + 最终报告。
-
-    最多 max_rounds 轮。每轮 LLM-2 可以输出 search_requests，
-    system_prompt: 可选的自定义系统提示词（SOTP 等变体使用）
-    代码执行搜索后将结果注入上下文，再次调用 LLM-2。
-    """
-    core = data_package.get("packages", {}).get("core", {}).get("fields", {})
-    stock = core.get("stock_name", data_package.get("stock_name", ""))
-    code = data_package.get("stock_code", "")
-    primary = routing.get("primary_model", "A")
-
-    # ── 构建 LLM-2 用户消息的静态部分 ──
-    # A 部分: LLM-1 完整输出
-    alpha_json = json.dumps(llm1_output, ensure_ascii=False, indent=2)
-
-    # B 部分: 代码计算结果
-    sv = llm1_output.get("scenario_valuation", {})
-    details = sv.get("scenario_details", {})
-    computed_table = ""
-    for s in ("bear", "base", "bull"):
-        d = details.get(s, {})
-        prob = d.get("probability", "?")
-        up = d.get("upside_pct", "?")
-        mcap = d.get("target_mcap_yi", "?")
-        computed_table += f"  {s}: prob={prob}, upside={up}%, target_mcap={mcap}亿\n"
-    beta_part = f"""概率加权: upside={computed.get('probability_weighted_upside_pct','?')}%, mcap={computed.get('probability_weighted_mcap_yi','?')}亿, asymmetry={computed.get('asymmetry_ratio','?')}x
-ROIC审计警告: {json.dumps(roic_warnings or [], ensure_ascii=False)}
-跨族底线校验: {json.dumps(mandatory_xcheck or {}, ensure_ascii=False, indent=2)[:500]}"""
-
-    # C 部分: 完整市场定价数据
-    anchor_2a = "earnings"
-    if agent2a_output:
-        anchor_2a = agent2a_output.get("market_narrative", {}).get("primary_anchor", "earnings")
-
-    wacc_pct = wacc_params.get('wacc_pct', 10)
-    if anchor_2a == "earnings":
-        bs_text = f"""反向 DCF (利润锚):
-  隐含永续增速 g = {bs_profile.get('implied_g_pct',0)}% (WACC={wacc_pct}%)
-  EV: {bs_profile['ev_yi']}亿 NOPAT: {bs_profile['nopat_yi']}亿 ROIC: {bs_profile['roic_pct']}%
-  g/WACC比值: {bs_profile.get('implied_g_pct',0) / max(wacc_pct, 1) * 100:.0f}%"""
-    else:
-        bs_text = f"BS画像: {json.dumps({k: v for k, v in bs_profile.items() if k not in ('ev_yi', 'nopat_yi')}, ensure_ascii=False)[:300]}"
-
-    market_data = f"""当前PE: {bs_profile.get('pe_ttm','?')}x  PB: {bs_profile.get('pb','?')}x  PS: {bs_profile.get('ps_ttm','?')}x
-市值: {core.get('market_cap_yi','?')}亿
-{bs_text}
-{bs_profile.get('note_to_llm', '')}"""
-
-    # D 部分: 完整上下文（baseline + 2a + 事件 + 财务 + WACC）
-    baseline_section = ""
-    if baseline_report and len(baseline_report) > 100:
-        baseline_section = f"\n## 投资地图\n{baseline_report}\n"
-
-    a2a_section = ""
-    if agent2a_output:
-        mn = agent2a_output.get("market_narrative", {})
-        ep = agent2a_output.get("event_pricing", {})
-        sa = agent2a_output.get("signal_audit", {})
-        pa = ep.get("pricing_assessment", {})
-        a2a_section = f"""
-估值锚: {mn.get('primary_anchor','?')}
-SOTP触发: {mn.get('sotp_triggered', False)}
-事件分布形状: {ep.get('event_profile',{}).get('distribution_shape','?')}
-计价程度: {pa.get('overall_priced_in','?')} ({pa.get('priced_in_estimate','?')})
-剩余催化: {pa.get('residual_catalyst','?')[:200]}
-信号评分: {sa.get('step2d_score','?')}/10 — {sa.get('score_rationale','?')[:200]}
-"""
-
-    wacc_text = f"WACC={wacc_params.get('wacc_pct',10)}% (rf={wacc_params.get('rf_pct','?')}% beta={wacc_params.get('beta','?')} ERP={wacc_params.get('erp_pct','?')}%)"
-
-    # ── 组装初始上下文 ──
-    context = f"""# 审阅任务: {stock}({code})
-
-## A 部分: LLM-1 参数推演输出
-{alpha_json}
-
-## B 部分: 代码计算估值结果
-{computed_table}
-{beta_part}
-
-## C 部分: 当前市场定价
-{market_data}
-
-## D 部分: 上下文数据
-{baseline_section}
-## Agent-2a 诊断结论
-{a2a_section}
-## WACC参数
-{wacc_text}
-
-## 路由判决
-主模型: {primary} ({routing.get('model_category','')})
-路由理由: {routing.get('routing_reason','')}
-
-## 事件素材
-{json.dumps({k: str(v)[:500] for k, v in event_data.items() if k != 'raw_event_text'}, ensure_ascii=False, indent=2)}
-
-## 预搜索结果
-{volc_pre_search if volc_pre_search else '无预搜索结果'}
-"""
-
-    # ── 多轮对话 + 并行搜索 ──
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-
-    # 初始用户消息
-    initial_user_msg = context
-    sp = system_prompt or LLM2_SYSTEM_PROMPT
-    messages = [
-        {"role": "system", "content": sp},
-        {"role": "user", "content": initial_user_msg},
-    ]
-
-    all_searches = []
-    for round_num in range(max_rounds):
-        t_round = time.time()
-        print(f"  [LLM-2] 轮次 {round_num + 1}/{max_rounds} 开始 (消息历史 {len(messages)} 条)...", flush=True)
-        resp = requests.post(
-            "https://api.deepseek.com/v1/chat/completions",
-            headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
-            json={
-                "model": "deepseek-v4-pro",
-                "messages": messages,  # ← 带完整历史，不是单条大字符串
-                "max_tokens": 40960,
-                "temperature": 0.1,
-                "thinking": {"type": "enabled"},
-            },
-            timeout=600,
-        )
-        resp.raise_for_status()
-        usage = resp.json().get("usage", {})
-        print(f"  [LLM-2] 轮次 {round_num + 1} 完成 prompt={usage.get('prompt_tokens',0)} completion={usage.get('completion_tokens',0)} latency={time.time()-t_round:.1f}s", flush=True)
-        content = resp.json()["choices"][0]["message"]["content"]
-        result = _parse_json(content)
-
-        # 检查是否需要更多搜索
-        search_requests = result.get("search_requests", [])
-        if not search_requests:
-            print(f"  [LLM-2] 无更多搜索请求，输出最终报告", flush=True)
-            return result  # 完成——最终报告
-
-        # 每轮最多 2 条搜索——截断多余的
-        search_requests = search_requests[:2]
-        print(f"  [LLM-2] 发起 {len(search_requests)} 条并行搜索...", flush=True)
-        # 并行执行所有搜索
-        search_results = []
-        with ThreadPoolExecutor(max_workers=len(search_requests)) as executor:
-            futures = {
-                executor.submit(_call_volc_search, sr.get("query", ""), sr.get("purpose", "")): sr
-                for sr in search_requests
-            }
-            for future in as_completed(futures):
-                sr = futures[future]
-                try:
-                    volc_res = future.result()
-                except Exception:
-                    volc_res = f"搜索失败: {sr.get('query', '')}"
-                search_results.append({
-                    "query": sr.get("query", ""),
-                    "purpose": sr.get("purpose", ""),
-                    "result": volc_res,
-                })
-        all_searches.extend(search_results)
-        print(f"  [LLM-2] {len(search_results)} 条搜索完成", flush=True)
-
-        # 将搜索结果作为 assistant + user 追加到对话历史
-        search_text = "\n".join(
-            f"查询: {s['query']}\n目的: {s['purpose']}\n结果: {s['result']}"
-            for s in search_results
-        )
-        # LLM 本轮输出（含 search_requests 的 JSON）作为 assistant 消息
-        assistant_msg = json.dumps(result, ensure_ascii=False, indent=2)
-        messages.append({"role": "assistant", "content": assistant_msg})
-        # 搜索结果作为 user 消息
-        messages.append({"role": "user", "content": f"## 搜索轮次 {round_num + 1} 结果\n\n{search_text}\n\n请基于以上搜索结果继续审阅。如需更多搜索，输出 search_requests；否则输出最终报告（不含 search_requests）。"})
-
-    # 达到最大轮次——返回最后一轮结果
-    print(f"  [LLM-2] 达到最大轮次 {max_rounds}，返回最后一轮结果", flush=True)
-    return result
-
-
-def _call_volc_search(query: str, purpose: str = "") -> str:
-    """调用火山引擎搜索。返回搜索结果文本。"""
-    try:
-        from agent_volc import _call_volc_engine
-        resp = _call_volc_engine(query)
-        if isinstance(resp, dict):
-            return resp.get("answer", json.dumps(resp, ensure_ascii=False)[:2000])
-        return str(resp)[:2000]
-    except Exception:
-        return f"搜索不可用: {query}"
-
-
-def _extract_search_queries(llm1_output: dict) -> list:
-    """从 LLM-1 输出中提取预搜索关键词。"""
-    queries = []
-    # 从 change_request 提取
-    for cr in llm1_output.get("change_request", []):
-        if isinstance(cr, dict) and cr.get("query"):
-            queries.append(cr["query"])
-    # 从 data_gaps 提取关键词
-    for gap in llm1_output.get("data_gaps", []):
-        if isinstance(gap, str) and len(gap) > 10:
-            # 取前 60 字符作为搜索关键词
-            queries.append(gap[:60])
-    return queries[:5]  # 最多 5 个预搜索
-
-
-def _apply_llm2_changes(llm1_output: dict, llm2_output: dict) -> bool:
-    """将 LLM-2 的参数修改应用到 LLM-1 输出。返回是否有修改。"""
-    changes = llm2_output.get("change_log", [])
-    if not changes:
-        return False
-
-    details = llm1_output.get("scenario_valuation", {}).get("scenario_details", {})
-    if isinstance(details, list):
-        details = {item.get("name", item.get("scenario", "")): item for item in details}
-        llm1_output["scenario_valuation"]["scenario_details"] = details
-
-    for change in changes:
-        path = change.get("path", "")
-        new_val = change.get("new_value")
-        parts = path.split(".")
-        target = details
-        for part in parts[:-1]:
-            target = target.get(part, {})
-        if parts[-1] in target:
-            old = target[parts[-1]]
-            target[parts[-1]] = new_val
-            change["old_value"] = old
-
-    # 追加修改记录到 reasoning_trace
-    llm1_output.setdefault("reasoning_trace", []).append(
-        f"[LLM-2 参数修改] 应用了 {len(changes)} 条修改: "
-        + "; ".join(f"{c['path']}: {c.get('old_value','?')} → {c['new_value']} ({c.get('reason','?')[:50]})"
-                    for c in changes)
-    )
-    return True
-
-
-def _merge_llm_outputs(llm1_output: dict, llm2_output: dict) -> dict:
-    """以 LLM-2 的完整输出为主体，LLM-1 作为兜底。
-
-    LLM-2 已输出完整报告（含 scenario_valuation、reasoning_trace 等）。
-    用 LLM-2 覆盖同名字段，仅保留 LLM-1 独有的元数据字段。
-    """
-    if not llm2_output:
-        # LLM-2 完全故障：用 LLM-1
-        return llm1_output
-
-    # 以 LLM-2 为主体，LLM-1 兜底缺失字段
-    for key in llm1_output:
-        if key not in llm2_output:
-            llm2_output[key] = llm1_output[key]
-
-    # 叙事合并: LLM-1 在前，LLM-2 审阅意见追加在后
-    llm1_narrative = llm1_output.get("narrative", "")
-    llm2_note = llm2_output.get("_review_note", "") or llm2_output.get("narrative", "")
-    if llm1_narrative and llm2_note and llm2_note != llm1_narrative:
-        llm2_output["narrative"] = llm1_narrative + "\n\n【审阅修正】" + llm2_note
-    elif llm1_narrative:
-        llm2_output["narrative"] = llm1_narrative
-
-    # 保留审计痕迹
-    llm2_output["_llm1_original"] = {
-        "scenario_valuation": llm1_output.get("scenario_valuation"),
-        "reasoning_trace": llm1_output.get("reasoning_trace"),
-    }
-    llm2_output["_llm2_change_log"] = llm2_output.get("change_log", [])
-    llm2_output["_llm_split_version"] = "2-call"
-
-    return llm2_output
 
 
 # ═══════════════════════════════════════
@@ -2381,148 +1796,6 @@ def _fix_trade_annotation(ta: dict, weighted_upside: float, asymmetry: float,
 
 
 # ═══════════════════════════════════════
-# Step 1.7: ROIC-CAGR 一致性审计 (Q2)
-# ═══════════════════════════════════════
-
-def _audit_roic_consistency(llm_output: dict, core: dict, wacc_params: dict) -> list[dict]:
-    """检查 base 的 CAGR 和 ROIC 恢复路径是否自洽。
-
-    不约束当期 ROIC（滞后财务数据不应误杀反转故事），
-    但要求 LLM 在自己选择的 CAGR 和 ROIC 目标之间保持逻辑一致性。
-    """
-    warnings = []
-    sv = llm_output.get("scenario_valuation", {})
-    details_raw = sv.get("scenario_details", {})
-    if isinstance(details_raw, list):
-        details = {item.get("scenario", ""): item for item in details_raw}
-    else:
-        details = details_raw
-
-    base = details.get("base", {})
-    narrative = base.get("scenario_narrative", "")
-
-    # 提取 base CAGR: 不同模型族字段名不同
-    base_cagr = base.get("revenue_growth_3y_cagr_pct") or base.get("stage1_growth_pct") or 0
-    wacc_pct = wacc_params.get("wacc_pct", 10)
-
-    if base_cagr <= 20:
-        return warnings  # 低增速不需要审计
-
-    # 检查 ROIC 相关关键词是否出现在 base 叙事中
-    roic_keywords = ["ROIC", "roic", "投入资本回报", "资本回报", "覆盖WACC", "覆盖资金成本",
-                      "价值创造", "回报率改善", "利润率提升至"]
-    has_roic_path = any(kw in narrative for kw in roic_keywords)
-
-    if not has_roic_path and base_cagr > 30:
-        warnings.append({
-            "code": "E308", "severity": "warning",
-            "message": (f"Base CAGR={base_cagr}%但场景叙事未说明ROIC恢复路径。"
-                       f"高增长+低资本回报的组合意味着增长在加速价值毁灭。"
-                       f"请在scenario_narrative中补充: ROIC如何从当前水平改善至覆盖WACC({wacc_pct}%)？"),
-            "action": "降置信度一档(若财报可行性评分>=7则强制降至<=6)",
-        })
-
-    # 交叉检查: 如果叙事中提到毛利率修复但没提 ROIC
-    gm_keywords = ["毛利率", "净利率", "利润率", "gross margin", "net margin"]
-    has_gm_path = any(kw in narrative.lower() for kw in gm_keywords)
-    if has_gm_path and not has_roic_path and base_cagr > 25:
-        warnings.append({
-            "code": "E308b", "severity": "warning",
-            "message": (f"Base叙事讨论了利润率修复但未涉及ROIC改善。"
-                       f"利润率改善不一定意味着ROIC改善（若IC同步膨胀）。"
-                       f"请确认: 增长是否需要大量资本投入？若是，ROIC路径是什么？"),
-            "action": "提示供人工审阅，不自动降级",
-        })
-
-    return warnings
-
-
-# ═══════════════════════════════════════
-# Step 1.8: 强制跨族底线校验 (Q1)
-# ═══════════════════════════════════════
-
-def _mandatory_cross_validation(core: dict, llm_output: dict,
-                                 routing: dict | None = None) -> dict | None:
-    """无论 LLM 选了什么校验策略，代码层强制运行资产族底线校验。
-
-    针对重资产/高负债的亏损公司——即使叙事是 revenue 驱动的，
-    PB-ROE 也应作为独立底线参照，防止 PS 模型无限上浮。
-    """
-    total_assets = core.get("total_assets_yi", 0)
-    total_equity = core.get("total_equity_yi", 1)
-    if total_assets / max(total_equity, 1) <= 1.5:
-        return None  # 非重资产公司，不适用
-
-    bps = core.get("bps", 0)
-    total_shares = core.get("total_shares_yi", 1)
-    book_value_bps = bps * total_shares if bps > 0 else 0
-    # 取较大值防御数据不一致（bps×股数 vs 净资产总额可能因口径不同有差异）
-    book_value = max(book_value_bps, total_equity) if book_value_bps > 0 else total_equity
-
-    # PB底线: 制造业重资产公司熊市PB参考 (1.0-1.5x)
-    debt_ratio = core.get("debt_to_assets_pct", 50)
-    roic = core.get("roic_pct", 0)
-
-    # 根据负债率和ROIC分层确定保守PB
-    if debt_ratio > 65 and roic < 0:
-        floor_pb = 1.0   # 高负债+亏损 → 资产清算价值
-    elif debt_ratio > 50 or roic < 5:
-        floor_pb = 1.5   # 中等风险 → 略高于账面
-    else:
-        floor_pb = 2.0   # 相对健康
-
-    floor_mcap = book_value * floor_pb
-
-    # 取主模型 base target
-    sv = llm_output.get("scenario_valuation", {})
-    details_raw = sv.get("scenario_details", {})
-    if isinstance(details_raw, list):
-        details = {item.get("scenario", ""): item for item in details_raw}
-    else:
-        details = details_raw
-    base_mcap = details.get("base", {}).get("target_mcap_yi", 0)
-
-    if base_mcap <= 0 or floor_mcap <= 0:
-        return None
-
-    ratio = base_mcap / floor_mcap
-
-    result = {
-        "_code_enforced": True,
-        "validation_model": "D(PB-ROE)",
-        "validation_paradigm": "资产底线",
-        "base_target_mcap_yi": base_mcap,
-        "validation_mcap_yi": round(floor_mcap, 1),
-        "gap_pct": round((base_mcap - floor_mcap) / floor_mcap * 100, 1),
-        "detail": {
-            "book_value_yi": round(book_value, 1),
-            "floor_pb": floor_pb,
-            "debt_ratio_pct": debt_ratio,
-            "roic_pct": roic,
-            "mcap_to_book_ratio": round(base_mcap / book_value, 1) if book_value > 0 else 0,
-        },
-    }
-
-    if ratio > 3.0:
-        result.update({
-            "gap_direction": "主模型显著高估(>3x净资产底线)",
-            "assessment": "严重偏离: 主模型base估值为净资产底线的{:.0f}倍，PS框架可能过度膨胀。请重新审视PS倍数的合理性。".format(ratio),
-        })
-    elif ratio > 2.0:
-        result.update({
-            "gap_direction": "主模型偏高(>2x净资产底线)",
-            "assessment": "存在分歧: 主模型base估值为净资产底线的{:.0f}倍。若叙事破裂，估值可能向资产价值回归。".format(ratio),
-        })
-    else:
-        result.update({
-            "gap_direction": "基本一致",
-            "assessment": "主模型与资产底线估值在合理范围内。",
-        })
-
-    return result
-
-
-# ═══════════════════════════════════════
 # Step 2: 代码校验
 # ═══════════════════════════════════════
 
@@ -2716,44 +1989,6 @@ def _assemble_final_output(
         confidence["_validation_warnings"].extend(
             [w["code"] for w in validation_warnings])
 
-    # 归一化: 旧版扁平 confidence → 新版 dimensions 嵌套格式
-    if "dimensions" not in confidence:
-        old_keys = {
-            "info_quality": ["info_quality", "data_reliability", "information_quality"],
-            "financial_feasibility": ["financial_feasibility", "forecast_accuracy"],
-            "valuation_safety": ["valuation_safety", "model_appropriateness"],
-            "historical_precedent": ["historical_precedent", "narrative_consistency"],
-        }
-        dims = {}
-        for new_key, old_aliases in old_keys.items():
-            score = 5
-            note = ""
-            for alias in old_aliases:
-                if alias in confidence:
-                    score = confidence.pop(alias)
-                    break
-            # 从 notes 字段提取
-            if "notes" in confidence:
-                note = str(confidence.pop("notes"))[:100]
-            dims[new_key] = {"score": score, "label": {"info_quality": "信息质量", "financial_feasibility": "财务可行性", "valuation_safety": "估值安全边际", "historical_precedent": "历史案例匹配"}[new_key], "note": note}
-        confidence["dimensions"] = dims
-
-    # 归一化: monitoring_kpis 键名
-    kpis = llm_output.get("monitoring_kpis", {})
-    if kpis:
-        key_map = {
-            "event_progress_kpis": "event_milestone_kpis",
-            "valuation_marker_kpis": "competition_signal_kpis",
-        }
-        for old_k, new_k in key_map.items():
-            if old_k in kpis and new_k not in kpis:
-                kpis[new_k] = kpis.pop(old_k)
-        # 字符串 → 对象
-        for cat in ("financial_verification_kpis", "event_milestone_kpis", "competition_signal_kpis", "risk_trigger_kpis"):
-            items = kpis.get(cat, [])
-            if items and isinstance(items[0], str):
-                kpis[cat] = [{"name": s, "baseline": "待观测", "target": "待定", "frequency": "季度"} for s in items]
-
     # 情景列表 — 模型感知：提取 LLM 输出的所有参数字段
     details_raw = sv.get("scenario_details", {})
     # 容错: LLM 可能输出数组格式 [{"scenario":"bear",...},...]，转为字典
@@ -2935,7 +2170,6 @@ def _assemble_final_output(
         },
         "reverse_dcf": rd,
         "validation_crosscheck": vx,
-        "_code_cross_validation": llm_output.get("_code_cross_validation"),
         "expectation_gap": llm_output.get("expectation_gap", {}),
         "confidence": confidence,
         "trade_annotation": ta,
@@ -2950,13 +2184,10 @@ def _assemble_final_output(
         "risk_triggers": llm_output.get("risk_triggers", {}),
         "narrative": llm_output.get("narrative", ""),
         "data_gaps": llm_output.get("data_gaps", []),
-        "growth_path_decomposition": llm_output.get("growth_path_decomposition"),
         "signal_audit": llm_output.get("signal_audit", {}),
         "scenarios": scenarios,
         "case_comparison_summary": llm_output.get("case_comparison_summary", {}),
         "_validation_warnings": validation_warnings,
-        "_llm2_change_log": llm_output.get("_llm2_change_log", llm_output.get("change_log", [])),
-        "_llm_split_version": llm_output.get("_llm_split_version", "1-call"),
     }
 
 
@@ -2987,37 +2218,31 @@ class ScenarioAsymmetry:
         baseline_report: str | None = None,
     ) -> dict:
         """
-        执行完整推演裁决 — V8 双 LLM 架构。
-
-        LLM-1: 事件→基本面→参数（Prompt 禁止市值锚定）
-        代码层: 参数→估值计算 + ROIC审计 + 跨族校验
-        LLM-2: 多轮搜索审阅 + 参数修正 + 最终报告
+        执行完整推演裁决。
 
         data_package: Agent-1 DataForge 输出
         routing_decision: Agent-2b routing_decision 部分
         event_data: Coze Agent0 输入
-        agent2a_output: Agent-2a 叙事诊断输出
-        volc_data: 火山联网搜索补充数据
-        baseline_report: Agent-Baseline 投资地图报告
+        agent2a_output: V6 新增 — Agent-2a 叙事诊断输出（信号审核 + 计价判断）
+        volc_data: V6.3 新增 — 火山联网搜索补充数据（券商预测/可比估值）
+        baseline_report: V7 新增 — Agent-Baseline 投资地图报告
         """
         cb = progress_cb or (lambda s, n: None)
         event_data = event_data or {}
         stock_code = data_package.get("stock_code", "")
-        primary = routing_decision.get("primary_model", "A")
-        core_fields = data_package.get("packages", {}).get("core", {}).get("fields", {})
-        core_fields["_wacc_decimal"] = 0.10  # default, will be overwritten
 
         # ── Step 0: WACC + BS 预计算 ──
         cb(1, "WACC/BS预计算")
         wacc_params = precompute_wacc(self.fetcher, stock_code, data_package)
-        core_fields["_wacc_decimal"] = wacc_params.get("wacc_pct", 10) / 100
+        primary = routing_decision.get("primary_model", "A")
+        # V6: 从 Agent-2a 获取估值锚，传给 BS 画像选择正确工具
         anchor = (agent2a_output or {}).get("market_narrative", {}).get("primary_anchor", "earnings")
         bs_profile = precompute_bs_profile(primary, data_package, wacc_params, anchor)
 
-        # ── Step 1: LLM-1 参数推演 ──
-        cb(2, "LLM-1 参数推演")
+        # ── Step 1: LLM 推演裁决 ──
+        cb(2, "LLM推演裁决")
         try:
-            llm1_output = _call_llm_scenario(
+            llm_output = _call_llm_scenario(
                 bs_profile, wacc_params, data_package,
                 routing_decision, event_data,
                 agent2a_output=agent2a_output,
@@ -3025,14 +2250,14 @@ class ScenarioAsymmetry:
                 baseline_report=baseline_report,
             )
         except ScenarioError as e:
-            cb(3, f"LLM-1 故障: {e.code}")
+            cb(3, f"LLM故障: {e.code}")
             if e.code in ("E302", "E303"):
                 try:
-                    llm1_output = _call_llm_scenario(
+                    llm_output = _call_llm_scenario(
                         bs_profile, wacc_params, data_package,
                         routing_decision, event_data,
                         agent2a_output=agent2a_output,
-                        volc_data=None,  # 重试时省略火山数据
+                        volc_data=volc_data,
                         baseline_report=baseline_report,
                     )
                 except ScenarioError:
@@ -3040,89 +2265,17 @@ class ScenarioAsymmetry:
             else:
                 raise
 
-        # ── Step 1.5: 代码计算（LLM-1 出参数，代码出数字）──
-        cb(3, "代码计算")
-        sv_pre = llm1_output.get("scenario_valuation", {})
+        # ── Step 1.5: 代码计算（LLM出参数，代码出数字）──
+        cb(3, "代码重算")
+        # 快照 LLM 原始值（用于 trace 修正条目）
+        sv_pre = llm_output.get("scenario_valuation", {})
         _llm_orig = {
             "upside": sv_pre.get("probability_weighted_upside_pct", None),
             "asymmetry": sv_pre.get("asymmetry_ratio", None),
             "mcap": sv_pre.get("probability_weighted_mcap_yi", None),
         }
-        computed = _compute_from_assumptions(
-            llm1_output.get("scenario_valuation", {}), primary, core_fields,
-        )
-        sv = llm1_output.get("scenario_valuation", {})
-        sv["probability_weighted_upside_pct"] = computed["probability_weighted_upside_pct"]
-        sv["probability_weighted_mcap_yi"] = computed["probability_weighted_mcap_yi"]
-        sv["asymmetry_ratio"] = computed["asymmetry_ratio"]
-        sv["_computed_by_code"] = True
-
-        # ── Step 1.7: ROIC-CAGR 一致性审计 ──
-        cb(3.5, "ROIC-CAGR审计")
-        roic_warnings = _audit_roic_consistency(llm1_output, core_fields, wacc_params)
-        if roic_warnings:
-            print(f"  [Agent3 roic-audit] warnings: {[w['code'] for w in roic_warnings]}", flush=True)
-
-        # ── Step 1.8: 强制跨族底线校验 ──
-        cb(3.7, "跨族底线校验")
-        mandatory_xcheck = _mandatory_cross_validation(
-            core_fields, llm1_output, routing_decision,
-        )
-        if mandatory_xcheck:
-            existing_xcheck = llm1_output.get("validation_crosscheck", {})
-            if existing_xcheck and existing_xcheck.get("validation_strategy") == "self_validation":
-                mandatory_xcheck["_overrides_llm_selfcheck"] = True
-            llm1_output["_code_cross_validation"] = mandatory_xcheck
-
-        # ── Step 2a: volc 预搜索（从 LLM-1 的 data_gaps + change_request 提取关键词）──
-        cb(4, "volc 预搜索")
-        pre_search_queries = _extract_search_queries(llm1_output)
-        volc_pre_search = ""
-        if pre_search_queries:
-            volc_results = []
-            for q in pre_search_queries:
-                try:
-                    res = _call_volc_search(q)
-                    volc_results.append(f"查询: {q}\n结果: {res}")
-                except Exception:
-                    volc_results.append(f"查询: {q}\n结果: 搜索失败")
-            volc_pre_search = "\n\n".join(volc_results)
-
-        # ── Step 2b: LLM-2 多轮搜索审阅 ──
-        cb(4.5, "LLM-2 审阅")
-        try:
-            llm2_output = _call_llm2(
-                llm1_output, computed, bs_profile, wacc_params,
-                data_package, routing_decision, event_data,
-                agent2a_output=agent2a_output,
-                baseline_report=baseline_report,
-                roic_warnings=roic_warnings,
-                mandatory_xcheck=mandatory_xcheck,
-                volc_pre_search=volc_pre_search,
-            )
-        except Exception:
-            # LLM-2 故障 → 降级: 用 LLM-1 输出 + 代码修正
-            print("  [Agent3] LLM-2 故障，降级为 LLM-1 + 代码修正模式", flush=True)
-            import traceback
-            traceback.print_exc()
-            llm2_output = {
-                "confidence": {"overall_score": 4, "overall_label": "低",
-                               "dimensions": {
-                                   "info_quality": {"score": 5, "label": "信息质量", "note": "LLM-2未执行，降级为默认值"},
-                                   "financial_feasibility": {"score": 5, "label": "财务可行性", "note": "LLM-2未执行"},
-                                   "valuation_safety": {"score": 3, "label": "估值安全边际", "note": "LLM-2未执行"},
-                                   "historical_precedent": {"score": 5, "label": "历史案例匹配", "note": "LLM-2未执行"}}},
-                "trade_annotation": {"tier": "☆☆☆ 规避", "total_score": "4/10",
-                                     "dimension_scores": {"odds_quality": 1, "pricing_headroom": 1,
-                                                         "transmission_confidence": 1, "model_consistency": 1},
-                                     "tier_note": "LLM-2未执行，降级为保守默认值"},
-            }
-
-        # ── Step 2.5: LLM-2 输出为主体，代码在其参数上重算 ──
-        cb(5, "合并+重算")
-        llm_output = _merge_llm_outputs(llm1_output, llm2_output)
-
-        # 在 LLM-2 的参数上重新计算（如果 LLM-2 改了参数）
+        core_fields = data_package.get("packages", {}).get("core", {}).get("fields", {})
+        core_fields["_wacc_decimal"] = wacc_params.get("wacc_pct", 10) / 100  # Model K 需要
         computed = _compute_from_assumptions(
             llm_output.get("scenario_valuation", {}), primary, core_fields,
         )
@@ -3132,12 +2285,12 @@ class ScenarioAsymmetry:
         sv["asymmetry_ratio"] = computed["asymmetry_ratio"]
         sv["_computed_by_code"] = True
 
-        # ── Step 3: 修复交易标注 ──
-        cb(5.5, "修正交易标注")
+        # ── Step 1.6: 修正交易标注文字（消除数值-文字脱节）──
+        cb(3.5, "修正交易标注")
         ta = llm_output.get("trade_annotation", {})
         details_raw = sv.get("scenario_details", {})
         if isinstance(details_raw, list):
-            details = {item.get("scenario", item.get("name", "")): item for item in details_raw}
+            details = {item.get("scenario", ""): item for item in details_raw}
         else:
             details = details_raw
         bear_u = details.get("bear", {}).get("upside_pct", 0)
@@ -3147,22 +2300,22 @@ class ScenarioAsymmetry:
             computed["asymmetry_ratio"], bear_u, bull_u,
         )
 
-        # ── Step 4: 代码校验 ──
-        cb(5.7, "一致性校验")
+        # ── Step 2: 代码校验 ──
+        cb(4, "一致性校验")
         validation_warnings = _validate_output(llm_output, bs_profile, wacc_params)
         validation_warnings = [w for w in validation_warnings if not w.get("code", "").startswith("E306")]
-        validation_warnings.extend(roic_warnings)
         if validation_warnings:
-            print(f"  [Agent3 validation] warnings: {[w['code'] for w in validation_warnings]}", flush=True)
+            codes = [w["code"] for w in validation_warnings]
+            print(f"  [Agent3 validation] warnings: {codes}", flush=True)
 
-        # ── Step 5: 组装输出 ──
-        cb(6, "组装输出")
+        # ── Step 3: 组装输出 ──
+        cb(5, "组装输出")
         output = _assemble_final_output(
             llm_output, bs_profile, data_package, routing_decision, validation_warnings,
             llm_original_values=_llm_orig,
         )
 
-        cb(7, "推演裁决完成")
+        cb(6, "推演裁决完成")
         return output
 
 

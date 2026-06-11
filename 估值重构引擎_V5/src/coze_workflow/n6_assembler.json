@@ -1,0 +1,38 @@
+{
+  "node": {
+    "id": "n6_assembler",
+    "type": "llm",
+    "name": "总装+去重+交叉验证",
+    "description": "读入5份顺序生成的字段报告，去重，交叉验证，输出万业谱记录JSON"
+  },
+
+  "model": {
+    "provider": "deepseek",
+    "model": "deepseek-v4-flash",
+    "temperature": 0,
+    "max_tokens": 8192,
+    "thinking": { "type": "enabled" }
+  },
+
+  "inputs": [
+    { "name": "investment_theme",        "type": "string", "source": "n1.output" },
+    { "name": "industry_expert_research","type": "string", "source": "n2.output" },
+    { "name": "adversarial_thinking",    "type": "string", "source": "n3.output" },
+    { "name": "future",                  "type": "string", "source": "n4.output" },
+    { "name": "event_deduction",         "type": "string", "source": "n5.output" },
+    { "name": "verified_name",           "type": "string", "source": "n0.verified_name" },
+    { "name": "verified_code",           "type": "string", "source": "n0.verified_code" },
+    { "name": "event_date",              "type": "string", "source": "start.event_date" },
+    { "name": "event_source",            "type": "string", "source": "start.event_source" },
+    { "name": "raw_text",                "type": "string", "source": "start.raw_text" },
+    { "name": "step_one",                "type": "string", "source": "start.step_one" }
+  ],
+
+  "outputs": [
+    { "name": "final_record", "type": "string", "description": "JSON字符串，5份去重语料+cross_validation+knowledge_supplement" }
+  ],
+
+  "system_prompt": "你是总编辑。你的任务是把5份顺序生成的语料做去重和交叉验证，输出一条完整的万业谱记录。\n\n## 5份语料的生成顺序\n\nN1(投资主题) → N2(产业链) → N3(逆向推演) → N4(催化日历) → N5(事件推演)\n\n后序报告基于前序写成，已经做了部分交叉引用。你的任务是找出仍然存在的重复和矛盾。\n\n## 去重规则\n\n1. 扫描5份语料，找到内容重叠段落\n2. N2(产业链)中引用了N1(投资主题)内容的 → 保留在N1, N2中删重\n3. N3(逆向)中的风险判断与N5(推演)中的破裂场景重叠 → 保留在N3, N5中删重\n4. 识别 knowledge_supplement — 搜索中获取但未被5份语料覆盖的补充信息\n\n## 交叉验证规则\n\n1. N1投资主题的判断 vs N2产业链的判断 → 是否自洽？\n2. N2卡点检查 vs N3失效测试 → 逻辑是否一致？\n3. N5推演路径 vs N1核心假设 → 是否存在逻辑矛盾？\n4. 不一致处标注\"⚠️存在分歧: [字段A]说...而[字段B]说...\"，不做调和\n\n## 输出格式\n\n务必输出纯JSON（不要markdown代码块包裹）:\n\n{\n  \"industry_expert_research\": \"去重后的产业链研究报告\",\n  \"adversarial_thinking\": \"去重后的逆向推演\",\n  \"investment_theme\": \"去重后的投资主题\",\n  \"future\": \"去重后的催化日历\",\n  \"event_deduction\": \"去重后的事件推演\",\n  \"knowledge_supplement\": \"5份语料均未覆盖的补充信息。如无则写'无额外补充'\",\n  \"cross_validation\": {\n    \"consistencies\": [\"一致点1: N1和N2独立得出...\"],\n    \"divergences\": [\"分歧点1: N2认为...但N3认为...\"]\n  }\n}\n\n规则:\n- 去重: 保留在最相关的字段，从次要字段删除\n- 不改变事实内容，只删除重复段落\n- knowledge_supplement不能为空字符串\n- 如果N3缺少红蓝对抗的存活强度标注，在adversarial_thinking末尾追加\"⚠️ 红蓝对抗不完整\"",
+
+  "user_message": "请去重+交叉验证以下5份语料。这些报告是按 N1→N2→N3→N4→N5 顺序生成的。\n\n## 基础信息\n股票: {{verified_name}}（{{verified_code}}）\n事件日期: {{event_date}}\n事件来源: {{event_source}}\n\n## N1 投资主题\n{{investment_theme}}\n\n## N2 产业链研究\n{{industry_expert_research}}\n\n## N3 逆向推演\n{{adversarial_thinking}}\n\n## N4 催化日历\n{{future}}\n\n## N5 事件推演\n{{event_deduction}}\n\n## 补充信息\n原始事件: {{raw_text}}\n预研分析: {{step_one}}"
+}

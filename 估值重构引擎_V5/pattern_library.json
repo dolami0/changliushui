@@ -1,0 +1,2270 @@
+[
+  {
+    "pattern_id": "cyclical_upturn_profit_nuke",
+    "stock_code": "000408",
+    "stock_name": "藏格矿业",
+    "sector": "农药化肥",
+    "gain_multiple": 8.8,
+    "return_type": "profit_nuke",
+    "return_type_cn": "利润核弹",
+    "return_composition": "利润主导(>90%), PE几乎不动或收缩",
+    "driver": "cyclical_upturn",
+    "driver_cn": "景气上行",
+    "dominant_factor": "",
+    "catalyst_summary": "钾肥+锂资源,盐湖提锂+钾肥景气",
+    "investment_logic": "钾肥+锂资源,盐湖提锂+钾肥景气",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['中盘(60-200亿)', '景气上行', '资源周期', '戴维斯双击', '钾锂双资源']",
+    "decagenome_tags": "['中盘(60-200亿)', '景气上行', '资源周期', '戴维斯双击', '钾锂双资源']",
+    "timeline": {
+      "start_date": "2021-03-31",
+      "peak_date": "2025-12-26",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 49,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 9.5,
+      "peak_pe": 38.7,
+      "pe_expansion_pct": 0,
+      "profit_expansion_pct": 24.4,
+      "gm_improvement_pp": 51.26,
+      "roic_improvement_pp": 49.21,
+      "start_mcap_yi": 0,
+      "peak_mcap_yi": 0
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "cyclical_upturn_profit_nuke",
+    "stock_code": "000426",
+    "stock_name": "兴业银锡",
+    "sector": "铅锌",
+    "gain_multiple": 4.7,
+    "return_type": "profit_nuke",
+    "return_type_cn": "利润核弹",
+    "return_composition": "利润主导(>90%), PE几乎不动或收缩",
+    "driver": "cyclical_upturn",
+    "driver_cn": "景气上行",
+    "dominant_factor": "",
+    "catalyst_summary": "银锡价格暴涨(白银+70%/锡+28%),收购亚洲第一银矿宇邦矿业+摩洛哥大西洋锡业,银漫二期扩产翻倍,量价齐升净利增257%",
+    "investment_logic": "银锡价格暴涨(白银+70%/锡+28%),收购亚洲第一银矿宇邦矿业+摩洛哥大西洋锡业,银漫二期扩产翻倍,量价齐升净利增257%",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['中盘(60-200亿)', '景气上行', '资源周期', '利润核弹']",
+    "decagenome_tags": "['中盘(60-200亿)', '景气上行', '资源周期', '利润核弹']",
+    "timeline": {
+      "start_date": "2023-03-31",
+      "peak_date": "2025-10-13",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 37,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 70.6,
+      "peak_pe": 76.6,
+      "pe_expansion_pct": 1.09,
+      "profit_expansion_pct": 44.9,
+      "gm_improvement_pp": 27.03,
+      "roic_improvement_pp": 16.37,
+      "start_mcap_yi": 149,
+      "peak_mcap_yi": 699
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "tech_breakthrough_profit_nuke",
+    "stock_code": "002052",
+    "stock_name": "同洲电子",
+    "sector": "家用电器",
+    "gain_multiple": 10.5,
+    "return_type": "profit_nuke",
+    "return_type_cn": "利润核弹",
+    "return_composition": "利润主导(>90%), PE几乎不动或收缩",
+    "driver": "tech_breakthrough",
+    "driver_cn": "技术突破",
+    "dominant_factor": "",
+    "catalyst_summary": "手机摄像头模组+车载镜头,消费电子复苏+智能驾驶双驱动",
+    "investment_logic": "手机摄像头模组+车载镜头,消费电子复苏+智能驾驶双驱动",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['起涨亏损', '技术突破', '利润核弹']",
+    "decagenome_tags": "['起涨亏损', '技术突破', '利润核弹']",
+    "timeline": {
+      "start_date": "2024-09-30",
+      "peak_date": "2025-08-22",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 50,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": null,
+      "peak_pe": 147.1,
+      "pe_expansion_pct": 0,
+      "profit_expansion_pct": 45.7,
+      "gm_improvement_pp": 51.54,
+      "roic_improvement_pp": 509.68,
+      "start_mcap_yi": 0,
+      "peak_mcap_yi": 90
+    },
+    "anchor_shift": {
+      "occurred": true,
+      "from": "None/亏损",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "earnings_inflection_davis_double",
+    "stock_code": "002270",
+    "stock_name": "华明装备",
+    "sector": "电气设备",
+    "gain_multiple": 5.4,
+    "return_type": "davis_double",
+    "return_type_cn": "戴维斯双击",
+    "return_composition": "利润+倍数双轮驱动",
+    "driver": "earnings_inflection",
+    "driver_cn": "业绩拐点",
+    "dominant_factor": "",
+    "catalyst_summary": "电力设备+特高压,电网投资+新能源并网",
+    "investment_logic": "电力设备+特高压,电网投资+新能源并网",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['小盘(30-60亿)', '业绩拐点', '隐形冠军', '估值范式切换', '戴维斯双击']",
+    "decagenome_tags": "['小盘(30-60亿)', '业绩拐点', '隐形冠军', '估值范式切换', '戴维斯双击']",
+    "timeline": {
+      "start_date": "2021-03-31",
+      "peak_date": "2025-11-07",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 54,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 12.7,
+      "peak_pe": 47.6,
+      "pe_expansion_pct": 3.74,
+      "profit_expansion_pct": 11.7,
+      "gm_improvement_pp": 3.8,
+      "roic_improvement_pp": 17,
+      "start_mcap_yi": 38,
+      "peak_mcap_yi": 206
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "earnings_inflection_anchor_reconstruction",
+    "stock_code": "002384",
+    "stock_name": "东山精密",
+    "sector": "元器件",
+    "gain_multiple": 6.0,
+    "return_type": "anchor_reconstruction",
+    "return_type_cn": "估值锚定重构",
+    "return_composition": "估值范式切换主导, 利润贡献小或亏损",
+    "driver": "earnings_inflection",
+    "driver_cn": "业绩拐点",
+    "dominant_factor": "",
+    "catalyst_summary": "东山精密:全球FPC第二PCB第三,苹果供应链+AI高端PCB扩产10亿美元,产业逻辑坚实",
+    "investment_logic": "东山精密:全球FPC第二PCB第三,苹果供应链+AI高端PCB扩产10亿美元,产业逻辑坚实",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['大盘(>200亿)', '估值范式切换', '硬科技', 'AI PCB', '苹果供应链']",
+    "decagenome_tags": "['大盘(>200亿)', '估值范式切换', '硬科技', 'AI PCB', '苹果供应链']",
+    "timeline": {
+      "start_date": "2024-03-29",
+      "peak_date": "2025-12-29",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 37,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 12.2,
+      "peak_pe": 129.8,
+      "pe_expansion_pct": 10.66,
+      "profit_expansion_pct": 8.9,
+      "gm_improvement_pp": 4,
+      "roic_improvement_pp": 2.89,
+      "start_mcap_yi": 252,
+      "peak_mcap_yi": 1520
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "tech_breakthrough_profit_nuke",
+    "stock_code": "002432",
+    "stock_name": "九安医疗",
+    "sector": "医疗保健",
+    "gain_multiple": 13.5,
+    "return_type": "profit_nuke",
+    "return_type_cn": "利润核弹",
+    "return_composition": "利润主导(>90%), PE几乎不动或收缩",
+    "driver": "tech_breakthrough",
+    "driver_cn": "技术突破",
+    "dominant_factor": "",
+    "catalyst_summary": "子公司iHealth新冠抗原自测试剂获FDA紧急授权(EUA),美国陆军81亿超级采购大单,50交易日28涨停涨幅12倍",
+    "investment_logic": "子公司iHealth新冠抗原自测试剂获FDA紧急授权(EUA),美国陆军81亿超级采购大单,50交易日28涨停涨幅12倍",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['小盘(30-60亿)', '技术突破', '医药', '利润核弹']",
+    "decagenome_tags": "['小盘(30-60亿)', '技术突破', '医药', '利润核弹']",
+    "timeline": {
+      "start_date": "2021-09-30",
+      "peak_date": "2022-04-14",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 41,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 83,
+      "peak_pe": 22.8,
+      "pe_expansion_pct": 0.27,
+      "profit_expansion_pct": 264.2,
+      "gm_improvement_pp": 44.25,
+      "roic_improvement_pp": 142.93,
+      "start_mcap_yi": 33,
+      "peak_mcap_yi": 444
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "business_model_upgrade_anchor_reconstruction",
+    "stock_code": "002779",
+    "stock_name": "中坚科技",
+    "sector": "园林机械→具身智能机器人",
+    "gain_multiple": 14.1,
+    "return_type": "anchor_reconstruction",
+    "return_type_cn": "估值锚定重构",
+    "return_composition": "估值范式切换主导, 利润贡献小或亏损",
+    "driver": "business_model_upgrade",
+    "driver_cn": "商业模式升级",
+    "dominant_factor": "",
+    "catalyst_summary": "【核心催化】投资挪威人形机器人公司1X(与OpenAI/软银/三星共同投资),成为1X中国供应链伙伴;与华为签署具身智能合作备忘录;基于英伟达IsaacLab开发四足机器人;定增7.85亿加码具身智能机器人产业化项目;筹划H股上市。【产品】灵睿P1四足机器狗(安防/巡检/救援)+UNICUTH1智能割草机器人+人形机器人整机(与华为盘古合作)。【风险】Q3净利降44%,机器人零收入",
+    "investment_logic": "【核心催化】投资挪威人形机器人公司1X(与OpenAI/软银/三星共同投资),成为1X中国供应链伙伴;与华为签署具身智能合作备忘录;基于英伟达IsaacLab开发四足机器人;定增7.85亿加码具身智能机器人产业化项目;筹划H股上市。【产品】灵睿P1四足机器狗(安防/巡检/救援)+UNICUTH1智能割草机器人+人形机器人整机(与华为盘古合作)。【风险】Q3净利降44%,机器人零收入",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['中盘(60-200亿)', '赛道切换', '具身智能', '人形机器人', '华为合作', '估值范式切换']",
+    "decagenome_tags": "['中盘(60-200亿)', '赛道切换', '具身智能', '人形机器人', '华为合作', '估值范式切换']",
+    "timeline": {
+      "start_date": "2021-03-31",
+      "peak_date": "2025-02-21",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 45,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": null,
+      "peak_pe": 499.2,
+      "pe_expansion_pct": 0,
+      "profit_expansion_pct": 197.1,
+      "gm_improvement_pp": 16.35,
+      "roic_improvement_pp": 17.19,
+      "start_mcap_yi": 0,
+      "peak_mcap_yi": 236
+    },
+    "anchor_shift": {
+      "occurred": true,
+      "from": "None/亏损",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "earnings_inflection_anchor_reconstruction",
+    "stock_code": "300049",
+    "stock_name": "福瑞医科",
+    "sector": "医疗保健",
+    "gain_multiple": 5.16,
+    "return_type": "anchor_reconstruction",
+    "return_type_cn": "估值锚定重构",
+    "return_composition": "估值范式切换主导, 利润贡献小或亏损",
+    "driver": "earnings_inflection",
+    "driver_cn": "业绩拐点",
+    "dominant_factor": "",
+    "catalyst_summary": "MASH新药(司美格鲁肽等)获批催生肝病检测需求爆发,FibroScan全球金标准(200+指南推荐),按次付费模式(977台装机)打开第二曲线",
+    "investment_logic": "MASH新药(司美格鲁肽等)获批催生肝病检测需求爆发,FibroScan全球金标准(200+指南推荐),按次付费模式(977台装机)打开第二曲线",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['小盘(30-60亿)', '估值范式切换', '医药', 'SaaS化平台', '全球金标准']",
+    "decagenome_tags": "['小盘(30-60亿)', '估值范式切换', '医药', 'SaaS化平台', '全球金标准']",
+    "timeline": {
+      "start_date": "2022-03-31",
+      "peak_date": "2025-09-17",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 51,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 38.5,
+      "peak_pe": 260.5,
+      "pe_expansion_pct": 6.76,
+      "profit_expansion_pct": 18.1,
+      "gm_improvement_pp": 6.19,
+      "roic_improvement_pp": 9.87,
+      "start_mcap_yi": 34,
+      "peak_mcap_yi": 216
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "earnings_inflection_profit_nuke",
+    "stock_code": "300100",
+    "stock_name": "双林股份",
+    "sector": "汽车配件",
+    "gain_multiple": 10.2,
+    "return_type": "profit_nuke",
+    "return_type_cn": "利润核弹",
+    "return_composition": "利润主导(>90%), PE几乎不动或收缩",
+    "driver": "earnings_inflection",
+    "driver_cn": "业绩拐点",
+    "dominant_factor": "",
+    "catalyst_summary": "汽车零部件+新能源,特斯拉供应链",
+    "investment_logic": "汽车零部件+新能源,特斯拉供应链",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['小盘(30-60亿)', '业绩拐点', '利润核弹']",
+    "decagenome_tags": "['小盘(30-60亿)', '业绩拐点', '利润核弹']",
+    "timeline": {
+      "start_date": "2022-03-31",
+      "peak_date": "2025-04-24",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 48,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 234.3,
+      "peak_pe": 84.7,
+      "pe_expansion_pct": 0.36,
+      "profit_expansion_pct": 10.1,
+      "gm_improvement_pp": 5.08,
+      "roic_improvement_pp": 13.53,
+      "start_mcap_yi": 32,
+      "peak_mcap_yi": 327
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "earnings_inflection_profit_nuke",
+    "stock_code": "300153",
+    "stock_name": "科泰电源",
+    "sector": "电气设备",
+    "gain_multiple": 9.5,
+    "return_type": "profit_nuke",
+    "return_type_cn": "利润核弹",
+    "return_composition": "利润主导(>90%), PE几乎不动或收缩",
+    "driver": "earnings_inflection",
+    "driver_cn": "业绩拐点",
+    "dominant_factor": "",
+    "catalyst_summary": "电源设备+新能源,储能+充电桩双驱动",
+    "investment_logic": "电源设备+新能源,储能+充电桩双驱动",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['微盘(<30亿)', '业绩拐点', '戴维斯双击', '储能', '充电桩']",
+    "decagenome_tags": "['微盘(<30亿)', '业绩拐点', '戴维斯双击', '储能', '充电桩']",
+    "timeline": {
+      "start_date": "2021-03-31",
+      "peak_date": "2025-08-20",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 74,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 81,
+      "peak_pe": 415.7,
+      "pe_expansion_pct": 0,
+      "profit_expansion_pct": 49.2,
+      "gm_improvement_pp": 4.15,
+      "roic_improvement_pp": 4.55,
+      "start_mcap_yi": 0,
+      "peak_mcap_yi": 156
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "business_model_upgrade_anchor_reconstruction",
+    "stock_code": "300255",
+    "stock_name": "常山药业",
+    "sector": "生物制药",
+    "gain_multiple": 5.4,
+    "return_type": "anchor_reconstruction",
+    "return_type_cn": "估值锚定重构",
+    "return_composition": "估值范式切换主导, 利润贡献小或亏损",
+    "driver": "business_model_upgrade",
+    "driver_cn": "商业模式升级",
+    "dominant_factor": "",
+    "catalyst_summary": "长效GLP-1艾本那肽对标司美格鲁肽,III期临床成功,减重适应症2025年获CDE批准,GLP-1千亿市场想象空间",
+    "investment_logic": "长效GLP-1艾本那肽对标司美格鲁肽,III期临床成功,减重适应症2025年获CDE批准,GLP-1千亿市场想象空间",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['起涨亏损', '估值范式切换', '创新药', 'GLP-1', '医药']",
+    "decagenome_tags": "['起涨亏损', '估值范式切换', '创新药', 'GLP-1', '医药']",
+    "timeline": {
+      "start_date": "2023-12-29",
+      "peak_date": "2025-11-03",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 43,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": -27.8,
+      "peak_pe": -212.7,
+      "pe_expansion_pct": 0,
+      "profit_expansion_pct": 1.3,
+      "gm_improvement_pp": 38.69,
+      "roic_improvement_pp": 25.96,
+      "start_mcap_yi": 0,
+      "peak_mcap_yi": 0
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "earnings_inflection_davis_double",
+    "stock_code": "300260",
+    "stock_name": "新莱应材",
+    "sector": "机械基件",
+    "gain_multiple": 4.45,
+    "return_type": "davis_double",
+    "return_type_cn": "戴维斯双击",
+    "return_composition": "利润+倍数双轮驱动",
+    "driver": "earnings_inflection",
+    "driver_cn": "业绩拐点",
+    "dominant_factor": "",
+    "catalyst_summary": "精密制造+半导体设备,国产替代+晶圆厂扩产",
+    "investment_logic": "精密制造+半导体设备,国产替代+晶圆厂扩产",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['小盘(30-60亿)', '业绩拐点', '估值范式切换', '半导体设备', '戴维斯双击']",
+    "decagenome_tags": "['小盘(30-60亿)', '业绩拐点', '估值范式切换', '半导体设备', '戴维斯双击']",
+    "timeline": {
+      "start_date": "2021-03-31",
+      "peak_date": "2022-10-26",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 43,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 40.8,
+      "peak_pe": 157.2,
+      "pe_expansion_pct": 3.86,
+      "profit_expansion_pct": 10,
+      "gm_improvement_pp": 5.06,
+      "roic_improvement_pp": 12.26,
+      "start_mcap_yi": 32,
+      "peak_mcap_yi": 258
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "tech_breakthrough_profit_nuke",
+    "stock_code": "300308",
+    "stock_name": "中际旭创",
+    "sector": "通信设备",
+    "gain_multiple": 18.2,
+    "return_type": "profit_nuke",
+    "return_type_cn": "利润核弹",
+    "return_composition": "利润主导(>90%), PE几乎不动或收缩",
+    "driver": "tech_breakthrough",
+    "driver_cn": "技术突破",
+    "dominant_factor": "",
+    "catalyst_summary": "全球光模块龙头,800G份额>40%,英伟达核心供应商,1.6T放量锁定80%订单,AI时代卖铲人,2023-2026利润从22亿→108亿",
+    "investment_logic": "全球光模块龙头,800G份额>40%,英伟达核心供应商,1.6T放量锁定80%订单,AI时代卖铲人,2023-2026利润从22亿→108亿",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['大盘(>200亿)', '技术突破', '硬科技', '估值范式切换', '利润核弹']",
+    "decagenome_tags": "['大盘(>200亿)', '技术突破', '硬科技', '估值范式切换', '利润核弹']",
+    "timeline": {
+      "start_date": "2021-03-31",
+      "peak_date": "2025-12-25",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 61,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 34.2,
+      "peak_pe": 85,
+      "pe_expansion_pct": 2.48,
+      "profit_expansion_pct": 80.3,
+      "gm_improvement_pp": 16.93,
+      "roic_improvement_pp": 39.88,
+      "start_mcap_yi": 258,
+      "peak_mcap_yi": 4684
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "composite_anchor_reconstruction",
+    "stock_code": "300436",
+    "stock_name": "广生堂",
+    "sector": "化学制药",
+    "gain_multiple": 6.7,
+    "return_type": "anchor_reconstruction",
+    "return_type_cn": "估值锚定重构",
+    "return_composition": "估值范式切换主导, 利润贡献小或亏损",
+    "driver": "composite",
+    "driver_cn": "综合驱动",
+    "dominant_factor": "",
+    "catalyst_summary": "化学制药+创新药,肝素+低分子肝素制剂",
+    "investment_logic": "化学制药+创新药,肝素+低分子肝素制剂",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['起涨亏损', '估值范式切换', '创新药', '国际化', '医药']",
+    "decagenome_tags": "['起涨亏损', '估值范式切换', '创新药', '国际化', '医药']",
+    "timeline": {
+      "start_date": "2023-12-29",
+      "peak_date": "2025-08-18",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 44,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": null,
+      "peak_pe": null,
+      "pe_expansion_pct": 0,
+      "profit_expansion_pct": 1,
+      "gm_improvement_pp": 8.22,
+      "roic_improvement_pp": 31.24,
+      "start_mcap_yi": 0,
+      "peak_mcap_yi": 0
+    },
+    "anchor_shift": {
+      "occurred": true,
+      "from": "None/亏损",
+      "to": "None/亏损(主题)"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "tech_breakthrough_davis_double",
+    "stock_code": "300476",
+    "stock_name": "胜宏科技",
+    "sector": "元器件",
+    "gain_multiple": 19.4,
+    "return_type": "davis_double",
+    "return_type_cn": "戴维斯双击",
+    "return_composition": "利润+倍数双轮驱动",
+    "driver": "tech_breakthrough",
+    "driver_cn": "技术突破",
+    "dominant_factor": "",
+    "catalyst_summary": "AI算力引爆高速PCB需求,800G/1.6T光模块用PCB核心供应商",
+    "investment_logic": "AI算力引爆高速PCB需求,800G/1.6T光模块用PCB核心供应商",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['中盘(60-200亿)', '技术突破', '硬科技', '戴维斯双击', 'AI PCB']",
+    "decagenome_tags": "['中盘(60-200亿)', '技术突破', '硬科技', '戴维斯双击', 'AI PCB']",
+    "timeline": {
+      "start_date": "2023-03-31",
+      "peak_date": "2025-09-16",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 47,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 22.6,
+      "peak_pe": 110.9,
+      "pe_expansion_pct": 4.9,
+      "profit_expansion_pct": 25,
+      "gm_improvement_pp": 16.11,
+      "roic_improvement_pp": 22.6,
+      "start_mcap_yi": 159,
+      "peak_mcap_yi": 3086
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "tech_breakthrough_davis_double",
+    "stock_code": "300502",
+    "stock_name": "新易盛",
+    "sector": "通信设备",
+    "gain_multiple": 9.5,
+    "return_type": "davis_double",
+    "return_type_cn": "戴维斯双击",
+    "return_composition": "利润+倍数双轮驱动",
+    "driver": "tech_breakthrough",
+    "driver_cn": "技术突破",
+    "dominant_factor": "",
+    "catalyst_summary": "ChatGPT引爆AI算力竞赛,800G/1.6T光模块需求爆发,LPO技术卡位Meta/亚马逊60%订单,英伟达GB200认证,2024净利增312%",
+    "investment_logic": "ChatGPT引爆AI算力竞赛,800G/1.6T光模块需求爆发,LPO技术卡位Meta/亚马逊60%订单,英伟达GB200认证,2024净利增312%",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['大盘(>200亿)', '技术突破', '硬科技', '戴维斯双击', '光模块龙头']",
+    "decagenome_tags": "['大盘(>200亿)', '技术突破', '硬科技', '戴维斯双击', '光模块龙头']",
+    "timeline": {
+      "start_date": "2023-03-31",
+      "peak_date": "2025-12-22",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 64,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 24.1,
+      "peak_pe": 82.3,
+      "pe_expansion_pct": 3.42,
+      "profit_expansion_pct": 74.1,
+      "gm_improvement_pp": 14.62,
+      "roic_improvement_pp": 70.06,
+      "start_mcap_yi": 231,
+      "peak_mcap_yi": 2205
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "tech_breakthrough_davis_double",
+    "stock_code": "300548",
+    "stock_name": "长芯博创",
+    "sector": "通信设备",
+    "gain_multiple": 6.0,
+    "return_type": "davis_double",
+    "return_type_cn": "戴维斯双击",
+    "return_composition": "利润+倍数双轮驱动",
+    "driver": "tech_breakthrough",
+    "driver_cn": "技术突破",
+    "dominant_factor": "",
+    "catalyst_summary": "AI数据中心驱动光通信器件需求,800G/1.6T升级周期受益",
+    "investment_logic": "AI数据中心驱动光通信器件需求,800G/1.6T升级周期受益",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['中盘(60-200亿)', '技术突破', '硬科技', '估值范式切换', '戴维斯双击']",
+    "decagenome_tags": "['中盘(60-200亿)', '技术突破', '硬科技', '估值范式切换', '戴维斯双击']",
+    "timeline": {
+      "start_date": "2024-03-29",
+      "peak_date": "2025-08-28",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 51,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 79.1,
+      "peak_pe": 285.9,
+      "pe_expansion_pct": 3.61,
+      "profit_expansion_pct": 42.6,
+      "gm_improvement_pp": 26.07,
+      "roic_improvement_pp": 18.89,
+      "start_mcap_yi": 76,
+      "peak_mcap_yi": 458
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "tech_breakthrough_davis_double",
+    "stock_code": "300570",
+    "stock_name": "太辰光",
+    "sector": "通信设备",
+    "gain_multiple": 8.9,
+    "return_type": "davis_double",
+    "return_type_cn": "戴维斯双击",
+    "return_composition": "利润+倍数双轮驱动",
+    "driver": "tech_breakthrough",
+    "driver_cn": "技术突破",
+    "dominant_factor": "",
+    "catalyst_summary": "光模块陶瓷插芯/光纤连接器龙头,AI数据中心核心受益",
+    "investment_logic": "光模块陶瓷插芯/光纤连接器龙头,AI数据中心核心受益",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['小盘(30-60亿)', '技术突破', '硬科技', '戴维斯双击', '全球龙头']",
+    "decagenome_tags": "['小盘(30-60亿)', '技术突破', '硬科技', '戴维斯双击', '全球龙头']",
+    "timeline": {
+      "start_date": "2021-03-31",
+      "peak_date": "2025-09-01",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 54,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 47,
+      "peak_pe": 142.3,
+      "pe_expansion_pct": 3.03,
+      "profit_expansion_pct": 16.4,
+      "gm_improvement_pp": 18.25,
+      "roic_improvement_pp": 16.83,
+      "start_mcap_yi": 35,
+      "peak_mcap_yi": 312
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "cyclical_upturn_profit_nuke",
+    "stock_code": "300641",
+    "stock_name": "正丹股份",
+    "sector": "化工原料",
+    "gain_multiple": 6.0,
+    "return_type": "profit_nuke",
+    "return_type_cn": "利润核弹",
+    "return_composition": "利润主导(>90%), PE几乎不动或收缩",
+    "driver": "cyclical_upturn",
+    "driver_cn": "景气上行",
+    "dominant_factor": "",
+    "catalyst_summary": "全球TMA龙头(产能8.5万吨/33%市占率),英力士永久关停7万吨产能致全球供给缺口6.3万吨,TMA价格暴涨5倍,2024净利增11949%",
+    "investment_logic": "全球TMA龙头(产能8.5万吨/33%市占率),英力士永久关停7万吨产能致全球供给缺口6.3万吨,TMA价格暴涨5倍,2024净利增11949%",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['微盘(<30亿)', '景气上行', '供给冲击', '资源周期', '利润核弹']",
+    "decagenome_tags": "['微盘(<30亿)', '景气上行', '供给冲击', '资源周期', '利润核弹']",
+    "timeline": {
+      "start_date": "2023-12-29",
+      "peak_date": "2024-06-12",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 49,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 303.1,
+      "peak_pe": 23.9,
+      "pe_expansion_pct": 0.08,
+      "profit_expansion_pct": 173.6,
+      "gm_improvement_pp": 51.66,
+      "roic_improvement_pp": 47.89,
+      "start_mcap_yi": 27,
+      "peak_mcap_yi": 161
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "earnings_inflection_davis_double",
+    "stock_code": "300718",
+    "stock_name": "长盛轴承",
+    "sector": "机械基件",
+    "gain_multiple": 7.9,
+    "return_type": "davis_double",
+    "return_type_cn": "戴维斯双击",
+    "return_composition": "利润+倍数双轮驱动",
+    "driver": "earnings_inflection",
+    "driver_cn": "业绩拐点",
+    "dominant_factor": "",
+    "catalyst_summary": "轴承+机器人,人形机器人产业链",
+    "investment_logic": "轴承+机器人,人形机器人产业链",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['小盘(30-60亿)', '业绩拐点', '估值范式切换', '机器人', '戴维斯双击']",
+    "decagenome_tags": "['小盘(30-60亿)', '业绩拐点', '估值范式切换', '机器人', '戴维斯双击']",
+    "timeline": {
+      "start_date": "2022-03-31",
+      "peak_date": "2025-03-05",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 56,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 25.4,
+      "peak_pe": 139.1,
+      "pe_expansion_pct": 5.48,
+      "profit_expansion_pct": 7.5,
+      "gm_improvement_pp": 12.73,
+      "roic_improvement_pp": 12.73,
+      "start_mcap_yi": 42,
+      "peak_mcap_yi": 331
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "business_model_upgrade_davis_double",
+    "stock_code": "300757",
+    "stock_name": "罗博特科",
+    "sector": "专用机械",
+    "gain_multiple": 5.11,
+    "return_type": "davis_double",
+    "return_type_cn": "戴维斯双击",
+    "return_composition": "利润+倍数双轮驱动",
+    "driver": "business_model_upgrade",
+    "driver_cn": "商业模式升级",
+    "dominant_factor": "",
+    "catalyst_summary": "子公司ficonTEC(全球硅光耦合设备龙头)为英伟达核心供应商,切入CPO/硅光赛道,6亿量产订单+港股递表,AI算力驱动800G/1.6T光模块需求爆发",
+    "investment_logic": "子公司ficonTEC(全球硅光耦合设备龙头)为英伟达核心供应商,切入CPO/硅光赛道,6亿量产订单+港股递表,AI算力驱动800G/1.6T光模块需求爆发",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['起涨亏损', '硬科技', 'AI基础设施', '估值范式切换', '戴维斯双击', '全球唯一']",
+    "decagenome_tags": "['起涨亏损', '硬科技', 'AI基础设施', '估值范式切换', '戴维斯双击', '全球唯一']",
+    "timeline": {
+      "start_date": "2023-12-29",
+      "peak_date": "2025-09-16",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 56,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": null,
+      "peak_pe": 315.1,
+      "pe_expansion_pct": 0,
+      "profit_expansion_pct": 3.9,
+      "gm_improvement_pp": 19.21,
+      "roic_improvement_pp": 8.77,
+      "start_mcap_yi": 0,
+      "peak_mcap_yi": 201
+    },
+    "anchor_shift": {
+      "occurred": true,
+      "from": "None/亏损",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "tech_breakthrough_profit_nuke",
+    "stock_code": "300779",
+    "stock_name": "惠城环保",
+    "sector": "环境保护",
+    "gain_multiple": 18.2,
+    "return_type": "profit_nuke",
+    "return_type_cn": "利润核弹",
+    "return_composition": "利润主导(>90%), PE几乎不动或收缩",
+    "driver": "tech_breakthrough",
+    "driver_cn": "技术突破",
+    "dominant_factor": "",
+    "catalyst_summary": "全球首创混合废塑料化学回收CPDCC技术,20万吨/年项目试产成功,2023年营收增195%利润增5499%,环保技术革命性突破",
+    "investment_logic": "全球首创混合废塑料化学回收CPDCC技术,20万吨/年项目试产成功,2023年营收增195%利润增5499%,环保技术革命性突破",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['起涨亏损', '技术突破', '利润核弹']",
+    "decagenome_tags": "['起涨亏损', '技术突破', '利润核弹']",
+    "timeline": {
+      "start_date": "2022-09-30",
+      "peak_date": "2025-07-11",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 52,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": null,
+      "peak_pe": 483.7,
+      "pe_expansion_pct": 0,
+      "profit_expansion_pct": 18.1,
+      "gm_improvement_pp": 22.27,
+      "roic_improvement_pp": 7.18,
+      "start_mcap_yi": 0,
+      "peak_mcap_yi": 222
+    },
+    "anchor_shift": {
+      "occurred": true,
+      "from": "None/亏损",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "earnings_inflection_davis_double",
+    "stock_code": "300857",
+    "stock_name": "协创数据",
+    "sector": "IT设备",
+    "gain_multiple": 8.12,
+    "return_type": "davis_double",
+    "return_type_cn": "戴维斯双击",
+    "return_composition": "利润+倍数双轮驱动",
+    "driver": "earnings_inflection",
+    "driver_cn": "业绩拐点",
+    "dominant_factor": "",
+    "catalyst_summary": "存储芯片分销+AI服务器内存需求,存储周期反转受益",
+    "investment_logic": "存储芯片分销+AI服务器内存需求,存储周期反转受益",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['小盘(30-60亿)', '业绩拐点', '硬科技', '戴维斯双击', 'AI算力租赁']",
+    "decagenome_tags": "['小盘(30-60亿)', '业绩拐点', '硬科技', '戴维斯双击', 'AI算力租赁']",
+    "timeline": {
+      "start_date": "2022-03-31",
+      "peak_date": "2025-09-30",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 48,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 38.7,
+      "peak_pe": 110.9,
+      "pe_expansion_pct": 2.87,
+      "profit_expansion_pct": 41.4,
+      "gm_improvement_pp": 7.44,
+      "roic_improvement_pp": 14.11,
+      "start_mcap_yi": 49,
+      "peak_mcap_yi": 382
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "earnings_inflection_profit_nuke",
+    "stock_code": "300870",
+    "stock_name": "欧陆通",
+    "sector": "电气设备",
+    "gain_multiple": 5.6,
+    "return_type": "profit_nuke",
+    "return_type_cn": "利润核弹",
+    "return_composition": "利润主导(>90%), PE几乎不动或收缩",
+    "driver": "earnings_inflection",
+    "driver_cn": "业绩拐点",
+    "dominant_factor": "",
+    "catalyst_summary": "AI服务器电源需求井喷,高功率电源国产替代稀缺标的,与Google合作GPU电源项目,数据中心电源营收+38%,ASIC芯片交付预期",
+    "investment_logic": "AI服务器电源需求井喷,高功率电源国产替代稀缺标的,与Google合作GPU电源项目,数据中心电源营收+38%,ASIC芯片交付预期",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['小盘(30-60亿)', '起涨亏损', '业绩拐点', '估值范式切换', '利润核弹']",
+    "decagenome_tags": "['小盘(30-60亿)', '起涨亏损', '业绩拐点', '估值范式切换', '利润核弹']",
+    "timeline": {
+      "start_date": "2022-03-31",
+      "peak_date": "2025-08-28",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 66,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 31.6,
+      "peak_pe": 263.7,
+      "pe_expansion_pct": 8.35,
+      "profit_expansion_pct": 13.1,
+      "gm_improvement_pp": 7.77,
+      "roic_improvement_pp": 10.95,
+      "start_mcap_yi": 51,
+      "peak_mcap_yi": 286
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "earnings_inflection_profit_nuke",
+    "stock_code": "600105",
+    "stock_name": "永鼎股份",
+    "sector": "通信设备",
+    "gain_multiple": 6.5,
+    "return_type": "profit_nuke",
+    "return_type_cn": "利润核弹",
+    "return_composition": "利润主导(>90%), PE几乎不动或收缩",
+    "driver": "earnings_inflection",
+    "driver_cn": "业绩拐点",
+    "dominant_factor": "",
+    "catalyst_summary": "光纤光缆+光模块,AI数据中心光互联受益,国企改革",
+    "investment_logic": "光纤光缆+光模块,AI数据中心光互联受益,国企改革",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['小盘(30-60亿)', '业绩拐点', '硬科技']",
+    "decagenome_tags": "['小盘(30-60亿)', '业绩拐点', '硬科技']",
+    "timeline": {
+      "start_date": "2022-03-31",
+      "peak_date": "2025-12-29",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 61,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 293.2,
+      "peak_pe": 183.4,
+      "pe_expansion_pct": 0.63,
+      "profit_expansion_pct": 8.6,
+      "gm_improvement_pp": 2.66,
+      "roic_improvement_pp": 4.27,
+      "start_mcap_yi": 43,
+      "peak_mcap_yi": 278
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "cyclical_upturn_profit_nuke",
+    "stock_code": "600301",
+    "stock_name": "华锡有色",
+    "sector": "小金属",
+    "gain_multiple": 9.61,
+    "return_type": "profit_nuke",
+    "return_type_cn": "利润核弹",
+    "return_composition": "利润主导(>90%), PE几乎不动或收缩",
+    "driver": "cyclical_upturn",
+    "driver_cn": "景气上行",
+    "dominant_factor": "",
+    "catalyst_summary": "小金属+半导体材料,锑+砷化镓双稀缺",
+    "investment_logic": "小金属+半导体材料,锑+砷化镓双稀缺",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['微盘(<30亿)', '景气上行', '资源周期', '利润核弹', '半导体材料']",
+    "decagenome_tags": "['微盘(<30亿)', '景气上行', '资源周期', '利润核弹', '半导体材料']",
+    "timeline": {
+      "start_date": "2021-03-31",
+      "peak_date": "2025-12-19",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 54,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 46.4,
+      "peak_pe": 73.7,
+      "pe_expansion_pct": 1.59,
+      "profit_expansion_pct": 229.8,
+      "gm_improvement_pp": 13.58,
+      "roic_improvement_pp": 91.6,
+      "start_mcap_yi": 15,
+      "peak_mcap_yi": 96
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "earnings_inflection_profit_nuke",
+    "stock_code": "601138",
+    "stock_name": "工业富联",
+    "sector": "通信设备",
+    "gain_multiple": 4.7,
+    "return_type": "profit_nuke",
+    "return_type_cn": "利润核弹",
+    "return_composition": "利润主导(>90%), PE几乎不动或收缩",
+    "driver": "earnings_inflection",
+    "driver_cn": "业绩拐点",
+    "dominant_factor": "",
+    "catalyst_summary": "英伟达AI服务器核心供应商,GB200机柜量产爬坡解决良率问题,AI ASIC服务器出货+320%,800G交换机营收+1300%,横跨苹果+英伟达双链万亿市值",
+    "investment_logic": "英伟达AI服务器核心供应商,GB200机柜量产爬坡解决良率问题,AI ASIC服务器出货+320%,800G交换机营收+1300%,横跨苹果+英伟达双链万亿市值",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['超大盘(>万亿)', '业绩拐点', '硬科技', 'AI基础设施', '戴维斯双击', '规模效应']",
+    "decagenome_tags": "['超大盘(>万亿)', '业绩拐点', '硬科技', 'AI基础设施', '戴维斯双击', '规模效应']",
+    "timeline": {
+      "start_date": "2023-03-31",
+      "peak_date": "2025-10-29",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 53,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 15.2,
+      "peak_pe": 28.4,
+      "pe_expansion_pct": 1.87,
+      "profit_expansion_pct": 11.4,
+      "gm_improvement_pp": 0.95,
+      "roic_improvement_pp": 13.19,
+      "start_mcap_yi": 3400,
+      "peak_mcap_yi": 16000
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "earnings_inflection_anchor_reconstruction",
+    "stock_code": "603009",
+    "stock_name": "北特科技",
+    "sector": "汽车配件",
+    "gain_multiple": 8.9,
+    "return_type": "anchor_reconstruction",
+    "return_type_cn": "估值锚定重构",
+    "return_composition": "估值范式切换主导, 利润贡献小或亏损",
+    "driver": "earnings_inflection",
+    "driver_cn": "业绩拐点",
+    "dominant_factor": "",
+    "catalyst_summary": "汽车零部件+新能源,特斯拉+比亚迪供应链",
+    "investment_logic": "汽车零部件+新能源,特斯拉+比亚迪供应链",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['微盘(<30亿)', '估值范式切换', '特斯拉', '比亚迪', '双供应链']",
+    "decagenome_tags": "['微盘(<30亿)', '估值范式切换', '特斯拉', '比亚迪', '双供应链']",
+    "timeline": {
+      "start_date": "2023-03-31",
+      "peak_date": "2025-02-27",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 45,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 47,
+      "peak_pe": 259.4,
+      "pe_expansion_pct": 5.51,
+      "profit_expansion_pct": 9.7,
+      "gm_improvement_pp": 2.84,
+      "roic_improvement_pp": 4.39,
+      "start_mcap_yi": 24,
+      "peak_mcap_yi": 215
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "tech_breakthrough_davis_double",
+    "stock_code": "603083",
+    "stock_name": "剑桥科技",
+    "sector": "通信设备",
+    "gain_multiple": 10.3,
+    "return_type": "davis_double",
+    "return_type_cn": "戴维斯双击",
+    "return_composition": "利润+倍数双轮驱动",
+    "driver": "tech_breakthrough",
+    "driver_cn": "技术突破",
+    "dominant_factor": "",
+    "catalyst_summary": "ChatGPT引爆AI算力,800G光模块需求井喷,微软供应链核心供应商,2023年A股涨幅第一(464%),小市值高弹性十倍代表",
+    "investment_logic": "ChatGPT引爆AI算力,800G光模块需求井喷,微软供应链核心供应商,2023年A股涨幅第一(464%),小市值高弹性十倍代表",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['微盘(<30亿)', '技术突破', '硬科技', '戴维斯双击', '微软供应链', '光模块']",
+    "decagenome_tags": "['微盘(<30亿)', '技术突破', '硬科技', '戴维斯双击', '微软供应链', '光模块']",
+    "timeline": {
+      "start_date": "2022-03-31",
+      "peak_date": "2025-12-30",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 66,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 36.4,
+      "peak_pe": 230.4,
+      "pe_expansion_pct": 6.34,
+      "profit_expansion_pct": 5.5,
+      "gm_improvement_pp": 17.87,
+      "roic_improvement_pp": 9.85,
+      "start_mcap_yi": 23,
+      "peak_mcap_yi": 238
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "tech_breakthrough_davis_double",
+    "stock_code": "603256",
+    "stock_name": "宏和科技",
+    "sector": "新材料/碳纤维",
+    "gain_multiple": 5.4,
+    "return_type": "davis_double",
+    "return_type_cn": "戴维斯双击",
+    "return_composition": "利润+倍数双轮驱动",
+    "driver": "tech_breakthrough",
+    "driver_cn": "技术突破",
+    "dominant_factor": "",
+    "catalyst_summary": "新材料+碳纤维,航空航天+新能源双驱动",
+    "investment_logic": "新材料+碳纤维,航空航天+新能源双驱动",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['起涨亏损', '技术突破', '新材料', '碳纤维', '戴维斯双击', '产品升级']",
+    "decagenome_tags": "['起涨亏损', '技术突破', '新材料', '碳纤维', '戴维斯双击', '产品升级']",
+    "timeline": {
+      "start_date": "2023-12-29",
+      "peak_date": "2025-08-28",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 42,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": -223,
+      "peak_pe": 361,
+      "pe_expansion_pct": 0,
+      "profit_expansion_pct": 8.1,
+      "gm_improvement_pp": 28.67,
+      "roic_improvement_pp": 10.76,
+      "start_mcap_yi": 0,
+      "peak_mcap_yi": 753
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "tech_breakthrough_davis_double",
+    "stock_code": "603516",
+    "stock_name": "淳中科技",
+    "sector": "IT设备",
+    "gain_multiple": 12.5,
+    "return_type": "davis_double",
+    "return_type_cn": "戴维斯双击",
+    "return_composition": "利润+倍数双轮驱动",
+    "driver": "tech_breakthrough",
+    "driver_cn": "技术突破",
+    "dominant_factor": "",
+    "catalyst_summary": "淳中科技:英伟达液冷测试设备概念+自研ASIC芯片,2024净利增390%,但液冷无实际收入,题材驱动型；2025年底跨界投资星河动力(商业航天龙头)",
+    "investment_logic": "淳中科技:英伟达液冷测试设备概念+自研ASIC芯片,2024净利增390%,但液冷无实际收入,题材驱动型；2025年底跨界投资星河动力(商业航天龙头)",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['小盘(30-60亿)', '技术突破', '硬科技', '戴维斯双击', '英伟达概念', 'ASIC芯片']",
+    "decagenome_tags": "['小盘(30-60亿)', '技术突破', '硬科技', '戴维斯双击', '英伟达概念', 'ASIC芯片']",
+    "timeline": {
+      "start_date": "2023-03-31",
+      "peak_date": "2025-11-07",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 50,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 121.9,
+      "peak_pe": 391.6,
+      "pe_expansion_pct": 3.21,
+      "profit_expansion_pct": 54.9,
+      "gm_improvement_pp": 21.46,
+      "roic_improvement_pp": 18.52,
+      "start_mcap_yi": 37,
+      "peak_mcap_yi": 461
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "tech_breakthrough_profit_nuke",
+    "stock_code": "603929",
+    "stock_name": "亚翔集成",
+    "sector": "装修装饰",
+    "gain_multiple": 10.6,
+    "return_type": "profit_nuke",
+    "return_type_cn": "利润核弹",
+    "return_composition": "利润主导(>90%), PE几乎不动或收缩",
+    "driver": "tech_breakthrough",
+    "driver_cn": "技术突破",
+    "dominant_factor": "",
+    "catalyst_summary": "半导体洁净室工程龙头,受益国内晶圆厂扩产周期",
+    "investment_logic": "半导体洁净室工程龙头,受益国内晶圆厂扩产周期",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['微盘(<30亿)', '起涨亏损', '技术突破', '利润核弹']",
+    "decagenome_tags": "['微盘(<30亿)', '起涨亏损', '技术突破', '利润核弹']",
+    "timeline": {
+      "start_date": "2021-03-31",
+      "peak_date": "2025-12-23",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 53,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 222,
+      "peak_pe": 54.5,
+      "pe_expansion_pct": 0.25,
+      "profit_expansion_pct": 136.1,
+      "gm_improvement_pp": 18.52,
+      "roic_improvement_pp": 43.27,
+      "start_mcap_yi": 22,
+      "peak_mcap_yi": 233
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "business_model_upgrade_anchor_reconstruction",
+    "stock_code": "605255",
+    "stock_name": "天普股份",
+    "sector": "汽车管路→AI芯片平台(中昊芯英)",
+    "gain_multiple": 14.4,
+    "return_type": "anchor_reconstruction",
+    "return_type_cn": "估值锚定重构",
+    "return_composition": "估值范式切换主导, 利润贡献小或亏损",
+    "driver": "business_model_upgrade",
+    "driver_cn": "商业模式升级",
+    "dominant_factor": "",
+    "catalyst_summary": "【核心催化】中昊芯英(前谷歌TPU团队创立/国内唯一量产TPU AI芯片)协议转让+增资超21亿入主,创始人杨龚轶凡成为实控人,15连板;【市场逻辑】TPU AI芯片独角兽借壳预期(公司多次否认但市场不理),外部流通盘仅25%筹码稀缺;【风险】PE达605倍,公司2022年已澄清与特斯拉/机器人无业务往来,主业营收降5%,中昊芯英已启动独立IPO明确36个月内无借壳计划",
+    "investment_logic": "【核心催化】中昊芯英(前谷歌TPU团队创立/国内唯一量产TPU AI芯片)协议转让+增资超21亿入主,创始人杨龚轶凡成为实控人,15连板;【市场逻辑】TPU AI芯片独角兽借壳预期(公司多次否认但市场不理),外部流通盘仅25%筹码稀缺;【风险】PE达605倍,公司2022年已澄清与特斯拉/机器人无业务往来,主业营收降5%,中昊芯英已启动独立IPO明确36个月内无借壳计划",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['微盘(<30亿)', '实控人变更', '借壳预期', 'AI芯片', 'TPU', '估值范式切换']",
+    "decagenome_tags": "['微盘(<30亿)', '实控人变更', '借壳预期', 'AI芯片', 'TPU', '估值范式切换']",
+    "timeline": {
+      "start_date": "2022-03-31",
+      "peak_date": "2025-12-30",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 57,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 32.2,
+      "peak_pe": 498.5,
+      "pe_expansion_pct": 15.49,
+      "profit_expansion_pct": 4.2,
+      "gm_improvement_pp": 7.27,
+      "roic_improvement_pp": 2.85,
+      "start_mcap_yi": 20,
+      "peak_mcap_yi": 288
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "business_model_upgrade_anchor_reconstruction",
+    "stock_code": "688027",
+    "stock_name": "国盾量子",
+    "sector": "通信设备",
+    "gain_multiple": 4.7,
+    "return_type": "anchor_reconstruction",
+    "return_type_cn": "估值锚定重构",
+    "return_composition": "估值范式切换主导, 利润贡献小或亏损",
+    "driver": "business_model_upgrade",
+    "driver_cn": "商业模式升级",
+    "dominant_factor": "",
+    "catalyst_summary": "量子通信+网络安全,量子密钥分发+量子计算",
+    "investment_logic": "量子通信+网络安全,量子密钥分发+量子计算",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['起涨亏损', '商业模式升级', '硬科技']",
+    "decagenome_tags": "['起涨亏损', '商业模式升级', '硬科技']",
+    "timeline": {
+      "start_date": "2023-12-29",
+      "peak_date": "2025-10-30",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 41,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": null,
+      "peak_pe": null,
+      "pe_expansion_pct": 0,
+      "profit_expansion_pct": 1,
+      "gm_improvement_pp": 15.11,
+      "roic_improvement_pp": 8.16,
+      "start_mcap_yi": 0,
+      "peak_mcap_yi": 0
+    },
+    "anchor_shift": {
+      "occurred": true,
+      "from": "None/亏损",
+      "to": "None/亏损(主题)"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "business_model_upgrade_anchor_reconstruction",
+    "stock_code": "688068",
+    "stock_name": "热景生物",
+    "sector": "医疗保健",
+    "gain_multiple": 4.1,
+    "return_type": "anchor_reconstruction",
+    "return_type_cn": "估值锚定重构",
+    "return_composition": "估值范式切换主导, 利润贡献小或亏损",
+    "driver": "business_model_upgrade",
+    "driver_cn": "商业模式升级",
+    "dominant_factor": "",
+    "catalyst_summary": "IVD→创新药平台转型,SGC001(全球首款急性心梗抗体药FIC)获FDA快速通道进入II期临床,AD抗体药Ib期,创新药估值体系重估",
+    "investment_logic": "IVD→创新药平台转型,SGC001(全球首款急性心梗抗体药FIC)获FDA快速通道进入II期临床,AD抗体药Ib期,创新药估值体系重估",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['起涨亏损', '估值范式切换', '医药', 'FIC创新药', 'II期临床']",
+    "decagenome_tags": "['起涨亏损', '估值范式切换', '医药', 'FIC创新药', 'II期临床']",
+    "timeline": {
+      "start_date": "2024-12-31",
+      "peak_date": "2025-08-06",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 29,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": null,
+      "peak_pe": null,
+      "pe_expansion_pct": 0,
+      "profit_expansion_pct": 12.3,
+      "gm_improvement_pp": 14.36,
+      "roic_improvement_pp": 5.78,
+      "start_mcap_yi": 0,
+      "peak_mcap_yi": 0
+    },
+    "anchor_shift": {
+      "occurred": true,
+      "from": "None/亏损",
+      "to": "None/亏损(主题)"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "business_model_upgrade_anchor_reconstruction",
+    "stock_code": "688109",
+    "stock_name": "品茗科技",
+    "sector": "建筑信息化→AI具身智能平台(通研院)",
+    "gain_multiple": 6.4,
+    "return_type": "anchor_reconstruction",
+    "return_type_cn": "估值锚定重构",
+    "return_composition": "估值范式切换主导, 利润贡献小或亏损",
+    "driver": "business_model_upgrade",
+    "driver_cn": "商业模式升级",
+    "dominant_factor": "",
+    "catalyst_summary": "【核心催化】通智清研(北京通用人工智能研究院/通研院)以39.504元/股受让15.92%股权(4.96亿),朱松纯(全球AI顶级学者/三次马尔奖)为通研院院长;通研院联合宇树科技/乐聚组成通智大脑联盟,已成立茗芯智脑承接具身大脑产业化;市场对标上纬新材(智元机器人入主涨16倍)剧本。复牌后3连板,股价从49→148元。【公司AI布局】品茗晓筑AI智能体+AI视觉监控+数字孪生",
+    "investment_logic": "【核心催化】通智清研(北京通用人工智能研究院/通研院)以39.504元/股受让15.92%股权(4.96亿),朱松纯(全球AI顶级学者/三次马尔奖)为通研院院长;通研院联合宇树科技/乐聚组成通智大脑联盟,已成立茗芯智脑承接具身大脑产业化;市场对标上纬新材(智元机器人入主涨16倍)剧本。复牌后3连板,股价从49→148元。【公司AI布局】品茗晓筑AI智能体+AI视觉监控+数字孪生",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['小盘(30-60亿)', '战略入股', 'AI国家队', '具身智能', '资产注入预期', '估值范式切换']",
+    "decagenome_tags": "['小盘(30-60亿)', '战略入股', 'AI国家队', '具身智能', '资产注入预期', '估值范式切换']",
+    "timeline": {
+      "start_date": "2022-12-30",
+      "peak_date": "2025-11-25",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 66,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": null,
+      "peak_pe": 253.6,
+      "pe_expansion_pct": 0,
+      "profit_expansion_pct": 2,
+      "gm_improvement_pp": 8.08,
+      "roic_improvement_pp": 12.45,
+      "start_mcap_yi": 0,
+      "peak_mcap_yi": 81
+    },
+    "anchor_shift": {
+      "occurred": true,
+      "from": "None/亏损",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "tech_breakthrough_profit_nuke",
+    "stock_code": "688183",
+    "stock_name": "生益电子",
+    "sector": "元器件",
+    "gain_multiple": 10.85,
+    "return_type": "profit_nuke",
+    "return_type_cn": "利润核弹",
+    "return_composition": "利润主导(>90%), PE几乎不动或收缩",
+    "driver": "tech_breakthrough",
+    "driver_cn": "技术突破",
+    "dominant_factor": "",
+    "catalyst_summary": "生益电子:AI服务器PCB龙头,800G交换机核心供应商,扣非净利增500%,A拆A标杆",
+    "investment_logic": "生益电子:AI服务器PCB龙头,800G交换机核心供应商,扣非净利增500%,A拆A标杆",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['中盘(60-200亿)', '起涨亏损', '技术突破', '硬科技', '利润核弹']",
+    "decagenome_tags": "['中盘(60-200亿)', '起涨亏损', '技术突破', '硬科技', '利润核弹']",
+    "timeline": {
+      "start_date": "2023-12-29",
+      "peak_date": "2025-10-29",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 50,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 152.8,
+      "peak_pe": 180.8,
+      "pe_expansion_pct": 1.18,
+      "profit_expansion_pct": 67.4,
+      "gm_improvement_pp": 17.69,
+      "roic_improvement_pp": 22.18,
+      "start_mcap_yi": 91,
+      "peak_mcap_yi": 918
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "tech_breakthrough_davis_double",
+    "stock_code": "688195",
+    "stock_name": "腾景科技",
+    "sector": "元器件",
+    "gain_multiple": 5.53,
+    "return_type": "davis_double",
+    "return_type_cn": "戴维斯双击",
+    "return_composition": "利润+倍数双轮驱动",
+    "driver": "tech_breakthrough",
+    "driver_cn": "技术突破",
+    "dominant_factor": "",
+    "catalyst_summary": "AI算力驱动高速PCB需求爆发,800G/1.6T光模块PCB核心供应商",
+    "investment_logic": "AI算力驱动高速PCB需求爆发,800G/1.6T光模块PCB核心供应商",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['小盘(30-60亿)', '技术突破', '硬科技', '估值范式切换', '戴维斯双击']",
+    "decagenome_tags": "['小盘(30-60亿)', '技术突破', '硬科技', '估值范式切换', '戴维斯双击']",
+    "timeline": {
+      "start_date": "2023-03-31",
+      "peak_date": "2025-12-12",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 66,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 66.4,
+      "peak_pe": 489.5,
+      "pe_expansion_pct": 7.37,
+      "profit_expansion_pct": 12.3,
+      "gm_improvement_pp": 15.62,
+      "roic_improvement_pp": 5.73,
+      "start_mcap_yi": 39,
+      "peak_mcap_yi": 265
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "composite_anchor_reconstruction",
+    "stock_code": "688256",
+    "stock_name": "寒武纪",
+    "sector": "半导体",
+    "gain_multiple": 29.1,
+    "return_type": "anchor_reconstruction",
+    "return_type_cn": "估值锚定重构",
+    "return_composition": "估值范式切换主导, 利润贡献小或亏损",
+    "driver": "composite",
+    "driver_cn": "综合驱动",
+    "dominant_factor": "",
+    "catalyst_summary": "美国芯片管制+国产替代从备选变必选,A股唯一AI芯片标的,思元590对标A100,DeepSeek适配国产算力,2025年首次扭亏盈利20亿",
+    "investment_logic": "美国芯片管制+国产替代从备选变必选,A股唯一AI芯片标的,思元590对标A100,DeepSeek适配国产算力,2025年首次扭亏盈利20亿",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['起涨亏损', '硬科技', 'AI芯片', '国产替代', '估值范式切换']",
+    "decagenome_tags": "['起涨亏损', '硬科技', 'AI芯片', '国产替代', '估值范式切换']",
+    "timeline": {
+      "start_date": "2022-12-30",
+      "peak_date": "2025-08-28",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 61,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": null,
+      "peak_pe": 498.6,
+      "pe_expansion_pct": 0,
+      "profit_expansion_pct": 2.6,
+      "gm_improvement_pp": 11.03,
+      "roic_improvement_pp": 47.48,
+      "start_mcap_yi": 0,
+      "peak_mcap_yi": 5576
+    },
+    "anchor_shift": {
+      "occurred": true,
+      "from": "None/亏损",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "tech_breakthrough_davis_double",
+    "stock_code": "688313",
+    "stock_name": "仕佳光子",
+    "sector": "通信设备",
+    "gain_multiple": 8.6,
+    "return_type": "davis_double",
+    "return_type_cn": "戴维斯双击",
+    "return_composition": "利润+倍数双轮驱动",
+    "driver": "tech_breakthrough",
+    "driver_cn": "技术突破",
+    "dominant_factor": "",
+    "catalyst_summary": "光芯片国产替代,受益800G光模块上游景气传导",
+    "investment_logic": "光芯片国产替代,受益800G光模块上游景气传导",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['起涨亏损', '技术突破', '硬科技', '戴维斯双击', '国产替代', '光芯片']",
+    "decagenome_tags": "['起涨亏损', '技术突破', '硬科技', '戴维斯双击', '国产替代', '光芯片']",
+    "timeline": {
+      "start_date": "2023-12-29",
+      "peak_date": "2025-12-12",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 44,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": null,
+      "peak_pe": 498.4,
+      "pe_expansion_pct": 0,
+      "profit_expansion_pct": 7.8,
+      "gm_improvement_pp": 20.47,
+      "roic_improvement_pp": 27.42,
+      "start_mcap_yi": 0,
+      "peak_mcap_yi": 81
+    },
+    "anchor_shift": {
+      "occurred": true,
+      "from": "None/亏损",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "business_model_upgrade_anchor_reconstruction",
+    "stock_code": "688585",
+    "stock_name": "上纬新材",
+    "sector": "新材料→人形机器人平台",
+    "gain_multiple": 10.2,
+    "return_type": "anchor_reconstruction",
+    "return_type_cn": "估值锚定重构",
+    "return_composition": "估值范式切换主导, 利润贡献小或亏损",
+    "driver": "business_model_upgrade",
+    "driver_cn": "商业模式升级",
+    "dominant_factor": "",
+    "catalyst_summary": "【核心催化】智元恒岳(智元机器人主体)受让29.99%股份+要约收购37%,邓泰华(前华为副总裁/智元机器人CEO)成为实控人,稚晖君(华为天才少年)进入董事会。【市场逻辑】碳纤维厂→人形机器人平台的价值重估,智元机器人是国内具身智能头部独角兽(腾讯/京东/高瓴/红杉/LG电子投资)。流通盘仅16%极易拉抬。原业务净利仅2990万降33%",
+    "investment_logic": "【核心催化】智元恒岳(智元机器人主体)受让29.99%股份+要约收购37%,邓泰华(前华为副总裁/智元机器人CEO)成为实控人,稚晖君(华为天才少年)进入董事会。【市场逻辑】碳纤维厂→人形机器人平台的价值重估,智元机器人是国内具身智能头部独角兽(腾讯/京东/高瓴/红杉/LG电子投资)。流通盘仅16%极易拉抬。原业务净利仅2990万降33%",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['小盘(30-60亿)', '实控人变更', '资产注入预期', '人形机器人', '壳价值重估', '估值范式切换']",
+    "decagenome_tags": "['小盘(30-60亿)', '实控人变更', '资产注入预期', '人形机器人', '壳价值重估', '估值范式切换']",
+    "timeline": {
+      "start_date": "2025-07-09",
+      "peak_date": "2025-12-29",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 67,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 44,
+      "peak_pe": 470,
+      "pe_expansion_pct": 11.48,
+      "profit_expansion_pct": 7.3,
+      "gm_improvement_pp": 12.94,
+      "roic_improvement_pp": 8.24,
+      "start_mcap_yi": 51,
+      "peak_mcap_yi": 518
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "PE",
+      "to": "PE"
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  },
+  {
+    "pattern_id": "earnings_inflection_profit_nuke",
+    "stock_code": "688656",
+    "stock_name": "浩欧博",
+    "sector": "医疗保健",
+    "gain_multiple": 8.1,
+    "return_type": "profit_nuke",
+    "return_type_cn": "利润核弹",
+    "return_composition": "利润主导(>90%), PE几乎不动或收缩",
+    "driver": "earnings_inflection",
+    "driver_cn": "业绩拐点",
+    "dominant_factor": "",
+    "catalyst_summary": "港股中国生物制药控股(首例H收A科创板),对标新诺威10倍路径H注A资产注入预期,过敏+自免检测+脱敏药物欧脱克形成诊疗闭环",
+    "investment_logic": "港股中国生物制药控股(首例H收A科创板),对标新诺威10倍路径H注A资产注入预期,过敏+自免检测+脱敏药物欧脱克形成诊疗闭环",
+    "key_signals": "[]",
+    "failure_mode": "[]",
+    "tags": "['微盘(<30亿)', '业绩拐点', '医药', '利润核弹']",
+    "decagenome_tags": "['微盘(<30亿)', '业绩拐点', '医药', '利润核弹']",
+    "timeline": {
+      "start_date": "2024-03-29",
+      "peak_date": "2025-12-02",
+      "months_to_2x": 0,
+      "months_to_5x": 0,
+      "months_to_10x": 0,
+      "max_drawdown_pct": 48,
+      "asymmetry_ratio": 0
+    },
+    "financial_metrics": {
+      "start_pe": 44.2,
+      "peak_pe": null,
+      "pe_expansion_pct": 0,
+      "profit_expansion_pct": 23.3,
+      "gm_improvement_pp": 8.31,
+      "roic_improvement_pp": 3.67,
+      "start_mcap_yi": 16,
+      "peak_mcap_yi": 130
+    },
+    "anchor_shift": {
+      "occurred": false,
+      "from": "",
+      "to": ""
+    },
+    "market_context": {
+      "expectation_gap": "",
+      "consensus_bias": "",
+      "macro_regime": "",
+      "style_factor": ""
+    },
+    "benchmark": {
+      "peer_name": "",
+      "peer_gain": 0,
+      "key_divergence": ""
+    }
+  }
+]
