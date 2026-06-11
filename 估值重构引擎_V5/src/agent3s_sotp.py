@@ -845,6 +845,12 @@ SOTP_LLM2_PROMPT = """# 你是 SOTP 估值审阅官
   "segments": [{ "同 LLM-1，参数可能被修改" }],
   "scenario_valuation": { "scenario_details": { "bear/base/bull": { "完整参数" } } },
   "reasoning_trace": ["LLM-1: ...", "LLM-2: 审查-..."],
+  "event_anchor_audit": {
+    "anchors_extracted": [{"anchor": "事件中的量化锚点", "source": "事件原文/专家纪要/分析师测算", "llm1_param": "LLM-1对应参数值", "gap": "差距描述", "discount_reasonable": true/false}],
+    "anchor_to_param_gap_analysis": "一句话总结最大的锚点-参数差距",
+    "anchors_discounted_reasonably": true/false,
+    "anchors_ignored": ["被LLM-1忽略的事件锚点"]
+  },
   "change_log": [{"path": "segments.0.base.target_ps", "old_value": 12, "new_value": 8, "reason": "...", "evidence": "..."}],
   "confidence": { "overall_score": 1-10, "overall_label": "高|中|低", "dimensions": { "info_quality": {"score": 1-10, "label": "信息质量", "note": "..."}, "financial_feasibility": {"score": 1-10, "label": "财务可行性", "note": "..."}, "valuation_safety": {"score": 1-10, "label": "估值安全边际", "note": "..."}, "historical_precedent": {"score": 1-10, "label": "历史案例匹配", "note": "..."} } },
   "trade_annotation": { "tier": "★★★ 高赔率机会|★★☆ 中等赔率|★☆☆ 低赔率机会|☆☆☆ 规避", "total_score": "X/10", "dimension_scores": {"odds_quality": 0-3, "pricing_headroom": 0-3, "transmission_confidence": 0-3, "model_consistency": 0-3}, "tier_note": "...", "suggested_action": "..." },

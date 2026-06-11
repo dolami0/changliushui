@@ -399,6 +399,12 @@ rNPV 作为公式无法定价的东西。适用于: 技术平台溢价、海外�
   "drugs": [{ 同 LLM-1，需要修改则输出完整对象 }],
   "mature_business": { 同 LLM-1 },
   "scenario_valuation": { "scenario_details": { "bear/base/bull": { "同 LLM-1，代码计算" } } },
+  "event_anchor_audit": {
+    "anchors_extracted": [{"anchor": "事件中的量化锚点", "source": "事件原文/专家纪要/分析师测算", "llm1_param": "PoS/峰值/折现率等", "gap": "差距描述", "discount_reasonable": true/false}],
+    "anchor_to_param_gap_analysis": "...",
+    "anchors_discounted_reasonably": true/false,
+    "anchors_ignored": []
+  },
   "change_log": [
     {"path": "drugs.0.base.peak_sales_yi", "old_value": 30, "new_value": 45, "reason": "峰值仅中国，美国Ph3已启动", "evidence": "FDA Type B EoP2 completed"}
   ],

@@ -850,6 +850,12 @@ change_log 每条格式:
     "LLM-2: 审查-置信度: ..."
   ],
   "data_gaps": ["补充后的缺口列表"],
+  "event_anchor_audit": {
+    "anchors_extracted": [{"anchor": "事件中的量化锚点", "source": "事件原文/专家纪要/分析师测算", "llm1_param": "LLM-1对应参数值", "gap": "差距描述", "discount_reasonable": true/false}],
+    "anchor_to_param_gap_analysis": "一句话总结最大的锚点-参数差距",
+    "anchors_discounted_reasonably": true/false,
+    "anchors_ignored": ["被LLM-1忽略的事件锚点"]
+  },
   "change_log": [
     {"path": "base.target_ps", "old_value": 12, "new_value": 8, "reason": "ROIC 6.2%<WACC 10%，不配行业龙头PS", "evidence": "有研新材当前PS=3.2x；A股半导体材料中位数PS=5.1x"}
   ],
