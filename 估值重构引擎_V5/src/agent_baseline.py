@@ -181,12 +181,8 @@ def _build_product_table(data_package: dict) -> str:
     """从 forward_looking 中提取产品结构表格。"""
     core = _get_core_fields(data_package)
     fw = core.get("_forward_looking", {}) or {}
-    products = (
-        ((fw.get("categories", {}) or {})
-         .get("earnings_elasticity", {}) or {})
-        .get("products", {}) or {}
-    )
-    mix = products.get("product_mix", []) or []
+    ea = ((fw.get("categories", {}) or {}).get("earnings_elasticity", {}) or {})
+    mix = ea.get("product_mix", []) or []
     if not mix:
         return "（无分产品数据）"
 
@@ -202,9 +198,9 @@ def _build_product_table(data_package: dict) -> str:
         lines.append(f"| {p['name']} | {rev:.2f} | {share:.1f}% | {gm_str} | {yoy_str} |")
 
     # 数据质量
-    gm_src = products.get("gm_source", "?")
-    gm_cov = products.get("gm_coverage_pct", 100)
-    data_vintage = products.get("data_vintage", "")
+    gm_src = ea.get("gm_source", "?")
+    gm_cov = ea.get("gm_coverage_pct", 100)
+    data_vintage = ea.get("data_vintage", "")
     lines.append(f"\n数据时效: {data_vintage} | 毛利率来源: {gm_src} (覆盖率{gm_cov}%)")
 
     return "\n".join(lines)

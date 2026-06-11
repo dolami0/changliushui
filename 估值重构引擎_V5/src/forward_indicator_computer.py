@@ -470,7 +470,7 @@ def _compute_product_structure(
         periods_sorted = ['investoday']
 
     if not by_period:
-        return {'products': {'label': '产品结构', '_note': '无分产品数据'}}
+        return {'label': '产品结构', 'product_mix': [], '_note': '无分产品数据'}
 
     # ── 利润数据可用性分级（按产品-期间维度）──
     # fina_mainbz 的 bz_profit 并非所有公司/所有期间都披露。
@@ -711,25 +711,23 @@ def _compute_product_structure(
     interpretation = '; '.join(parts) if parts else '产品结构无显著异常'
 
     return {
-        'products': {
-            'label': '产品结构信号',
-            'data_vintage': vintage_str,
-            'gm_source': gm_source,
-            'gm_coverage_pct': round(gm_coverage * 100, 1),
-            'periods_available': len(periods_sorted),
-            'annual_periods': len(annual_periods),
-            'has_h1_data': h1_current is not None,
-            'product_mix': product_mix,
-            'keyword_matches': keyword_matches,
-            'margin_structure': margin_structure,
-            'order_fulfillment_crosscheck': crosscheck,
-            'h2_momentum': h2_momentum,
-            'interpretation': interpretation,
-            'story_check': (
-                '产品级毛利率 = 叙事推演硬约束。'
-                '核心叙事产品毛利率显著低于宣称值 → 区分"数据滞后"与"叙事夸大"。'
-            ),
-        },
+        'label': '产品结构信号',
+        'data_vintage': vintage_str,
+        'gm_source': gm_source,
+        'gm_coverage_pct': round(gm_coverage * 100, 1),
+        'periods_available': len(periods_sorted),
+        'annual_periods': len(annual_periods),
+        'has_h1_data': h1_current is not None,
+        'product_mix': product_mix,
+        'keyword_matches': keyword_matches,
+        'margin_structure': margin_structure,
+        'order_fulfillment_crosscheck': crosscheck,
+        'h2_momentum': h2_momentum,
+        'interpretation': interpretation,
+        'story_check': (
+            '产品级毛利率 = 叙事推演硬约束。'
+            '核心叙事产品毛利率显著低于宣称值 → 区分"数据滞后"与"叙事夸大"。'
+        ),
     }
 
 

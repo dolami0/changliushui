@@ -524,11 +524,7 @@ class DataForge:
         sp_pkg = self._fetch_specialized(dr.get("specialized_package", {}), ticker)
         self._fetched_packages["specialized"] = sp_pkg
 
-        # ── Step 4: validation_package（允许缺失） ──
-        vp_pkg = self._fetch_validation(dr.get("validation_package", {}), ticker)
-        self._fetched_packages["validation"] = vp_pkg
-
-        # ── Step 5: optional_package（忽略失败） ──
+        # ── Step 4: optional_package（忽略失败） ──
         op_pkg = self._fetch_optional(dr.get("optional_package", {}), ticker)
         self._fetched_packages["optional"] = op_pkg
 
@@ -561,12 +557,6 @@ class DataForge:
                     "status": sp_pkg.status,
                     "quality_score": sp_pkg.quality_score,
                     "missing_fields": sp_pkg.missing_fields,
-                },
-                "validation": {
-                    "fields": vp_pkg.fields,
-                    "status": vp_pkg.status,
-                    "quality_score": vp_pkg.quality_score,
-                    "missing_fields": vp_pkg.missing_fields,
                 },
                 "optional": {
                     "fields": op_pkg.fields,
@@ -656,52 +646,6 @@ class DataForge:
                 pkg.missing_fields.append(field)
 
         fetched_count = len(pkg.fields)
-        total = len(requested_fields)
-        if fetched_count == 0:
-            pkg.status = "empty"
-            pkg.quality_score = 0
-        elif fetched_count < total:
-            pkg.status = "partial"
-            pkg.quality_score = max(1, 10 - len(pkg.missing_fields))
-        else:
-            pkg.status = "complete"
-            pkg.quality_score = 10
-
-        return pkg
-
-    def _fetch_validation(self, val_req: dict, stock_code: str) -> PackageResult:
-        """拉取 validation_package 字段。"""
-        pkg = PackageResult(name="validation")
-        requested_fields = val_req.get("fields", [])
-        if not requested_fields:
-            pkg.status = "empty"
-            return pkg
-
-        # 同行比较数据
-        try:
-            ind = self.fetcher.fetch_industries(stock_code)
-            ind_code = ind.get("sw_l1_code", "")
-            if ind_code:
-                rankings = self.fetcher.fetch_financial_rankings(ind_code)
-                if rankings:
-                    pkg.fields["peer_rankings"] = rankings
-                    # 从排名中提取中位数 PE/PS
-                    try:
-                        pes = [item.get("net_profit_parent_rank", 0) for item in rankings]
-                        pkg.fields["peer_median_pe"] = _median(pes)
-                    except Exception:
-                        pkg.fields["peer_median_pe"] = None
-            if ind_code:
-                forecast = self.fetcher.fetch_industry_forecast(ind_code)
-                pkg.fields["industry_forecast"] = forecast
-        except Exception:
-            pass
-
-        for field in requested_fields:
-            if field not in pkg.fields:
-                pkg.missing_fields.append(field)
-
-        fetched_count = len([f for f in requested_fields if f in pkg.fields])
         total = len(requested_fields)
         if fetched_count == 0:
             pkg.status = "empty"

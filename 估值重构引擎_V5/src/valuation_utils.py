@@ -185,7 +185,7 @@ def build_forward_signal_panel(core: dict) -> str:
 
     # ── 盈利弹性（产品结构） ──
     earnings = cats.get('earnings_elasticity', {})
-    products_data = earnings.get('products', {}) if earnings else {}
+    products_data = earnings if earnings else {}
     if products_data and products_data.get('product_mix'):
         data_vintage = products_data.get('data_vintage', '?')
         mix = products_data['product_mix']

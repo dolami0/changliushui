@@ -106,11 +106,6 @@ CORE_FIELDS: list[str] = [
     "total_equity",
 ]
 
-VALIDATION_FIELDS: list[str] = [
-    "peer_median_pe", "peer_median_ps", "historical_pe_range",
-    "beta", "wacc_estimate", "industry_cycle_position",
-]
-
 OPTIONAL_FIELDS: list[str] = [
     "dividend_yield", "segment_breakdown",
 ]
@@ -216,11 +211,6 @@ class Agent0:
                         "fields": all_specialized,
                         "mandatory": False,
                         "failure_action": "continue_with_gap",
-                    },
-                    "validation_package": {
-                        "fields": VALIDATION_FIELDS,
-                        "mandatory": False,
-                        "failure_action": "skip_validation",
                     },
                     "optional_package": {
                         "fields": OPTIONAL_FIELDS,
