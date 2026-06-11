@@ -333,12 +333,50 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
                 cats = fwd.get("categories", {}) if isinstance(fwd, dict) else {}
                 ea = cats.get("earnings_elasticity", {}) if isinstance(cats, dict) else {}
                 product_mix = ea.get("product_mix", []) if isinstance(ea, dict) else []
+                sotp_blocked = False
                 if not product_mix:
                     print(f"  [SOTP] 阻止: Agent-1无分部财务数据(product_mix为空)，退回标准管线", flush=True)
+                    sotp_blocked = True
                 else:
-                    state.pipeline_type = "sotp"
-                    sotp_result = self._run_sotp_pipeline(state, event_data, cb, wacc_params, volc_data_std)
-                    return sotp_result
+                    # V8.1 代码层集中度守卫: 最大产品占比>80%且非转型早期 → 不触发SOTP
+                    # Agent-2a prompt也有此规则，但LLM可能矛盾（sotp_triggered=true同时narrative说集中度过高）
+                    # 代码层独立验证，不依赖LLM的sotp_triggered布尔值
+                    max_product = max(product_mix, key=lambda p: p.get("revenue_share_pct", 0))
+                    max_share = max_product.get("revenue_share_pct", 0)
+                    if max_share > 80:
+                        # 转型早期例外: 有另一产品增速>30%且 5%<=占比<20% → 允许SOTP
+                        # 占比<5%的高增速通常是极小基数噪音（如0.03→0.07亿 = +133%），不是真正的第二曲线
+                        has_disruptor = any(
+                            p.get("revenue_yoy_pct", 0) > 30
+                            and 5 <= p.get("revenue_share_pct", 0) < 20
+                            for p in product_mix
+                        )
+                        if not has_disruptor:
+                            print(f"  [SOTP] 阻止: 产品集中度过高(最大产品占{max_share:.0f}%>80%)且非转型早期，退回标准管线", flush=True)
+                            sotp_blocked = True
+                        else:
+                            state.pipeline_type = "sotp"
+                            sotp_result = self._run_sotp_pipeline(state, event_data, cb, wacc_params, volc_data_std)
+                            return sotp_result
+                    else:
+                        state.pipeline_type = "sotp"
+                        sotp_result = self._run_sotp_pipeline(state, event_data, cb, wacc_params, volc_data_std)
+                        return sotp_result
+
+                # SOTP被阻止 → 回退到标准管线前，修复 routing_decision
+                # Agent-2b 可能因 2a 的 sotp_triggered=true 而选了 J(SOTP)，
+                # 但标准管线对 J 无计算公式，需降级到非 SOTP 模型
+                if sotp_blocked and rd.get("primary_model", "") == "J":
+                    # 用 secondary/validation model 作为替代，或根据锚选择
+                    fallback = (rd.get("validation_models") or [None])[0]
+                    if not fallback:
+                        anchor = a2a_mn.get("primary_anchor", "earnings")
+                        fallback = "B" if anchor == "revenue" else "A"
+                    print(f"  [SOTP] 路由修复: primary_model J→{fallback} (SOTP被阻止,标准管线无法处理J)", flush=True)
+                    rd["primary_model"] = fallback
+                    rd["_sotp_blocked_fallback"] = True
+                    rd["_sotp_blocked_reason"] = "concentration" if product_mix else "no_product_data"
+                    state.agent2b_output["routing_decision"] = rd
 
             # ── Agent-3: 推演裁决 ──
             cb("agent3", 1, 1, "running", "推演裁决(三情景)")

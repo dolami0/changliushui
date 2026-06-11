@@ -916,80 +916,24 @@ def _build_segments_section(
     market_narrative: dict,
     core: dict,
 ) -> str:
-    """构建两段式分部信息——叙事主锚 + 其他业务（合并所有副锚）。"""
-    total_rev = core.get("revenue_ttm_yi", 1)
-    secondary_total = sum(sa.get("revenue_share_pct", 0) for sa in secondary_anchors)
-    primary_share = max(0, 100 - secondary_total)
+    """构建分部信息——列出各分部名称、锚类型、是否事件催动。
 
-    lines = ["| 分部 | 角色 | 锚 | 事件催动 | 收入占比 | 估算收入(亿) |",
-             "|------|------|-----|---------|---------|-------------|"]
+    LLM-1 根据此表和 product_mix 数据自行判定 segment_revenue_yi。
+    不在此处做任何算术——revenue_share_pct 可能为字符串，不可靠。
+    """
+    lines = ["| 分部 | 锚 | 事件催动 |",
+             "|------|-----|---------|"]
 
-    # 叙事主锚分部 — 合并所有与 primary_anchor 相同的副锚
-    primary_rev_segments = [sa for sa in secondary_anchors if sa.get("anchor") == primary_anchor]
-    other_segments = [sa for sa in secondary_anchors if sa.get("anchor") != primary_anchor]
+    for sa in secondary_anchors:
+        seg_name = sa.get("segment", "?")[:40]
+        anchor = sa.get("anchor", "?")
+        driven = "✅是" if sa.get("is_event_driven") else "❌否"
+        lines.append(f"| {seg_name} | {anchor} | {driven} |")
 
-    primary_label = market_narrative.get("core_bet", "叙事主线")[:20]
-    primary_rev = total_rev * primary_share / 100
-
-    # 主锚分部内部子业务明细（关键: 展示哪些子业务被事件催动、哪些不是）
-    if primary_rev_segments:
-        lines.append(f"| {primary_label} | 叙事主锚(变参) | {primary_anchor} | 见子业务 | {primary_share:.1f}% | {primary_rev:.1f} |")
-        for ps in primary_rev_segments:
-            driven = "✅是" if ps.get("is_event_driven") else "❌否"
-            ps_rev = total_rev * ps.get("revenue_share_pct", 0) / 100
-            lines.append(f"|   ↳ {ps.get('segment','?')} | 子业务 | {ps.get('anchor',primary_anchor)} | {driven} | {ps.get('revenue_share_pct',0):.1f}% | {ps_rev:.2f} |")
-    else:
-        lines.append(f"| {primary_label} | 叙事主锚(变参) | {primary_anchor} | ✅是 | {primary_share:.1f}% | {primary_rev:.1f} |")
-
-    # 其他业务（锚类型不同的副锚，基准不变）
-    other_share = sum(sa.get("revenue_share_pct", 0) for sa in other_segments)
-    if other_share > 0:
-        other_rev = total_rev * other_share / 100
-        other_anchor = other_segments[0].get("anchor", "earnings") if other_segments else "earnings"
-        other_names = " + ".join(sa.get("segment", "?") for sa in other_segments)
-        any_driven = any(sa.get("is_event_driven") for sa in other_segments)
-        driven_mark = "✅是" if any_driven else "❌否"
-        lines.append(f"| {other_names} | 其他业务(不变) | {other_anchor} | {driven_mark} | {other_share:.1f}% | {other_rev:.1f} |")
-
-    # 如果没有任何副锚（100% 主锚），标注特殊处理
     if not secondary_anchors:
-        lines.append("| （无其他业务，100%为叙事主锚分部） | — | — | — | — |")
+        lines.append("| （单一分部，无需拆分） | — | — |")
 
-    # 主锚分部内部异质性提示 — 当主锚内混合了事件催动和非事件催动的子业务时
-    if primary_rev_segments:
-        driven_segs = [s for s in primary_rev_segments if s.get("is_event_driven")]
-        non_driven_segs = [s for s in primary_rev_segments if not s.get("is_event_driven")]
-        if driven_segs and non_driven_segs:
-            driven_share = sum(s.get("revenue_share_pct", 0) for s in driven_segs)
-            non_driven_share = sum(s.get("revenue_share_pct", 0) for s in non_driven_segs)
-            driven_names = "+".join(s.get("segment", "?") for s in driven_segs)
-            non_driven_names = "+".join(s.get("segment", "?") for s in non_driven_segs)
-            lines.append(f"\n> ⚠️ **主锚分部内部异质**: {driven_names}({driven_share:.0f}%,事件催动) 与 {non_driven_names}({non_driven_share:.0f}%,非事件催动) 被合并为同一个参数组。CAGR和PS必须按收入占比加权——非事件催动子业务不得享受事件溢价。")
-
-    # ── 产品表交叉校验：Agent-2a 的分部占比是否与产品增速矛盾？──
-    fw = core.get('_forward_looking', {}) or {}
-    cats = fw.get('categories', {}) or {}
-    products = (cats.get('earnings_elasticity', {}) or {}).get('products', {}) or {}
-    mix = products.get('product_mix', []) or []
-    if mix:
-        # 产品按增速分组：>30%为高增长(revenue锚候选)，<20%为低增长(earnings锚候选)
-        high_growth_share = sum(
-            p.get('revenue_share_pct', 0) for p in mix
-            if (p.get('revenue_yoy_pct') or 0) > 30
-        )
-        low_growth_share = sum(
-            p.get('revenue_share_pct', 0) for p in mix
-            if (p.get('revenue_yoy_pct') or 0) < 20
-        )
-        # Agent-2a 主锚占比 vs 产品高增长占比
-        gap = high_growth_share - primary_share
-        if abs(gap) > 15:
-            lines.append(f'\n> **分部定义纠偏**：产品表中高增速(>30% YoY)产品合计占{high_growth_share:.0f}%，但Agent-2a判定的叙事主锚分部仅占{primary_share:.0f}%，偏差{gap:.0f}ppt。')
-            lines.append(f'> 请以产品表的增速分组为准重新划分分部：高增速产品归入叙事主锚分部(revenue锚)，低增速/低毛利产品({low_growth_share:.0f}%)归入其他业务(earnings锚)。')
-            lines.append(f'> 若2a的划分与产品表冲突，以产品表为准——2a没有产品级增速数据。')
-
-    return "\n".join(lines)
-
+    return chr(10).join(lines)
 
 def _build_event_driven_note(
     rd_2b: dict,
