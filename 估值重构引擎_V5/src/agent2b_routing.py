@@ -441,6 +441,27 @@ class RouteJudgeV6:
                 "_fallback": True,
             }
 
+        # ── 代码层硬校验: 家族约束强制执行 ──
+        # LLM可能违抗Agent-2a的家族约束（如revenue_multiples族选了K）
+        family_models_str = FAMILY_MODELS.get(family, "")
+        # 从 "B(PS+TAM)" 或 "A(ROIC-RR DCF), C(DCF+拐点)" 中提取模型字母
+        import re as _re_family
+        allowed = _re_family.findall(r'\b([A-Z])\b', family_models_str)
+        chosen = routing.get("primary_model", "")
+        if allowed and chosen and chosen not in allowed:
+            # LLM选了超出家族约束的模型 → 回退到族内首选
+            fallback_family = allowed[0]
+            print(f"  [RouteJudge] 家族约束: chosen={chosen} not in {allowed} → override to {fallback_family}", flush=True)
+            routing["primary_model"] = fallback_family
+            routing["model_category"] = "Revenue Multiples" if fallback_family == "B" else (
+                "Earnings Multiples" if fallback_family in ("A","C","G","I","K") else "Asset Multiples"
+            )
+            routing["routing_reason"] = (
+                routing.get("routing_reason", "") +
+                f" [家族约束:{family}→强制{fallback_family}]"
+            )
+            routing["_family_constraint_override"] = True
+
         # ── 代码层硬校验: K模型经济可行性 ──
         # K(DCF)对NOPAT起点过低的标的会退化为"终值PE赌注"
         # ——阶段1 FCFF≈0(RR封顶0.9), 终值被WACC折现杀穿
