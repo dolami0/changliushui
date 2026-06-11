@@ -551,6 +551,17 @@ bear 不可推翻已发生的业务事实（如已出货产品→不应给0估�
 
 **你的模型**: 2b路由判官已将叙事主锚分部模型选定为 **{PRIMARY_MODEL} ({MODEL_DESC})**，参数族为 {MODEL_FAMILY}。你的 `anchor` 字段必须设为 `{SEGMENT_ANCHOR}`，bear/base/bull 参数必须严格使用以下参数体系——不允许使用其他模型的参数名。
 
+**通用原则——所有分部参数都从事件锚点出发，按来源置信度打折:**
+
+事件量化锚点（清单项1）是你赋所有分部参数的起点。不管是 CAGR、ROIC、PE、PS、EBITDA 增速还是终端倍数——先问"事件的数字是多少"，再决定打多少折。
+
+**按来源置信度打折框架**（适用于所有参数类型）:
+- 公司公告/已执行: 不打折或 <10%
+- 行业专家纪要/券商预测: 10-30% 折扣
+- 分析师空间测算/目标值: 20-40% 折扣
+
+**打折必须显式**: 每条打折标注 锚点原文→来源→置信度→打折幅度→打折后数字→理由。不允许综合一句"更保守"覆盖所有打折。
+
 赋参数的起点是 3d 的因果剧本。思考事件变量作用于个股路线的方式——这决定了三情景参数的方向和幅度。然后用 3a 的分布形状和 3b 的计价天花板做约束。在此基础上，用以下参数规则校准具体数值。
 
 参数锚定行业估值中枢（来自背景知识或行业常识），参考行业全貌中公司的竞争位势做调整。不锚定具体个股案例。
@@ -777,6 +788,27 @@ SOTP_LLM2_PROMPT = """# 你是 SOTP 估值审阅官
 格式: `"search_requests": [{"query": "...", "purpose": "..."}]`。最终报告不输出 search_requests。
 
 ## 任务
+
+### 任务0: 事件锚点对照表 —— 最先执行，必须输出 event_anchor_audit
+
+从事件素材中提取所有量化锚点（价格、产能、时间节点、客户、毛利率目标），与 LLM-1 的各分部参数做逐项对照。
+
+**输出字段 event_anchor_audit**（必须包含在 JSON 中，不能为空）:
+```json
+"event_anchor_audit": {
+  "anchors_extracted": [{"anchor": "...", "source": "事件原文/专家纪要/分析师测算", "llm1_param": "对应参数值", "gap": "差距描述", "discount_reasonable": true/false}],
+  "anchor_to_param_gap_analysis": "一句话总结最大的锚点-参数差距",
+  "anchors_discounted_reasonably": true/false,
+  "anchors_ignored": ["列出被LLM-1忽略的事件锚点"]
+}
+```
+
+**收入校验（必须执行）**: 从事件锚点推算各分部收入，与 LLM-1 隐含收入对比:
+1. 算差距: 事件推算 vs LLM-1，差距多少%
+2. 判合理性: LLM-1 是否有 source 标注+置信度打折+理由？
+3. 做结论: 合理→discounted_reasonably=true；不合理→change_log 修正
+- 收入差距本身不是问题——问题是差距没有解释
+- **不能 0 条 change_log 但 event_anchor_audit 显示大差距——两者必须自洽**
 
 ### 任务 1: 数据补充 — LLM-1 的 data_gaps 和 change_request 是必搜清单
 
