@@ -93,9 +93,9 @@ routing_reason 必须引用: (1) 2a的叙事线索 (2) 具体财务数据。≥8
 ## Step 4: 约束合规检查
 
 - 主模型是否在 {FAMILY_CONSTRAINT} 族内 → constraint_compliance
-- 若发现不得不跨族（如硬约束排除了族内所有模型），设置 constraint_override=true
-  ——这是极端情况，必须在 override_rationale 中详细说明
-- 若使用了B的转型例外,constraint_override=true, override_rationale 说明原因
+- **族约束是硬性的**。只有在族内所有模型都被硬约束排除时才允许 constraint_override。
+  不能因为"觉得另一个族的模型更合适"就跨族——2a的锚判定已经决定了族，不可推翻。
+  设置 override=true 时必须在 override_rationale 中列出族内被排除的每个模型及其被排除原因。
 
 # 模型族-模型映射
 
