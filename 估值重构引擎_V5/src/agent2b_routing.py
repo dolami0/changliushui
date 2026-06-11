@@ -442,27 +442,6 @@ class RouteJudgeV6:
                 "_fallback": True,
             }
 
-        # ── 代码层硬校验: 家族约束强制执行 ──
-        # LLM可能违抗Agent-2a的家族约束（如revenue_multiples族选了K）
-        family_models_str = FAMILY_MODELS.get(family, "")
-        # 从 "B(PS+TAM)" 或 "A(ROIC-RR DCF), C(DCF+拐点)" 中提取模型字母
-        import re as _re_family
-        allowed = _re_family.findall(r'\b([A-Z])\b', family_models_str)
-        chosen = routing.get("primary_model", "")
-        if allowed and chosen and chosen not in allowed:
-            # LLM选了超出家族约束的模型 → 回退到族内首选
-            fallback_family = allowed[0]
-            print(f"  [RouteJudge] 家族约束: chosen={chosen} not in {allowed} → override to {fallback_family}", flush=True)
-            routing["primary_model"] = fallback_family
-            routing["model_category"] = "Revenue Multiples" if fallback_family == "B" else (
-                "Earnings Multiples" if fallback_family in ("A","C","G","I","K") else "Asset Multiples"
-            )
-            routing["routing_reason"] = (
-                routing.get("routing_reason", "") +
-                f" [家族约束:{family}→强制{fallback_family}]"
-            )
-            routing["_family_constraint_override"] = True
-
         # ── 代码层硬校验: K模型经济可行性 ──
         # K(DCF)对NOPAT起点过低的标的会退化为"终值PE赌注"
         # ——阶段1 FCFF≈0(RR封顶0.9), 终值被WACC折现杀穿
@@ -483,25 +462,6 @@ class RouteJudgeV6:
                     f" [K不适用:NOPAT={nopat_k:.2f}亿/市值={nopat_ratio*100:.2f}%<0.8%,DCF退化为终值PE赌注→回退{fallback}]"
                 )
                 routing["_k_blocked_by_code"] = True
-
-        # ── 代码层硬校验: A模型要求正向盈利 ──
-        # A(ROIC-RR DCF): mcap = IC × ROIC% × PE。当ROIC<0时NOPAT为负，PE失去经济含义。
-        # 此时应强制走B(PS/revenue)，不依赖盈利假设。
-        if routing.get("primary_model") == "A":
-            core_a = data_package.get("packages", {}).get("core", {}).get("fields", {})
-            roic_a = core_a.get("roic_pct", 0)
-            nm_a = core_a.get("net_margin_pct", 0)
-            if roic_a < 0 and nm_a < 0:
-                anchor = (agent2a_output or {}).get("market_narrative", {}).get("primary_anchor", "earnings")
-                # 深度亏损公司→PE模型不适用，强制revenue锚
-                print(f"  [RouteJudge] A blocked: ROIC={roic_a}%<0 净利率={nm_a}%<0 → PE无经济含义, override to B", flush=True)
-                routing["primary_model"] = "B"
-                routing["model_category"] = "Revenue Multiples"
-                routing["routing_reason"] = (
-                    routing.get("routing_reason", "") +
-                    f" [A不适用:ROIC={roic_a}%<0净利率={nm_a}%<0,PE无经济含义→回退B]"
-                )
-                routing["_a_blocked_by_code"] = True
 
         # ── 注入事件驱动分部(代码层透传,不为LLM输出的兜底) ──
         ed = (agent2a_output.get("forward_to_routing", {}) or {}).get("event_driven_segment")
