@@ -450,15 +450,36 @@ class RouteJudgeV6:
             mcap_k = core_k.get("market_cap_yi", 100)
             nopat_ratio = nopat_k / max(mcap_k, 1)
             if nopat_k < 0.5 or nopat_ratio < 0.008:
-                # NOPAT起点过低, DCF不可行 → 回退到A(ROIC-RR DCF, 更保守的earnings模型)
-                print(f"  [RouteJudge] K blocked: NOPAT={nopat_k:.2f}yi NOPAT/mcap={nopat_ratio*100:.2f}% < 0.8%", flush=True)
-                routing["primary_model"] = "A"
-                routing["model_category"] = "Earnings Multiples"
+                # NOPAT起点过低, DCF不可行 → 回退到A或B（尊重Agent-2a锚选择）
+                anchor = (agent2a_output or {}).get("market_narrative", {}).get("primary_anchor", "earnings")
+                fallback = "B" if anchor == "revenue" else "A"
+                print(f"  [RouteJudge] K blocked: NOPAT={nopat_k:.2f}yi NOPAT/mcap={nopat_ratio*100:.2f}% < 0.8% → override to {fallback}", flush=True)
+                routing["primary_model"] = fallback
+                routing["model_category"] = "Revenue Multiples" if fallback == "B" else "Earnings Multiples"
                 routing["routing_reason"] = (
                     routing.get("routing_reason", "") +
-                    f" [K不适用:NOPAT={nopat_k:.2f}亿/市值={nopat_ratio*100:.2f}%<0.8%,DCF退化为终值PE赌注→回退A]"
+                    f" [K不适用:NOPAT={nopat_k:.2f}亿/市值={nopat_ratio*100:.2f}%<0.8%,DCF退化为终值PE赌注→回退{fallback}]"
                 )
                 routing["_k_blocked_by_code"] = True
+
+        # ── 代码层硬校验: A模型要求正向盈利 ──
+        # A(ROIC-RR DCF): mcap = IC × ROIC% × PE。当ROIC<0时NOPAT为负，PE失去经济含义。
+        # 此时应强制走B(PS/revenue)，不依赖盈利假设。
+        if routing.get("primary_model") == "A":
+            core_a = data_package.get("packages", {}).get("core", {}).get("fields", {})
+            roic_a = core_a.get("roic_pct", 0)
+            nm_a = core_a.get("net_margin_pct", 0)
+            if roic_a < 0 and nm_a < 0:
+                anchor = (agent2a_output or {}).get("market_narrative", {}).get("primary_anchor", "earnings")
+                # 深度亏损公司→PE模型不适用，强制revenue锚
+                print(f"  [RouteJudge] A blocked: ROIC={roic_a}%<0 净利率={nm_a}%<0 → PE无经济含义, override to B", flush=True)
+                routing["primary_model"] = "B"
+                routing["model_category"] = "Revenue Multiples"
+                routing["routing_reason"] = (
+                    routing.get("routing_reason", "") +
+                    f" [A不适用:ROIC={roic_a}%<0净利率={nm_a}%<0,PE无经济含义→回退B]"
+                )
+                routing["_a_blocked_by_code"] = True
 
         # ── 注入事件驱动分部(代码层透传,不为LLM输出的兜底) ──
         ed = (agent2a_output.get("forward_to_routing", {}) or {}).get("event_driven_segment")
