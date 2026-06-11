@@ -24,6 +24,9 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from valuation_utils import call_deepseek
+from agent3_scenario_asymmetry import (
+    _call_llm2, _call_volc_search, _extract_search_queries, _merge_llm_outputs,
+)
 
 
 # ═══════════════════════════════════════
@@ -69,10 +72,13 @@ RNPV_SCENARIO_PROMPT = """# 你是创新药管线估值分析师
 
 ### 第二段：管线药物 rNPV
 
-每个管线药物：
+每个管线药物（代码计算公式——赋参数前必读）:
 ```
-风险调整现值 = PoS% × 峰值销售(亿) / (1 + 折现率%)^到峰值年数
+rNPV = PoS% × 峰值销售(亿) × 3 / (1 + 折现率%)^到峰值年数
 ```
+- 专利倍数固定为 3x: 代表峰值后约 7 年（爬坡+峰值+衰退）的净现值近似。不可自行调整。
+- 你的任务: 填 PoS、峰值销售、折现率、到峰值年数这四个参数。代码用上面的公式算。
+- 禁止心算估值: 不要自己算"这个药值多少亿"然后反推参数。参数来自基本面判断，rNPV 是代码的事。
 
 **PoS 基准（按临床阶段）**:
 
@@ -228,29 +234,25 @@ RNPV_SCENARIO_PROMPT = """# 你是创新药管线估值分析师
   },
 
   "confidence": {
-    "overall_score": 5,
-    "overall_label": "中",
-    "key_uncertainties": [
-      "管线PoS及峰值销售基于公开信息和行业类比，非一手临床数据",
-      "成熟业务估值依赖盈利预测，假设敏感性高",
-      "海外商业化执行风险较高"
-    ],
-    "note": "rNPV置信度天然低于标准DCF——临床数据非一手，情景基于有限信息的合理假设。"
+    "overall_score": 5, "overall_label": "中",
+    "dimensions": {
+      "info_quality": {"score": 5, "label": "信息质量", "note": "rNPV置信度天然低于标准DCF——临床数据非一手"},
+      "financial_feasibility": {"score": 5, "label": "财务可行性", "note": "管线PoS及峰值销售基于公开信息"},
+      "valuation_safety": {"score": 5, "label": "估值安全边际", "note": "成熟业务估值依赖盈利预测"},
+      "historical_precedent": {"score": 5, "label": "历史案例匹配", "note": "海外商业化执行风险较高"}
+    }
   },
-
   "trade_annotation": {
-    "tier": "★★☆ 中等赔率",
+    "tier": "★★☆ 中等赔率", "total_score": "5/10",
+    "dimension_scores": {"odds_quality": 2, "pricing_headroom": 2, "transmission_confidence": 2, "model_consistency": 2},
     "tier_note": "基于概率加权回报和不对称比的综合判定",
-    "action": "观望",
-    "suggestion": "关注HSK31858 Ph3数据读出和环泊酚美国首张处方时间"
+    "suggested_action": "关注关键临床数据读出"
   },
-
   "monitoring_kpis": {
-    "kpis": [
-      "环泊酚美国季度销售额",
-      "HSK31858 Ph3入组进度/中期数据",
-      "礼来合作里程碑触发公告"
-    ]
+    "financial_verification_kpis": [{"name": "季度销售额", "baseline": "0", "target": "待定", "frequency": "季度", "verifies": "商业化执行"}],
+    "event_milestone_kpis": [{"name": "Ph3数据读出", "expected_timing": "T+90天", "significance": "管线价值重估", "verification_source": "公司公告"}],
+    "competition_signal_kpis": [{"name": "竞品进展", "current_state": "跟踪中", "trigger": "竞品获批", "action_if_triggered": "下调PoS"}],
+    "risk_trigger_kpis": [{"name": "研发失败", "linked_to": "核心管线", "severity": "high", "monitor": "每季度"}]
   },
 
   "risk_triggers": {
@@ -282,6 +284,102 @@ RNPV_SCENARIO_PROMPT = """# 你是创新药管线估值分析师
 4. **概率和为 1.0**: bear + base + bull = 1.0
 5. **已获批药物 PoS = 100%** (bear 可小幅下调至 90-95%，反映商业化失败风险，不可归零)
 6. **输出纯 JSON**，不包含任何 markdown 标记或解释文字
+"""
+
+
+# ═══════════════════════════════════════
+# rNPV LLM-2 系统提示词
+# ═══════════════════════════════════════
+
+RNPV_LLM2_PROMPT = """# 你是管线估值审阅官
+
+审阅 LLM-1 的药物参数推演，对照代码计算的 rNPV 加总结果，补充缺失数据，纠正错误，输出完整最终报告。
+
+## 多轮搜索（每轮最多 2 条）
+
+## 任务
+
+### 任务 1: 数据补充 — LLM-1 的 data_gaps 和 change_request 是必搜清单
+
+逐条生成 search_request，火山支持自然语言查询。volc 预搜索结果如已覆盖可跳过。每条缺口都要有对应的搜索或说明为何跳过。
+
+### 任务 2: 逻辑审查 — 从 LLM-1 的 reasoning_trace 逐条追溯 + rNPV 三大盲区
+
+先逐条读 LLM-1 的推理链: 每个参数赋值有依据吗？数据引用和 baseline 一致吗？风险映射在参数里有体现吗？
+
+再检查 rNPV 模型的三大致命盲区:
+
+rNPV = Σ(PoS × 峰值销售 × 系数 / (1+r)^t) + 成熟业务 PE − 净负债。这个公式天然低估三类价值，你必须逐项检查并修正:
+
+**盲区 1: 平台溢价。** rNPV 把公司当成"几个药的清单"，但市场买的是"可能会持续出药的引擎"。如果公司有技术平台（口服多肽递送、AI 辅助设计、超长效修饰等），这些平台能力意味着: (a)现有药物的 PoS 高于行业基准（因为有平台验证）,(b)未来还有新资产会从平台产出——rNPV 不算这些东西。检查 LLM-1 的 PoS 和峰值销售是否反映了平台能力溢价。如果没有 → 上调 PoS 或峰值，附理由。
+
+**盲区 2: 海外期权。** LLM-1 通常只给中国市场的峰值销售。如果公司在推进 FDA 临床、有海外合作伙伴、或药物机制具有全球竞争力，海外市场是真实的期权价值。检查: LLM-1 的峰值销售是否涵盖了海外？如果没有 → (a)在 bull 情景中加入海外峰值,(b)或在 base 中上调峰值反映海外概率加权。
+
+**盲区 3: 成熟业务底部价值。** LLM-1 倾向用"TTM 净利 × 行业 PE"来估成熟业务。但对于转型期药企，TTM 净利往往是周期底部（研发费用吞噬、旧产品下滑）。市场给成熟业务的估值是对"正常化盈利+现金流+产能+客户关系"的定价，不是当前利润的快照。检查: (a)成熟业务的正常化净利润是多少（剔除一次性因素）?(b)OCF 是否远高于净利润（说明折旧掩盖了真实盈利能力）?(c)可比原料药/仿制药公司在非恐慌期的 EV/EBITDA 或 PS 是多少？如果 LLM-1 的成熟业务 PE 给的太低 → 上调至合理水平，附理由。
+
+常规检查:
+- PoS/峰值销售/折现率是否有支撑？
+- 可比公司选对了吗？
+- 管线是否有遗漏的资产？
+
+**⚠️ 数据时效性铁律: 事件 > 一切。** 事件是唯一最新情报。券商预测/行业报告可能是事件前的旧数据。矛盾时以事件为准——券商没反映最新进展 → 券商过时了。
+
+### 任务 3: 修正——参数修改 + 估值调整，两者缺一不可
+
+**修正铁律: 沿事件因果链走。** 事件是第一性输入——NPV 用的 PoS/峰值/折现率必须反映事件中的最新临床数据/监管进展/竞争格局变化，不能用行业基准 PoS 做机械对标。事件才是最新的。
+
+你有两个工具来修正 LLM-1 的估值。**两者互补，必须同时使用:**
+
+**工具 A: change_log — 修正具体参数错误。**
+
+LLM-1 的某个参数设错了——你能找到证据证明正确值是多少。适用于: PoS 偏差、峰值销售只算了中国、折现率不合理、PE 对标错误。
+
+输出格式:
+```json
+"change_log": [
+  {"path": "drugs.0.base.peak_sales_yi", "old_value": 30, "new_value": 45,
+   "reason": "峰值销售仅覆盖中国。BGM0504美国Ph3已启动，应概率加权计入海外",
+   "evidence": "FDA Type B EoP2 completed; 美国减重市场$50B+"}
+]
+```
+path 引用格式: `drugs.N.base.param_name` (N=药物序号), 或 `mature_business.base.pe_multiple`
+
+**工具 B: valuation_adjustments — 弥补 rNPV 模型的结构性盲区。**
+
+rNPV 作为公式无法定价的东西。适用于: 技术平台溢价、海外期权(如果无法通过峰值销售表达)、成熟业务底部修正(如果TTM净利严重失真)。
+
+在 `valuation_adjustments` 中输出三个调整项，每项含 `value_yi`(亿)、`apply_to`、`rationale`。
+
+**铁律**: 如果你的 narrative 批评了某个参数或指出了某个低估，必须在 change_log 或 valuation_adjustments 中找到对应修正。两者都不能空——至少有一个要有实质内容。
+
+### 任务 4: 最终判断 — 基于代码计算的 rNPV 数字
+- 置信度、交易标注、预期差、最终叙事
+- **关键**: 如果你的修改显著改变了估值（比如从 -84% 变成 -30%），在 narrative 中解释: 之前的估值漏了什么？你的修改反映了什么？
+
+## 输出 Schema — 完整最终报告
+
+{
+  "drugs": [{ 同 LLM-1，需要修改则输出完整对象 }],
+  "mature_business": { 同 LLM-1 },
+  "scenario_valuation": { "scenario_details": { "bear/base/bull": { "同 LLM-1，代码计算" } } },
+  "change_log": [
+    {"path": "drugs.0.base.peak_sales_yi", "old_value": 30, "new_value": 45, "reason": "峰值仅中国，美国Ph3已启动", "evidence": "FDA Type B EoP2 completed"}
+  ],
+  "valuation_adjustments": {
+    "platform_premium": {"value_yi": 0, "apply_to": "all_scenarios", "rationale": "..."},
+    "overseas_option": {"value_yi": 0, "apply_to": "bull_only", "rationale": "..."},
+    "mature_business_correction": {"value_yi": 0, "apply_to": "all_scenarios", "rationale": "..."}
+  },
+  "reasoning_trace": ["LLM-1: ...", "LLM-2: 审查-..."],
+  "confidence": { "overall_score": 1-10 },
+  "trade_annotation": { "tier": "..." },
+  "monitoring_kpis": {}, "risk_triggers": {},
+  "narrative": "...", "expectation_gap": { "level": "..." }
+}
+
+核心: WACC不可改 / 概率和=1.0 / 参数修改必须有证据 / 纯JSON / **禁止在 narrative 中写任何市值数字——估值由代码计算，你不应该自己估算**
+
+**⚠️ 关键铁律: change_log 不能为空。** 如果你的 narrative 里写了"PoS偏低"、"峰值销售没算海外"、"成熟业务PE太低"、"平台价值被忽略"，你必须在 change_log 里给出对应的参数修改。narrative 里的每个审阅发现都必须能在 change_log 里找到对应的条目。只有一种情况 change_log 可以为空：你确认 LLM-1 的每个参数都完美无误。但这种情况下你的 narrative 也不应该包含任何批评。
 """
 
 
@@ -430,13 +528,18 @@ def _compute_drug_rnpv(
     time_to_peak_years: float,
     discount_rate_pct: float,
 ) -> float:
-    """单药 rNPV = PoS% × 峰值销售 / (1 + 折现率%)^年数"""
+    """单药 rNPV = PoS% × 峰值销售 × 专利倍数 / (1 + 折现率%)^年数
+
+    专利倍数固定为 3x，代表峰值后约 7 年销售额（爬坡+峰值+衰退）折现到峰值年的净现值。
+    这是行业常用简化——不做逐年现金流预测，用峰值×3 近似整个专利期的 NPV。
+    """
+    PATENT_LIFE_MULTIPLE = 3.0
     if pos_pct <= 0 or peak_sales_yi <= 0 or time_to_peak_years < 0:
         return 0.0
     rate = 1 + discount_rate_pct / 100
     if rate <= 0:
         return 0.0
-    return round(pos_pct / 100 * peak_sales_yi / (rate ** time_to_peak_years), 2)
+    return round(pos_pct / 100 * peak_sales_yi * PATENT_LIFE_MULTIPLE / (rate ** time_to_peak_years), 2)
 
 
 def _compute_mature_value(method: str, params: dict) -> float:
@@ -809,7 +912,8 @@ class RnpvScenarioValuation:
         # Step 1: 构建用户消息
         user_msg = _build_user_message(pipeline_data, event_data, agent2a_output)
 
-        # Step 2: LLM 调用 → 参数推演
+        # ── Step 2: LLM-1 参数推演 ──
+        print(f"  [rNPV] LLM-1 参数推演...", flush=True)
         result = call_deepseek(
             RNPV_SCENARIO_PROMPT, user_msg,
             temperature=0.1,
@@ -818,7 +922,7 @@ class RnpvScenarioValuation:
 
         # 重试一次
         if "_parse_error" in result:
-            print(f"  [Agent-2r] LLM 解析失败，重试...", flush=True)
+            print(f"  [rNPV] LLM-1 解析失败，重试...", flush=True)
             result = call_deepseek(
                 RNPV_SCENARIO_PROMPT, user_msg,
                 temperature=0.1,
@@ -832,23 +936,134 @@ class RnpvScenarioValuation:
                 "_parse_error": result.get("_parse_error", ""),
             }
 
-        # Step 3: 校验输出格式
-        validation_warnings = _validate_rnpv_output(result)
-
-        # Step 4: 代码计算估值
+        # ── Step 3: 代码计算估值 ──
         net_cash = fin.get("net_cash_yi", 0)
         current_mcap = fin.get("market_cap_yi", 0)
         valuation_summary = _compute_from_assumptions(result, net_cash, current_mcap)
 
-        # Step 5: 组装 Agent-3 兼容输出
+        # ── Step 3.5: volc 预搜索 ──
+        pre_search_queries = _extract_search_queries(result)
+        volc_pre_search = ""
+        if pre_search_queries:
+            volc_results = []
+            for q in pre_search_queries:
+                try:
+                    res = _call_volc_search(q)
+                    volc_results.append(f"查询: {q}\n结果: {res}")
+                except Exception:
+                    volc_results.append(f"查询: {q}\n结果: 搜索失败")
+            volc_pre_search = "\n\n".join(volc_results)
+
+        # ── Step 3.7: LLM-2 审阅 ──
+        print(f"  [rNPV] LLM-2 审阅...", flush=True)
+        try:
+            llm2_result = _call_llm2(
+                result, valuation_summary,
+                {"pe_ttm": fin.get("pe_ttm", 0), "pb": fin.get("pb", 0),
+                 "implied_g_pct": 0, "market_premium_pct": 0, "ev_yi": 0,
+                 "nopat_yi": 0, "roic_pct": 0,
+                 "wacc_simple_pct": 10},
+                {},  # wacc_params not needed for rNPV
+                {"packages": {"core": {"fields": fin}}},  # minimal data_package
+                {},
+                {},  # routing
+                system_prompt=RNPV_LLM2_PROMPT,
+                volc_pre_search=volc_pre_search,
+            )
+        except Exception:
+            print("  [rNPV] LLM-2 故障，降级", flush=True)
+            import traceback
+            traceback.print_exc()
+            llm2_result = {}
+
+        # ── Step 4: 合并，LLM-2 为主体 ──
+        # 先保护 LLM-1 的核心数据（drugs, mature_business），防止被 LLM-2 的空数组覆盖
+        llm1_drugs = result.get("drugs", [])
+        llm1_mature = result.get("mature_business", {})
+        result = _merge_llm_outputs(result, llm2_result)
+        # 如果 LLM-2 输出了空的 drugs/mature_business，回退到 LLM-1 的
+        if not result.get("drugs"):
+            result["drugs"] = llm1_drugs
+        if not result.get("mature_business") or not any(
+            result.get("mature_business", {}).get(s, {}).get("pe_multiple")
+            for s in ("bear", "base", "bull")
+        ):
+            result["mature_business"] = llm1_mature
+
+        # ── Step 4.3: 应用 change_log 中的参数修改 ──
+        changes = result.get("change_log", [])
+        if changes:
+            drugs = result.get("drugs", [])
+            mature = result.get("mature_business", {})
+            for c in changes:
+                path = c.get("path", "")
+                parts = path.split(".")
+                new_val = c.get("new_value")
+                if parts[0] == "drugs" and len(parts) >= 4:
+                    idx = int(parts[1])
+                    if idx < len(drugs):
+                        target = drugs[idx]
+                        for p in parts[2:-1]:
+                            target = target.get(p, {})
+                        c["old_value"] = target.get(parts[-1])
+                        target[parts[-1]] = new_val
+                elif parts[0] == "mature_business" and len(parts) >= 3:
+                    target = mature
+                    for p in parts[1:-1]:
+                        target = target.get(p, {})
+                    c["old_value"] = target.get(parts[-1])
+                    target[parts[-1]] = new_val
+            if changes:
+                print(f"  [rNPV] 应用了 {len(changes)} 条参数修改", flush=True)
+
+        # ── Step 4.5: 重新计算 ──
+        valuation_summary = _compute_from_assumptions(result, net_cash, current_mcap)
+
+        # ── Step 4.7: 应用 LLM-2 的估值调整 ──
+        adjustments = result.get("valuation_adjustments", {})
+        if adjustments:
+            for adj_name, adj in adjustments.items():
+                if not isinstance(adj, dict) or not adj.get("value_yi"):
+                    continue
+                val = adj["value_yi"]
+                apply_to = adj.get("apply_to", "all_scenarios")
+                sv = result.get("scenario_valuation", {}).get("scenario_details", {})
+                for scenario_name in ("bear", "base", "bull"):
+                    if apply_to == "bull_only" and scenario_name != "bull":
+                        continue
+                    if scenario_name in sv:
+                        sv[scenario_name]["target_mcap_yi"] = sv[scenario_name].get("target_mcap_yi", 0) + val
+                print(f"  [rNPV] 估值调整: {adj_name} +{val}亿 (apply_to={apply_to}) — {adj.get('rationale','')[:80]}", flush=True)
+
+            # 重新计算加权汇总
+            sv = result.get("scenario_valuation", {}).get("scenario_details", {})
+            probs, upsides, mcaps = [], [], []
+            for s in ("bear", "base", "bull"):
+                d = sv.get(s, {})
+                p = d.get("probability", 0)
+                m = d.get("target_mcap_yi", 0)
+                u = (m / current_mcap - 1) * 100 if current_mcap > 0 else 0
+                probs.append(p)
+                upsides.append(u)
+                mcaps.append(m)
+                d["upside_pct"] = round(u, 1)
+            w_up = sum(p * u for p, u in zip(probs, upsides))
+            w_mcap = sum(p * m for p, m in zip(probs, mcaps))
+            asym = abs(upsides[2] / upsides[0]) if upsides[0] != 0 else 0
+            valuation_summary = {
+                "probability_weighted_upside_pct": round(w_up, 1),
+                "probability_weighted_mcap_yi": round(w_mcap, 1),
+                "asymmetry_ratio": round(asym, 2),
+            }
+
+        # ── Step 5: 校验 + 组装 ──
+        validation_warnings = _validate_rnpv_output(result)
         output = _assemble_output(result, valuation_summary, pipeline_data, agent2a_output)
 
-        # 注入校验信息
         if validation_warnings:
             if "_validation_warnings" not in output:
                 output["_validation_warnings"] = []
             output["_validation_warnings"].extend(validation_warnings)
-            # 降置信度
             conf = output.get("confidence", {})
             if isinstance(conf, dict):
                 orig = conf.get("overall_score", 5)

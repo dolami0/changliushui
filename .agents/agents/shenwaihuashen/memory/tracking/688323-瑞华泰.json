@@ -1,0 +1,277 @@
+{
+  "stockCode": "688323",
+  "stockName": "瑞华泰",
+  "track_status": "active",
+  "thesis": "国内唯一掌握电子级PI全链条技术的国产龙头，嘉兴产能爬坡(利用率70%→目标85%+)驱动毛利率触底回升，海外巨头零扩产+AI服务器PI需求爆发创造历史性国产替代窗口，核心验证点为半年报GM拐点+三星供应商代码获取。",
+  "conviction": 42,
+  "decisionDate": "2026-06-10",
+  "decision": "有条件通过",
+  "recommendedPosition": 5,
+  "actualPosition": 0,
+  "entryCondition": "半年报(8月)GM≥20%且产能利用率>70%后建仓3%；若市值回落至65亿以下可提前建观察仓",
+  "entryPriceTarget": 35.0,
+  "pillars": [
+    {
+      "name": "产能爬坡→毛利率触底回升",
+      "expectation": "嘉兴一期5条线产能利用率从70%提升至85%+，单位固定成本摊薄，综合GM从17.4%回升至22%+",
+      "quantifiedTarget": "2026H2综合GM≥22%",
+      "status": "pending",
+      "verificationDate": "2026-08-31",
+      "lastChecked": "2026-06-10",
+      "history": [
+        {
+          "date": "2026-06-10",
+          "actual": "GM四连降20.87%→19.54%→18.27%→17.37%(Q1 2026)，产能利用率~70%",
+          "trend": "down"
+        }
+      ]
+    },
+    {
+      "name": "海外涨价+国产替代→收入加速",
+      "expectation": "钟渊提价20%+供需缺口扩大→国产PI跟涨+客户导入加速，营收CAGR从14%加速至30%+",
+      "quantifiedTarget": "2026H2单季营收同比增速>30%",
+      "status": "pending",
+      "verificationDate": "2026-10-31",
+      "lastChecked": "2026-06-10",
+      "history": [
+        {
+          "date": "2026-06-10",
+          "actual": "Q1 2026营收0.92亿(+15.9% YoY)，增速温和未加速",
+          "trend": "flat"
+        }
+      ]
+    },
+    {
+      "name": "海外大客户供应商代码获取",
+      "expectation": "三星/海力士正式供应商代码获取，从'小批量测试'升级为'正式供应商'",
+      "quantifiedTarget": "2026年底前获取≥1家海外存储大客户供应商代码",
+      "status": "pending",
+      "verificationDate": "2026-12-31",
+      "lastChecked": "2026-06-10",
+      "history": [
+        {
+          "date": "2026-06-10",
+          "actual": "三星小批量测试通过(专家纪要L2)，海力士/中际旭创1.6T认证中，均未获正式代码",
+          "trend": "up"
+        }
+      ]
+    },
+    {
+      "name": "嘉兴二期实质性开工",
+      "expectation": "二期3550吨项目从'规划建设中'进入实质性建设阶段，为2027-28产能跃升奠定基础",
+      "quantifiedTarget": "2026年底前二期主体工程开工",
+      "status": "pending",
+      "verificationDate": "2026-12-31",
+      "lastChecked": "2026-06-10",
+      "history": [
+        {
+          "date": "2026-06-10",
+          "actual": "公司公告显示为'规划建设中'，未披露具体开工时间",
+          "trend": "flat"
+        }
+      ]
+    }
+  ],
+  "risks": [
+    {
+      "name": "GM拐点时间不确定",
+      "probability": "高",
+      "impact": "GM若持续<18%，产能爬坡→降本逻辑被延迟，估值承压",
+      "monitoring": "跟踪每季毛利率变化，半年报为首个验证点"
+    },
+    {
+      "name": "客户认证进度不及预期",
+      "probability": "中",
+      "impact": "三星/海力士供应商代码若2026年底未获取，海外大客户突破叙事延迟",
+      "monitoring": "跟踪公司公告/投资者关系记录中的客户进展表述"
+    },
+    {
+      "name": "国内竞争加剧",
+      "probability": "中",
+      "impact": "瑞华技术2000吨(2027)、欧克科技、八亿时空等新进入者分流市场份额，削弱国产替代窗口期的独占性",
+      "monitoring": "跟踪竞品产能投产公告和客户导入新闻"
+    },
+    {
+      "name": "核心数据来自L2专家纪要",
+      "probability": "高",
+      "impact": "产能缺口、客户验证进度、海外涨价幅度等关键数据尚未经L5公告/财报验证，存在高估风险",
+      "monitoring": "半年报为首次L5验证机会，逐项对照纪要数据与财报数据"
+    },
+    {
+      "name": "财务压力",
+      "probability": "中",
+      "impact": "负债率67.6%、流动比率0.80、速动比率0.61，财务状况紧张。若亏损持续时间超预期，可能触发流动性风险",
+      "monitoring": "跟踪负债率/流动比率季度变化，OCF是否持续为正"
+    }
+  ],
+  "exitConditions": [
+    "半年报GM≤17%且无改善→不建仓，转为观望",
+    "三星供应商代码2026年底前未获取+GM连续三季无改善→清仓",
+    "嘉兴二期2027H1仍未开工→叙事降级，减仓50%",
+    "国内竞对率先获取海外大客户批量订单→减仓50%",
+    "OCF连续两季转负→清仓(流动性风险)"
+  ],
+  "catalystCalendar": [
+    {
+      "date": "2026-08",
+      "event": "半年报：GM拐点+产能利用率首次L5验证",
+      "type": "财报",
+      "impact": "H",
+      "bull": "GM≥20%且产能利用率>75%",
+      "bear": "GM≤17%且产能利用率无改善",
+      "sourceLevel": "L5",
+      "sourceDetail": "2026年半年报",
+      "sourceNote": "最重要验证点——GM能否终止四连降",
+      "status": "pending",
+      "lastChecked": "2026-06-10"
+    },
+    {
+      "date": "2026-H2",
+      "event": "三星/海力士供应商代码获取",
+      "type": "公司",
+      "impact": "H",
+      "bull": "获三星/海力士正式供应商代码公告",
+      "bear": "2026年底前未获取任何海外存储客户代码",
+      "sourceLevel": "L5",
+      "sourceDetail": "待公司公告",
+      "sourceNote": "当前仅专家纪要L2提及小批量测试通过",
+      "status": "pending",
+      "lastChecked": "2026-06-10"
+    },
+    {
+      "date": "2026-10",
+      "event": "三季报：GM+营收增速二次验证",
+      "type": "财报",
+      "impact": "H",
+      "bull": "GM≥22%且营收增速>30%",
+      "bear": "GM≤18%或营收增速<15%",
+      "sourceLevel": "L5",
+      "sourceDetail": "2026年三季报",
+      "sourceNote": "验证GM回升趋势是否确立",
+      "status": "pending",
+      "lastChecked": "2026-06-10"
+    },
+    {
+      "date": "2026-Q4",
+      "event": "嘉兴二期开工/达产进度",
+      "type": "公司",
+      "impact": "H",
+      "bull": "二期主体工程开工",
+      "bear": "二期仍处'规划中'无实质进展",
+      "sourceLevel": "L5",
+      "sourceDetail": "待公司公告",
+      "sourceNote": "当前为'规划建设中'",
+      "status": "pending",
+      "lastChecked": "2026-06-10"
+    },
+    {
+      "date": "持续",
+      "event": "海外电子级PI月度进口价",
+      "type": "行业",
+      "impact": "M",
+      "bull": "进口价环比持续上涨",
+      "bear": "进口价回落或滞涨",
+      "sourceLevel": "L3",
+      "sourceDetail": "行业数据/海关数据",
+      "sourceNote": "钟渊4月提价20%已确认(L5)",
+      "status": "pending",
+      "lastChecked": "2026-06-10"
+    }
+  ],
+  "basePrice": 39.9,
+  "baseMarketCap": 71.82,
+  "baseDate": "2026-06-10",
+  "priceLog": [
+    {
+      "date": "2026-06-10",
+      "price": 39.9,
+      "pe": null,
+      "mv_yi": 71.82,
+      "return_pct": 0.0,
+      "mv_change_pct": 0.0,
+      "note": "建档基准价。三连板后收盘价，PS≈18x，PE=NaN(亏损)。"
+    }
+  ],
+  "positionLog": [],
+  "valuationComparison": {
+    "date": "2026-06-10",
+    "method": "闭卷推导→开卷对比",
+    "scenarios": {
+      "bear": {
+        "myCAGR": 8,
+        "myPS": 5,
+        "myReturn": -65,
+        "upCAGR": 0,
+        "upPS": 0,
+        "upReturn": -56
+      },
+      "base": {
+        "myCAGR": 36,
+        "myPS": 12,
+        "myReturn": 67,
+        "upCAGR": 45,
+        "upPS": 12,
+        "upReturn": 127
+      },
+      "bull": {
+        "myCAGR": 59,
+        "myPS": 18,
+        "myReturn": 301,
+        "upCAGR": 60,
+        "upPS": 18,
+        "upReturn": 358
+      }
+    },
+    "myWeightedReturn": 81.3,
+    "upWeightedReturn": 134.3,
+    "myAsymmetry": 6.0,
+    "upAsymmetry": 6.3,
+    "verdict": "报告CAGR偏乐观(45% vs 独立36%)，因嘉兴二期尚未实质性开工。概率分布我偏保守(Bear 25% vs 15%)。核心结论方向一致。"
+  },
+  "aShareTracking": {
+    "pledgeCheck": {
+      "lastChecked": "2026-06-10",
+      "result": "无质押记录(investoday确认)"
+    },
+    "unlockCheck": {
+      "lastChecked": "2026-06-10",
+      "result": "待首次月度专检"
+    },
+    "marginCheck": {
+      "lastChecked": "2026-06-10",
+      "result": "待首次月度专检"
+    },
+    "insiderTrading": {
+      "lastChecked": "2026-06-10",
+      "result": "国投高科/泰巨尧坤温和减持(实际远低于计划上限)；刘鑫增持502万股(+188%)→正面信号"
+    }
+  },
+  "reviewSchedule": {
+    "nextFullReview": "2026-08-31(半年报)",
+    "nextQuickCheck": "2026-06-11(明日巡检)",
+    "lastCheck": "2026-06-10(巡检)",
+    "patrolFrequency": "每日 22:00"
+  },
+  "thesisLog": [
+    {
+      "version": 1,
+      "date": "2026-06-10T09:07:00",
+      "thesis": "国内唯一掌握电子级PI全链条技术的国产龙头，嘉兴产能爬坡(利用率70%→目标85%+)驱动毛利率触底回升，海外巨头零扩产+AI服务器PI需求爆发创造历史性国产替代窗口，核心验证点为半年报GM拐点+三星供应商代码获取。",
+      "conviction": 42,
+      "delta": "今日建档。GM四连降(20.87%→17.37%)。嘉兴二期仍规划中。三星代码待获取。",
+      "trigger": "每日巡检",
+      "narrative": "今日建档。GM四连降(20.87%→17.37%)。嘉兴二期仍规划中。三星代码待获取。",
+      "verifiedAssumptions": [
+        "嘉兴一期5条线全投产(利用率70%)",
+        "钟渊4月提价20%确认"
+      ],
+      "invalidatedAssumptions": [],
+      "newUnknowns": [
+        "半年报GM能否终止四连降",
+        "三星正式供应商代码获取时间",
+        "嘉兴二期何时实质性开工"
+      ],
+      "narrativeTension": "stable"
+    }
+  ]
+}

@@ -324,10 +324,21 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
 
             # ── SOTP 分叉 (V6.4): Agent-2a 判 sotp_triggered → 走 SOTP 分部估值 ──
             # 移到2b之后：2b已跑完，sotp_primary_segment_model可用
+            # V8 硬约束: 无分部财务数据(product_mix为空) → 不触发SOTP，退回标准管线
             if a2a_mn.get("sotp_triggered") and _SOTP_AVAILABLE:
-                state.pipeline_type = "sotp"
-                sotp_result = self._run_sotp_pipeline(state, event_data, cb, wacc_params, volc_data_std)
-                return sotp_result
+                a1_pkgs = state.agent1_output.get("packages", {}) if isinstance(state.agent1_output, dict) else {}
+                a1_core = a1_pkgs.get("core", {}) if isinstance(a1_pkgs, dict) else {}
+                a1_fields = a1_core.get("fields", {}) if isinstance(a1_core, dict) else {}
+                fwd = a1_fields.get("_forward_looking", {}) if isinstance(a1_fields, dict) else {}
+                cats = fwd.get("categories", {}) if isinstance(fwd, dict) else {}
+                ea = cats.get("earnings_elasticity", {}) if isinstance(cats, dict) else {}
+                product_mix = ea.get("product_mix", []) if isinstance(ea, dict) else []
+                if not product_mix:
+                    print(f"  [SOTP] 阻止: Agent-1无分部财务数据(product_mix为空)，退回标准管线", flush=True)
+                else:
+                    state.pipeline_type = "sotp"
+                    sotp_result = self._run_sotp_pipeline(state, event_data, cb, wacc_params, volc_data_std)
+                    return sotp_result
 
             # ── Agent-3: 推演裁决 ──
             cb("agent3", 1, 1, "running", "推演裁决(三情景)")

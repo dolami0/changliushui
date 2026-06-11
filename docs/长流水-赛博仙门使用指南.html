@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>长流水 · 入门指南</title>
+<style>
+  :root { --bg:#050401; --surface:#0d0c09; --border:#1a1a1a; --text:#e0ded8; --muted:#8a8880; --neon:#ADFF00; --orange:#FF5C00; --gold:#C88D3A; --red:#ff4444; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Noto Sans SC','IBM Plex Mono',sans-serif; line-height:1.9; max-width:860px; margin:0 auto; padding:2.5rem 1.5rem 4rem; }
+  body::before { content:''; position:fixed; inset:0; background:radial-gradient(circle at 50% 0%, rgba(173,255,0,0.012) 0%, transparent 60%); pointer-events:none; z-index:-1; }
+  h1 { font-size:2rem; color:var(--neon); text-align:center; letter-spacing:6px; margin-bottom:0.2rem; }
+  h1 .sub { display:block; font-size:0.85rem; color:var(--muted); letter-spacing:2px; margin-top:0.2rem; }
+  h2 { font-size:1.15rem; color:var(--neon); margin:2.5rem 0 1rem; padding-bottom:0.3rem; border-bottom:1px solid var(--border); }
+  h3 { font-size:0.95rem; color:var(--orange); margin:1.5rem 0 0.5rem; }
+  p,li { margin:0.4rem 0; color:var(--muted); }
+  .hl { color:var(--neon); font-weight:bold; } .warn { color:var(--red); } .gold { color:var(--gold); }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:1.2rem 1.5rem; margin:0.8rem 0; }
+  .step-row { display:flex; flex-wrap:wrap; gap:0.4rem; margin:1rem 0; font-size:0.78rem; }
+  .step { background:var(--surface); border:1px solid var(--border); padding:0.5rem 0.7rem; border-radius:4px; text-align:center; flex:1; min-width:60px; }
+  .step .n { color:var(--neon); font-weight:bold; } .step .d { color:var(--muted); font-size:0.68rem; }
+  .step-arrow { color:var(--neon); display:flex; align-items:center; font-size:1rem; }
+  table { width:100%; border-collapse:collapse; margin:0.6rem 0; font-size:0.8rem; }
+  th,td { padding:0.45rem 0.6rem; text-align:left; border:1px solid var(--border); }
+  th { background:var(--surface); color:var(--neon); font-weight:normal; } td { color:var(--muted); }
+  blockquote { border-left:2px solid var(--neon); padding:0.4rem 0.8rem; margin:0.8rem 0; color:var(--text); font-size:0.82rem; background:rgba(173,255,0,0.03); }
+  .page-block { background:var(--surface); border:1px solid var(--border); border-radius:6px; padding:1rem 1.2rem; margin:0.5rem 0; }
+  .page-block .pname { color:var(--neon); font-weight:bold; }
+  .page-block .purl { color:var(--gold); font-size:0.7rem; margin-left:0.5rem; }
+  .page-block .pdesc { color:var(--muted); font-size:0.82rem; margin-top:0.2rem; }
+  .page-block .puse { color:var(--text); font-size:0.78rem; margin-top:0.2rem; padding-top:0.2rem; border-top:1px dashed var(--border); }
+  @media (max-width:600px) { body { padding:1rem 0.7rem; } h1 { font-size:1.5rem; } .step-row { flex-direction:column; } .step-arrow { display:none; } }
+</style>
+</head>
+<body>
+
+<h1>长流水<span class="sub">赛博仙门 · 十倍股猎杀系统 · 使用指南</span></h1>
+<p style="text-align:center;color:var(--gold);margin-bottom:1.5rem;">「念念相续，天机无相。大道所向，因果成章。」</p>
+
+<!-- ==================== 0 ==================== -->
+<h2>零、这是个什么东西</h2>
+<p>长流水是一个<span class="hl">用 AI 挖十倍股</span>的系统。它每天自动监听 A 股重大事件——政策、涨价、技术突破、订单放量——然后分析：<span class="hl">这个事件能不能让某只股票大涨？</span></p>
+<p>全流程自动。你的角色是<span class="gold">裁决者</span>：看结果、做判断、下决策。</p>
+
+<!-- ==================== 1 ==================== -->
+<h2>一、首页（全景监控面板）</h2>
+<p>打开网站看到的第一屏。这个页面让你一望而知系统的运转状态、最新的猎物、以及你正在追踪的标的。</p>
+
+<h3>1.1 风闻入阵</h3>
+<div class="page-block">
+  <div class="pdesc">首页顶部区域，快速提交一条市场消息或小道消息。粘贴资讯原文，系统自动归类、评分、匹配受益个股。消息入阵后进入估值管线排队，过段时间就能在定数录里看到分析结果。</div>
+  <div class="puse">📌 <strong>怎么用：</strong>看到有价值的资讯→粘贴进去→传讯入阵。不用自己去手动匹配标的，系统自动找。</div>
+</div>
+
+<h3>1.2 定数录</h3>
+<div class="page-block">
+  <div class="pdesc">估值报告的<span class="hl">汇总面板</span>。每一条都是系统跑完的完整估值报告——显示标的名称、事件概要、加权涨跌幅、不对称比、通过状态。相当于你的「猎物清单」。</div>
+  <div class="puse">📌 <strong>怎么用：</strong>按加权涨跌幅排序，先看涨幅最高的。点击跳转到详细估值报告。点击「藏经云→定数录」可进入全量表格视图，支持搜索和排序。</div>
+</div>
+
+<h3>1.3 天眼司</h3>
+<div class="page-block">
+  <div class="pdesc">事件监听的<span class="hl">状态面板</span>。展示当前正在监听的事件源、响应等级、匹配到的标的数。一眼知道系统有没有在正常工作。</div>
+  <div class="puse">📌 <strong>怎么用：</strong>确认监听中（绿色指示灯）。如果停了，去总控台开启调度器。</div>
+</div>
+
+<h3>1.4 跟踪令</h3>
+<div class="page-block">
+  <div class="pdesc">已通过审阅的标的<span class="hl">快捷监控面板</span>。列出所有追踪中标的的核心指标：当前价格、涨跌幅、PE、论点状态。</div>
+  <div class="puse">📌 <strong>怎么用：</strong>扫一眼——有没有标红的（论点 at_risk 或 broken）？点击进入完整的追踪令详情页。</div>
+</div>
+
+<!-- ==================== 2 ==================== -->
+<h2>二、估值报告 — 最核心的页面</h2>
+<p>从定数录点击任意标的，或在地址栏输入 <span class="gold">/report/股票代码</span>，进入估值重构报告。按以下顺序读：</p>
+
+<div class="step-row" style="font-size:0.82rem;">
+  <div class="step"><div class="n">① 加权涨跌幅</div><div class="d">事件驱动的期望收益<br/>>+30% 值得关注</div></div>
+  <div class="step-arrow">→</div>
+  <div class="step"><div class="n">② 不对称比</div><div class="d">赚赔比<br/>>1.5x 有性价比</div></div>
+  <div class="step-arrow">→</div>
+  <div class="step"><div class="n">③ Bear 情景</div><div class="d">最差能亏多少？<br/>你能承受吗</div></div>
+  <div class="step-arrow">→</div>
+  <div class="step"><div class="n">④ Base/Bull</div><div class="d">增速假设合理吗？<br/>PS/PE 倍数靠谱吗？</div></div>
+  <div class="step-arrow">→</div>
+  <div class="step"><div class="n">⑤ 估值路由</div><div class="d">为什么选这个模型？<br/>模型选对了吗？</div></div>
+  <div class="step-arrow">→</div>
+  <div class="step"><div class="n">⑥ 置信度</div><div class="d">系统自己多大把握？<br/>>6/10 可参考</div></div>
+</div>
+
+<blockquote><strong>核心原则：不要只看加权涨跌幅就追。</strong>先看 Bear——最差亏多少？再看不对称比——值不值得冒这个险？最后想——这个故事你自己信不信？</blockquote>
+
+<h3>报告中常见术语</h3>
+<table>
+  <tr><th>术语</th><th>一句话</th></tr>
+  <tr><td>估值锚</td><td>市场在用利润(PE)、收入(PS)还是资产(PB)给这家公司标价。锚不同，逻辑完全不同。</td></tr>
+  <tr><td>Bear / Base / Bull</td><td>故事没成 / 故事正常推进 / 故事超出预期——三种情况下的市值和涨跌幅。</td></tr>
+  <tr><td>不对称比</td><td>Bull 赚的 ÷ Bear 亏的（加权后）。>1.5x 才划算。</td></tr>
+  <tr><td>置信度</td><td>系统给自己的报告打分（信息质量/财务可行性/历史先例/估值安全/综合）。</td></tr>
+  <tr><td>SOTP</td><td>分部估值。公司有 PE 业务和 PS 业务时，拆开各自估值再加总。防止用错了锚。</td></tr>
+  <tr><td>范式切换</td><td>市场换了一种方式给公司标价——PE 15x 的化工股变成 PS 8x 的新材料股。这是最大的涨幅来源。</td></tr>
+</table>
+
+<!-- ==================== 3 ==================== -->
+<h2>三、总控台</h2>
+<div class="page-block">
+  <div class="pname">总控台<span class="purl">/dashboard</span></div>
+  <div class="pdesc">系统的<span class="hl">指挥中心</span>。分为三大区域：</div>
+  <p style="margin-top:0.5rem;">❶ <strong>调度控制区</strong>：调度器开关（启动/暂停自动轮询）、下次轮询倒计时、A 股市场状态、产业链引擎控制。</p>
+  <p>❷ <strong>实时进度流</strong>：SSE 推送，展示当前正在估值推演的标的一步步走到哪了。</p>
+  <p>❸ <strong>审阅面板</strong>：对跑完的报告做「通过/有条件通过/驳回」裁决——通过则创建追踪令，进入持续跟踪。</p>
+  <div class="puse">📌 <strong>怎么用：</strong>确保调度器在运转→有新标的时点击代码跳转报告→读完回来在审阅面板裁决。</div>
+</div>
+
+<!-- ==================== 4 ==================== -->
+<h2>四、身外化身</h2>
+<div class="page-block">
+  <div class="pname">身外化身<span class="purl">/avatar</span></div>
+  <div class="pdesc">AI 对话研报工具。输入股票代码或名称 + 问题，系统运行七步分析流程输出一份手写级投资研判。适合：快速探查不在追踪列表中的新标的、对已有报告做补充分析。</div>
+  <div class="puse">📌 跑完需要几分钟，不是秒回。分析过程中可以看到每一步的进度。</div>
+</div>
+
+<!-- ==================== 5 ==================== -->
+<h2>五、追踪令</h2>
+<div class="page-block">
+  <div class="pname">追踪令详情<span class="purl">/tracking</span></div>
+  <div class="pdesc">估值报告审阅通过后生成的<strong>持续跟踪档案</strong>。首页的「跟踪令」面板是概要视图，这里是完整详情。</div>
+
+  <h3>5.1 论点支柱 (Pillars)</h3>
+  <p>当初为什么买这只票——拆成 3-5 条可验证的支柱，每条有验证日期。</p>
+  <table>
+    <tr><th>状态</th><th>怎么办</th></tr>
+    <tr><td><span class="hl">pending</span> 还没到验证时间</td><td>继续持有</td></tr>
+    <tr><td><span class="hl">on_track</span> 趋势向好</td><td>持有，可加仓</td></tr>
+    <tr><td><span class="warn">at_risk</span> 危险信号</td><td>减仓，密切关注</td></tr>
+    <tr><td><span class="warn">broken</span> 论点破灭</td><td><strong>清仓</strong></td></tr>
+  </table>
+
+  <h3>5.2 催化剂日历</h3>
+  <p>未来影响股价的关键事件时点——业绩预告、政策发布、产品认证、客户导入。每个催化剂标注了利好(bull)和利空(bear)两种兑现结果。</p>
+
+  <h3>5.3 价格日志</h3>
+  <p>每个交易日的收盘价、PE、市值、涨跌幅自动记录。一眼看到趋势变化。</p>
+
+  <h3>5.4 A 股专检</h3>
+  <p>质押率、限售解禁、两融余额、内幕交易减持——自动按频率检查，有问题标红。</p>
+
+  <h3>5.5 退出条件</h3>
+  <p>每只标的预设退出规则——触发就卖，不犹豫。</p>
+</div>
+
+<!-- ==================== 6 ==================== -->
+<h2>六、其他页面速查</h2>
+<table>
+  <tr><th>页面</th><th>路径</th><th>干什么的</th></tr>
+  <tr><td>天机峰</td><td>/tianjifeng</td><td>产业链利润流 Sankey 图——上下游钱怎么分的</td></tr>
+  <tr><td>藏经云</td><td>/cangjingyun</td><td>知识库：天机卷 / 万业谱 / 定数录 / 因果簿，四库轮播</td></tr>
+  <tr><td>炼器房</td><td>/agent-config</td><td>系统参数配置（API Key / 模型选择 / 温度），一般不碰</td></tr>
+</table>
+
+<!-- ==================== 7 ==================== -->
+<h2>七、日常操作流程</h2>
+<div class="step-row" style="font-size:0.82rem;">
+  <div class="step"><div class="n">每日打开</div><div class="d">首页→扫定数录<br/>看有没有新标的</div></div>
+  <div class="step-arrow">→</div>
+  <div class="step"><div class="n">读报告</div><div class="d">六步读报告法<br/>决定是否出手</div></div>
+  <div class="step-arrow">→</div>
+  <div class="step"><div class="n">审阅裁决</div><div class="d">通过→创建追踪令<br/>驳回→不进追踪</div></div>
+  <div class="step-arrow">→</div>
+  <div class="step"><div class="n">持有追踪</div><div class="d">每个工作日自动巡检<br/>论点验证+催化剂+A股检查</div></div>
+  <div class="step-arrow">→</div>
+  <div class="step"><div class="n">退出</div><div class="d">论点破灭→清仓<br/>退出条件触发→卖</div></div>
+</div>
+
+<!-- ==================== Footer ==================== -->
+<div style="text-align:center;margin-top:3rem;padding-top:2rem;border-top:1px solid var(--border);">
+  <p style="color:var(--muted);font-size:0.7rem;">
+    长流水 · 赛博仙门 · 十倍股猎杀系统<br/>
+    念念相续，天机无相。大道所向，因果成章。
+  </p>
+</div>
+</body>
+</html>

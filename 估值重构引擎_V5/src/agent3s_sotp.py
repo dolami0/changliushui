@@ -38,6 +38,12 @@ from agent3_scenario_asymmetry import (
     MODEL_NAMES,
     MODEL_FAMILIES,
     MODEL_PARAM_NAMES_MAP,
+    # V8: LLM-2 基础设施
+    _call_llm2,
+    _call_volc_search,
+    _extract_search_queries,
+    _merge_llm_outputs,
+    LLM2_SYSTEM_PROMPT as SHARED_LLM2_PROMPT,
 )
 
 # Volcengine 知识问答 (用于 SOTP 分部数据后备)
@@ -707,14 +713,17 @@ asymmetry_ratio = bull_upside / |bear_upside|
 - `preflight_check` 逐项自检格式: ["[OK] 清单项1素材吸收完成", "[OK] 清单项2引用2a审核结论完成", "[OK] 清单项3a-3e完成(含风险映射+约束确认+叙事一致性检查)", "[OK] 概率和=1.00", "[OK] upside单调递增,全参数经济含义自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
 - 输出纯 JSON，不要用 markdown 代码块包裹
 
+# 参数锚定法则
+
+你的 PE/PS/PB 锚定的是【可比公司 + 行业稳态中枢】，不是当前市值。当前市值只是一个事实标签，不是你赋参数的靶子。赋完参数后不要心算估值——代码会算。
+
 # 核心约束
 1. WACC 不可修改（代码预计算）
 2. 三情景概率之和 = 1.0
-3. bear_upside < base_upside < bull_upside
-4. BS画像是起点，bull必须超越市场已定价的增长才有upside
-5. 输出纯 JSON
+3. bear 参数 < base 参数 < bull 参数（逐级递增）
+4. 输出纯 JSON，不要用 markdown 代码块包裹
 
-# 共享输出 Schema（字段顺序 = 清单项推理顺序）:
+# LLM-1 SOTP 输出 Schema（仅参数，不含市值/upside）:
 
 {
   "reasoning_trace": ["清单项1-素材吸收(引用2a锚+计价): ...", "清单项2-引用2a审核结论(step2d=X): ...", "清单项3a-分布形状+投资命题: ...", "清单项3b-计价天花板(还剩下多少没计价): ...", "清单项3d-因果剧本(bear/base/bull各一段): ...", "清单项3e-赋参数: ...", "清单项4a-一致性校验: ...", "清单项4b-计价验证(按锚选工具): ...", "清单项4c-校验交叉: ...", "清单项4d-非对称: ...", "清单项4e-置信度: ..."],
@@ -749,61 +758,69 @@ asymmetry_ratio = bull_upside / |bear_upside|
     "probability_weighted_upside_pct": XX,
     "asymmetry_ratio": X.X
   },
-  "reverse_dcf": {
-    "applicable": true,
-    "market_implied_g_pct": "代码预计算(earnings锚=反向DCF的g, revenue锚=隐含CAGR, asset锚=隐含ROE改善)",
-    "my_implied_g_pct": "基于中性情景推演的对应指标(earnings锚=利润增速, revenue锚=收入CAGR, asset锚=ROE改善)",
-    "expectation_gap_pct": "market_implied - my_implied 的差距",
-    "gap_direction": "市场低估|市场高估|基本公允|无法计算",
-    "gap_magnitude": "显著|中等|轻微|不适用",
-    "applicable_note": "若 applicable=false，说明原因"
-  },
-  "validation_crosscheck": {
-    "validation_model": "{VALIDATION_MODEL}",
-    "validation_paradigm": "盈利视角|收入视角|资产视角|资源视角|管线视角|分拆视角|与主模型相同",
-    "base_target_mcap_yi": "代码填充",
-    "validation_mcap_yi": "校验模型粗估市值(亿元人民币)",
-    "gap_pct": "代码填充",
-    "gap_direction": "主模型高估|主模型低估|基本一致",
-    "assessment": "互相印证|存在分歧|严重冲突"
-  },
-  "expectation_gap": {
-    "level": "市场显著低估|市场中等低估|基本公允|市场高估|无法计算",
-    "note": "预期差说明。level必须与4b分析的结论一致(不硬绑reverse_dcf)",
-  "confidence": {
-    "overall_score": 1-10,
-    "overall_label": "高|中|低",
-    "dimensions": {
-      "info_quality": {"score": 1-10, "label": "信息质量", "note": "说明评分依据"},
-      "financial_feasibility": {"score": 1-10, "label": "财务可行性", "note": "说明评分依据"},
-      "valuation_safety": {"score": 1-10, "label": "估值安全边际", "note": "说明评分依据"},
-      "historical_precedent": {"score": 1-10, "label": "历史案例匹配", "note": "说明评分依据"}
-    }
-  },
-  "trade_annotation": {
-    "tier": "★★★ 高赔率机会|★★☆ 中等赔率|★☆☆ 低赔率机会|☆☆☆ 规避",
-    "total_score": "X/10",
-    "dimension_scores": {"odds_quality": 0-3, "pricing_headroom": 0-3, "transmission_confidence": 0-3, "model_consistency": 0-3},
-    "alignment_signals": ["信号描述"],
-    "tier_note": "交易标注核心理由",
-    "suggested_action": "建议操作"
-  },
-  "monitoring_kpis": {
-    "financial_verification_kpis": [{"name":"", "baseline":"", "target":"", "frequency":"季度", "verifies":""}],
-    "event_milestone_kpis": [{"name":"", "expected_timing":"", "significance":"", "verification_source":""}],
-    "competition_signal_kpis": [{"name":"", "current_state":"", "trigger":"", "action_if_triggered":""}],
-    "risk_trigger_kpis": [{"name":"", "linked_to":"", "severity":"high|medium|low", "monitor":""}]
-  },
-  "risk_triggers": {
-    "bull_trigger": "触发条件说明",
-    "bear_trigger": "触发条件说明",
-    "monitoring_frequency": "季度(与财报同步验证)"
-  },
-  "narrative": "投资叙事",
   "data_gaps": ["无缺口则写空数组[]。有缺口格式: 缺少[具体数据]，导致[具体判断]置信度下降"],
-  "probability_rationale": "bear: [环节1(概率X%) + 环节2(概率Y%) + ... → 联合概率Z%]. bull: [超预期事件1(概率X%) + 超预期事件2(概率Y%) + ... → 联合概率Z%]. base: 100% - bear - bull = Z%",
-  "preflight_check": ["[OK] 清单项1完成", "[OK] 清单项2a-2d完成", "[OK] 清单项3a-3e完成", "[OK] 概率和=1.00", "[OK] upside单调递增,全参数自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
+  "change_request": [{"query": "搜索查询", "purpose": "填补什么数据缺口"}],
+  "preflight_check": ["[OK] 清单项1完成", "[OK] 清单项2a-2d完成", "[OK] 清单项3a-3e完成", "[OK] 概率和=1.00", "[OK] 参数逐级递增,全参数自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
 }"""
+
+
+# ═══════════════════════════════════════
+# SOTP LLM-2 系统提示词 — 审阅分部参数 + 最终报告
+# ═══════════════════════════════════════
+
+SOTP_LLM2_PROMPT = """# 你是 SOTP 估值审阅官
+
+你的职责是审阅 LLM-1 的分部参数推演，对照代码计算的 SOTP 加总结果，补充缺失数据，纠正错误，输出完整最终报告。
+
+## 多轮对话与搜索（同标准管线，每轮最多 2 条搜索）
+
+格式: `"search_requests": [{"query": "...", "purpose": "..."}]`。最终报告不输出 search_requests。
+
+## 任务
+
+### 任务 1: 数据补充 — LLM-1 的 data_gaps 和 change_request 是必搜清单
+
+逐条生成 search_request，火山支持自然语言查询。volc 预搜索结果如已覆盖可跳过。
+
+### 任务 2: 逻辑审查 — 从 LLM-1 的 reasoning_trace 逐条追溯
+
+每个参数赋值在推理链里有依据吗？引用的数据和 baseline 一致吗？风险映射在参数里有体现吗？三情景逻辑分叉和参数差异对应吗？
+
+常规检查: 分部参数内部矛盾？可比公司选错？分部锚选择合理？
+
+**⚠️ 数据时效性铁律: 事件 > 一切。** 事件是唯一最新情报。券商预测、历史财务、火山搜索结果都可能是事件前的旧数据。矛盾时以事件为准——券商预测没反映涨价 → 券商预测过时，不是事件错了。
+
+### 任务 3: 参数修改 — 发现问题就必须改
+
+**修正铁律: 沿事件因果链走，不能跳过事件套历史数据。** 事件改变了什么 → 参数如何反映 → LLM-1 偏差是高估还是低估事件 → 往哪个方向调。禁止用当前 ROIC/历史 PE 做机械对标——它们是事件冲击前的基本面快照。
+
+每个修改附理由+证据。
+
+### 任务 4: 最终判断 — 基于代码计算的 SOTP 加总数字:
+- 置信度、交易标注、预期差、监测 KPI、最终叙事
+
+## 输出 Schema — 完整最终报告
+
+你在 LLM-1 的输出基础上审阅修改，输出完整报告。包含 LLM-1 的所有字段 + 你的审阅追加:
+
+{
+  "segments": [{ "同 LLM-1，参数可能被修改" }],
+  "scenario_valuation": { "scenario_details": { "bear/base/bull": { "完整参数" } } },
+  "reasoning_trace": ["LLM-1: ...", "LLM-2: 审查-..."],
+  "change_log": [{"path": "segments.0.base.target_ps", "old_value": 12, "new_value": 8, "reason": "...", "evidence": "..."}],
+  "confidence": { "overall_score": 1-10, "overall_label": "高|中|低", "dimensions": { "info_quality": {"score": 1-10, "label": "信息质量", "note": "..."}, "financial_feasibility": {"score": 1-10, "label": "财务可行性", "note": "..."}, "valuation_safety": {"score": 1-10, "label": "估值安全边际", "note": "..."}, "historical_precedent": {"score": 1-10, "label": "历史案例匹配", "note": "..."} } },
+  "trade_annotation": { "tier": "★★★ 高赔率机会|★★☆ 中等赔率|★☆☆ 低赔率机会|☆☆☆ 规避", "total_score": "X/10", "dimension_scores": {"odds_quality": 0-3, "pricing_headroom": 0-3, "transmission_confidence": 0-3, "model_consistency": 0-3}, "tier_note": "...", "suggested_action": "..." },
+  "monitoring_kpis": { "financial_verification_kpis": [{"name":"","baseline":"","target":"","frequency":"季度","verifies":""}], "event_milestone_kpis": [{"name":"","expected_timing":"","significance":"","verification_source":""}], "competition_signal_kpis": [{"name":"","current_state":"","trigger":"","action_if_triggered":""}], "risk_trigger_kpis": [{"name":"","linked_to":"","severity":"high|medium|low","monitor":""}] },
+  "risk_triggers": {},
+  "narrative": "...",
+  "expectation_gap": { "level": "市场更乐观|市场更悲观|预期相近|无法解码", "note": "..." },
+  "validation_crosscheck": {}
+}
+
+核心约束: WACC 不可改 / 概率和=1.0 / 参数修改必须有证据 / 输出纯 JSON / **禁止在 narrative 中写任何市值数字——估值由代码计算，你不应该自己估算**
+
+**⚠️ 关键铁律: change_log 不能为空。** 如果你的 narrative 里写了"分部PS太高"、"低毛利分部不应享受高PS"、"可比公司选错了"，你必须在 change_log 里给出对应的参数修改。narrative 里的每个审阅发现都必须能在 change_log 里找到对应的条目。只有一种情况 change_log 可以为空：你确认 LLM-1 的每个分部参数都完美无误。但这种情况下你的 narrative 也不应该包含任何批评。
+"""
 
 
 # ═══════════════════════════════════════
@@ -2103,7 +2120,79 @@ class SOTPScenarioAsymmetry:
                 print(f"  [SOTP] result seg字段: {result.get('segments', 'MISSING')}", flush=True)
             raise
 
-        # ── Step 3: 修正交易标注（复用 Agent-3）──
+        # ── Step 2a: volc 预搜索（从 LLM-1 的 data_gaps 提取）──
+        cb(2.5, "volc 预搜索")
+        pre_search_queries = _extract_search_queries(result)
+        volc_pre_search = ""
+        if pre_search_queries:
+            volc_results = []
+            for q in pre_search_queries:
+                try:
+                    res = _call_volc_search(q)
+                    volc_results.append(f"查询: {q}\n结果: {res}")
+                except Exception:
+                    volc_results.append(f"查询: {q}\n结果: 搜索失败")
+            volc_pre_search = "\n\n".join(volc_results)
+
+        # ── Step 2b: LLM-2 多轮搜索审阅 ──
+        cb(2.7, "LLM-2 审阅")
+        try:
+            # 构建 LLM-2 输入: LLM-1 输出 + 代码计算结果 + 完整上下文
+            llm2_result = _call_llm2(
+                result, sotp_computed,
+                {"pe_ttm": core.get("pe_ttm", 0), "pb": core.get("pb", 0),
+                 "implied_g_pct": 0, "market_premium_pct": 0, "ev_yi": 0,
+                 "nopat_yi": 0, "roic_pct": 0, "wacc_simple_pct": wacc_params.get("wacc_pct", 10)},
+                wacc_params, data_package,
+                agent2b_output or {}, event_data,
+                agent2a_output=agent2a_output,
+                baseline_report=baseline_report,
+                volc_pre_search=volc_pre_search,
+                system_prompt=SOTP_LLM2_PROMPT,
+            )
+        except Exception:
+            print("  [SOTP] LLM-2 故障，降级为 LLM-1 + 代码修正模式", flush=True)
+            import traceback
+            traceback.print_exc()
+            llm2_result = {}
+
+        # ── Step 2.5: 合并 LLM-1 + LLM-2，LLM-2 为主体 ──
+        cb(2.8, "合并输出")
+        # 保护 LLM-1 的 segments 数据
+        llm1_segments = result.get("segments", [])
+        result = _merge_llm_outputs(result, llm2_result)
+        if not result.get("segments"):
+            result["segments"] = llm1_segments
+
+        # 应用 change_log 中的参数修改
+        changes = result.get("change_log", [])
+        if changes:
+            segments = result.get("segments", [])
+            for c in changes:
+                path = c.get("path", "")
+                parts = path.split(".")
+                new_val = c.get("new_value")
+                # path like "segments.0.base.target_ps" or "segments.1.bull.revenue_growth_3y_cagr_pct"
+                if parts[0] == "segments" and len(parts) >= 4:
+                    idx = int(parts[1])
+                    if idx < len(segments):
+                        target = segments[idx]
+                        for p in parts[2:-1]:
+                            target = target.get(p, {})
+                        c["old_value"] = target.get(parts[-1])
+                        target[parts[-1]] = new_val
+            if changes:
+                print(f"  [SOTP] 应用了 {len(changes)} 条参数修改", flush=True)
+
+        # 在 LLM-2 的参数上重新计算
+        sotp_computed = _compute_sotp_from_llm(result, core)
+        sv = result.get("scenario_valuation", {})
+        sv["probability_weighted_upside_pct"] = sotp_computed["weighted_upside_pct"]
+        sv["probability_weighted_mcap_yi"] = sotp_computed["weighted_mcap_yi"]
+        sv["asymmetry_ratio"] = sotp_computed["asymmetry_ratio"]
+        sv["_computed_by_code"] = True
+
+        # ── Step 3: 修正交易标注 ──
         cb(3, "修正交易标注")
         ta = result.get("trade_annotation", {})
         sv = result.get("scenario_valuation", {})
@@ -2226,6 +2315,10 @@ class SOTPScenarioAsymmetry:
             "scenario_details": sv.get("scenario_details", {}),
             "capital_structure": capital_diag,
         }
+        # 前端可读的 segments
+        output["segments"] = result.get("segments", [])
+        output["llm2_change_log"] = result.get("_llm2_change_log", result.get("change_log", []))
+        output["llm_split_version"] = result.get("_llm_split_version", "1-call")
 
         cb(6, "SOTP估值完成")
         return output
