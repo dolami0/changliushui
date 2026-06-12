@@ -316,25 +316,18 @@ RNPV_LLM2_PROMPT = """# 你是管线估值审阅官
 
 ## 任务
 
-### 任务0: 事件锚点对照表 —— 最先执行，必须输出 event_anchor_audit
+### 任务0: 事件锚点对照 —— 最先执行，写入 reasoning_trace
 
-从事件素材中提取所有管线相关量化锚点（临床数据、峰值销售预测、竞品对标、BD 金额、时间节点），与 LLM-1 的药物参数做逐项对照。
+从事件素材中提取所有管线相关量化锚点（临床数据、峰值销售预测、竞品对标、BD 金额、时间节点），与 LLM-1 的药物参数做逐项对比。**不需要输出独立 JSON 字段**——结果直接写入 reasoning_trace 的 "LLM-2: 事件锚校验" 条目。
 
-**输出字段 event_anchor_audit**（必须包含，不能为空）:
-```json
-"event_anchor_audit": {
-  "anchors_extracted": [{"anchor": "...", "source": "事件原文/专家纪要/分析师测算", "llm1_param": "PoS/峰值/折现率等", "gap": "差距描述", "discount_reasonable": true/false}],
-  "anchor_to_param_gap_analysis": "一句话总结最大的锚点-参数差距",
-  "anchors_discounted_reasonably": true/false,
-  "anchors_ignored": ["列出被LLM-1忽略的事件锚点"]
-}
+**reasoning_trace 必填条目格式**（自然语言）:
+```
+LLM-2: 事件锚校验:
+- 事件锚点[临床数据/峰值/BD/时间]: (来源) → LLM-1 PoS/峰值/折现率 → 差距 → 打折合理性 → 结论
+- 结论: N/M个锚点合理, 不合理锚点已在change_log修正
 ```
 
-**执行规则**:
-- 每个管线药物的 PoS/峰值销售/折现率/时间线都要与事件锚点对照
-- 算差距→判合理性→做结论: 合理→discounted_reasonably=true；不合理→change_log 修正
-- 收入差距本身不是问题——问题是差距没有解释
-- **不能 0 条 change_log 但 event_anchor_audit 显示大差距——两者必须自洽**
+**执行规则**: 每个管线药物的关键锚点都要过一遍。算差距→判理由→做结论。不能 0 条 change_log 但锚校验写"多项不合理"——两者必须自洽。
 
 ### 任务 1: 数据补充 — LLM-1 的 data_gaps 和 change_request 是必搜清单
 
@@ -399,12 +392,6 @@ rNPV 作为公式无法定价的东西。适用于: 技术平台溢价、海外�
   "drugs": [{ 同 LLM-1，需要修改则输出完整对象 }],
   "mature_business": { 同 LLM-1 },
   "scenario_valuation": { "scenario_details": { "bear/base/bull": { "同 LLM-1，代码计算" } } },
-  "event_anchor_audit": {
-    "anchors_extracted": [{"anchor": "事件中的量化锚点", "source": "事件原文/专家纪要/分析师测算", "llm1_param": "PoS/峰值/折现率等", "gap": "差距描述", "discount_reasonable": true/false}],
-    "anchor_to_param_gap_analysis": "...",
-    "anchors_discounted_reasonably": true/false,
-    "anchors_ignored": []
-  },
   "change_log": [
     {"path": "drugs.0.base.peak_sales_yi", "old_value": 30, "new_value": 45, "reason": "峰值仅中国，美国Ph3已启动", "evidence": "FDA Type B EoP2 completed"}
   ],

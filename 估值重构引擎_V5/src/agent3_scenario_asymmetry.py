@@ -717,32 +717,24 @@ LLM2_SYSTEM_PROMPT = """# 你是估值审阅官
 
 ## 任务（按顺序）
 
-### 任务0: 事件锚点对照表 —— 最先执行，必须输出 event_anchor_audit
+### 任务0: 事件锚点对照 —— 最先执行，写入 reasoning_trace
 
-从事件素材中提取所有量化锚点，与 LLM-1 的参数做逐项对照。这不是"检查"——这是**赋值前必须完成的对表**。
+从事件素材中提取所有量化锚点（价格、产能、时间节点、客户、毛利率目标），与 LLM-1 的参数做逐项对比。**不需要输出独立 JSON 字段**——结果直接写入 reasoning_trace 的 "LLM-2: 事件锚校验" 条目。
 
-**输出字段 event_anchor_audit**（必须包含在 JSON 中）:
-```json
-"event_anchor_audit": {
-  "anchors_extracted": [
-    {"anchor": "海外电子级PI 300万/吨", "source": "事件原文", "llm1_param": "PS=4x", "gap": "PS=4x隐含均价约80万/吨，与事件锚点差距大", "action": "若事件锚点可信，PS应上调"}
-  ],
-  "anchor_to_param_gap_analysis": "一句话总结最大的锚点-参数差距",
-  "anchors_discounted_reasonably": true/false,
-  "anchors_ignored": ["列出被LLM-1忽略的事件锚点"]
-}
+**reasoning_trace 必填条目格式**（自然语言，不是 JSON）:
+```
+LLM-2: 事件锚校验:
+- 事件锚点[价格]: 海外PI 300万/吨(事件原文) → LLM-1 base PS=5x 隐含均价约130万 → 差距-57%。LLM-1 打折理由: 国产价仅为进口50%，取150万×85折=128万。打折合理。
+- 事件锚点[产能]: 5000吨(专家纪要,置信度中→打9折=4500吨) → LLM-1 CAGR=70% 隐含3年后约4000吨。差距-11%。在打折范围内，合理。
+- 事件锚点[客户]: 三星/华为/长存(事件原文) → LLM-1 未在参数中显式体现客户溢价 → 建议在 PS 中反映客户结构改善。
+- 结论: 3/5个锚点打折合理，1个锚点被忽略(客户结构)，在change_log中上调base PS 0.5x作为客户溢价。
 ```
 
 **执行规则**:
-- 事件素材中每个硬数字（价格、产能、时间节点、客户、毛利率目标）都要提取
-- 区分"硬数据"（已公告产能/已执行价格）和"分析师推断"（空间测算/目标利润率）
-- 逐条对照 LLM-1 的参数: 这个参数是否回应了事件锚点？偏离了多少？偏离理由充分吗？
-- **收入校验（必须执行）**: 从事件锚点推算 3 年后收入（产能×价格×利用率，可加你的置信度打折），与 LLM-1 的 CAGR 隐含收入对比。做三件事:
-  1. 算差距: 事件推算收入 vs LLM-1 隐含收入，差距多少%
-  2. 判合理性: LLM-1 的偏离是否有 source 标注+置信度打折+理由？打折来源和幅度是否合理？
-  3. 做结论: 合理→在 event_anchor_audit 中标注 "discounted_reasonably: true"；不合理→必须在 change_log 中修正对应参数
-- 收入差距本身不是问题——问题是差距没有解释。LLM-1 如果有显式的"产能打8折+价格打85折→CAGR 79%→再因爬坡降至55%"这样的链条，就是合理的。如果只有一句"更保守"没有任何数学，就是不合格的。
-- 不能输出空表。不能输出 0 条 change_log 但 event_anchor_audit 显示大差距——两者必须自洽。
+- 事件素材中每个硬数字都要过一遍
+- 算差距→判理由→做结论。合理就写"合理"，不合理就写 change_log
+- 收入差距本身不是问题——问题是差距没有解释
+- 不能 0 条 change_log 但锚校验写"多项不合理"——两者必须自洽。
 
 ### 任务 1: 数据补充——必搜清单
 
@@ -845,17 +837,12 @@ change_log 每条格式:
   "reasoning_trace": [
     "LLM-1: 清单项1-素材吸收: ...",
     "...": "保留 LLM-1 的完整 reasoning_trace，在末尾追加你的审阅条目",
+    "LLM-2: 事件锚校验: 事件锚点[价格/产能/客户/利润率]→LLM-1参数→差距→打折合理性→结论",
     "LLM-2: 审查-数据补充: ...",
     "LLM-2: 审查-参数修改: 将 base.target_ps 从 12x 降至 8x，因...(理由)",
     "LLM-2: 审查-置信度: ..."
   ],
   "data_gaps": ["补充后的缺口列表"],
-  "event_anchor_audit": {
-    "anchors_extracted": [{"anchor": "事件中的量化锚点", "source": "事件原文/专家纪要/分析师测算", "llm1_param": "LLM-1对应参数值", "gap": "差距描述", "discount_reasonable": true/false}],
-    "anchor_to_param_gap_analysis": "一句话总结最大的锚点-参数差距",
-    "anchors_discounted_reasonably": true/false,
-    "anchors_ignored": ["被LLM-1忽略的事件锚点"]
-  },
   "change_log": [
     {"path": "base.target_ps", "old_value": 12, "new_value": 8, "reason": "ROIC 6.2%<WACC 10%，不配行业龙头PS", "evidence": "有研新材当前PS=3.2x；A股半导体材料中位数PS=5.1x"}
   ],

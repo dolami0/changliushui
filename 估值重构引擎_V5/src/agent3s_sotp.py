@@ -795,26 +795,19 @@ SOTP_LLM2_PROMPT = """# 你是 SOTP 估值审阅官
 
 ## 任务
 
-### 任务0: 事件锚点对照表 —— 最先执行，必须输出 event_anchor_audit
+### 任务0: 事件锚点对照 —— 最先执行，写入 reasoning_trace
 
-从事件素材中提取所有量化锚点（价格、产能、时间节点、客户、毛利率目标），与 LLM-1 的各分部参数做逐项对照。
+从事件素材中提取所有量化锚点（价格、产能、时间节点、客户、毛利率目标），与 LLM-1 的各分部参数做逐项对比。**不需要输出独立 JSON 字段**——结果直接写入 reasoning_trace 的 "LLM-2: 事件锚校验" 条目。
 
-**输出字段 event_anchor_audit**（必须包含在 JSON 中，不能为空）:
-```json
-"event_anchor_audit": {
-  "anchors_extracted": [{"anchor": "...", "source": "事件原文/专家纪要/分析师测算", "llm1_param": "对应参数值", "gap": "差距描述", "discount_reasonable": true/false}],
-  "anchor_to_param_gap_analysis": "一句话总结最大的锚点-参数差距",
-  "anchors_discounted_reasonably": true/false,
-  "anchors_ignored": ["列出被LLM-1忽略的事件锚点"]
-}
+**reasoning_trace 必填条目格式**（自然语言）:
+```
+LLM-2: 事件锚校验:
+- 事件锚点[XX]: (来源) → LLM-1分部参数 → 差距 → 打折合理性 → 结论
+- 收入校验: 事件推算各分部收入 vs LLM-1隐含收入, 差距X%, 打折链是否合理
+- 结论: N/M个锚点合理, 不合理锚点已在change_log修正
 ```
 
-**收入校验（必须执行）**: 从事件锚点推算各分部收入，与 LLM-1 隐含收入对比:
-1. 算差距: 事件推算 vs LLM-1，差距多少%
-2. 判合理性: LLM-1 是否有 source 标注+置信度打折+理由？
-3. 做结论: 合理→discounted_reasonably=true；不合理→change_log 修正
-- 收入差距本身不是问题——问题是差距没有解释
-- **不能 0 条 change_log 但 event_anchor_audit 显示大差距——两者必须自洽**
+**执行规则**: 每个事件硬数字都要过一遍。算差距→判理由→做结论。不能 0 条 change_log 但锚校验写"多项不合理"——两者必须自洽。
 
 ### 任务 1: 数据补充 — LLM-1 的 data_gaps 和 change_request 是必搜清单
 
@@ -845,12 +838,6 @@ SOTP_LLM2_PROMPT = """# 你是 SOTP 估值审阅官
   "segments": [{ "同 LLM-1，参数可能被修改" }],
   "scenario_valuation": { "scenario_details": { "bear/base/bull": { "完整参数" } } },
   "reasoning_trace": ["LLM-1: ...", "LLM-2: 审查-..."],
-  "event_anchor_audit": {
-    "anchors_extracted": [{"anchor": "事件中的量化锚点", "source": "事件原文/专家纪要/分析师测算", "llm1_param": "LLM-1对应参数值", "gap": "差距描述", "discount_reasonable": true/false}],
-    "anchor_to_param_gap_analysis": "一句话总结最大的锚点-参数差距",
-    "anchors_discounted_reasonably": true/false,
-    "anchors_ignored": ["被LLM-1忽略的事件锚点"]
-  },
   "change_log": [{"path": "segments.0.base.target_ps", "old_value": 12, "new_value": 8, "reason": "...", "evidence": "..."}],
   "confidence": { "overall_score": 1-10, "overall_label": "高|中|低", "dimensions": { "info_quality": {"score": 1-10, "label": "信息质量", "note": "..."}, "financial_feasibility": {"score": 1-10, "label": "财务可行性", "note": "..."}, "valuation_safety": {"score": 1-10, "label": "估值安全边际", "note": "..."}, "historical_precedent": {"score": 1-10, "label": "历史案例匹配", "note": "..."} } },
   "trade_annotation": { "tier": "★★★ 高赔率机会|★★☆ 中等赔率|★☆☆ 低赔率机会|☆☆☆ 规避", "total_score": "X/10", "dimension_scores": {"odds_quality": 0-3, "pricing_headroom": 0-3, "transmission_confidence": 0-3, "model_consistency": 0-3}, "tier_note": "...", "suggested_action": "..." },
