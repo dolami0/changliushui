@@ -707,11 +707,12 @@ LLM2_SYSTEM_PROMPT = """# 你是估值审阅官
 **search_requests 格式**（每轮最多 2 条）:
 ```json
 "search_requests": [
-  {"query": "精炼的搜索查询", "purpose": "要填补什么/验证什么"}
+  {"query": "精炼的搜索查询", "purpose": "要填补什么/验证什么", "source": "volc"}
 ]
 ```
+- `source`: `"volc"` = 火山引擎（中文研报/公告/行业数据，默认）；`"bocha"` = 博查外网搜索（全球信息、海外题材、英文资料）。涉及 FDA/海外临床/全球供应链/国际竞对时用 bocha，国内数据用 volc。
 
-**搜索范围限制**: 只搜 data_gaps 和 change_request 中列出的具体信息缺口。禁止搜索任何公司的 PE/PS/PB 估值倍数——可比公司信息来自 baseline 产业位置和你的行业知识，不来自火山搜索。
+**搜索范围限制**: 只搜 data_gaps 和 change_request 中列出的具体信息缺口。禁止搜索任何公司的 PE/PS/PB 估值倍数——可比公司信息来自 baseline 产业位置和你的行业知识。
 
 **搜索的第一优先级——验证事件锚点**: 事件中的量化锚点（价格、产能、时间节点）可能是分析师推断，不是事实。每条锚点都要搜一下: 当前真实报价是多少？产能建设进度到哪了？趋势是加速还是延迟？用搜索到的当前数据来校准 LLM-1 对事件的打折幅度——如果搜索证实涨价确实在进行、产能确实在推进，你就不能无理由地大幅打折。
 
@@ -2011,24 +2012,27 @@ SOTP触发: {mn.get('sotp_triggered', False)}
 
         # 每轮最多 2 条搜索——截断多余的
         search_requests = search_requests[:2]
+        # 根据 source 字段路由搜索引擎: "bocha"→外网, 默认→火山
         print(f"  [LLM-2] 发起 {len(search_requests)} 条并行搜索...", flush=True)
-        # 并行执行所有搜索
         search_results = []
         with ThreadPoolExecutor(max_workers=len(search_requests)) as executor:
-            futures = {
-                executor.submit(_call_volc_search, sr.get("query", ""), sr.get("purpose", "")): sr
-                for sr in search_requests
-            }
+            futures = {}
+            for sr in search_requests:
+                src = sr.get("source", "volc")
+                if src == "bocha":
+                    futures[executor.submit(_call_bocha_search, sr.get("query", ""), sr.get("purpose", ""))] = sr
+                else:
+                    futures[executor.submit(_call_volc_search, sr.get("query", ""), sr.get("purpose", ""))] = sr
             for future in as_completed(futures):
                 sr = futures[future]
                 try:
-                    volc_res = future.result()
+                    search_res = future.result()
                 except Exception:
-                    volc_res = f"搜索失败: {sr.get('query', '')}"
+                    search_res = f"搜索失败: {sr.get('query', '')}"
                 search_results.append({
                     "query": sr.get("query", ""),
                     "purpose": sr.get("purpose", ""),
-                    "result": volc_res,
+                    "result": search_res,
                 })
         all_searches.extend(search_results)
         print(f"  [LLM-2] {len(search_results)} 条搜索完成", flush=True)
@@ -2050,40 +2054,23 @@ SOTP触发: {mn.get('sotp_triggered', False)}
 
 
 def _call_volc_search(query: str, purpose: str = "") -> str:
-    """调用火山引擎 + 博查外网搜索。返回搜索结果文本。"""
-    overseas_kw = ['FDA', 'Ph1', 'Ph2', 'Ph3', 'clinical trial', 'NMPA', 'EMA',
-                   'NVIDIA', 'TSMC', 'Samsung', 'SK hynix', 'global', '海外',
-                   '美国', '欧洲', '日本', '韩国', '东南亚', 'international',
-                   'ASML', 'Applied Materials', 'Lam Research', 'Micron',
-                   'Coherent', 'II-VI', 'Broadcom', 'Marvell', 'Intel', 'AMD']
-    has_overseas = any(kw.lower() in query.lower() for kw in overseas_kw)
-
-    # 1. 火山引擎（中文研报/公告/行业数据）
-    volc_text = ""
+    """调用火山引擎搜索（中文研报/公告/行业数据）。"""
     try:
         from agent3s_sotp import _call_volc
-        volc_text = _call_volc(query)
-    except Exception:
-        pass
+        resp = _call_volc(query)
+        return resp[:2000] if resp else f"搜索无结果: {query}"
+    except Exception as e:
+        return f"搜索异常: {query} ({e})"
 
-    # 2. 海外题材 → 博查外网搜索补充
-    bocha_text = ""
-    if has_overseas:
-        try:
-            from agents.tools import bocha_search
-            bocha_text = bocha_search(query, count=5, freshness="oneYear")
-        except Exception:
-            pass
 
-    # 3. 合并结果
-    parts = []
-    if volc_text:
-        parts.append(f"[火山-中文数据]\n{volc_text[:1500]}")
-    if bocha_text:
-        parts.append(f"[博查-外网搜索]\n{bocha_text[:800]}")
-    if not parts:
-        return f"搜索无结果: {query}"
-    return "\n\n".join(parts)
+def _call_bocha_search(query: str, purpose: str = "") -> str:
+    """调用博查外网搜索（全球信息/海外题材）。LLM-2 通过 search_requests 的 source='bocha' 主动触发。"""
+    try:
+        from agents.tools import bocha_search
+        resp = bocha_search(query, count=5, freshness="oneYear")
+        return f"[博查-外网搜索]\n{resp[:2000]}" if resp else f"搜索无结果: {query}"
+    except Exception as e:
+        return f"搜索异常: {query} ({e})"
 
 
 def _extract_search_queries(llm1_output: dict) -> list:
