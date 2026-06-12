@@ -1,13 +1,15 @@
 """
-宗门中枢 (Orchestrator) — V6
+宗门中枢 (Orchestrator) — V8
 
-V6 变化: Agent-2 拆分为 Agent-2a(叙事诊断) + Agent-2b(路由判决)。
-管线从 4 步变为 5 步: Agent-0→1→2a→2b→3。2a 输出约束 2b 和 3。
+V8 变化: Agent-2a+2b 合并为统一 Agent-2 (UnifiedRouteJudge)。
+管线从 5 步变为 4 步: Agent-0→1→2→3。
+V6 的 2a→2b 拆分因职责边界模糊导致路由不稳定——2b 的 Prompt 不断膨胀
+叙事分析逻辑，实质上是让两个 LLM 独立判断同一件事。V8 合并为单次调用。
 
 职责:
-  1. 按状态机编排 5-Agent 管线 (Agent-0→1→2a→2b→3)
-  2. rNPV 分叉 (Agent-0 行业判定→标准/rNPV管线, rNPV 延后实现)
-  3. 增量补取闭环 (Agent-2b 发现缺失→回退 Agent-1)
+  1. 按状态机编排 4-Agent 管线 (Agent-0→1→2→3)
+  2. rNPV 分叉 (Agent-2 判 primary_model=F → rNPV 管线)
+  3. SOTP 分叉 (Agent-2 判 primary_model=J → SOTP 管线)
   4. 评测模式 (frozen 数据注入，跳过 Agent-0/1 数据拉取)
   5. 故障处理 (DeepSeek/Volcengine/investoday 故障降级)
   6. 审计追踪 (每个 Agent 的输入/输出/耗时/错误)
@@ -15,7 +17,7 @@ V6 变化: Agent-2 拆分为 Agent-2a(叙事诊断) + Agent-2b(路由判决)。
 原则:
   - 唯一硬终止条件: core_package 数据不可用 (E101)
   - 其他一切故障降级处理
-  - 增量补取最多1次回退
+  - SOTP/rNPV 分叉基于模型选择结果，不是前置触发器
 """
 
 import json
@@ -30,8 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from agent0_pre_router import Agent0
 from agent1_data_forge import DataForge, DataForgeError
-from agent2a_narrative import NarrativeDiagnosis
-from agent2b_routing import RouteJudgeV6
+from agent2_unified import UnifiedRouteJudge  # V8: 合并 2a+2b
 from agent3_scenario_asymmetry import ScenarioAsymmetry, ScenarioError, precompute_wacc
 from data_fetcher import DataFetcher
 from env_config import DEEPSEEK_API_KEY
@@ -70,8 +71,7 @@ class PipelineState:
     # 各 Agent 输出
     agent0_output: dict | None = None
     agent1_output: dict | None = None
-    agent2a_output: dict | None = None   # V6 新增: 叙事诊断
-    agent2b_output: dict | None = None   # V6 改名: 路由判决
+    agent2_output: dict | None = None    # V8: 统一路由判官 (替代 V6 的 2a+2b)
     pre_screen_result: PreScreenResult | None = None  # V6.2 灵光预筛
     agent3_output: dict | None = None
     baseline_report: str | None = None   # V7: Agent-Baseline 投资地图报告
@@ -285,49 +285,36 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
                 state.step_times["baseline"] = round(time.time() - t0, 2)
                 cb("baseline", 0, 0, "done", f"失败: {str(e)[:40]}")
 
-            # ── Agent-2a: 叙事诊断 (火山数据+投资地图已注入) ──
-            cb("agent2a", 1, 2, "running", "叙事诊断(锚+计价+信号审核)")
+            # ── Agent-2: 统一路由判决 (V8: 合并 2a+2b) ──
+            cb("agent2", 1, 1, "running", "统一路由(锚+光谱+模型+计价)")
             t0 = time.time()
-            state.agent2a_output = self._run_agent2a(
+            state.agent2_output = self._run_agent2(
                 state.agent1_output, event_data, wacc_params,
                 volc_data=volc_data_std,
                 baseline_report=state.baseline_report,
             )
-            state.step_times["agent2a"] = round(time.time() - t0, 2)
-            a2a_mn = state.agent2a_output.get("market_narrative", {})
-            a2a_ep = state.agent2a_output.get("event_pricing", {})
-            a2a_pr = a2a_ep.get("event_profile", {})
-            cb("agent2a", 1, 2, "done",
-               f"锚:{a2a_mn.get('primary_anchor','?')} "
-               f"光谱:{a2a_pr.get('distribution_shape','?')} "
-               f"计价:{a2a_ep.get('pricing_assessment',{}).get('overall_priced_in','?')}")
+            state.step_times["agent2"] = round(time.time() - t0, 2)
+            a2 = state.agent2_output
+            a2_mn = a2.get("market_narrative", {})
+            a2_ep = a2.get("event_profile", {})
+            a2_rd = a2.get("routing_decision", {})
+            a2_pa = a2.get("pricing_assessment", {})
+            cb("agent2", 1, 1, "done",
+               f"锚:{a2_mn.get('primary_anchor','?')} "
+               f"模型:{a2_rd.get('primary_model','?')} "
+               f"光谱:{a2_ep.get('distribution_shape','?')} "
+               f"计价:{a2_pa.get('overall_priced_in','?')}")
 
-            # ── rNPV 分叉: Agent-2a 判锚为 pipeline → 走 rNPV 专用管线 ──
-            if a2a_mn.get("primary_anchor") == "pipeline" and _RNPV_AVAILABLE:
+            primary_model = a2_rd.get("primary_model", "")
+
+            # ── rNPV 分叉: Agent-2 选 F → 走 rNPV 专用管线 ──
+            if primary_model == "F" and _RNPV_AVAILABLE:
                 state.pipeline_type = "rnpv"
                 return self._run_rnpv_pipeline(state, event_data, cb)
 
-            # ── Agent-2b: 路由判决 ──
-            cb("agent2b", 2, 2, "running", "路由判决(受2a约束)")
-            t0 = time.time()
-            state.agent2b_output = self._run_agent2b(
-                state.agent1_output, state.agent2a_output, event_data,
-                volc_data=volc_data_std,
-                baseline_report=state.baseline_report,
-            )
-            state.step_times["agent2b"] = round(time.time() - t0, 2)
-            rd = state.agent2b_output.get("routing_decision", {})
-            cc = rd.get("constraint_compliance", {})
-            override_str = "(override)" if cc.get("constraint_override") else ""
-            cb("agent2b", 2, 2, "done",
-               f"主:{rd.get('primary_model','?')} 校验:{rd.get('validation_models',[])} {override_str}")
-
-            # ── SOTP 分叉 (V6.4): Agent-2a 判 sotp_triggered → 走 SOTP 分部估值 ──
-            # 移到2b之后：2b已跑完，sotp_primary_segment_model可用
-            # V8 硬约束: 无分部财务数据(product_mix为空) → 不触发SOTP，退回标准管线
-            # 注意: 叙事主锚>80%的规则在Agent-2a prompt中（LLM判断），不在代码层。
-            #   product_mix是原始产品数据，不是叙事锚。新产品5%份额不应被集中度误杀。
-            if a2a_mn.get("sotp_triggered") and _SOTP_AVAILABLE:
+            # ── SOTP 分叉: Agent-2 选 J → 走 SOTP 分部估值 ──
+            # 代码层安全网: 无 product_mix 数据时阻止 SOTP
+            if primary_model == "J" and _SOTP_AVAILABLE:
                 a1_pkgs = state.agent1_output.get("packages", {}) if isinstance(state.agent1_output, dict) else {}
                 a1_core = a1_pkgs.get("core", {}) if isinstance(a1_pkgs, dict) else {}
                 a1_fields = a1_core.get("fields", {}) if isinstance(a1_core, dict) else {}
@@ -337,19 +324,15 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
                 product_mix = ea.get("product_mix", []) if isinstance(ea, dict) else []
                 if not product_mix:
                     print(f"  [SOTP] 阻止: Agent-1无分部财务数据(product_mix为空)，退回标准管线", flush=True)
-                    # SOTP被阻止 → 修复 routing_decision
-                    # Agent-2b 可能因 2a 的 sotp_triggered=true 而选了 J，
-                    # 但标准管线对 J 无计算公式，需降级
-                    if rd.get("primary_model", "") == "J":
-                        fallback = (rd.get("validation_models") or [None])[0]
-                        if not fallback:
-                            anchor = a2a_mn.get("primary_anchor", "earnings")
-                            fallback = "B" if anchor == "revenue" else "A"
-                        print(f"  [SOTP] 路由修复: primary_model J→{fallback} (SOTP被阻止,标准管线无法处理J)", flush=True)
-                        rd["primary_model"] = fallback
-                        rd["_sotp_blocked_fallback"] = True
-                        rd["_sotp_blocked_reason"] = "no_product_data"
-                        state.agent2b_output["routing_decision"] = rd
+                    fallback = (a2_rd.get("validation_models") or [None])[0]
+                    if not fallback:
+                        anchor = a2_mn.get("primary_anchor", "earnings")
+                        fallback = "B" if anchor == "revenue" else "A"
+                    print(f"  [SOTP] 路由修复: primary_model J→{fallback}", flush=True)
+                    a2_rd["primary_model"] = fallback
+                    a2_rd["_sotp_blocked_fallback"] = True
+                    a2_rd["_sotp_blocked_reason"] = "no_product_data"
+                    a2["routing_decision"] = a2_rd
                 else:
                     state.pipeline_type = "sotp"
                     sotp_result = self._run_sotp_pipeline(state, event_data, cb, wacc_params, volc_data_std)
@@ -359,8 +342,8 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
             cb("agent3", 1, 1, "running", "推演裁决(三情景)")
             t0 = time.time()
             state.agent3_output = self._run_agent3(
-                state.agent1_output, state.agent2b_output,
-                event_data, state.agent2a_output,
+                state.agent1_output, state.agent2_output,
+                event_data,
                 volc_data=volc_data_std,
                 baseline_report=state.baseline_report,
             )
@@ -386,6 +369,51 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
         return self._assemble_result(state)
 
     # ── Agent 运行器 ──
+
+    @staticmethod
+    def _make_agent2a_compat(agent2_output: dict) -> dict:
+        """V8: 从统一 Agent-2 输出构建 agent2a 兼容格式（供 Agent-3/SOTP/rNPV 消费）。
+
+        下游依赖的字段（已在统一输出中）:
+          - market_narrative (含 secondary_anchors, anchor_shift_potential)
+          - event_profile / pricing_assessment (含 priced_in_estimate)
+          - signal_audit / _pricing_tool / _model_advisories
+
+        下游依赖但需从统一输出推算的字段:
+          - sotp_triggered: primary_model=="J" → true
+        """
+        mn_raw = agent2_output.get("market_narrative", {})
+        rd = agent2_output.get("routing_decision", {})
+        primary_model = rd.get("primary_model", "")
+
+        mn = dict(mn_raw)
+        # 从模型选择推算 SOTP 触发状态（兼容下游 Agent-3/SOTP 的 mn.get("sotp_triggered") 读取）
+        if "sotp_triggered" not in mn:
+            mn["sotp_triggered"] = (primary_model == "J")
+
+        # 确保 anchor_shift_potential 存在（Agent-3 LLM-2 提示词直接引用）
+        if "anchor_shift_potential" not in mn:
+            mn["anchor_shift_potential"] = {"shift_possible": False, "shift_timing": "", "from_anchor": "", "to_anchor": ""}
+
+        # 确保 secondary_anchors 存在（SOTP 管线直接读取）
+        if "secondary_anchors" not in mn:
+            mn["secondary_anchors"] = []
+
+        return {
+            "market_narrative": mn,
+            "event_pricing": {
+                "event_profile": agent2_output.get("event_profile", {}),
+                "pricing_assessment": agent2_output.get("pricing_assessment", {}),
+            },
+            "signal_audit": agent2_output.get("signal_audit", {}),
+            "_pricing_tool": agent2_output.get("_pricing_tool", {}),
+            "_model_advisories": agent2_output.get("_model_advisories", {}),
+        }
+
+    @staticmethod
+    def _make_agent2b_compat(agent2_output: dict) -> dict:
+        """V8: 从统一 Agent-2 输出构建 agent2 兼容格式（供 scheduler 消费 routing_decision）。"""
+        return {"routing_decision": agent2_output.get("routing_decision", {})}
 
     def _run_agent0(self, stock_code: str, event_data: dict) -> dict:
         a0 = Agent0()
@@ -413,44 +441,32 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
         forge = DataForge()
         return forge.run(pre_routing)
 
-    def _run_agent2a(self, data_package: dict, event_data: dict,
-                     wacc_params: dict, volc_data: dict | None = None,
-                     baseline_report: str | None = None) -> dict:
-        a2a = NarrativeDiagnosis(deepseek_key=self.api_key)
+    def _run_agent2(self, data_package: dict, event_data: dict,
+                   wacc_params: dict, volc_data: dict | None = None,
+                   baseline_report: str | None = None) -> dict:
+        """V8: 统一路由判官 — 一次调用完成锚识别+模型选择+计价判断。"""
+        a2 = UnifiedRouteJudge(deepseek_key=self.api_key)
         try:
-            return a2a.run(data_package, event_data, wacc_params,
-                          volc_data=volc_data, baseline_report=baseline_report)
+            return a2.run(data_package, event_data, wacc_params,
+                         volc_data=volc_data, baseline_report=baseline_report)
         except Exception as e:
-            print(f"  [Orchestrator] Agent-2a 异常, fallback: {e}", flush=True)
-            return a2a._fallback_diagnosis(
-                data_package.get("packages", {}).get("core", {}).get("fields", {}),
-            )
+            print(f"  [Orchestrator] Agent-2 异常, fallback: {e}", flush=True)
+            core = data_package.get("packages", {}).get("core", {}).get("fields", {})
+            return a2._fallback(core)
 
-    def _run_agent2b(self, data_package: dict, agent2a_output: dict,
-                     event_data: dict, volc_data: dict | None = None,
-                     baseline_report: str | None = None) -> dict:
-        a2b = RouteJudgeV6(deepseek_key=self.api_key)
-        try:
-            return a2b.run(data_package, agent2a_output, event_data, volc_data,
-                          baseline_report=baseline_report)
-        except Exception as e:
-            print(f"  [Orchestrator] Agent-2b 异常, fallback: {e}", flush=True)
-            return {
-                "routing_decision": a2b._fallback_routing(data_package, agent2a_output),
-                "_fallback": True,
-            }
-
-    def _run_agent3(self, data_package: dict, agent2b_output: dict,
-                    event_data: dict, agent2a_output: dict,
+    def _run_agent3(self, data_package: dict, agent2_output: dict,
+                    event_data: dict,
                     volc_data: dict | None = None,
                     baseline_report: str | None = None) -> dict:
+        """V8: Agent-3 接收统一 Agent-2 输出。"""
         a3 = ScenarioAsymmetry(deepseek_key=self.api_key)
-        rd = agent2b_output.get("routing_decision", {})
+        rd = agent2_output.get("routing_decision", {})
+        agent2a_compat = self._make_agent2a_compat(agent2_output)
 
         try:
             return a3.run(
                 data_package, rd, event_data,
-                agent2a_output=agent2a_output,
+                agent2a_output=agent2a_compat,
                 volc_data=volc_data,
                 baseline_report=baseline_report,
             )
@@ -459,7 +475,7 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
                 try:
                     return a3.run(
                         data_package, rd, event_data,
-                        agent2a_output=agent2a_output,
+                        agent2a_output=agent2a_compat,
                         baseline_report=baseline_report,
                     )
                 except ScenarioError:
@@ -487,9 +503,13 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
         cb("agent2r", 2, 2, "running", "rNPV参数推演+代码估值")
         t0 = time.time()
         a2r = RnpvScenarioValuation(deepseek_key=self.api_key)
+
+        # V8: 从统一 Agent-2 输出中提取 agent2a 兼容格式
+        agent2a_compat = self._make_agent2a_compat(state.agent2_output or {})
+
         scenario_output = a2r.run(
             pipeline_data, event_data,
-            agent2a_output=state.agent2a_output,
+            agent2a_output=agent2a_compat,
         )
         state.step_times["agent2r"] = round(time.time() - t0, 2)
         vs = scenario_output.get("valuation_summary", {})
@@ -508,15 +528,15 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
             "agent2r": scenario_output,                # Agent-2r 完整输出（含 valuation_summary/scenarios）
             "agent2": scenario_output,                 # scheduler 兼容: agent2 = agent2r
             "agent3": scenario_output,                 # Agent-3 兼容: 已组装为 Agent-3 格式
-            "agent2a": state.agent2a_output or {},     # V7 修复: 保留 Agent-2a 叙事诊断
-            "routing_decision": {                      # V7 修复: 构造路由信息
+            "agent2a": agent2a_compat,                 # V8: 从统一输出提取的兼容格式
+            "routing_decision": {                      # V8: 构造路由信息（统一格式）
                 "primary_model": "F",
                 "model_category": "rNPV",
-                "routing_reason": "Agent-2a判定pipeline锚→分叉至rNPV管线",
+                "routing_reason": "Agent-2判定primary_model=F→分叉至rNPV管线",
                 "validation_models": [],
             },
             "status": "done",
-            "pipeline_version": "7.0-rnpv",
+            "pipeline_version": "8.0-rnpv",
             "pipeline_type": "rnpv",
             "audit": {
                 "stock_code": stock_code,
@@ -543,10 +563,14 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
         t0 = time.time()
         a3s = SOTPScenarioAsymmetry(deepseek_key=self.api_key)
 
+        # V8: 从统一 Agent-2 提取 agent2a/agent2b 兼容格式
+        agent2a_compat = self._make_agent2a_compat(state.agent2_output or {})
+        agent2b_compat = self._make_agent2b_compat(state.agent2_output or {})
+
         sotp_output = a3s.run(
             data_package=state.agent1_output,
-            agent2a_output=state.agent2a_output,
-            agent2b_output=state.agent2b_output,
+            agent2a_output=agent2a_compat,
+            agent2b_output=agent2b_compat,
             event_data=event_data,
             wacc_params=wacc_params,
             volc_data=volc_data,
@@ -570,11 +594,11 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
             "agent0": state.agent0_output or {},
             "baseline_report": state.baseline_report or "",
             "agent1": state.agent1_output or {},
-            "agent2": state.agent2b_output or {},   # 2b 路由决策, scheduler 提取 routing_decision
-            "agent2a": state.agent2a_output or {},
+            "agent2": agent2b_compat,                    # scheduler 兼容: routing_decision 在此
+            "agent2a": agent2a_compat,                   # V8: 从统一输出提取
             "agent3": sotp_output,
             "status": "done",
-            "pipeline_version": "6.1-sotp",
+            "pipeline_version": "8.0-sotp",
             "pipeline_type": "sotp",
             "audit": {
                 "stock_code": stock_code,
@@ -589,16 +613,20 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
     # ── 结果组装 ──
 
     def _assemble_result(self, state: PipelineState) -> dict:
-        """组装最终结果 dict（兼容 scheduler + server V5/V6 格式）。"""
-        a2b = dict(state.agent2b_output or {})
+        """组装最终结果 dict（兼容 scheduler + server V5/V6/V8 格式）。"""
+        a2 = state.agent2_output or {}
         a3 = state.agent3_output or {}
+
+        # V8: 从统一输出拆分出 agent2a/agent2 兼容格式
+        agent2a_compat = self._make_agent2a_compat(a2)
+        agent2_compat = self._make_agent2b_compat(a2)
 
         result = {
             "agent0": state.agent0_output or {},
             "baseline_report": state.baseline_report or "",
             "agent1": state.agent1_output or {},
-            "agent2": a2b,   # 保持 agent2 键名向后兼容
-            "agent2a": state.agent2a_output or {},  # V6 新增
+            "agent2": agent2_compat,   # scheduler 兼容: routing_decision 在此
+            "agent2a": agent2a_compat, # V6/V8 兼容: market_narrative + event_pricing + signal_audit
             "agent3": state.agent3_output or {},
             "status": state.status,
             "pre_screen": {
@@ -612,7 +640,7 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
                 "cut_reason": ps.cut_reason,
                 "summary": ps.summary,
             } if (ps := state.pre_screen_result) else {},
-            "pipeline_version": "6.2",
+            "pipeline_version": "8.0",
             "pipeline_type": state.pipeline_type,
             "audit": {
                 "stock_code": state.stock_code,
