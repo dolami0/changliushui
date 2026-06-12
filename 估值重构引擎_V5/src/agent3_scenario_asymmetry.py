@@ -3084,8 +3084,11 @@ def _assemble_final_output(
     # 兜底: validation_paradigm 缺失或非法时，由校验模型族推导
     VALID_PARADIGMS = {"盈利视角", "收入视角", "资产视角", "资源视角", "管线视角", "分拆视角", "与主模型相同"}
     if not vx.get("validation_paradigm") or vx["validation_paradigm"] not in VALID_PARADIGMS:
-        v_model = vx.get("validation_model", routing.get("validation_models", [None])[0] if routing.get("validation_models") else "")
-        v_model_key = v_model[0] if v_model else ""
+        v_model_raw = vx.get("validation_model", routing.get("validation_models", [None])[0] if routing.get("validation_models") else "")
+        # LLM 有时输出 dict 而非 string
+        if isinstance(v_model_raw, dict):
+            v_model_raw = v_model_raw.get("model", v_model_raw.get("name", ""))
+        v_model_key = (v_model_raw[0] if isinstance(v_model_raw, str) and v_model_raw else "") if v_model_raw else ""
         v_family = MODEL_FAMILIES.get(v_model_key, "")
         paradigm_map = {
             "盈利乘数": "盈利视角",
