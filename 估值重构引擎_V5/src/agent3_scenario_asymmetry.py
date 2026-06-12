@@ -2052,13 +2052,11 @@ SOTP触发: {mn.get('sotp_triggered', False)}
 def _call_volc_search(query: str, purpose: str = "") -> str:
     """调用火山引擎搜索。返回搜索结果文本。"""
     try:
-        from agent_volc import _call_volc_engine
-        resp = _call_volc_engine(query)
-        if isinstance(resp, dict):
-            return resp.get("answer", json.dumps(resp, ensure_ascii=False)[:2000])
-        return str(resp)[:2000]
-    except Exception:
-        return f"搜索不可用: {query}"
+        from agent3s_sotp import _call_volc
+        resp = _call_volc(query)
+        return resp[:2000] if resp else f"搜索无结果: {query}"
+    except Exception as e:
+        return f"搜索异常: {query} ({e})"
 
 
 def _extract_search_queries(llm1_output: dict) -> list:
