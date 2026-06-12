@@ -2002,7 +2002,28 @@ SOTP触发: {mn.get('sotp_triggered', False)}
         usage = resp.json().get("usage", {})
         print(f"  [LLM-2] 轮次 {round_num + 1} 完成 prompt={usage.get('prompt_tokens',0)} completion={usage.get('completion_tokens',0)} latency={time.time()-t_round:.1f}s", flush=True)
         content = resp.json()["choices"][0]["message"]["content"]
-        result = _parse_json(content)
+        try:
+            result = _parse_json(content)
+        except ScenarioError:
+            # JSON解析失败 → 重试一次（追加格式纠正消息）
+            print(f"  [LLM-2] JSON解析失败，重试(格式纠正)...", flush=True)
+            # 追加 assistant 消息（原始输出） + user 消息（格式纠正指令）
+            messages.append({"role": "assistant", "content": content[:500]})
+            messages.append({"role": "user", "content": "你的上一条回复包含非JSON内容或JSON格式错误——可能是markdown代码块未闭合、嵌套括号不匹配、或字段值中包含未转义的特殊字符。请重新输出完整的纯JSON（不要用markdown代码块包裹，不要有任何前置/后置解释文字），确保最后一条回复是一个有效的JSON对象。"})
+            retry_resp = requests.post(
+                "https://api.deepseek.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
+                json={"model": "deepseek-v4-pro", "messages": messages, "max_tokens": 40960, "temperature": 0.1},
+                timeout=600,
+            )
+            retry_resp.raise_for_status()
+            retry_content = retry_resp.json()["choices"][0]["message"]["content"]
+            try:
+                result = _parse_json(retry_content)
+                print(f"  [LLM-2] 重试成功", flush=True)
+            except ScenarioError:
+                print(f"  [LLM-2] 重试仍失败，使用空结果", flush=True)
+                result = {"_parse_error": "JSON解析失败(重试后仍失败)", "change_log": [], "narrative": ""}
 
         # 检查是否需要更多搜索
         search_requests = result.get("search_requests", [])
