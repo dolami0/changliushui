@@ -17,12 +17,17 @@
       "quantifiedTarget": "2026H2综合GM≥22%",
       "status": "pending",
       "verificationDate": "2026-08-31",
-      "lastChecked": "2026-06-10",
+      "lastChecked": "2026-06-12",
       "history": [
         {
           "date": "2026-06-10",
           "actual": "GM四连降20.87%→19.54%→18.27%→17.37%(Q1 2026)，产能利用率~70%",
           "trend": "down"
+        },
+        {
+          "date": "2026-06-12",
+          "actual": "6/10异常波动公告:公司自认无重要新增订单。深圳9条线利用率86.2%，嘉兴5条已投产利用率~70%。GM四连降未改。",
+          "trend": "flat"
         }
       ]
     },
@@ -32,11 +37,16 @@
       "quantifiedTarget": "2026H2单季营收同比增速>30%",
       "status": "pending",
       "verificationDate": "2026-10-31",
-      "lastChecked": "2026-06-10",
+      "lastChecked": "2026-06-12",
       "history": [
         {
           "date": "2026-06-10",
           "actual": "Q1 2026营收0.92亿(+15.9% YoY)，增速温和未加速",
+          "trend": "flat"
+        },
+        {
+          "date": "2026-06-12",
+          "actual": "钟渊4月提价20%确认。公司无新增订单公告。股价5日+45%系概念炒作(玻璃基板/先进封装)，与基本面无关。",
           "trend": "flat"
         }
       ]
@@ -47,12 +57,17 @@
       "quantifiedTarget": "2026年底前获取≥1家海外存储大客户供应商代码",
       "status": "pending",
       "verificationDate": "2026-12-31",
-      "lastChecked": "2026-06-10",
+      "lastChecked": "2026-06-12",
       "history": [
         {
           "date": "2026-06-10",
           "actual": "三星小批量测试通过(专家纪要L2)，海力士/中际旭创1.6T认证中，均未获正式代码",
           "trend": "up"
+        },
+        {
+          "date": "2026-06-12",
+          "actual": "半导体PI已通过韩国企业评测(非三星)小批量供货。PSPI初期研发，与中芯国际无合作。",
+          "trend": "flat"
         }
       ]
     },
@@ -62,11 +77,16 @@
       "quantifiedTarget": "2026年底前二期主体工程开工",
       "status": "pending",
       "verificationDate": "2026-12-31",
-      "lastChecked": "2026-06-10",
+      "lastChecked": "2026-06-12",
       "history": [
         {
           "date": "2026-06-10",
           "actual": "公司公告显示为'规划建设中'，未披露具体开工时间",
+          "trend": "flat"
+        },
+        {
+          "date": "2026-06-12",
+          "actual": "无新进展。公司澄清玻璃基板封装暂未应用。新增6G概念。",
           "trend": "flat"
         }
       ]
@@ -123,7 +143,7 @@
       "sourceDetail": "2026年半年报",
       "sourceNote": "最重要验证点——GM能否终止四连降",
       "status": "pending",
-      "lastChecked": "2026-06-10"
+      "lastChecked": "2026-06-12"
     },
     {
       "date": "2026-H2",
@@ -136,7 +156,7 @@
       "sourceDetail": "待公司公告",
       "sourceNote": "当前仅专家纪要L2提及小批量测试通过",
       "status": "pending",
-      "lastChecked": "2026-06-10"
+      "lastChecked": "2026-06-12"
     },
     {
       "date": "2026-10",
@@ -149,7 +169,7 @@
       "sourceDetail": "2026年三季报",
       "sourceNote": "验证GM回升趋势是否确立",
       "status": "pending",
-      "lastChecked": "2026-06-10"
+      "lastChecked": "2026-06-12"
     },
     {
       "date": "2026-Q4",
@@ -162,7 +182,7 @@
       "sourceDetail": "待公司公告",
       "sourceNote": "当前为'规划建设中'",
       "status": "pending",
-      "lastChecked": "2026-06-10"
+      "lastChecked": "2026-06-12"
     },
     {
       "date": "持续",
@@ -175,7 +195,33 @@
       "sourceDetail": "行业数据/海关数据",
       "sourceNote": "钟渊4月提价20%已确认(L5)",
       "status": "pending",
-      "lastChecked": "2026-06-10"
+      "lastChecked": "2026-06-12"
+    },
+    {
+      "date": "2026-06-10",
+      "event": "异常波动公告:公司自认[目前没有重要新增订单]",
+      "type": "公司",
+      "impact": "H",
+      "bull": "概念炒作退潮→股价回归基本面",
+      "bear": "无实质订单+炒作破灭→恐慌抛售",
+      "sourceLevel": "L5",
+      "sourceDetail": "2026-06-10 异常波动公告",
+      "sourceNote": "公司主动澄清，是L5级信号。股价5日+45%后公司说无订单→炒作风险。",
+      "status": "triggered",
+      "lastChecked": "2026-06-12"
+    },
+    {
+      "date": "2026-06-12",
+      "event": "TPI薄膜突破打破国外专利壁垒+CPI送样折叠屏",
+      "type": "公司",
+      "impact": "M",
+      "bull": "TPI订单规模持续提升→贡献增量收入",
+      "bear": "送样阶段→批量销售周期不确定",
+      "sourceLevel": "L4",
+      "sourceDetail": "2025年报+互动平台回复",
+      "sourceNote": "渐进式进展，短期收入贡献有限",
+      "status": "pending",
+      "lastChecked": "2026-06-12"
     }
   ],
   "basePrice": 39.9,
@@ -190,6 +236,15 @@
       "return_pct": 0.0,
       "mv_change_pct": 0.0,
       "note": "建档基准价。三连板后收盘价，PS≈18x，PE=NaN(亏损)。"
+    },
+    {
+      "date": "2026-06-12",
+      "price": 43.1,
+      "pe": null,
+      "mv_yi": 77.58,
+      "return_pct": 8.0,
+      "mv_change_pct": 8.0,
+      "note": "巡检。5日涨+45%(概念炒作:玻璃基板/先进封装)。6/10异常波动公告:公司自认[目前没有重要新增订单]。TPI突破打破国外专利壁垒。半导体PI小批量供货韩国。CPI送样。"
     }
   ],
   "positionLog": [],
@@ -248,8 +303,8 @@
   },
   "reviewSchedule": {
     "nextFullReview": "2026-08-31(半年报)",
-    "nextQuickCheck": "2026-06-11(明日巡检)",
-    "lastCheck": "2026-06-10(巡检)",
+    "nextQuickCheck": "2026-06-13(明日巡检)",
+    "lastCheck": "2026-06-12(巡检)",
     "patrolFrequency": "每日 22:00"
   },
   "thesisLog": [
@@ -272,6 +327,19 @@
         "嘉兴二期何时实质性开工"
       ],
       "narrativeTension": "stable"
+    },
+    {
+      "version": 2,
+      "date": "2026-06-12T22:00:00",
+      "thesis": "国内唯一掌握电子级PI全链条技术的国产龙头，嘉兴产能爬坡(利用率70%→目标85%+)驱动毛利率触底回升，海外巨头零扩产+AI服务器PI需求爆发创造历史性国产替代窗口，核心验证点为半年报GM拐点+三星供应商代码获取。",
+      "conviction": 42,
+      "delta": "5日涨+45%(概念炒作:玻璃基板/先进封装)。6/10异常波动公告:公司自认[目前没有重要新增订单]。TPI突破打破国外专利壁垒。半导体PI小批量供货韩国。CPI送样。",
+      "trigger": "每日巡检",
+      "narrative": "5日涨+45%(概念炒作:玻璃基板/先进封装)。6/10异常波动公告:公司自认[目前没有重要新增订单]。TPI突破打破国外专利壁垒。半导体PI小批量供货韩国。CPI送样。",
+      "verifiedAssumptions": [],
+      "invalidatedAssumptions": [],
+      "newUnknowns": [],
+      "narrativeTension": "easing"
     }
   ]
 }

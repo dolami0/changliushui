@@ -30,6 +30,26 @@ def find_record(stock_code):
     items = (result or {}).get("data", {}).get("items", [])
     return items[0] if items else None
 
+def list_records():
+    """读取 Coze 表中全部记录，返回 {stock_code: {track_status, ...}} 的字典。
+    这是巡检前确定哪些标的需要巡检的 source of truth。"""
+    result = api("POST", "/records/query", {"page_size": 50})
+    items = (result or {}).get("data", {}).get("items", [])
+    records = {}
+    for item in items:
+        fields = item.get("fields", item)  # Coze returns flat or nested
+        code = fields.get("stock_code", "")
+        if code:
+            records[code] = {
+                "track_status": fields.get("track_status", "active"),
+                "stock_name": fields.get("stock_name", ""),
+                "conviction": fields.get("conviction", ""),
+            }
+    print(f"[Coze] 读取到 {len(records)} 条记录")
+    for code, r in records.items():
+        print(f"  {code} {r['stock_name']} | status={r['track_status']}")
+    return records
+
 def upsert(tracking_file):
     with open(tracking_file, "r", encoding="utf-8") as f:
         d = json.load(f)

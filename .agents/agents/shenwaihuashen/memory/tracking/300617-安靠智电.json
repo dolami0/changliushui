@@ -638,5 +638,5 @@
     "lastCheck": "2026-06-10(巡检)",
     "patrolFrequency": "每日 22:00"
   },
-  "track_status": "active"
+  "track_status": "paused"
 }

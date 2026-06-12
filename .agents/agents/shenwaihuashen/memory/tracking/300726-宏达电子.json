@@ -15,7 +15,7 @@
       "expectation": "2026Q2民品收入同比增速>50%，单层瓷介电容环比>30%",
       "status": "on_track",
       "verificationDate": "2026-07-15",
-      "lastChecked": "2026-06-10",
+      "lastChecked": "2026-06-12",
       "history": [
         {
           "date": "2026-05-29",
@@ -41,6 +41,11 @@
           "date": "2026-06-10",
           "actual": "公司澄清MLCC仅占营收18%。英伟达Rubin MLCC中标确认，但AI产品增速待Q2验证。",
           "trend": "up"
+        },
+        {
+          "date": "2026-06-12",
+          "actual": "MLCC炒作退潮，6/12再澄清MLCC极小(仅11%)。钽电容涨价逻辑持续，PE回至62x。非钽业务占比升至66%。",
+          "trend": "stable"
         }
       ]
     },
@@ -49,7 +54,7 @@
       "expectation": "综合毛利率维持在58%以上，Q2环比不降>1pct",
       "status": "on_track",
       "verificationDate": "2026-07-15",
-      "lastChecked": "2026-06-10",
+      "lastChecked": "2026-06-12",
       "history": [
         {
           "date": "2026-05-23",
@@ -75,6 +80,11 @@
           "date": "2026-06-10",
           "actual": "Q1 GM=60%维持高位，稳如预期",
           "trend": "flat"
+        },
+        {
+          "date": "2026-06-12",
+          "actual": "Q1 GM=60%维持高位，稳如预期。MLCC退潮≠基本面恶化。",
+          "trend": "stable"
         }
       ]
     },
@@ -83,7 +93,7 @@
       "expectation": "松下/基美6月涨价执行，现货市场确认供给缺口",
       "status": "on_track",
       "verificationDate": "2026-06-30",
-      "lastChecked": "2026-06-10",
+      "lastChecked": "2026-06-12",
       "history": [
         {
           "date": "2026-05-23",
@@ -114,6 +124,11 @@
           "date": "2026-06-10",
           "actual": "AVX 5月涨价生效+KEMET 6/1第四次调价，涨价周期持续中",
           "trend": "up"
+        },
+        {
+          "date": "2026-06-12",
+          "actual": "KEMET高端+50-65%涨价已执行。钽电容供不应求持续。公司原材料储备优势未变。",
+          "trend": "up"
         }
       ]
     },
@@ -122,7 +137,7 @@
       "expectation": "高可靠产品收入维持10%+增速，十五五订单持续释放",
       "status": "on_track",
       "verificationDate": "2026-08-31",
-      "lastChecked": "2026-06-10",
+      "lastChecked": "2026-06-12",
       "history": [
         {
           "date": "2026-05-23",
@@ -148,6 +163,11 @@
           "date": "2026-06-10",
           "actual": "军品营收占比>81%，Q1营收+70.77%，稳定增长",
           "trend": "up"
+        },
+        {
+          "date": "2026-06-12",
+          "actual": "军品营收>81%，Q1+70.77%。十三五百订单锁定，稳。",
+          "trend": "stable"
         }
       ]
     }
@@ -195,7 +215,7 @@
       "bear": "炒作破灭→恐慌性抛售",
       "status": "triggered",
       "note": "6/4公告：民用MLCC规模极小/民品仅18%/PE 82x风险提示。6/5回撤-6.14%初步验证炒作退潮",
-      "lastChecked": "2026-06-10"
+      "lastChecked": "2026-06-12"
     },
     {
       "date": "2026-06-02",
@@ -206,29 +226,7 @@
       "bear": "投入过大影响短期利润",
       "status": "pending",
       "note": "6/2章程修订公告，一期2026-2028年，面向新能源/消费/工控",
-      "lastChecked": "2026-06-10"
-    },
-    {
-      "date": "2026-06-04",
-      "event": "异常波动公告澄清MLCC炒作",
-      "type": "公司",
-      "impact": "M",
-      "bull": "炒作退潮后估值回归合理→健康上行",
-      "bear": "炒作破灭→恐慌性抛售",
-      "status": "triggered",
-      "note": "已触发(巡2026-06-08)。AVX 5月+KEMET 6/1涨价生效。但公司董秘未明确披露自身涨价幅度",
-      "lastChecked": "2026-06-10"
-    },
-    {
-      "date": "2026-06-02",
-      "event": "无锡封测产线(一期3亿)章程修订",
-      "type": "公司",
-      "impact": "M",
-      "bull": "封测产线如期推进→半导体高端化",
-      "bear": "投入过大影响短期利润",
-      "status": "pending",
-      "note": "6/2章程修订公告，一期2026-2028年，面向新能源/消费/工控",
-      "lastChecked": "2026-06-10"
+      "lastChecked": "2026-06-12"
     },
     {
       "date": "2026-06",
@@ -239,7 +237,7 @@
       "bear": "涨价被下游抵制",
       "status": "triggered",
       "note": "已触发(巡2026-06-08)。AVX 5月+KEMET 6/1涨价生效。但公司董秘未明确披露自身涨价幅度",
-      "lastChecked": "2026-06-10"
+      "lastChecked": "2026-06-12"
     },
     {
       "date": "2026-07-15",
@@ -248,7 +246,7 @@
       "impact": "H",
       "bull": "民品>60%,GM>58%",
       "bear": "民品<30%或GM降>1pct",
-      "lastChecked": "2026-06-10"
+      "lastChecked": "2026-06-12"
     },
     {
       "date": "2026-08",
@@ -257,7 +255,7 @@
       "impact": "H",
       "bull": "模块及其他占比>30%",
       "bear": "增速放缓",
-      "lastChecked": "2026-06-10"
+      "lastChecked": "2026-06-12"
     },
     {
       "date": "2026-08-11",
@@ -266,7 +264,7 @@
       "impact": "H",
       "bull": "获正式供应商资格",
       "bear": "认证延迟",
-      "lastChecked": "2026-06-10"
+      "lastChecked": "2026-06-12"
     },
     {
       "date": "2026-Q3",
@@ -275,7 +273,7 @@
       "impact": "M",
       "bull": "IPO成功",
       "bear": "",
-      "lastChecked": "2026-06-10"
+      "lastChecked": "2026-06-12"
     },
     {
       "date": "2026-10",
@@ -284,7 +282,7 @@
       "impact": "M",
       "bull": "Q3环比增长",
       "bear": "Q3环比下滑",
-      "lastChecked": "2026-06-10"
+      "lastChecked": "2026-06-12"
     }
   ],
   "basePrice": 63.2,
@@ -368,6 +366,15 @@
       "return_pct": 3.8,
       "mv_change_pct": 3.8,
       "note": "巡检。MV +3.8%，各支柱健康。7/15 H1预告为关键催化剂。"
+    },
+    {
+      "date": "2026-06-12",
+      "price": 60.34,
+      "pe": 61.94,
+      "mv_yi": 248.5,
+      "return_pct": -4.6,
+      "mv_change_pct": -8.0,
+      "note": "巡检。MLCC炒作退潮-6.3%。6/12再次澄清MLCC体量极小。股价从高点79.92→60.34(-24.5%)。钽电容涨价周期持续(AVX+KEMET)。PE从82x→62x赔率修复。民品MLCC仅占11%。"
     }
   ],
   "positionLog": [],
@@ -495,6 +502,19 @@
         "原材料成本传导效果"
       ],
       "narrativeTension": "rising"
+    },
+    {
+      "version": 7,
+      "date": "2026-06-12T22:00:00",
+      "thesis": "涨价潮全面落地+1.6T光模块验证完成。军工钽电容龙头，原材料储备优势将涨价几乎100%转化为净利润，供给缺口+AI需求+成本优势三重共振。核心验证点：Q2民品增速>50%+GM>58%。",
+      "conviction": 62,
+      "delta": "MLCC炒作退潮-6.3%。6/12再次澄清MLCC体量极小。股价从高点79.92→60.34(-24.5%)。钽电容涨价周期持续(AVX+KEMET)。PE从82x→62x赔率修复。民品MLCC仅占11%。",
+      "trigger": "每日巡检",
+      "narrative": "MLCC炒作退潮-6.3%。6/12再次澄清MLCC体量极小。股价从高点79.92→60.34(-24.5%)。钽电容涨价周期持续(AVX+KEMET)。PE从82x→62x赔率修复。民品MLCC仅占11%。",
+      "verifiedAssumptions": [],
+      "invalidatedAssumptions": [],
+      "newUnknowns": [],
+      "narrativeTension": "rising"
     }
   ],
   "aShareTracking": {
@@ -517,8 +537,8 @@
   },
   "reviewSchedule": {
     "nextFullReview": "2026-08-31(半年报)",
-    "nextQuickCheck": "2026-06-11(明日巡检)",
-    "lastCheck": "2026-06-10(巡检)",
+    "nextQuickCheck": "2026-06-13(明日巡检)",
+    "lastCheck": "2026-06-12(巡检)",
     "patrolFrequency": "每日 22:00"
   },
   "track_status": "active"

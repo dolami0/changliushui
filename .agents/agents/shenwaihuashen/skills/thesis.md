@@ -178,7 +178,18 @@ cd D:\长流水\.agents\agents\shenwaihuashen && python data_helper.py daily <co
 
 ### 3. 更新流程（每次追踪时）
 
-**Step 0 — 过滤暂停标的**：遍历 `memory/tracking/` 下所有 JSON 文件，跳过 `track_status` 为 `"paused"` 的标的。仅对 `track_status` 为 `"active"` 的标的执行后续 Step A-G。
+**Step 0 — 从 Coze 读取真实状态（强制·不可跳过）**：
+
+> ⚠️ **Coze 表格是 `track_status` 的唯一 source of truth。** 前端可以直接修改 Coze 表格（如暂停/恢复标的），本地 JSON 只是操作缓存。巡检前必须先读 Coze，再同步本地。
+
+```bash
+cd D:\长流水\.agents\agents\shenwaihuashen && python patrol_batch.py
+```
+
+此脚本自动执行：
+1. **Coze → 本地同步**：从 Coze 读取全部记录的 `track_status`，若本地 JSON 不一致则自动对齐
+2. **筛选 active**：仅对 Coze 中 `track_status == "active"` 的标的执行 Step A-G
+3. **跳过 paused**：前端暂停的标的自动跳过，不需要手动修改本地文件
 
 ---
 
