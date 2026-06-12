@@ -2050,10 +2050,19 @@ SOTP触发: {mn.get('sotp_triggered', False)}
 
 
 def _call_volc_search(query: str, purpose: str = "") -> str:
-    """调用火山引擎搜索。返回搜索结果文本。"""
+    """调用火山引擎搜索，涉及海外题材时加联网搜索指令。返回搜索结果文本。"""
+    # 检测海外关键词 → 加联网搜索前缀
+    overseas_kw = ['FDA', 'Ph1', 'Ph2', 'Ph3', 'clinical trial', 'NMPA', 'EMA',
+                   'NVIDIA', 'TSMC', 'Samsung', 'SK hynix', 'global', '海外',
+                   '美国', '欧洲', '日本', '韩国', '东南亚', 'international',
+                   'ASML', 'Applied Materials', 'Lam Research', 'Micron',
+                   'Coherent', 'II-VI', 'Broadcom', 'Marvell', 'Intel', 'AMD']
+    has_overseas = any(kw.lower() in query.lower() for kw in overseas_kw)
+    search_query = f"请联网搜索: {query}" if has_overseas else query
+
     try:
         from agent3s_sotp import _call_volc
-        resp = _call_volc(query)
+        resp = _call_volc(search_query)
         return resp[:2000] if resp else f"搜索无结果: {query}"
     except Exception as e:
         return f"搜索异常: {query} ({e})"
