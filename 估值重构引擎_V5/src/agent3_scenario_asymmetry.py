@@ -2030,7 +2030,29 @@ SOTP触发: {mn.get('sotp_triggered', False)}
                     "**请将上方 assistant 消息中的全部内容重新输出为有效 JSON。**"
                     "不要删除、缩写、或改写任何字段的值——保留所有分析、参数、叙事文字。"
                     "只修复导致 JSON 解析失败的格式问题。"
-                    "不要用 markdown 代码块包裹。"
+                    "不要用 markdown 代码块包裹。\n\n"
+                    "**输出必须包含以下全部字段（对照检查，确保无遗漏）:**\n"
+                    "{\n"
+                    '  "scenario_valuation": {"scenario_details": {"bear":{...}, "base":{...}, "bull":{...}}},\n'
+                    '  "growth_path_decomposition": {...},\n'
+                    '  "signal_audit": {...},\n'
+                    '  "reasoning_trace": ["LLM-1: ...", "LLM-2: 审查-..."],\n'
+                    '  "data_gaps": ["..."],\n'
+                    '  "change_log": [{"path":"...", "old":..., "new":..., "reason":"...", "evidence":"..."}],\n'
+                    '  "confidence": {"overall_score": 1-10, "overall_label": "高|中|低", "dimensions": {"info_quality":{...}, "financial_feasibility":{...}, "valuation_safety":{...}, "historical_precedent":{...}}},\n'
+                    '  "trade_annotation": {"tier":"★★★...", "total_score":"X/10", "dimension_scores":{...}, "alignment_signals":[...], "tier_note":"...", "suggested_action":"..."},\n'
+                    '  "monitoring_kpis": {"financial_verification_kpis":[...], "event_milestone_kpis":[...], "competition_signal_kpis":[...], "risk_trigger_kpis":[...]},\n'
+                    '  "risk_triggers": {"bull_trigger":"...", "bear_trigger":"...", "monitoring_frequency":"季度"},\n'
+                    '  "narrative": "完整叙事文字",\n'
+                    '  "probability_rationale": "概率推导",\n'
+                    '  "expectation_gap": {"level":"市场更乐观|市场更悲观|预期相近|无法解码", "note":"..."},\n'
+                    '  "validation_crosscheck": {"validation_model":"...", "assessment":"..."}\n'
+                    "}\n\n"
+                    "**常见 JSON 错误自查:**\n"
+                    "- 字符串值中的双引号是否用反斜杠转义了？（如 \\\"某券商\\\"研报\\\"）\n"
+                    "- 数组/对象的最后一个元素后面是否误加了逗号？\n"
+                    "- 所有 { 是否有对应的 }？所有 [ 是否有对应的 ]？\n"
+                    "- 嵌套对象是否层级正确？"
                 )
             })
             retry_resp = requests.post(
