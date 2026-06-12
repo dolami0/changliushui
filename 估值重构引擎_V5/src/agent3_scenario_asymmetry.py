@@ -1763,6 +1763,7 @@ def _call_llm_scenario(
 """
 
     try:
+        system_prompt = _build_model_aware_prompt(primary, validation_model)
         resp = requests.post(
             DEEPSEEK_API,
             headers={
@@ -1772,7 +1773,7 @@ def _call_llm_scenario(
             json={
                 "model": "deepseek-v4-pro",
                 "messages": [
-                    {"role": "system", "content": _build_model_aware_prompt(primary, validation_model)},
+                    {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_msg},
                 ],
                 "max_tokens": 40960,
@@ -1790,7 +1791,39 @@ def _call_llm_scenario(
             print(f"  [Agent3 tokens] prompt={usage.get('prompt_tokens')} "
                   f"completion={usage.get('completion_tokens')}", flush=True)
 
-        return _parse_json(content)
+        try:
+            return _parse_json(content)
+        except ScenarioError:
+            # LLM-1 JSON 解析失败 → 格式纠正重试
+            print(f"  [LLM-1] JSON解析失败(len={len(content)})，格式纠正重试...", flush=True)
+            retry_msgs = [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_msg},
+                {"role": "assistant", "content": content[:15000]},
+                {"role": "user", "content": (
+                    "你的上一条回复 JSON 格式有误。请重新输出完整 JSON，"
+                    "不要用 markdown 代码块包裹，确保所有字符串中的双引号已转义、"
+                    "所有括号配对闭合、最后一个元素后没有尾逗号。"
+                    "输出必须包含 scenario_valuation（含 scenario_details 的 bear/base/bull）、"
+                    "reasoning_trace、growth_path_decomposition、data_gaps、signal_audit。"
+                    "保留全部分析内容——只修复格式。"
+                )},
+            ]
+            retry_resp = requests.post(
+                "https://api.deepseek.com/v1/chat/completions",
+                headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
+                json={"model": "deepseek-v4-pro", "messages": retry_msgs, "max_tokens": 40960, "temperature": 0.1},
+                timeout=600,
+            )
+            retry_resp.raise_for_status()
+            retry_content = retry_resp.json()["choices"][0]["message"]["content"]
+            try:
+                result = _parse_json(retry_content)
+                print(f"  [LLM-1] 重试成功", flush=True)
+                return result
+            except ScenarioError:
+                print(f"  [LLM-1] 重试仍失败，抛出 E301", flush=True)
+                raise
 
     except requests.Timeout:
         raise ScenarioError("E302", "LLM调用超时(>600s)")
