@@ -1554,7 +1554,12 @@ def _compute_sotp_total(
     debt = core.get("interest_bearing_debt_yi", 0)
     net_cash = cash - debt
 
-    total_value = net_cash
+    # PE/PS/PB 是权益乘数（市值=权益价值），已内含资本结构定价。
+    # 用权益乘数估值的分部不应再额外减扣净负债——那是重复扣减。
+    # 只有 EV/EBITDA 等企业价值乘数才需要减净负债得到权益价值。
+    total_value = 0.0  # 从零开始，不预扣净负债
+    total_ev_value = 0.0  # 追踪 EV 类分部价值（需要减债）
+    has_ev_segments = False
     segment_values = []
     primary_val = None
     other_val = 0.0
@@ -1592,7 +1597,13 @@ def _compute_sotp_total(
         seg_val = _compute_segment_value(anchor, params, seg_revenue, core)
 
         if seg_val is not None:
-            total_value += seg_val
+            # 权益乘数(PE/PS/PB) → 直接加总，不再减债（已内含杠杆定价）
+            # EV乘数(EV/EBITDA) → 计入EV池，最后统一减净负债
+            if anchor == "resource":  # E model uses EV/EBITDA
+                total_ev_value += seg_val
+                has_ev_segments = True
+            else:
+                total_value += seg_val
             segment_values.append({
                 "segment": seg_name,
                 "anchor": anchor,
@@ -1605,12 +1616,17 @@ def _compute_sotp_total(
             else:
                 other_val += seg_val
 
+    # ── 净负债调整: 仅对 EV 乘数分部做，权益乘数分部已内含杠杆 ──
+    if has_ev_segments and net_cash < 0:
+        # EV类分部价值减净负债 → 权益价值
+        total_value += total_ev_value + net_cash
+        total_value = max(0.0, total_value)  # 有限责任底线
+    elif has_ev_segments:
+        total_value += total_ev_value + net_cash  # net_cash为正→加现金
+
     # ── 经济底线: 权益价值不能为负（有限责任原则）──
-    # bear 情景下高杠杆公司可能出现 "分部价值 < 净负债" → 总值为负
-    # 底线下限 = max(0, net_cash): 至少保留净现金价值（若净现金为正）
-    # 但若净现金本身为负, 底线为 0（股东不承担超出投资额的损失）
     raw_total = round(total_value, 1)
-    floor = max(0.0, net_cash)  # 净现金为正时保留，为负时底线=0
+    floor = max(0.0, net_cash) if net_cash > 0 else 0.0
     floored_total = max(floor, raw_total)
     was_floored = floored_total > raw_total
 
