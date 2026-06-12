@@ -2140,28 +2140,139 @@ def _apply_llm2_changes(llm1_output: dict, llm2_output: dict) -> bool:
     return True
 
 
+def _is_hollow_output(llm2: dict) -> bool:
+    """检测 LLM-2 是否产出了'空心JSON'——结构完整但内容为空。"""
+    # 关键字段全部为空 = hollow
+    narrative = llm2.get("narrative", "")
+    confidence = llm2.get("confidence", {})
+    trade = llm2.get("trade_annotation", {})
+    kpis = llm2.get("monitoring_kpis", {})
+    triggers = llm2.get("risk_triggers", {})
+
+    narrative_empty = not narrative or len(str(narrative).strip()) < 20
+    confidence_empty = not confidence or confidence.get("overall_score") is None
+    trade_empty = not trade or not trade.get("tier") or trade.get("total_score", "") == "0/10"
+    kpis_empty = not kpis or (isinstance(kpis, dict) and all(not v for v in kpis.values()))
+    triggers_empty = not triggers or not triggers.get("bull_trigger")
+
+    # 至少 3 个关键字段为空 → 判定 hollow
+    hollow_count = sum([narrative_empty, confidence_empty, trade_empty, kpis_empty, triggers_empty])
+    return hollow_count >= 3
+
+
+def _construct_fallback_narrative(llm1_output: dict) -> str:
+    """从 LLM-1 的 reasoning_trace 和 scenario narratives 构造兜底叙事。"""
+    sv = llm1_output.get("scenario_valuation", {})
+    details = sv.get("scenario_details", {})
+    parts = []
+
+    # 从三个情景的 scenario_narrative 提取
+    for sn in ("base", "bull", "bear"):
+        d = details.get(sn, {})
+        if d:
+            prob = d.get("probability", "?")
+            sn_narr = d.get("scenario_narrative", "")
+            if sn_narr:
+                parts.append(f"**{sn}情景 (概率{prob})**: {sn_narr}")
+
+    if parts:
+        return "## 情景叙事\n\n" + "\n\n".join(parts)
+
+    # fallback: 从 reasoning_trace 提取
+    rt = llm1_output.get("reasoning_trace", [])
+    if rt and isinstance(rt, list):
+        for item in rt:
+            if isinstance(item, str) and "因果剧本" in item:
+                return f"## 因果剧本\n\n{item}"
+    return "LLM-2 审查未完成，以下为 LLM-1 原始推理。详见 reasoning_trace。"
+
+
 def _merge_llm_outputs(llm1_output: dict, llm2_output: dict) -> dict:
     """以 LLM-2 的完整输出为主体，LLM-1 作为兜底。
 
     LLM-2 已输出完整报告（含 scenario_valuation、reasoning_trace 等）。
     用 LLM-2 覆盖同名字段，仅保留 LLM-1 独有的元数据字段。
+
+    V8.1: 新增空心输出检测——当 LLM-2 产出结构性有效但内容为空的 JSON 时，
+    用 LLM-1 数据 + 代码默认值构造兜底，防止 report 中出现大量 "?" 和空字段。
     """
     if not llm2_output:
         # LLM-2 完全故障：用 LLM-1
         return llm1_output
+
+    # 检测空心输出
+    hollow = _is_hollow_output(llm2_output)
+    if hollow:
+        print("  [merge] 检测到 LLM-2 空心输出，启用代码兜底", flush=True)
+        llm2_output["_hollow_output_detected"] = True
 
     # 以 LLM-2 为主体，LLM-1 兜底缺失字段
     for key in llm1_output:
         if key not in llm2_output:
             llm2_output[key] = llm1_output[key]
 
-    # 叙事合并: LLM-1 在前，LLM-2 审阅意见追加在后
+    # ── 叙事合并 ──
     llm1_narrative = llm1_output.get("narrative", "")
-    llm2_note = llm2_output.get("_review_note", "") or llm2_output.get("narrative", "")
-    if llm1_narrative and llm2_note and llm2_note != llm1_narrative:
-        llm2_output["narrative"] = llm1_narrative + "\n\n【审阅修正】" + llm2_note
-    elif llm1_narrative:
-        llm2_output["narrative"] = llm1_narrative
+    llm2_narrative = llm2_output.get("narrative", "")
+    llm2_review = llm2_output.get("_review_note", "")
+
+    if hollow:
+        # 空心输出：用 LLM-1 数据构造叙事
+        if not llm2_narrative or len(str(llm2_narrative).strip()) < 20:
+            llm2_output["narrative"] = _construct_fallback_narrative(llm1_output)
+        if llm2_review:
+            llm2_output["narrative"] += "\n\n【审阅意见(部分)】" + str(llm2_review)[:500]
+    else:
+        # 正常合并
+        llm2_note = llm2_review or llm2_narrative
+        if llm1_narrative and llm2_note and llm2_note != llm1_narrative:
+            llm2_output["narrative"] = llm1_narrative + "\n\n【审阅修正】" + llm2_note
+        elif llm1_narrative:
+            llm2_output["narrative"] = llm1_narrative
+
+    # ── 空心输出：兜底缺失的关键字段 ──
+    if hollow:
+        # confidence
+        if not llm2_output.get("confidence") or llm2_output["confidence"].get("overall_score") is None:
+            llm2_output["confidence"] = {
+                "overall_score": 4,
+                "overall_label": "低",
+                "dimensions": {
+                    "info_quality": {"score": 5, "label": "信息质量", "note": "LLM-2审查未完成，默认中位值"},
+                    "financial_feasibility": {"score": 5, "label": "财务可行性", "note": "LLM-2审查未完成"},
+                    "valuation_safety": {"score": 3, "label": "估值安全边际", "note": "LLM-2审查未完成，保守估计"},
+                    "historical_precedent": {"score": 5, "label": "历史案例匹配", "note": "LLM-2审查未完成"},
+                },
+            }
+
+        # risk_triggers
+        if not llm2_output.get("risk_triggers") or not llm2_output["risk_triggers"].get("bull_trigger"):
+            # 从 LLM-1 reasoning_trace 的风险映射中提取
+            rt = llm1_output.get("reasoning_trace", [])
+            bear_trigger = "未生成(LLM-2审查未完成)"
+            bull_trigger = "未生成(LLM-2审查未完成)"
+            if isinstance(rt, list):
+                for item in rt:
+                    if isinstance(item, str) and "风险映射" in item:
+                        # 提取关键风险作为触发器
+                        excerpt = item[item.find("风险映射"):item.find("风险映射")+300]
+                        bear_trigger = f"风险未解除: {excerpt[:150]}..."
+                        break
+            llm2_output["risk_triggers"] = {
+                "bull_trigger": bull_trigger,
+                "bear_trigger": bear_trigger,
+                "monitoring_frequency": "季度",
+            }
+
+        # expectation_gap
+        if not llm2_output.get("expectation_gap") or not llm2_output["expectation_gap"].get("level"):
+            pa = (llm1_output.get("event_pricing", {}) or {}).get("pricing_assessment", {})
+            priced = pa.get("overall_priced_in", "unknown")
+            gap_level = {"partially": "预期相近", "fully": "市场更乐观", "not_priced": "市场更悲观"}.get(priced, "无法解码")
+            llm2_output["expectation_gap"] = {
+                "level": gap_level,
+                "note": f"基于计价判断 overall_priced_in={priced} 推算(LLM-2审查未完成)",
+            }
 
     # 保留审计痕迹
     llm2_output["_llm1_original"] = {
