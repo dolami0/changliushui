@@ -2073,6 +2073,51 @@ SOTP触发: {mn.get('sotp_triggered', False)}
         # 检查是否需要更多搜索
         search_requests = result.get("search_requests", [])
         if not search_requests:
+            # 无更多搜索 → 但在返回前检查是否"空心输出"（JSON 成功但关键字段为空）
+            # 注意: 格式重试已处理 parse failure；这里处理 parse success but hollow
+            hollow = False
+            if round_num == 0 and not result.get("_parse_error"):
+                # 只对首轮（无搜索轮次）做检查——多轮搜索后通常内容丰富
+                narrative = result.get("narrative", "")
+                confidence = result.get("confidence", {})
+                change_log = result.get("change_log", [])
+                if (not narrative or len(str(narrative).strip()) < 30) \
+                   and (not confidence or confidence.get("overall_score") is None) \
+                   and (not change_log):
+                    hollow = True
+
+            if hollow:
+                print(f"  [LLM-2] 输出内容空心(无narrative/confidence/change_log)，质量重试...", flush=True)
+                # 把空心输出作为 assistant 消息，追加质量纠正指令
+                messages.append({"role": "assistant", "content": json.dumps(result, ensure_ascii=False, indent=2)})
+                messages.append({"role": "user", "content": (
+                    "你的上一条回复 JSON 格式正确，但以下关键字段为空或缺失：\n"
+                    "- narrative: 空（必须包含完整的叙事文本）\n"
+                    "- confidence: 缺失 overall_score（必须给 1-10 评分）\n"
+                    "- change_log: 空（必须列出至少一条审查结论或确认 LLM-1 无误的理由）\n\n"
+                    "请基于上面已有的分析 context，填充这些字段。"
+                    "不需要修改已有字段——只补充空的字段。"
+                    "输出完整 JSON（不要用 markdown 代码块包裹）。"
+                )})
+                retry_resp = requests.post(
+                    "https://api.deepseek.com/v1/chat/completions",
+                    headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
+                    json={"model": "deepseek-v4-pro", "messages": messages, "max_tokens": 16384, "temperature": 0.3},
+                    timeout=600,
+                )
+                retry_resp.raise_for_status()
+                retry_content = retry_resp.json()["choices"][0]["message"]["content"]
+                try:
+                    retry_result = _parse_json(retry_content)
+                    # 只合并 LLM-2 原生就缺失的字段，不覆盖已有的
+                    for key in ("narrative", "confidence", "change_log", "trade_annotation",
+                                "monitoring_kpis", "risk_triggers", "expectation_gap"):
+                        if key in retry_result and retry_result[key] and (not result.get(key) or result.get(key) in ([], {}, "", None)):
+                            result[key] = retry_result[key]
+                    print(f"  [LLM-2] 质量重试成功，补全 {sum(1 for k in retry_result if k in result)} 个字段", flush=True)
+                except ScenarioError:
+                    print(f"  [LLM-2] 质量重试 JSON 解析失败，保留原标题（下游 merge 会兜底）", flush=True)
+
             print(f"  [LLM-2] 无更多搜索请求，输出最终报告", flush=True)
             return result  # 完成——最终报告
 
