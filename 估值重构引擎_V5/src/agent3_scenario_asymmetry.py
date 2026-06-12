@@ -2004,11 +2004,35 @@ SOTP触发: {mn.get('sotp_triggered', False)}
         try:
             result = _parse_json(content)
         except ScenarioError:
-            # JSON解析失败 → 重试一次（追加格式纠正消息）
-            print(f"  [LLM-2] JSON解析失败，重试(格式纠正)...", flush=True)
-            # 追加 assistant 消息（原始输出） + user 消息（格式纠正指令）
-            messages.append({"role": "assistant", "content": content[:500]})
-            messages.append({"role": "user", "content": "你的上一条回复包含非JSON内容或JSON格式错误——可能是markdown代码块未闭合、嵌套括号不匹配、或字段值中包含未转义的特殊字符。请重新输出完整的纯JSON（不要用markdown代码块包裹，不要有任何前置/后置解释文字），确保最后一条回复是一个有效的JSON对象。"})
+            # JSON解析失败 → 重试一次（保留完整内容，只修复格式）
+            print(f"  [LLM-2] JSON解析失败(len={len(content)})，重试(保留全部内容修复格式)...", flush=True)
+            # 诊断: 保存原始输出供排查
+            import tempfile as _tf
+            try:
+                _diag = Path(_tf.gettempdir()) / f"llm2_parse_fail_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+                _diag.write_text(content, encoding="utf-8")
+                print(f"  [LLM-2] 原始输出已保存: {_diag}", flush=True)
+            except Exception:
+                pass
+            # 保留完整原始输出（最多 12000 字符覆盖核心 JSON），截断防止 token 爆炸
+            # 旧逻辑只传 content[:500]→LLM 看到碎片产出了空 JSON
+            preserved = content[:12000] if len(content) > 12000 else content
+            messages.append({
+                "role": "assistant",
+                "content": preserved
+            })
+            messages.append({
+                "role": "user",
+                "content": (
+                    "你的上一条回复（见上方 assistant 消息）包含 JSON 格式错误——"
+                    "可能是 markdown 代码块未闭合、嵌套括号不匹配、大段文字中未转义的双引号、"
+                    "或尾逗号。\n\n"
+                    "**请将上方 assistant 消息中的全部内容重新输出为有效 JSON。**"
+                    "不要删除、缩写、或改写任何字段的值——保留所有分析、参数、叙事文字。"
+                    "只修复导致 JSON 解析失败的格式问题。"
+                    "不要用 markdown 代码块包裹。"
+                )
+            })
             retry_resp = requests.post(
                 "https://api.deepseek.com/v1/chat/completions",
                 headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
