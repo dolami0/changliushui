@@ -2014,9 +2014,9 @@ SOTP触发: {mn.get('sotp_triggered', False)}
                 print(f"  [LLM-2] 原始输出已保存: {_diag}", flush=True)
             except Exception:
                 pass
-            # 保留完整原始输出（最多 12000 字符覆盖核心 JSON），截断防止 token 爆炸
+            # 保留完整原始输出（最多 20000 字符），截断防止 token 爆炸
             # 旧逻辑只传 content[:500]→LLM 看到碎片产出了空 JSON
-            preserved = content[:12000] if len(content) > 12000 else content
+            preserved = content[:20000] if len(content) > 20000 else content
             messages.append({
                 "role": "assistant",
                 "content": preserved
