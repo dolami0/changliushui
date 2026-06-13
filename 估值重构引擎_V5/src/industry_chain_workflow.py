@@ -461,32 +461,39 @@ class IndustryChainWorkflow:
             rough = self._llm(LLM1_ROUGH_PROMPT,
                 self._msg_llm1(news, step_one, knowledge, web=light_results),
                 label="LLM1-粗判", model=DEEPSEEK_MODEL_FAST)
-            top_two = rough.get("top_two", [])
-            if not top_two or len(top_two) < 2:
-                # 粗判失败→退化到全量分析
-                rough_industry = rough.get("industry", "")
-                rough_all = rough.get("all_nodes", [])
-                if rough_all:
-                    top_two = [
-                        {"node_name": rough_all[0]["name"], "position": rough_all[0].get("position",""), "rough_score": 0},
-                        {"node_name": rough_all[1]["name"], "position": rough_all[1].get("position",""), "rough_score": 0},
-                    ] if len(rough_all) >= 2 else []
-            if not top_two or len(top_two) < 2:
+            all_nodes = rough.get("all_nodes", [])
+            if not all_nodes or len(all_nodes) < 2:
                 return {"status": "skipped", "error": "LLM #1 无法识别产业链节点", "record_id": rid}
 
-            # ── Step 1b: 节点定向深搜(并行) + LLM #1 精析 ──
+            # ── Step 1b: 全节点定向深搜(并行) → 所有节点信息均等 ──
             if not eval_mode:
-                self._p(progress_cb, 3, f"定向深搜: {top_two[0].get('node_name','')[:20]} + {top_two[1].get('node_name','')[:20]}")
-                deep1 = _node_deep_search(top_two[0].get("node_name", ""))
-                deep2 = _node_deep_search(top_two[1].get("node_name", ""))
-                deep_results = f"## 【{top_two[0].get('node_name','')}】定向深搜\n{deep1}\n\n## 【{top_two[1].get('node_name','')}】定向深搜\n{deep2}"
+                node_names = [n.get("name", "") for n in all_nodes]
+                self._p(progress_cb, 3, f"定向深搜({len(node_names)}节点并行)")
+                # 并行深搜所有节点
+                with ThreadPoolExecutor(max_workers=len(node_names)*2) as ex:
+                    futures = {
+                        ex.submit(_node_deep_search, name): name
+                        for name in node_names
+                    }
+                    deep_map = {}
+                    for f in as_completed(futures):
+                        name = futures[f]
+                        try:
+                            deep_map[name] = f.result(timeout=30)
+                        except Exception as exc:
+                            deep_map[name] = f"[搜索失败] {exc}"
+                # 按原始顺序编译
+                deep_parts = []
+                for name in node_names:
+                    deep_parts.append(f"## 【{name}】定向深搜\n{deep_map.get(name, '[未执行]')}")
+                deep_results = "\n\n".join(deep_parts)
             else:
                 deep_results = ""
 
-            self._p(progress_cb, 4, "LLM产业链精析(轻搜+深搜)")
+            self._p(progress_cb, 4, "LLM产业链精析(全节点均等深搜)")
             chain = self._llm(LLM1_FINAL_PROMPT,
                 self._msg_llm1(news, step_one, knowledge,
-                    web=f"# 产业链全景（轻搜）\n{light_results}\n\n# 前2节点定向深搜\n{deep_results}"),
+                    web=f"# 产业链全景（轻搜）\n{light_results}\n\n# 各节点定向深搜（信息均等）\n{deep_results}"),
                 label="LLM1-精析", model=DEEPSEEK_MODEL_FAST)
 
             # 校验 LLM #1 输出
