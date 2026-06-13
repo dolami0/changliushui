@@ -1,20 +1,19 @@
 """
-产业链利润流分析器 — 轻搜粗判 + 定向深搜 + 精析
+产业链利润流分析器 — Volc结构化搜索 + fetch_url按需深读
 
-Step 1: 代码层轻量预搜索(3维度×3结果) → LLM #1 粗判节点 → 提取 top 2
-Step 2: 代码层节点定向深搜(2节点×2查询×5结果, 并行) → LLM #1 精析 → 输出
-Step 3: Volc联网搜索 — 每节点1个query (并行)
+Step 1: 轻搜(2 Volc并行) → LLM粗判 → 深搜(每节点1 Volc并行) → LLM精析(fetch_url按需)
+Step 2: Volc联网搜索 — 每节点1个query (并行)
 Pass 1:
-  Step 4: LLM #2 (flash) — 提名节点1候选股(仅名称,无代码)
-  Step 4.5: tushare 按名称校验真实代码
-  Step 5: tushare市值/PE/财务指标 + Volc个股投资地图 (并行)
-  Step 6: LLM #2 (v4-pro) — 四维评分(黑洞/弹射+卡位质量×市值天花板)
+  Step 3: LLM #2 (flash) — 提名节点1候选股(仅名称,无代码)
+  Step 3.5: tushare 按名称校验真实代码
+  Step 4: tushare市值/PE/财务指标 + Volc个股投资地图 (并行)
+  Step 5: LLM #2 (v4-pro) — 四维评分(黑洞/弹射+卡位质量×市值天花板)
   ├─ best >= 6.5 → 输出
   └─ best < 6.5 → Pass 2:
-      Step 7: 提名节点2候选股
-      Step 7.5: tushare 代码校验
-      Step 8: 数据富化
-      Step 9: 混合评分 → 输出
+      Step 6: 提名节点2候选股
+      Step 6.5: tushare 代码校验
+      Step 7: 数据富化
+      Step 8: 混合评分 → 输出
 """
 
 import json, re, time, requests
@@ -137,49 +136,74 @@ LLM1_FINAL_PROMPT = """你是产业链利润流分析师。以下是该事件的
 
 
 # ═══════════════════════════════════════
-# 搜索工具函数
+# Volc 搜索工具函数 — 替代 bocha，结构化输出，信息密度更高
 # ═══════════════════════════════════════
+def _volc_call(prompt: str, timeout: int = 60) -> str:
+    """单次 Volc Agent 调用"""
+    try:
+        r = requests.post(VOLC_URL, json={
+            "bot_id": VOLC_BOT_ID, "stream": False,
+            "messages": [{"role": "user", "content": prompt}],
+            "auto_extract": True,
+        }, headers={"Authorization": f"Bearer {VOLC_AGENT_KEY}",
+                    "Content-Type": "application/json"}, timeout=timeout)
+        if r.status_code == 200:
+            choices = r.json().get("choices", [])
+            if choices:
+                return choices[0].get("message", {}).get("content", "")
+    except Exception:
+        pass
+    return "[Volc调用失败]"
+
+
 def _light_search(news: str, step_one: str = "") -> str:
-    """轻量预搜索: 3维度×3结果, 仅用于节点识别"""
-    ctx = (step_one or news)[:400]
-    queries = [
-        ("产业链全景", f"{ctx} 产业链 上游 中游 下游 各环节 核心公司"),
-        ("利润分配",   f"{ctx} 产业链 利润分配 毛利率 哪个环节最赚钱 利润率"),
-        ("市场规模",   f"{ctx} 市场规模 TAM 2025 2026 2030 亿元 行业空间"),
-    ]
-    return _exec_parallel_search(queries, count=3)
+    """轻搜: 2次Volc并行 — 结构+利润 | TAM+壁垒（方案B，性价比最优）"""
+    ctx = (step_one or news)[:500]
+    q1 = f"""事件: {ctx}
+请识别该事件涉及的产业链关键节点:
+- 列出所有上游/中游/下游环节、核心产品及代表公司
+- 评估每个节点的利润截留能力（毛利率水平、集中度CR3/CR5、议价力、增值占比）
+- 给出每个节点利润截留的初步排序
+每个节点标注具体的毛利率和集中度数字，有来源标注来源。"""
+
+    q2 = f"""事件: {ctx}
+请评估该事件产业链各节点的市场规模和竞争壁垒:
+- 每个节点的国内TAM（2025年实际和2030年预估，亿元）
+- 每个节点的进入壁垒（认证周期、技术门槛、客户绑定、切换成本）
+- 需求弹性：事件对各节点的拉动强度排序
+有数据来源的标注来源。"""
+
+    results: dict[str, str] = {}
+    with ThreadPoolExecutor(max_workers=2) as ex:
+        futures = {
+            ex.submit(_volc_call, q1, 90): "产业链结构与利润截留",
+            ex.submit(_volc_call, q2, 90): "TAM与进入壁垒",
+        }
+        for f in as_completed(futures):
+            label = futures[f]
+            try:
+                results[label] = f.result(timeout=95)
+            except Exception as exc:
+                results[label] = f"[搜索失败] {exc}"
+
+    parts = []
+    for label in ["产业链结构与利润截留", "TAM与进入壁垒"]:
+        r = results.get(label, "[未执行]")
+        parts.append(f"## {label}\n{r[:4000]}")
+    return "\n\n---\n\n".join(parts)
 
 
 def _node_deep_search(node_name: str) -> str:
-    """节点定向深搜: 2条查询×5结果(仅摘要+URL, 不自动抓全文——留给LLM自行fetch)"""
-    queries = [
-        ("利润与竞争", f"{node_name} 毛利率 竞争格局 市场份额 集中度 CR3 龙头企业"),
-        ("壁垒与切换成本", f"{node_name} 技术壁垒 认证周期 客户绑定 进入门槛"),
-    ]
-    return _exec_parallel_search(queries, count=5)
+    """节点定向深搜: 1次Volc调用, 覆盖利润/竞争/壁垒/TAM"""
+    prompt = f"""请针对「{node_name}」产业链节点，搜索并提供以下维度的详细分析：
 
+1. 利润分配：该节点各环节的毛利率、净利率水平，在产业链中截留利润的能力
+2. 竞争格局：市场份额分布、CR3/CR5集中度、头部企业及份额
+3. 技术壁垒：认证周期、客户绑定程度、切换成本
+4. TAM：国内市场规模(亿元)，2025年实际和2030年预估
 
-def _exec_parallel_search(queries: list[tuple[str, str]], count: int = 5) -> str:
-    """并行执行 bocha 搜索，返回编译后的结果文本(含URL, 供LLM自行fetch)"""
-    results: dict[str, str] = {}
-
-    with ThreadPoolExecutor(max_workers=len(queries)) as ex:
-        futures = {
-            ex.submit(bocha_search, q, count=count, freshness="oneYear"): dim
-            for dim, q in queries
-        }
-        for f in as_completed(futures):
-            dim = futures[f]
-            try:
-                results[dim] = f.result(timeout=30)
-            except Exception as exc:
-                results[dim] = f"[搜索失败] {exc}"
-
-    parts = []
-    for dim, _ in queries:
-        r = results.get(dim, "[未执行]")
-        parts.append(f"## {dim}\n{r[:3000]}")
-    return "\n\n---\n\n".join(parts)
+请给出具体数字（不要只定性描述），有数据来源的标注来源。每个维度至少2-3个关键数据点。"""
+    return _volc_call(prompt, timeout=90)
 
 # ═══════════════════════════════════════
 # LLM #2 — 个股赔率评分
