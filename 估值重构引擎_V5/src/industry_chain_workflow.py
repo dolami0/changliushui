@@ -24,7 +24,7 @@ from typing import Any, Callable
 
 from data_fetcher import DataFetcher
 from env_config import VOLC_AGENT_KEY
-from agents.tools import bocha_search, TOOL_DEFINITIONS, TOOL_MAP
+from agents.tools import bocha_search, fetch_url, TOOL_DEFINITIONS, TOOL_MAP
 
 # ═══════════════════════════════════════
 # API 配置
@@ -150,34 +150,62 @@ def _light_search(news: str, step_one: str = "") -> str:
 
 
 def _node_deep_search(node_name: str) -> str:
-    """节点定向深搜: 2条查询×5结果, 覆盖利润/竞争/壁垒"""
+    """节点定向深搜: 2条查询×5结果 + 每条自动fetch前2篇全文"""
     queries = [
         ("利润与竞争", f"{node_name} 毛利率 竞争格局 市场份额 集中度 CR3 龙头企业"),
         ("壁垒与切换成本", f"{node_name} 技术壁垒 认证周期 客户绑定 进入门槛"),
     ]
-    return _exec_parallel_search(queries, count=5)
+    return _exec_parallel_search(queries, count=5, fetch_fulltext=2)
 
 
-def _exec_parallel_search(queries: list[tuple[str, str]], count: int = 5) -> str:
-    """并行执行搜索，返回编译后的结果文本"""
+def _extract_urls(search_result: str, top_n: int = 2) -> list[str]:
+    """从 bocha_search 格式化输出中提取前 N 个 URL"""
+    import re as _re
+    return _re.findall(r'URL:\s*(https?://[^\s\n]+)', search_result)[:top_n]
+
+
+def _search_with_fetch(query: str, count: int = 5, fetch_top: int = 2) -> str:
+    """bocha 搜索 + 自动抓取前 N 条结果的全文"""
+    result = bocha_search(query, count=count)
+    if fetch_top <= 0:
+        return result
+    urls = _extract_urls(result, fetch_top)
+    fetched = []
+    for i, url in enumerate(urls):
+        try:
+            full = fetch_url(url)  # 返回最多5000字的正文
+            fetched.append(f"\n[深度阅读{i+1}] {url}\n{full[:3000]}")
+        except Exception:
+            pass
+    if fetched:
+        result += "\n\n══════ 全文抓取 ══════\n" + "\n".join(fetched)
+    return result
+
+
+def _exec_parallel_search(queries: list[tuple[str, str]], count: int = 5,
+                          fetch_fulltext: int = 0) -> str:
+    """并行执行搜索。fetch_fulltext>0 时自动抓取前N篇全文"""
     results: dict[str, str] = {}
 
     with ThreadPoolExecutor(max_workers=len(queries)) as ex:
-        futures = {
-            ex.submit(bocha_search, q, count=count, freshness="oneYear"): dim
-            for dim, q in queries
-        }
+        futures = {}
+        for dim, q in queries:
+            if fetch_fulltext > 0:
+                f = ex.submit(_search_with_fetch, q, count=count, fetch_top=fetch_fulltext)
+            else:
+                f = ex.submit(bocha_search, q, count=count, freshness="oneYear")
+            futures[f] = dim
         for f in as_completed(futures):
             dim = futures[f]
             try:
-                results[dim] = f.result(timeout=30)
+                results[dim] = f.result(timeout=45)  # fetch可能要更久
             except Exception as exc:
                 results[dim] = f"[搜索失败] {exc}"
 
     parts = []
     for dim, _ in queries:
         r = results.get(dim, "[未执行]")
-        parts.append(f"## {dim}\n{r[:2500]}")
+        parts.append(f"## {dim}\n{r[:4000]}")
     return "\n\n---\n\n".join(parts)
 
 # ═══════════════════════════════════════
