@@ -468,7 +468,7 @@ class IndustryChainWorkflow:
 
             # ── Step 1b: 全节点定向深搜(并行) → 所有节点信息均等 ──
             if not eval_mode:
-                node_names = [n.get("name", "") for n in all_nodes]
+                node_names = [n.get("name", "") for n in all_nodes[:4]]  # 最多4个节点
                 self._p(progress_cb, 3, f"定向深搜({len(node_names)}节点并行)")
                 # 并行深搜所有节点
                 with ThreadPoolExecutor(max_workers=len(node_names)*2) as ex:
