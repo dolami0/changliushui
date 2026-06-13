@@ -24,7 +24,7 @@ from typing import Any, Callable
 
 from data_fetcher import DataFetcher
 from env_config import VOLC_AGENT_KEY
-from agents.tools import bocha_search, fetch_url, TOOL_DEFINITIONS, TOOL_MAP
+from agents.tools import bocha_search, TOOL_DEFINITIONS, TOOL_MAP
 
 # ═══════════════════════════════════════
 # API 配置
@@ -104,11 +104,11 @@ LLM1_ROUGH_PROMPT = """你是产业链分析师。以下是该事件的联网搜
   "top_two": [{"node_name":"","position":"","rough_score":0,"why":"一句话说明为什么此节点截留利润"}]
 }"""
 
-LLM1_FINAL_PROMPT = """你是产业链利润流分析师。以下是该事件的联网搜索结果+前2节点的定向深搜材料，请完成最终产业链分析。
+LLM1_FINAL_PROMPT = """你是产业链利润流分析师。以下是该事件的联网搜索结果+各节点的定向深搜材料，请完成最终产业链分析。
 
 # 工作方式
-你不需要搜索——所有材料已提供。定向深搜部分专门针对前2节点提供了详细的利润/竞争/壁垒数据。
-如果某个维度的搜索结果不够充分，标注「信息不足」，不要凭空推断。
+所有搜索结果已提供（含URL）。摘要信息不足时，用 fetch_url 打开URL读取全文——尤其当摘要缺少毛利率/市占率/TAM的具体数字时，必须 fetch 获取精确数据。fetch 后暂停判断信息是否足够。
+搜索已完成，不要用 bocha_search。
 
 # 分析框架：5维度利润截留评估
 
@@ -150,62 +150,34 @@ def _light_search(news: str, step_one: str = "") -> str:
 
 
 def _node_deep_search(node_name: str) -> str:
-    """节点定向深搜: 2条查询×5结果 + 每条自动fetch前2篇全文"""
+    """节点定向深搜: 2条查询×5结果(仅摘要+URL, 不自动抓全文——留给LLM自行fetch)"""
     queries = [
         ("利润与竞争", f"{node_name} 毛利率 竞争格局 市场份额 集中度 CR3 龙头企业"),
         ("壁垒与切换成本", f"{node_name} 技术壁垒 认证周期 客户绑定 进入门槛"),
     ]
-    return _exec_parallel_search(queries, count=5, fetch_fulltext=2)
+    return _exec_parallel_search(queries, count=5)
 
 
-def _extract_urls(search_result: str, top_n: int = 2) -> list[str]:
-    """从 bocha_search 格式化输出中提取前 N 个 URL"""
-    import re as _re
-    return _re.findall(r'URL:\s*(https?://[^\s\n]+)', search_result)[:top_n]
-
-
-def _search_with_fetch(query: str, count: int = 5, fetch_top: int = 2) -> str:
-    """bocha 搜索 + 自动抓取前 N 条结果的全文"""
-    result = bocha_search(query, count=count)
-    if fetch_top <= 0:
-        return result
-    urls = _extract_urls(result, fetch_top)
-    fetched = []
-    for i, url in enumerate(urls):
-        try:
-            full = fetch_url(url)  # 返回最多5000字的正文
-            fetched.append(f"\n[深度阅读{i+1}] {url}\n{full[:3000]}")
-        except Exception:
-            pass
-    if fetched:
-        result += "\n\n══════ 全文抓取 ══════\n" + "\n".join(fetched)
-    return result
-
-
-def _exec_parallel_search(queries: list[tuple[str, str]], count: int = 5,
-                          fetch_fulltext: int = 0) -> str:
-    """并行执行搜索。fetch_fulltext>0 时自动抓取前N篇全文"""
+def _exec_parallel_search(queries: list[tuple[str, str]], count: int = 5) -> str:
+    """并行执行 bocha 搜索，返回编译后的结果文本(含URL, 供LLM自行fetch)"""
     results: dict[str, str] = {}
 
     with ThreadPoolExecutor(max_workers=len(queries)) as ex:
-        futures = {}
-        for dim, q in queries:
-            if fetch_fulltext > 0:
-                f = ex.submit(_search_with_fetch, q, count=count, fetch_top=fetch_fulltext)
-            else:
-                f = ex.submit(bocha_search, q, count=count, freshness="oneYear")
-            futures[f] = dim
+        futures = {
+            ex.submit(bocha_search, q, count=count, freshness="oneYear"): dim
+            for dim, q in queries
+        }
         for f in as_completed(futures):
             dim = futures[f]
             try:
-                results[dim] = f.result(timeout=45)  # fetch可能要更久
+                results[dim] = f.result(timeout=30)
             except Exception as exc:
                 results[dim] = f"[搜索失败] {exc}"
 
     parts = []
     for dim, _ in queries:
         r = results.get(dim, "[未执行]")
-        parts.append(f"## {dim}\n{r[:4000]}")
+        parts.append(f"## {dim}\n{r[:3000]}")
     return "\n\n---\n\n".join(parts)
 
 # ═══════════════════════════════════════
@@ -518,11 +490,15 @@ class IndustryChainWorkflow:
             else:
                 deep_results = ""
 
-            self._p(progress_cb, 4, "LLM产业链精析(全节点均等深搜)")
-            chain = self._llm(LLM1_FINAL_PROMPT,
+            self._p(progress_cb, 4, "LLM产业链精析(可fetch_url)")
+            # 仅给 fetch_url 工具，不让 LLM 再做搜索——搜索已由代码层完成
+            FETCH_ONLY = [t for t in TOOL_DEFINITIONS if t["function"]["name"] == "fetch_url"]
+            chain = self._llm_tool_use(LLM1_FINAL_PROMPT,
                 self._msg_llm1(news, step_one, knowledge,
-                    web=f"# 产业链全景（轻搜）\n{light_results}\n\n# 各节点定向深搜（信息均等）\n{deep_results}"),
-                label="LLM1-精析", model=DEEPSEEK_MODEL_FAST)
+                    web=f"# 产业链全景（轻搜）\n{light_results}\n\n# 各节点定向深搜（含URL, 信息均等）\n{deep_results}"),
+                tools=FETCH_ONLY, tool_map=TOOL_MAP, max_turns=2,
+                model=DEEPSEEK_MODEL_FAST)
+            chain.pop("_search_log", [])
 
             # 校验 LLM #1 输出
             industry = chain.get("chain_overview", {}).get("industry", "")
@@ -532,11 +508,13 @@ class IndustryChainWorkflow:
                 return {"status": "skipped", "error": chain.get("error", ""), "record_id": rid}
             if (not industry or not nodes):
                 print(f"[LLM1-EMPTY] industry='{industry}' nodes={len(nodes)}, retrying...", flush=True)
-                chain = self._llm(LLM1_FINAL_PROMPT,
+                chain = self._llm_tool_use(LLM1_FINAL_PROMPT,
                     self._msg_llm1(news, step_one, knowledge,
-                        web=f"# 产业链全景\n{light_results}\n\n# 前2节点定向深搜\n{deep_results}")
+                        web=f"# 产业链全景\n{light_results}\n\n# 各节点定向深搜\n{deep_results}")
                     + "\n\n上次输出industry或top_two_nodes为空。请确保chain_overview.industry不为空、top_two_nodes包含2个节点。",
-                    label="LLM1-重试", model=DEEPSEEK_MODEL)
+                    tools=FETCH_ONLY, tool_map=TOOL_MAP, max_turns=1,
+                    model=DEEPSEEK_MODEL)
+                chain.pop("_search_log", [])
                 industry = chain.get("chain_overview", {}).get("industry", "")
                 nodes = chain.get("top_two_nodes", [])
                 is_hard_error = chain.get("error", "").startswith("API ")
