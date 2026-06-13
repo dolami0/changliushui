@@ -1,8 +1,8 @@
 """
-产业链利润流分析器 — 全局预搜索 + 单次LLM分析
+产业链利润流分析器 — 轻搜粗判 + 定向深搜 + 精析
 
-Step 1: 代码层6维度并行搜索(bocha) — 消除贪心搜索偏差
-Step 2: LLM #1 (deepseek-v4-flash/v4-pro) — 基于预搜索结果做产业链推理 → 前2节点
+Step 1: 代码层轻量预搜索(3维度×3结果) → LLM #1 粗判节点 → 提取 top 2
+Step 2: 代码层节点定向深搜(2节点×2查询×5结果, 并行) → LLM #1 精析 → 输出
 Step 3: Volc联网搜索 — 每节点1个query (并行)
 Pass 1:
   Step 4: LLM #2 (flash) — 提名节点1候选股(仅名称,无代码)
@@ -88,12 +88,26 @@ LLM1_PROMPT = """你是产业链利润流分析师。你的任务是通过自主
 }"""
 
 # ═══════════════════════════════════════
-# LLM #1 V2 — 全局预搜索 + 单次分析（消除贪心搜索偏差）
+# LLM #1 V2 — 两轮分析：轻搜粗判 → 节点定向深搜 → 精析
 # ═══════════════════════════════════════
-LLM1_PROMPT_V2 = """你是产业链利润流分析师。以下是针对该事件的6维度联网搜索结果（已由上游并行搜索完成），请基于这些材料完成产业链分析。
+LLM1_ROUGH_PROMPT = """你是产业链分析师。以下是该事件的联网搜索结果，请快速识别产业链上的关键节点并粗排利润截留能力。
 
 # 工作方式
-你不需要搜索——所有材料已提供在「联网搜索结果」中。你的任务是阅读、交叉验证、综合判断。
+阅读搜索结果，识别该产业链涉及的所有关键环节（上游/中游/下游）。
+对每个节点评估其利润截留潜力（高/中/低），选出前2个利润截留最强的节点。
+此阶段只需粗略判断——后续会对前2节点做定向深搜。
+
+# 输出JSON
+{
+  "industry": "",
+  "all_nodes": [{"name":"","position":"upstream/midstream/downstream","profit_potential":"high/medium/low"}],
+  "top_two": [{"node_name":"","position":"","rough_score":0,"why":"一句话说明为什么此节点截留利润"}]
+}"""
+
+LLM1_FINAL_PROMPT = """你是产业链利润流分析师。以下是该事件的联网搜索结果+前2节点的定向深搜材料，请完成最终产业链分析。
+
+# 工作方式
+你不需要搜索——所有材料已提供。定向深搜部分专门针对前2节点提供了详细的利润/竞争/壁垒数据。
 如果某个维度的搜索结果不够充分，标注「信息不足」，不要凭空推断。
 
 # 分析框架：5维度利润截留评估
@@ -105,17 +119,13 @@ LLM1_PROMPT_V2 = """你是产业链利润流分析师。以下是针对该事件
 5. 需求弹性 — 事件直接拉动该节点需求，还是间接蹭到？
 
 # 隐性上游优先原则
-
-产业链利润往往向"隐性上游"集中——即体积小、价值密度高、认证壁垒极强的上游环节（芯片、特种材料、核心元器件），而非显眼的中游总装。分析时重点关注：
+产业链利润往往向"隐性上游"集中——体积小、价值密度高、认证壁垒极强的上游环节（芯片、特种材料、核心元器件），而非显眼的中游总装。分析时重点关注：
 - 若某上游环节占下游成品成本<5%但断供即瘫痪 → 利润截留极高
 - 中游总装即使产值大，若竞争分散、切换成本低，利润截留反而不如隐性上游
 - 不要无限向上游追溯：只考虑一阶直接供应商
 
-# 节点命名规则
-节点名必须包含「产业链具体环节+行业定语」。
-
 # 证据纪律
-对每个维度的评分，必须标注证据来源。搜索材料中找到的引用为"搜索发现"，需附带具体数据+来源；基于材料的逻辑推理为"推断"，需标注"推断"及推理链条。绝对禁止没有任何证据基础的评分。
+对每个维度的评分，必须标注证据来源。搜索材料中找到的引用为"搜索发现"，需附带具体数据+来源；基于材料的逻辑推理为"推断"，需标注"推断"及推理链条。
 
 # 最终输出JSON
 {
@@ -126,26 +136,33 @@ LLM1_PROMPT_V2 = """你是产业链利润流分析师。以下是针对该事件
 
 
 # ═══════════════════════════════════════
-# 全局预搜索 — 6维度并行，消除 LLM 贪心搜索偏差
+# 搜索工具函数
 # ═══════════════════════════════════════
-def _build_search_queries(news: str, step_one: str = "") -> list[tuple[str, str]]:
-    """从资讯内容生成6个维度的搜索查询，返回 [(维度名, query), ...]"""
+def _light_search(news: str, step_one: str = "") -> str:
+    """轻量预搜索: 3维度×3结果, 仅用于节点识别"""
     ctx = (step_one or news)[:400]
-    return [
-        ("产业链结构", f"{ctx} 产业链 上游 中游 下游 各环节 核心公司"),
-        ("利润分配",   f"{ctx} 产业链 利润分配 哪个环节毛利率最高 利润率 净利润"),
-        ("竞争格局",   f"{ctx} 产业链 竞争格局 市场份额 集中度 CR3 CR5 寡头"),
-        ("进入壁垒",   f"{ctx} 产业链 进入壁垒 认证周期 技术门槛 客户绑定 切换成本"),
-        ("需求弹性",   f"{ctx} 政策驱动 受益环节 需求拉动 弹性 增量空间"),
-        ("TAM",        f"{ctx} 市场规模 TAM 2025 2026 2030 亿元 行业空间"),
+    queries = [
+        ("产业链全景", f"{ctx} 产业链 上游 中游 下游 各环节 核心公司"),
+        ("利润分配",   f"{ctx} 产业链 利润分配 毛利率 哪个环节最赚钱 利润率"),
+        ("市场规模",   f"{ctx} 市场规模 TAM 2025 2026 2030 亿元 行业空间"),
     ]
+    return _exec_parallel_search(queries, count=3)
 
 
-def _parallel_search(queries: list[tuple[str, str]], count: int = 5) -> str:
-    """并行执行所有搜索，返回编译后的结果文本"""
+def _node_deep_search(node_name: str) -> str:
+    """节点定向深搜: 2条查询×5结果, 覆盖利润/竞争/壁垒"""
+    queries = [
+        ("利润与竞争", f"{node_name} 毛利率 竞争格局 市场份额 集中度 CR3 龙头企业"),
+        ("壁垒与切换成本", f"{node_name} 技术壁垒 认证周期 客户绑定 进入门槛"),
+    ]
+    return _exec_parallel_search(queries, count=5)
+
+
+def _exec_parallel_search(queries: list[tuple[str, str]], count: int = 5) -> str:
+    """并行执行搜索，返回编译后的结果文本"""
     results: dict[str, str] = {}
 
-    with ThreadPoolExecutor(max_workers=6) as ex:
+    with ThreadPoolExecutor(max_workers=len(queries)) as ex:
         futures = {
             ex.submit(bocha_search, q, count=count, freshness="oneYear"): dim
             for dim, q in queries
@@ -157,7 +174,6 @@ def _parallel_search(queries: list[tuple[str, str]], count: int = 5) -> str:
             except Exception as exc:
                 results[dim] = f"[搜索失败] {exc}"
 
-    # 按原始顺序输出
     parts = []
     for dim, _ in queries:
         r = results.get(dim, "[未执行]")
@@ -434,18 +450,44 @@ class IndustryChainWorkflow:
             return {"status": "skipped", "error": "news_content 为空"}
 
         try:
-            # Step 1: 全局预搜索(6维度并行) → LLM #1 单次分析
+            # ── Step 1a: 轻量搜索 + LLM #1 粗判节点 ──
             if not eval_mode:
-                self._p(progress_cb, 1, "全局预搜索(6维度并行)")
-                queries = _build_search_queries(news, step_one)
-                search_results = _parallel_search(queries, count=5)
+                self._p(progress_cb, 1, "轻量预搜索(3维度×3结果)")
+                light_results = _light_search(news, step_one)
             else:
-                search_results = ""
+                light_results = ""
 
-            self._p(progress_cb, 2, "LLM产业链推理(基于预搜索结果)")
-            chain = self._llm(LLM1_PROMPT_V2,
-                self._msg_llm1(news, step_one, knowledge, web=search_results),
-                label="LLM1-分析", model=DEEPSEEK_MODEL_FAST)
+            self._p(progress_cb, 2, "LLM粗判节点")
+            rough = self._llm(LLM1_ROUGH_PROMPT,
+                self._msg_llm1(news, step_one, knowledge, web=light_results),
+                label="LLM1-粗判", model=DEEPSEEK_MODEL_FAST)
+            top_two = rough.get("top_two", [])
+            if not top_two or len(top_two) < 2:
+                # 粗判失败→退化到全量分析
+                rough_industry = rough.get("industry", "")
+                rough_all = rough.get("all_nodes", [])
+                if rough_all:
+                    top_two = [
+                        {"node_name": rough_all[0]["name"], "position": rough_all[0].get("position",""), "rough_score": 0},
+                        {"node_name": rough_all[1]["name"], "position": rough_all[1].get("position",""), "rough_score": 0},
+                    ] if len(rough_all) >= 2 else []
+            if not top_two or len(top_two) < 2:
+                return {"status": "skipped", "error": "LLM #1 无法识别产业链节点", "record_id": rid}
+
+            # ── Step 1b: 节点定向深搜(并行) + LLM #1 精析 ──
+            if not eval_mode:
+                self._p(progress_cb, 3, f"定向深搜: {top_two[0].get('node_name','')[:20]} + {top_two[1].get('node_name','')[:20]}")
+                deep1 = _node_deep_search(top_two[0].get("node_name", ""))
+                deep2 = _node_deep_search(top_two[1].get("node_name", ""))
+                deep_results = f"## 【{top_two[0].get('node_name','')}】定向深搜\n{deep1}\n\n## 【{top_two[1].get('node_name','')}】定向深搜\n{deep2}"
+            else:
+                deep_results = ""
+
+            self._p(progress_cb, 4, "LLM产业链精析(轻搜+深搜)")
+            chain = self._llm(LLM1_FINAL_PROMPT,
+                self._msg_llm1(news, step_one, knowledge,
+                    web=f"# 产业链全景（轻搜）\n{light_results}\n\n# 前2节点定向深搜\n{deep_results}"),
+                label="LLM1-精析", model=DEEPSEEK_MODEL_FAST)
 
             # 校验 LLM #1 输出
             industry = chain.get("chain_overview", {}).get("industry", "")
@@ -455,11 +497,11 @@ class IndustryChainWorkflow:
                 return {"status": "skipped", "error": chain.get("error", ""), "record_id": rid}
             if (not industry or not nodes):
                 print(f"[LLM1-EMPTY] industry='{industry}' nodes={len(nodes)}, retrying...", flush=True)
-                chain = self._llm(LLM1_PROMPT_V2,
-                    self._msg_llm1(news, step_one, knowledge, web=search_results)
+                chain = self._llm(LLM1_FINAL_PROMPT,
+                    self._msg_llm1(news, step_one, knowledge,
+                        web=f"# 产业链全景\n{light_results}\n\n# 前2节点定向深搜\n{deep_results}")
                     + "\n\n上次输出industry或top_two_nodes为空。请确保chain_overview.industry不为空、top_two_nodes包含2个节点。",
                     label="LLM1-重试", model=DEEPSEEK_MODEL)
-                # 重试后再次检查
                 industry = chain.get("chain_overview", {}).get("industry", "")
                 nodes = chain.get("top_two_nodes", [])
                 is_hard_error = chain.get("error", "").startswith("API ")
