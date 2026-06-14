@@ -542,6 +542,7 @@ CAGR/增速: 高增速必须匹配高再投资率（RR=g/ROIC）。增速和 RR 
   "change_request": [
     {"query": "具体搜索查询", "purpose": "填补哪个数据缺口/验证哪个假设"}
   ],
+  "narrative": "投资叙事——200-400字，用自然语言把事件→参数→情景的完整故事串起来。包含：事件改变了什么、为什么用这个锚和模型、三个情景分别是什么路径、关键风险和催化剂。不要写市值数字。",
   "preflight_check": ["[OK] 清单项1完成", "[OK] 清单项2a-2d完成", "[OK] 清单项3a-3e完成", "[OK] 概率和=1.00", "[OK] 参数逐级递增,全参数自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
 }
 """
@@ -929,7 +930,7 @@ change_log 每条格式:
     "risk_trigger_kpis": [{"name": "风险名称", "linked_to": "关联指标", "severity": "high|medium|low", "monitor": "监控频率"}]
   },
   "risk_triggers": { "bull_trigger": "...", "bear_trigger": "...", "monitoring_frequency": "季度" },
-  "narrative": "照抄 LLM-1 的原始叙事——这是 LLM-1 从事件到参数的核心故事线，不要改写。如果你有修正意见，写在 _review_note 字段里。",
+  "narrative": "<必填: 基于LLM-1的叙事做审阅增强——保留LLM-1的核心故事线，融入你的审阅发现（参数修正、搜索验证结果、前瞻信号解读），形成200-500字的完整投资叙事。如果LLM-1的叙事有逻辑问题，在保留其框架的前提下修正。不要写市值数字——引用upside%即可。>",
   "probability_rationale": "概率推导",
   "expectation_gap": { "level": "市场更乐观|市场更悲观|预期相近|无法解码", "note": "..." },
   "validation_crosscheck": { "validation_model": "...", "assessment": "..." },
@@ -2597,17 +2598,31 @@ def _merge_llm_outputs(llm1_output: dict, llm2_output: dict) -> dict:
     llm2_narrative = llm2_output.get("narrative", "")
     llm2_review = llm2_output.get("_review_note", "")
 
-    if hollow:
-        # 空心输出：用 LLM-1 数据构造叙事
-        if not llm2_narrative or len(str(llm2_narrative).strip()) < 20:
-            llm2_output["narrative"] = _construct_fallback_narrative(llm1_output)
-        if llm2_review:
-            llm2_output["narrative"] += "\n\n【审阅意见(部分)】" + str(llm2_review)[:500]
+    # 检测 LLM-2 narrative 是否无效（空/过短/是schema占位文字）
+    _invalid_narratives = (
+        "照抄 LLM-1",
+        "<必填:",
+        "<从LLM-1",
+        "不要改写",
+    )
+    llm2_narrative_invalid = (
+        not llm2_narrative
+        or len(str(llm2_narrative).strip()) < 30
+        or any(marker in str(llm2_narrative) for marker in _invalid_narratives)
+    )
+
+    if hollow or llm2_narrative_invalid:
+        # 空心输出 或 LLM-2 的 narrative 无效 → 用 LLM-1 数据构造叙事
+        llm2_output["narrative"] = _construct_fallback_narrative(llm1_output)
+        if llm2_review and not any(marker in str(llm2_review) for marker in _invalid_narratives):
+            llm2_output["narrative"] += "\n\n【审阅意见】" + str(llm2_review)[:800]
     else:
-        # 正常合并
+        # 正常合并：LLM-2 产出了有效叙事
         llm2_note = llm2_review or llm2_narrative
         if llm1_narrative and llm2_note and llm2_note != llm1_narrative:
             llm2_output["narrative"] = llm1_narrative + "\n\n【审阅修正】" + llm2_note
+        elif llm2_narrative and len(llm2_narrative) > 30:
+            llm2_output["narrative"] = llm2_narrative
         elif llm1_narrative:
             llm2_output["narrative"] = llm1_narrative
 
