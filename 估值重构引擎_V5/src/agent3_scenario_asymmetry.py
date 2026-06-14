@@ -736,6 +736,69 @@ LLM-2: 事件锚校验:
 - 收入差距本身不是问题——问题是差距没有解释
 - 不能 0 条 change_log 但锚校验写"多项不合理"——两者必须自洽。
 
+### 任务 0.5: 前瞻信号验证（必做，不可跳过）
+
+E 部分的前瞻指标面板是代码层预计算的异常检测结果。你的任务不是重新计算，而是**验证 LLM-1 是否响应了每条异常信号，并搜索最新数据来修正过时的解读**。
+
+#### 第 1 步：获取最新数据（每类异常至少搜 1 次）
+
+E 部分中标记为 [严重异常]/[显著异常]/[值得关注] 的信号，不是你直接采信的数据——它们是**可能已过时的快照**。你必须搜索最新值:
+
+- 合同负债异常 → 搜索 `"{公司名} 2026年Q1 合同负债 同比"`
+- 存货异常 → 搜索 `"{公司名} 存货结构 原材料 产成品"` 或 `"{公司名} 存货 跌价准备"`
+- 应收账款异常 → 搜索 `"{公司名} 应收账款 账龄 回款"`
+- 业绩预告 → 搜索 `"{公司名} 2026年 业绩预告"`
+
+**铁律**: 搜索到的新值与 E 部分旧值有显著差异 → 以搜索值为准，在 change_log 和 reasoning_trace 中标注"LLM-2搜索更新: 旧值=XXX, 新值=YYY"。
+
+#### 第 2 步：对照 LLM-1 的解读
+
+在 LLM-1 的 reasoning_trace 中逐条查找:
+
+- LLM-1 回应了信号且解读正确 → 在 reasoning_trace 中记录 "LLM-2: 前瞻信号-{指标}: LLM-1 解读正确，[简述原因]"
+- LLM-1 回应了信号但解读错误 → **必须在 change_log 中修正**。例如"LLM-1 说合同负债正常所以维持 base CAGR 25%——但实际暴跌 61.59%"
+- LLM-1 完全没提某个异常信号 → **LLM-1 遗漏**。你必须搜索确认，然后在 change_log 中补充修正
+- LLM-1 的 data_gaps 中标注了需要确认的信号 → 优先搜索这条
+
+#### 第 3 步：时间维度分离判断
+
+对照以下规则:
+
+| 情景 | 规则 |
+|------|------|
+| 事件 bullish + 信号 bullish | 事件+信号一致 → 上调 base 概率 + 上调近期 CAGR |
+| 事件 bullish + 信号 bearish | **不改变事件方向**（事件管终局天花板）。调整近期路径: 下调 base CAGR + 上调 bear 概率 + 推迟 bull 兑现时间 |
+| 事件 bearish + 信号 bullish | 同上反向: 事件方向不改，但上调 base 概率（执行超预期） |
+| 事件未涉及 + 信号异常 | 信号独立有效，按信号方向调参数。在 data_gaps 标注"事件未覆盖此维度" |
+
+**核心原则**: 事件管"天花板在哪"（终局 PS/PE/bull 空间），前瞻信号管"脚下的路好不好走"（近期 CAGR/概率/时间节点）。两者各管各的时间维度。
+
+#### 第 4 步：存货结构特别判定
+
+如果存货异常增加（↑>1σ），你必须区分「战略性备货」和「被动积压」:
+
+**战略性备货（bullish）**— 满足 2+ 条:
+1. 搜索证实上游原材料涨价/产能紧张
+2. 公司处于产能扩张期（CAPEX/折旧 > 1.5）
+3. 下游需求在增长或事件描述需求爆发
+4. 合同负债/预付款同步增加
+
+**被动积压（bearish）**— 满足 2+ 条:
+1. 营收增速连续下滑或为负
+2. 应收账款同步跳升
+3. 搜索证实行需求走弱
+4. 公司未处于产能扩张期
+
+不确定时 → 搜索 `"{公司名} 存货构成 原材料占比"` 来确认。
+
+#### 第 5 步：落地到 change_log 和 reasoning_trace
+
+- 每个需要行动的异常信号 → **一条 change_log**
+- 每条 change_log → **有对应的 reasoning_trace 条目**（格式: "LLM-2: 前瞻信号-{指标}: ..."）
+- 交叉信号一致性判断 → 一条 reasoning_trace 条目（格式: "LLM-2: 前瞻信号-交叉验证: ..."）
+
+**铁律**: reasoning_trace 中有前瞻信号发现但 change_log 中找不到对应修改 → **违规**。narrative 中提到某个信号问题但 change_log 没改 → **违规**。
+
 ### 任务 1: 数据补充——必搜清单
 
 LLM-1 输出的 data_gaps 和 change_request 不是参考——是**必搜清单**。每条都必须通过 search_requests 向火山引擎发起搜索。火山支持自然语言查询，直接用 data_gaps 原文即可。
@@ -838,6 +901,8 @@ change_log 每条格式:
     "LLM-1: 清单项1-素材吸收: ...",
     "...": "保留 LLM-1 的完整 reasoning_trace，在末尾追加你的审阅条目",
     "LLM-2: 事件锚校验: 事件锚点[价格/产能/客户/利润率]→LLM-1参数→差距→打折合理性→结论",
+    "LLM-2: 前瞻信号-{指标}: 当前值,σ,方向 → LLM-1是否回应 → 解读正确/错误/遗漏 → 参数影响",
+    "LLM-2: 前瞻信号-交叉验证: 多信号一致性判断 → 对概率/参数的总体影响",
     "LLM-2: 审查-数据补充: ...",
     "LLM-2: 审查-参数修改: 将 base.target_ps 从 12x 降至 8x，因...(理由)",
     "LLM-2: 审查-置信度: ..."
@@ -1360,16 +1425,31 @@ def _build_forward_signal_panel(core: dict) -> str:
         lines.append(f'\n###  定量异常信号（vs 历史8期均值±标准差）')
         for a in anomalies:
             anomaly_info = a.get('anomaly', {})
-            if anomaly_info:
+            level = anomaly_info.get('level', 'normal')
+            if anomaly_info and anomaly_info.get('sigma') is not None:
                 sigma = anomaly_info.get('sigma', 0)
                 direction = '↑' if anomaly_info.get('direction') == 'up' else '↓'
-                tag = '' if anomaly_info.get('level') == 'extreme' else ''
+                if level == 'extreme':
+                    tag = '[严重异常] '
+                elif level == 'significant':
+                    tag = '[显著异常] '
+                elif level == 'elevated':
+                    tag = '[值得关注] '
+                else:
+                    tag = ''
                 lines.append(
-                    f"\n{tag} **{a['label']}**: {a.get('value','?')}{a.get('unit','')} "
-                    f"({direction}{abs(sigma)}σ, 均值={anomaly_info.get('mean','?')})"
+                    f"\n{tag}**{a['label']}**: {a.get('value','?')}{a.get('unit','')} "
+                    f"({direction}{abs(sigma):.1f}σ, 均值={anomaly_info.get('mean','?')})"
+                )
+            elif level == 'qualitative':
+                # CAPEX/折旧比等无σ的定性指标
+                sl = a.get('supply_label', '')
+                lines.append(
+                    f"\n[定性信号] **{a['label']}**: {a.get('value','?')}{a.get('unit','')} "
+                    f"→ {sl}"
                 )
             else:
-                lines.append(f"\n **{a['label']}**: {a.get('value','?')}")
+                lines.append(f"\n **{a['label']}**: {a.get('value','?')}{a.get('unit','')}")
             if a.get('interpretation'):
                 lines.append(f"   → {a['interpretation']}")
             if a.get('story_check'):
@@ -1539,18 +1619,33 @@ def _build_forward_signal_panel(core: dict) -> str:
 ---
 ### 如何使用前瞻信号
 
-1. **异常信号 = 必须响应的硬约束**:
-   - 信号方向与故事假设一致 → 在 reasoning_trace 中引用，加强该情景置信度
-   - 信号方向与故事假设矛盾 → **必须在对应情景的 scenario_narrative 中解释矛盾**，并相应调整概率/参数
-   - 忽略异常信号会导致估值系统性偏差
+**前瞻信号管的是"脚下的路好不好走"——近期1-2个季度的执行现实。事件管的是"天花板在哪"——中长期结构性方向。两者各管各的时间维度，不构成逻辑矛盾。**
 
-2. **正常信号 = 旁证**:
-   - 可在参数聚焦中作为辅助证据引用
-   - 不要因为信号正常就默认"无事发生"——正常范围内也可能掩盖结构性变化
+1. **异常信号 = 必须响应，不可跳过**:
+   - **必须在 reasoning_trace 中逐条回应**每个 [严重异常]/[显著异常]/[值得关注] 信号。
+     格式: "前瞻信号-{指标名}: 当前值={value}(σ={sigma}), 方向={up/down}。解读: ...。参数影响: ..."
+   - 信号与事件方向一致 → 加强该情景置信度，在对应参数中反映
+   - 信号与事件方向矛盾 → **不改变事件方向（事件管终局）**，但调整近期路径参数:
+     * 合同负债↓ + 事件 bullish → base CAGR 下调、bear 概率上调（近期不顺但终局不改）
+     * 存货↑ + 事件 bullish → 区分战略性备货还是被动积压（见下方存货判定）
+   - 忽略异常信号会导致估值系统性偏差——LLM-2 会验证你是否响应了每个信号
 
-3. **缺失类别** → 用 TTM 快照和定性素材替代判断，在 data_gaps 中标注
+2. **存货异常特别判定**（最容易被误读的前瞻信号）:
+   - 存货↑(>1σ) + 上游涨价/产能紧张 + 公司处于扩产期 → **战略性备货(bullish)** → 上调bull毛利率(锁定低成本库存)
+   - 存货↑(>1σ) + 营收下滑 + 下游需求疲软 → **被动积压(bearish)** → 上调bear概率
+   - 不确定时 → 在 data_gaps 中写明"需确认存货结构(原材料vs产成品)"
 
-4. **单位**: 所有金额单位为亿元人民币(亿)，比率单位为%。sigma=偏离历史均值的标准差倍数。
+3. **CAPEX/折旧比**（定性信号，无σ）:
+   - >1.5 产能扩张期 → 未来产出弹性大，但现金流压力也大
+   - <0.8 收缩期 → 扩张动力不足，长期增长受制约
+
+4. **正常信号 ≠ 可以跳过**:
+   - 在 reasoning_trace 中至少用一句话确认: "前瞻信号-{指标}: 正常范围内，无异常"
+   - 不要因为信号正常就默认"无事发生"
+
+5. **缺失数据** → 在 data_gaps 中标注缺失了什么、为什么需要它
+
+6. **单位**: 金额=亿元人民币(亿)，比率=%。sigma=偏离历史均值的标准差倍数。
 """)
 
     return '\n'.join(lines)
@@ -1886,6 +1981,165 @@ def _parse_json(text: str) -> dict:
 # LLM-2 调用 — 多轮搜索 + 审阅 + 最终报告
 # ═══════════════════════════════════════
 
+def _build_forward_signal_panel_for_llm2(core: dict) -> str:
+    """为 LLM-2 构建前瞻指标审计面板。
+
+    与 LLM-1 版本的区别:
+    - 不只展示异常信号，展示所有指标(含正常范围值)
+    - 每个指标附带双向解读框架(牛市 vs 熊市)
+    - 附带存货战略性积压 vs 被动积压的判定条件
+    - 附带交叉信号一致性摘要
+    """
+    fw = core.get('_forward_looking', {})
+    if not fw or fw.get('status') == 'unavailable':
+        return "## E部分: 前瞻指标面板\n状态: 不可用\n"
+
+    cats = fw.get('categories', {})
+    lines = ["## E部分: 前瞻指标面板（LLM-2 审计专用）\n",
+             "逐条审计以下指标。sigma异常是线索，不是定论——你必须结合事件素材和搜索结果做独立判断。",
+             f"数据时点: 基于Agent-1提取时的财报数据。如需最新季度值，必须搜索验证。\n"]
+
+    # ── 需求验证层 ──
+    demand = cats.get('demand_reality', {})
+    lines.append("### 需求验证层")
+    for key, label, bull_note, bear_note in [
+        ('contract_liab', '合同负债',
+         '订单加速积累→上调近期CAGR。这是最强bullish前瞻信号',
+         '订单枯竭→下调近期CAGR+上调bear概率。这是最强bearish前瞻信号'),
+        ('accounts_receivable', '应收账款/营收比',
+         '营收加速时应收自然上升→正常。若应收/营收比稳定则不调参数',
+         '营收不动但应收跳升→信用风险，客户回款困难→下调利润率假设'),
+        ('prepayments', '预付账款',
+         '预付↑+合同负债↑=主动锁产能→bullish，上调base概率',
+         '预付↓=采购意愿下降→bearish，上调bear概率'),
+    ]:
+        data = demand.get(key, {})
+        if data and isinstance(data, dict):
+            v = data.get('value', '?')
+            unit = data.get('unit', '')
+            anom = data.get('anomaly', {})
+            sigma_val = anom.get('sigma', None)
+            level = anom.get('level', 'normal') if anom else 'normal'
+            direction = anom.get('direction', 'flat') if anom else 'flat'
+
+            if sigma_val is not None and not (isinstance(sigma_val, float) and sigma_val != sigma_val):
+                sigma_str = f"σ={sigma_val:+.1f}"
+            else:
+                sigma_str = "σ=无数据"
+
+            if level == 'extreme':
+                tag = '[严重异常] '
+            elif level == 'significant':
+                tag = '[显著异常] '
+            elif level == 'elevated':
+                tag = '[值得关注] '
+            else:
+                tag = ''
+
+            lines.append(f"\n**{tag}{label}**: {v}{unit} ({sigma_str}, 方向={direction}, 级别={level})")
+            lines.append(f"  → 牛市解读: {bull_note}")
+            lines.append(f"  → 熊市解读: {bear_note}")
+
+    # ── 供给就绪层 ──
+    supply = cats.get('supply_readiness', {})
+    lines.append("\n### 供给就绪层")
+    for key, label, bull_note, bear_note in [
+        ('inventory', '存货',
+         '上游涨价+公司扩产+需求增长→战略性备货(bullish)，上调bull毛利率。'
+         '**必须搜索存货结构(原材料vs产成品)来确认**',
+         '需求疲软+营收下滑→被动积压(bearish)，上调bear概率。'
+         '**必须搜索行业供需状态来确认**'),
+        ('cip', '在建工程',
+         '需求确定+在建高增→为增长做产能准备(bullish)',
+         '需求不明+在建高增→过度扩张，未来产能过剩(bearish)'),
+        ('capex_depr_ratio', 'CAPEX/折旧比',
+         '>1.5且需求确定→扩张期，未来产出弹性大',
+         '>1.5且需求不明→资本开支浪费；<0.8→收缩期，增长受制约'),
+    ]:
+        data = supply.get(key, {})
+        if data and isinstance(data, dict):
+            v = data.get('value', '?')
+            unit = data.get('unit', '')
+            anom = data.get('anomaly', {})
+            sigma_val = anom.get('sigma', None)
+            level = anom.get('level', 'normal') if anom else 'normal'
+            direction = anom.get('direction', 'flat') if anom else 'flat'
+
+            if sigma_val is not None and not (isinstance(sigma_val, float) and sigma_val != sigma_val):
+                sigma_str = f"σ={sigma_val:+.1f}"
+            else:
+                sigma_str = "σ=无数据"
+
+            tag = ''
+            if level == 'extreme':
+                tag = '[严重异常] '
+            elif level == 'significant':
+                tag = '[显著异常] '
+            elif level == 'elevated':
+                tag = '[值得关注] '
+
+            # CAPEX/折旧比额外显示定性标签
+            extra = ''
+            if key == 'capex_depr_ratio' and data.get('supply_label'):
+                extra = f" → {data['supply_label']}"
+
+            lines.append(f"\n**{tag}{label}**: {v}{unit} ({sigma_str}, 方向={direction}, 级别={level}){extra}")
+            lines.append(f"  → 牛市解读: {bull_note}")
+            lines.append(f"  → 熊市解读: {bear_note}")
+
+    # ── 盈利弹性 + 管理层信号 ──
+    earnings = cats.get('earnings_elasticity', {})
+    if earnings:
+        interp = earnings.get('interpretation', '')
+        story_check = earnings.get('story_check', '')
+        lines.append(f"\n### 盈利弹性 — 产品结构")
+        if interp:
+            lines.append(f"  解读: {interp}")
+        if story_check:
+            lines.append(f"  叙事检验: {story_check}")
+
+    mgmt = cats.get('management_guidance', {})
+    if mgmt:
+        forecast = mgmt.get('forecast', {})
+        if forecast.get('type'):
+            lines.append(f"\n### 管理层信号")
+            lines.append(f"  业绩预告: {forecast.get('type')} {forecast.get('np_change_range','?')}")
+            if forecast.get('interpretation'):
+                lines.append(f"  解读: {forecast['interpretation']}")
+
+    # ── 存货战略性积压判定条件 ──
+    lines.append(f"""
+### 存货结构特别判定（存货异常增加时必须执行）
+
+**战略性备货（bullish）的判断条件**（满足2+条→bullish）:
+1. 事件素材或搜索结果显示上游原材料涨价/产能紧张/供应链风险
+2. 公司处在产能扩张期（CAPEX/折旧 > 1.5）
+3. 下游需求在增长（营收增速 > 10%）或事件描述需求爆发
+4. 合同负债/预付款同步增加（"锁产能+获订单"双确认）
+
+**被动积压（bearish）的判断条件**（满足2+条→bearish）:
+1. 营收增速连续下滑或为负
+2. 应收账款同步跳升（"货卖出去了但钱没收回来"）
+3. 行业整体需求走弱（事件或搜索可证实）
+4. 公司未处于产能扩张期
+
+**不确定时**: 搜索"{{公司名}} 存货结构 原材料 产成品"来确认
+""")
+
+    # ── 交叉信号一致性 ──
+    lines.append(f"""
+### 交叉信号一致性检查
+
+请判断以上信号是否指向同一方向:
+- 多信号同向 → 强化该方向情景的概率，在 change_log 中体现
+- 信号矛盾 → 不确定性高，base 概率应占主导，在 narrative 中说明矛盾
+- 所有信号正常 → 检查是否因数据不足(σ=nan)而漏检，不要默认为"一切正常"
+- **与LLM-1对照**: 在 reasoning_trace 中找LLM-1是否回应了每个信号。未回应=遗漏→你必须补充
+""")
+
+    return '\n'.join(lines)
+
+
 def _call_llm2(
     llm1_output: dict,
     computed: dict,
@@ -2001,6 +2255,9 @@ SOTP触发: {mn.get('sotp_triggered', False)}
 
 ## 预搜索结果
 {volc_pre_search if volc_pre_search else '无预搜索结果'}
+
+## E部分: 前瞻指标面板（必审——任务0.5）
+{_build_forward_signal_panel_for_llm2(core)}
 """
 
     # ── 多轮对话 + 并行搜索 ──

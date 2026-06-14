@@ -193,28 +193,55 @@ def compute_forward_signals(
 
 
 def _collect_anomalies(cat1, cat2, cat4, cat5) -> list[dict]:
-    """收集所有类别中异常等级 >= 'significant' 的信号。"""
+    """收集所有类别中异常等级 >= 'elevated' 的信号。
+
+    三级异常标记:
+    - extreme (>3σ): 严重偏离，几乎可以肯定有问题
+    - significant (>2σ): 显著偏离，需要严肃对待
+    - elevated (>1σ): 值得关注，早期预警信号——大多数有意义的异常在这个级别
+    """
     result = []
+    # 包含 CAPEX/折旧比的定性信号（从不触发σ异常但信息量高）
+    if cat2 and not cat2.get('_note'):
+        cdr = cat2.get('capex_depr_ratio', {})
+        if isinstance(cdr, dict) and cdr.get('supply_label'):
+            result.append({
+                'category': '供给准备度',
+                'signal': 'capex_depr_ratio',
+                'label': cdr.get('label', 'CAPEX/折旧比'),
+                'value': cdr.get('value'),
+                'unit': cdr.get('unit', ''),
+                'anomaly': {
+                    'level': 'qualitative',
+                    'sigma': None,
+                    'direction': 'flat',
+                    'mean': None,
+                    'std': None,
+                },
+                'supply_label': cdr.get('supply_label', ''),
+                'interpretation': cdr.get('interpretation', ''),
+                'story_check': '',
+            })
+
     for category, signals in [('需求真实性', cat1), ('供给准备度', cat2),
                                 ('现金流质量', cat4), ('管理层预期', cat5)]:
         if not signals or signals.get('_note'):
             continue
-        # 提取带 anomaly 标记的子信号
         for key, val in signals.items():
             if isinstance(val, dict) and 'anomaly' in val:
                 a = val['anomaly']
-                if a.get('level') in ('extreme', 'significant'):
+                if a.get('level') in ('extreme', 'significant', 'elevated'):
                     result.append({
                         'category': category,
                         'signal': key,
                         'label': val.get('label', key),
                         'value': val.get('value'),
+                        'unit': val.get('unit', ''),
                         'anomaly': a,
                         'interpretation': val.get('interpretation', ''),
                         'story_check': val.get('story_check', ''),
                     })
             elif isinstance(val, dict) and 'flag' in val and val['flag']:
-                # 管理层预期等定性信号
                 result.append({
                     'category': category,
                     'signal': key,
@@ -223,10 +250,11 @@ def _collect_anomalies(cat1, cat2, cat4, cat5) -> list[dict]:
                     'flag': val['flag'],
                     'interpretation': val.get('interpretation', ''),
                 })
-    # 按异常等级排序: extreme > significant
+    # 按异常等级排序: extreme > significant > elevated > qualitative
+    _level_order = {'extreme': 0, 'significant': 1, 'elevated': 2, 'qualitative': 3}
     result.sort(key=lambda x: (
-        0 if x.get('anomaly', {}).get('level') == 'extreme' else 1,
-        -(abs(x.get('anomaly', {}).get('sigma', 0)))
+        _level_order.get(x.get('anomaly', {}).get('level', ''), 4),
+        -(abs(x.get('anomaly', {}).get('sigma', 0) or 0))
     ))
     return result
 
