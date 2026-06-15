@@ -110,21 +110,25 @@ Agent-2a 已完成叙事诊断，你必须信任其结论。从用户消息中�
 
 **③ 事件 — 冲击投资地图的变量**
 
-这是**改变了什么**。两部分素材:
-- **事件本身**（原始事件、事件研判、背景知识）：产能、价格、供需缺口的**当前**数据——估值参数的主要锚定来源，优先于地图中的历史基线。
-- **个股路线**（投资主题、发展推演、催化节点、逆向风险）：公司的既定轨迹。事件变量将作用于这条路线——加速、跃迁、还是偏离？逆向风险（adversarial_thinking）约束 bear 情景的证伪路径，催化节点（future）是里程碑时间线的补充。
+三份事件分析报告:
 
-**三者的关系**: 地图告诉你"事件冲击前的基本面"，事件告诉你"基本面变了多少"，你的参数 = 地图财务基线 + 事件冲击带来的基本面变化。估值锚由 2a 确定，不可推翻。
+- **事件推演 (event_deduction)**: 事件→传导链→财务指标的完整路径。含: 每步传导机制与量化依据、关键发现(量化数字+历史案例+多方博弈)、脆弱性与证伪条件、市场共识对照表(一致/超出/矛盾)、瓶颈节点(硬约束性质/量化边界/突破路径)。
+
+- **逆向推演 (adversarial_thinking)**: 对投资逻辑的攻击测试。含: 每个关键假设的存活强度(强/中/弱)、降级条件、击穿逻辑链的信号组合。
+
+- **催化日历 (future)**: 结构化时间表。每行含P0/P1/P2优先级+证实/证伪条件。日历风险提示标注催化真空期和负面密集期。
+
+三者与 baseline 的关系: baseline 是事件前的静态画像。事件推演告诉你"变了多少"、逆向推演告诉你"最可能在哪断"、催化日历告诉你"什么时候验证"。
 
 **关键**: 估值锚和计价程度以 2a 为准（不可推翻）。当事件素材中的当前数据与地图中的历史基线冲突时，以事件素材为准——事件已经改变了现状。
 
 **⚠️ 事件量化锚点——赋值前必须提取并回应:**
 
-读完事件素材后，从三个来源提取量化锚点: ①事件原文 ②背景知识 ③baseline（注意 baseline 可能有滞后）。在 reasoning_trace 的"清单项1"末尾列出。格式:
+读完事件素材后，从两个来源提取量化锚点: ①事件原文 ②baseline（注意 baseline 可能有滞后）。在 reasoning_trace 的"清单项1"末尾列出。格式:
 
 ```
 [事件量化锚点 — 含来源标注]
-- 收入/产能/时间: (来源: 事件正文/背景知识/行业全貌, 如 3000吨×200万/吨=60亿)
+- 收入/产能/时间: (来源: 事件正文/事件推演/投资地图, 如 3000吨×200万/吨=60亿)
 - 价格: (来源: ...)
 - 利润率: (来源: ...)
 - 估值倍数: (来源: ...)
@@ -1787,26 +1791,26 @@ def _call_llm_scenario(
 > 历史财务数据（见下一节）反映的是事件冲击前的过去状态——只用于理解冲击幅度和商业模式，
 > 不可替代事件素材中的产能/价格/利用率作为当前情形的基准。
 
-## 事件变量
+## 事件原始文本
 {event_data.get('raw_event_text','')}
 
 ## 事件研判
 {event_data.get('preliminary_reasoning','')}
 
-## 背景知识
-{event_data.get('knowledge_supplement','')}
-
-## {stock}的投资主题
-{event_data.get('investment_theme','')}
-
-## {stock}的发展推演
+## 事件推演 (传导链→关键发现→脆弱性与证伪→市场共识对照→瓶颈节点)
 {event_data.get('event_deduction','')}
 
-## {stock}的催化节点
+## 逆向推演 (各假设存活强度+降级条件+击穿信号组合)
+{event_data.get('adversarial_thinking','')}
+
+## 催化日历 (P0/P1/P2优先级+证实/证伪条件+日历风险提示)
 {event_data.get('future','')}
 
-## {stock}的逆向风险
-{event_data.get('adversarial_thinking','')}
+## 投资主题
+{event_data.get('investment_theme','')}
+
+## 行业研究
+{event_data.get('industry_expert_research','')}
 
 ## 行业全貌
 {event_data.get('industry_expert_research','')}
@@ -1930,7 +1934,8 @@ def _call_llm_scenario(
 def _parse_json(text: str) -> dict:
     """从 LLM 回复中提取 JSON（增强容错）。
 
-    处理: markdown代码块、前置/后置自然语言、嵌套括号。
+    处理: markdown代码块、前置/后置自然语言、嵌套括号、
+          JSON字符串内的裸换行/控制字符(LLM长输出常见bug)。
     """
     text = text.strip()
 
@@ -1944,7 +1949,6 @@ def _parse_json(text: str) -> dict:
     if not text.startswith("{"):
         s = text.find("{")
         if s >= 0:
-            # 括号深度计数，找配对的 }
             depth = 0
             e = -1
             for i in range(s, len(text)):
@@ -1958,24 +1962,69 @@ def _parse_json(text: str) -> dict:
             if e > s:
                 text = text[s:e + 1]
 
-    try:
-        parsed = json.loads(text)
-        if not isinstance(parsed, dict):
-            raise ScenarioError("E301", f"JSON顶层非object(type={type(parsed).__name__})", {"raw": text[:500]})
-        return parsed
-    except json.JSONDecodeError:
-        # 最后的 fallback: 尝试简单的 { 到 } 截取
-        s = text.find("{")
-        e = text.rfind("}")
-        if s >= 0 and e > s:
+    # 3. 容错解析: 逐字符修复裸控制字符（\x00-\x1f 中除 \t \n \r 外）
+    #    迭代修复——每次 json.loads 失败时找到报错位置，转义该字符后重试。
+    import json as _json
+    MAX_RETRIES = 20
+    for _retry in range(MAX_RETRIES):
+        try:
+            parsed = _json.loads(text)
+            if not isinstance(parsed, dict):
+                raise ScenarioError("E301", f"JSON顶层非object(type={type(parsed).__name__})", {"raw": text[:500]})
+            return parsed
+        except _json.JSONDecodeError as e:
+            if "control character" in str(e) or "Invalid \\escape" in str(e):
+                pos = e.pos
+                if pos < len(text):
+                    ch = text[pos]
+                    # 裸换行或制表符 → 转义
+                    if ch == '\n':
+                        text = text[:pos] + '\\n' + text[pos+1:]
+                        continue
+                    elif ch == '\r':
+                        text = text[:pos] + '\\r' + text[pos+1:]
+                        continue
+                    elif ch == '\t':
+                        text = text[:pos] + '\\t' + text[pos+1:]
+                        continue
+                    elif ord(ch) < 32:
+                        text = text[:pos] + ' ' + text[pos+1:]
+                        continue
+            # 其他 JSON 错误（如 "Expecting ',' delimiter"）→ 不可修复，跳出
+            break
+
+    # 4. 最后的 fallback: 简单的 { 到 } 截取 + 再试一次裸换行修复
+    s = text.find("{")
+    e = text.rfind("}")
+    if s >= 0 and e > s:
+        fallback = text[s:e + 1]
+        # 再次尝试修复裸换行
+        for _ in range(MAX_RETRIES):
             try:
-                parsed2 = json.loads(text[s:e + 1])
+                parsed2 = _json.loads(fallback)
                 if not isinstance(parsed2, dict):
                     raise ScenarioError("E301", f"JSON非object(type={type(parsed2).__name__})", {"raw": text[:500]})
                 return parsed2
-            except json.JSONDecodeError:
-                pass
-        raise ScenarioError("E301", "JSON解析失败", {"raw": text[:500]})
+            except _json.JSONDecodeError as exc:
+                if "control character" in str(exc) or "Invalid \\escape" in str(exc):
+                    pos = exc.pos
+                    if pos < len(fallback):
+                        ch = fallback[pos]
+                        if ch == '\n':
+                            fallback = fallback[:pos] + '\\n' + fallback[pos+1:]
+                            continue
+                        elif ch == '\r':
+                            fallback = fallback[:pos] + '\\r' + fallback[pos+1:]
+                            continue
+                        elif ch == '\t':
+                            fallback = fallback[:pos] + '\\t' + fallback[pos+1:]
+                            continue
+                        elif ord(ch) < 32:
+                            fallback = fallback[:pos] + ' ' + fallback[pos+1:]
+                            continue
+                break
+
+    raise ScenarioError("E301", "JSON解析失败", {"raw": text[:500]})
 
 
 # ═══════════════════════════════════════

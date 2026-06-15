@@ -42,7 +42,7 @@ RNPV_SCENARIO_PROMPT = """# 你是创新药管线估值分析师
 没有故事的数字是尸体，没有数字的故事是童话。
 
 创新药管线估值的两个维度：
-- **叙事层**: 这家公司的管线组合解决什么临床需求？FDA/NDA/Ph3 各阶段有哪些催化剂？事件推演中的证实/证伪节点是什么？
+- **叙事层**: 这家公司的管线组合解决什么临床需求？FDA/NDA/Ph3 各阶段有哪些催化剂？事件推演中的传导链量化和证伪条件是什么？
 - **参数层**: PoS（成功率）、峰值销售、折现率、时间线。成熟业务的 PE/PS 倍数。
 
 铁律：事件叙事决定参数的输入，参数反推叙事的可信度。二者必须严丝合缝。
@@ -80,8 +80,8 @@ RNPV_SCENARIO_PROMPT = """# 你是创新药管线估值分析师
 **成熟业务净利必须基于事件催化剂做前瞻估计，不能直接用 TTM：**
 - TTM 净利是过去 12 个月的实际业绩——它是地板，不是天花板
 - 你的任务是判断：基于事件催化剂（FDA 获批、BD 合作、新品上市），未来 12-24 个月的净利会到多少
-- 从事件推演（event_deduction）中提取收入/利润传导节点：FDA 批准→海外销售起量、BD 首付款→其他收益、新适应症获批→国内份额扩张
-- 投资主题（investment_theme）中的市场空间数据是前瞻估计的核心依据
+- 从事件推演中提取传导链和量化依据：FDA 批准→海外销售起量、BD 首付款→其他收益、新适应症获批→国内份额扩张
+- 事件推演中的关键发现（量化+历史案例）和瓶颈节点是前瞻估计的核心依据
 - base 净利 = TTM × (1 + 催化剂驱动的增速)，增速必须有事件依据
 - bull 净利 = 催化剂超预期兑现（放量更快、定价更高、适应症扩展）
 - bear 净利 = 催化剂落空（商业化执行失败、竞品压制），可低于 TTM
@@ -156,19 +156,18 @@ rNPV = PoS% × 峰值销售(亿) × 3 / (1 + 折现率%)^到峰值年数
 
 ### 事件驱动调节
 
-用户消息中的 **发展推演** 包含三阶段（T+30/90/180 天）的证实/证伪节点和转移概率。你必须：
-1. 引用证实/证伪节点来校准 PoS——已发生的证实节点提升 PoS，证伪节点下调 PoS
-2. 引用 **逆向风险** 的五维风险（核心假设脆弱性/利益相关方博弈/反身性/产业链挤压/外部冲击）来校准 bear 概率
-3. 引用 **投资主题** 的市场空间/竞争格局数据来校准峰值销售
-4. 参考 **事件变量**（原始事件、事件研判）理解外部催化剂的确定性和结构性强弱
-5. 参考 **行业全貌** 的竞争格局判断个股在产业链中的议价能力和利润率可持续性
+用户消息中的事件分析报告包含证实/证伪节点、存活强度、降级条件和催化时间表。你必须：
+1. 引用事件推演中的传导链量化依据和脆弱性分析来校准 PoS
+2. 引用逆向推演中的存活强度(强/中/弱)和降级条件来校准 bear 概率
+3. 引用投资主题和行业研究中的市场空间/竞争格局数据来校准峰值销售
+4. 引用催化日历中的P0/P1/P2优先级和日历风险提示来校准时间维度参数
 
 **事件计价**: Agent-2a 已判断事件的计价程度。这是情景推演的起点——不是重新判断事件好不好，而是判断市场已经 price in 了多少。
 
 ## 思维禁区
 
 - 禁止黑箱输出估值数字——你只输出参数，代码完成算术
-- 禁止忽视事件推演中的证实/证伪节点——那是参数校准的核心依据
+- 禁止忽视事件推演中的脆弱性分析和证伪条件——那是参数校准的核心依据
 - 禁止对已获批药物下调 PoS——FDA/NMPA 批文是不可逆的事实
 - 禁止模板化概率——bear 概率来自因果链条的独立环节数，不是固定模板
 - 禁止参数脱节——PoS、峰值销售、折现率必须与临床阶段和竞争格局一致
@@ -180,7 +179,7 @@ rNPV = PoS% × 峰值销售(亿) × 3 / (1 + 折现率%)^到峰值年数
 ```json
 {
   "reasoning_trace": [
-    "清单项1-素材吸收: 从发展推演/逆向风险/投资主题中提取关键证实/证伪节点和市场数据，理解事件变量的性质和影响范围",
+    "清单项1-素材吸收: 从事件推演/逆向推演/投资主题中提取传导链量化依据、存活强度和证伪条件，理解事件变量的性质和影响范围",
     "清单项2-管线分析: 逐药评估临床阶段/竞争格局/催化剂时间线，引用2a诊断结论",
     "清单项3-三情景因果推演: bear/base/bull各情景的核心假设和因果链条",
     "清单项4-参数赋参: 各情景逐药赋参(需满足单调递增 bear<base<bull)",
@@ -480,19 +479,21 @@ def _build_user_message(
     # ── 事件与个股素材（全量，不截断）──
     event_sections = []
     if event_data.get("raw_event_text"):
-        event_sections.append("## 事件变量\n" + str(event_data["raw_event_text"]))
+        event_sections.append("## 事件原始文本\n" + str(event_data["raw_event_text"]))
     if event_data.get("preliminary_reasoning"):
         event_sections.append("## 事件研判\n" + str(event_data["preliminary_reasoning"]))
-    if event_data.get("knowledge_supplement"):
-        event_sections.append("## 背景知识\n" + str(event_data["knowledge_supplement"]))
+    if event_data.get("event_deduction"):
+        event_sections.append("## 事件推演 (传导链→关键发现→脆弱性与证伪→市场共识对照→瓶颈节点)\n" + str(event_data["event_deduction"]))
+    if event_data.get("adversarial_thinking"):
+        event_sections.append("## 逆向推演 (各假设存活强度+降级条件+击穿信号组合)\n" + str(event_data["adversarial_thinking"]))
+    if event_data.get("future"):
+        event_sections.append("## 催化日历 (P0/P1/P2优先级+证实/证伪条件+日历风险提示)\n" + str(event_data["future"]))
     if event_data.get("investment_theme"):
         event_sections.append(f"## {stock_name}的投资主题\n" + str(event_data["investment_theme"]))
-    if event_data.get("event_deduction"):
-        event_sections.append(f"## {stock_name}的发展推演\n" + str(event_data["event_deduction"]))
-    if event_data.get("adversarial_thinking"):
-        event_sections.append(f"## {stock_name}的逆向风险\n" + str(event_data["adversarial_thinking"]))
     if event_data.get("industry_expert_research"):
-        event_sections.append("## 行业全貌\n" + str(event_data["industry_expert_research"]))
+        event_sections.append("## 行业研究\n" + str(event_data["industry_expert_research"]))
+    if event_data.get("knowledge_supplement"):
+        event_sections.append("## 背景补充\n" + str(event_data["knowledge_supplement"]))
     event_text = "\n\n".join(event_sections)
 
     # ── Agent-2a 诊断（如有）──

@@ -746,30 +746,23 @@ def build_unified_user_message(
 - asset离谱但earnings合理 → 市场在定价资产重估
 - 哪个最离谱 ≠ 哪个错误 —— 它指向市场在交易的方向
 
-# 四、事件语料
+# 四、事件语料 — 事件对公司的增量影响
 
-## 事件背景 (Agent-0)
+## 原始事件
 {event_data.get('raw_event_text','')}
 
-## 投资主题
-{event_data.get('investment_theme','')}
-
-## 事件推演传导链
+## 事件推演 (传导链→关键发现→脆弱性与证伪→市场共识对照→瓶颈节点)
 {event_data.get('event_deduction','')}
 
-## 空头审查/反方观点
+## 逆向推演 (各假设存活强度+降级条件+击穿信号组合)
 {event_data.get('adversarial_thinking','')}
 
-## 知识补充 + 行业研究
-{event_data.get('knowledge_supplement','')}
-{event_data.get('industry_expert_research','')}
-
-## 预研推理 (Agent-0 深度分析)
-响应等级: L{event_data.get('response_level','?')}（仅反映事件确定性，不直接决定概率）
-{event_data.get('preliminary_reasoning','')}
-
-## 未来催化节点
+## 催化日历 (P0/P1/P2优先级+证实/证伪条件+日历风险提示)
 {event_data.get('future','')}
+
+## 预研推理
+响应等级: L{event_data.get('response_level','?')}
+{event_data.get('preliminary_reasoning','')}
 
 {_build_volc_section(volc_data)}
 
