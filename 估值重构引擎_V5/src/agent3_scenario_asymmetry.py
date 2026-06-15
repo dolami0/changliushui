@@ -561,7 +561,8 @@ scenario_details 为字典 {"bear":{...}, "base":{...}, "bull":{...}}，每个�
     "I": """Model I - Earnings normalization:
 scenario_details 为字典 {"bear":{...}, "base":{...}, "bull":{...}}，每个情景含: probability, normalized_roic_pct, normalized_pe, target_mcap_yi, upside_pct, valuation_method, scenario_narrative(<=60字因果剧本)""",
     "B": """Model B - PS+TAM (revenue driven):
-scenario_details 为字典 {"bear":{...}, "base":{...}, "bull":{...}}，每个情景含: probability, revenue_growth_3y_cagr_pct, target_ps, tam_penetration_pct, target_mcap_yi, upside_pct, valuation_method, scenario_narrative(<=60字因果剧本)""",
+scenario_details 参数: probability, [revenue_growth_3y_cagr_pct 或 forward_revenue_3y_yi], target_ps, tam_penetration_pct
+0->1阶跃业务(current rev<5%): 用 forward_revenue_3y_yi = TAM*冲击后3年市占率, 不用CAGR从0推导""",
     "D": """Model D - PB-ROE (asset quality driven):
 scenario_details 为字典 {"bear":{...}, "base":{...}, "bull":{...}}，每个情景含: probability, target_roe_pct, target_pb, payout_ratio_pct, target_mcap_yi, upside_pct, valuation_method, scenario_narrative(<=60字因果剧本)""",
     "H": """Model H - NAV asset revaluation:
@@ -693,28 +694,22 @@ LLM2_SYSTEM_PROMPT = """# 你是估值审阅官
 - **C 部分: 当前市场定价数据** — 市值、PE、PS、PB、隐含增速、BS画像——此时可见
 - **D 部分: 完整上下文** — baseline报告、事件数据、2a诊断结论、财务数据
 
-## 多轮对话与搜索工具
+## 搜索工具（单轮结构化查询）
 
-你和一个更大的对话系统在进行**多轮对话**——不是一次性问答。
+你不是在多轮对话。把所有搜索需求打包成**一个结构化查询**，一次性发给火山引擎。
 
-**对话机制**:
-- 第 1 轮: 你收到完整上下文（A/B/C/D 部分），开始审阅
-- 如果你需要搜索: 在 JSON 输出中包含 `search_requests` 字段。代码会执行搜索（并行），然后将你的本轮输出作为 assistant 消息、搜索结果作为 user 消息追加到对话历史
-- 第 2 轮: 你收到完整的对话历史（第 1 轮的上下文 + 你的输出 + 搜索结果），可以基于新信息继续审阅
-- 第 3 轮: 同上，最多 3 轮，**每轮最多 2 条搜索**——精炼查询，确保每条带来可操作的增量信息
-- 当你不再需要搜索时: **不输出 search_requests 字段**，直接输出最终报告。对话结束。
+**流程**: 你输出含 `volc_query` 的JSON → 代码执行搜索 → 结果注入 → 再次调用你输出最终报告
 
-**search_requests 格式**（每轮最多 2 条）:
+**volc_query 格式**（必填——火山引擎结构化查询）:
 ```json
-"search_requests": [
-  {"query": "精炼的搜索查询", "purpose": "要填补什么/验证什么", "source": "volc"}
-]
+"volc_query": "请提供以下信息:\n1. [公司] [业务] [数据需求]——[用途]\n2. [客户/行业交叉验证]\n3. ..."
 ```
-- `source`: `"volc"` = 火山引擎（中文研报/公告/行业数据，默认）；`"bocha"` = 博查外网搜索（全球信息、海外题材、英文资料）。涉及 FDA/海外临床/全球供应链/国际竞对时用 bocha，国内数据用 volc。
+用编号组织所有子问题。每个子问题写清三要素: 查什么、为什么、期望格式。
+火山支持自然语言结构化查询——把所有data_gaps、事件锚点验证、前瞻信号搜索打包进一个query。
 
-**搜索范围限制**: 只搜 data_gaps 和 change_request 中列出的具体信息缺口。禁止搜索任何公司的 PE/PS/PB 估值倍数——可比公司信息来自 baseline 产业位置和你的行业知识。
+**bocha_query**（可选，仅海外题材）: 同上，博查外网搜索。
 
-**搜索的第一优先级——验证事件锚点**: 事件中的量化锚点（价格、产能、时间节点）可能是分析师推断，不是事实。每条锚点都要搜一下: 当前真实报价是多少？产能建设进度到哪了？趋势是加速还是延迟？用搜索到的当前数据来校准 LLM-1 对事件的打折幅度——如果搜索证实涨价确实在进行、产能确实在推进，你就不能无理由地大幅打折。
+**铁律**: 有data_gaps必须输出volc_query。禁止搜PE/PS/PB。搜到矛盾→change_log修正。
 
 ## 任务（按顺序）
 
@@ -2154,7 +2149,7 @@ def _call_llm2(
     roic_warnings: list | None = None,
     mandatory_xcheck: dict | None = None,
     volc_pre_search: str = "",
-    max_rounds: int = 3,
+    max_rounds: int = 1,
     system_prompt: str | None = None,
 ) -> dict:
     """LLM-2: 多轮搜索审阅 + 最终报告。
@@ -2361,8 +2356,19 @@ SOTP触发: {mn.get('sotp_triggered', False)}
                 print(f"  [LLM-2] 重试仍失败，使用空结果", flush=True)
                 result = {"_parse_error": "JSON解析失败(重试后仍失败)", "change_log": [], "narrative": ""}
 
-        # 检查是否需要更多搜索
-        search_requests = result.get("search_requests", [])
+        # volc_query 兼容: 单轮结构化查询 → 转为 search_requests 格式
+        volc_q = result.get("volc_query", "")
+        bocha_q = result.get("bocha_query", "")
+        if volc_q or bocha_q:
+            sq = []
+            if volc_q:
+                sq.append({"query": volc_q, "purpose": "结构化综合查询(含所有子问题)", "source": "volc"})
+            if bocha_q:
+                sq.append({"query": bocha_q, "purpose": "外网综合查询", "source": "bocha"})
+            result = {k: v for k, v in result.items() if k not in ("volc_query", "bocha_query")}
+            search_requests = sq
+        else:
+            search_requests = result.get("search_requests", [])
         if not search_requests:
             # 无更多搜索 → 但在返回前检查是否"空心输出"（JSON 成功但关键字段为空）
             # 注意: 格式重试已处理 parse failure；这里处理 parse success but hollow
@@ -2732,11 +2738,15 @@ def _compute_scenario_mcap(model: str, params: dict, core: dict) -> float | None
             return round(ic * roic / 100 * pe, 1)
         return None
     elif m == "B":
-        # 收入乘数: mcap = 3年复利增长后的收入 × PS
-        cagr = params.get("revenue_growth_3y_cagr_pct", 0)
+        forward_rev = params.get("forward_revenue_3y_yi")
+        if forward_rev and forward_rev > 0:
+            future_revenue = forward_rev
+        else:
+            cagr = params.get("revenue_growth_3y_cagr_pct", 0)
+            future_revenue = revenue * (1 + cagr / 100) ** 3 if revenue > 0 else 0
         ps = params.get("target_ps", 0)
-        if revenue > 0 and ps > 0:
-            return round(revenue * (1 + cagr / 100) ** 3 * ps, 1)
+        if future_revenue > 0 and ps > 0:
+            return round(future_revenue * ps, 1)
         return None
     elif m == "D":
         # PB-ROE: mcap = equity × PB

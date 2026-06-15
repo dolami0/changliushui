@@ -76,11 +76,22 @@ ROUTE_JUDGE_V8_PROMPT = """你是估值路由判官。你的任务是一次调�
 
 从"投资主题"和"事件推演"中提取: 市场在讲什么故事？这个故事的核心变量是什么？
 
+**⚠️ 第一步（必须最先做）: SOTP判定**:
+SOTP不是锚——它是估值方法论。在判断任何锚之前，你必须回答一个问题:
+
+**> 用单一PE或单一PS给这家公司的全部业务估值，会不会严重扭曲至少一个业务的价值？**
+
+如果答案是"会" → primary_anchor = sotp, primary_model = J。不需要证明给谁看——你自己的判断就够了。
+SOTP内部各分部仍由事件驱动各自的锚和模型，不矛盾。
+
+如果答案是"不会" → 继续第二步。
+
+**第二步: 叙事→锚判断（仅在不需要SOTP时执行）**:
+
 - 故事讲的是"收入爆发/TAM扩张/市占率提升" → 锚偏向 revenue
 - 故事讲的是"盈利拐点/利润率修复/ROIC改善" → 锚偏向 earnings
 - 故事讲的是"资产重估/隐蔽资产/NAV" → 锚偏向 asset
 - 故事讲的是"管线获批/临床数据/峰值销售" → 锚偏向 pipeline
-- 故事涉及"多业务估值范式不同" → 可能需要 SOTP
 
 **叙事驱动指标，不是指标驱动叙事。** 先读懂故事，再用数据验证。
 
@@ -199,11 +210,24 @@ ROUTE_JUDGE_V8_PROMPT = """你是估值路由判官。你的任务是一次调�
 
 **注意: 不要机械套用阈值。** 老业务占比20%或40%不是硬性分界线——关键是"混在一起会不会产生系统性偏差"。如果你判断会 → 选J。
 
-**当 primary_model=J 时，必须填写 `sotp_primary_segment_model`:**
-为叙事主锚分部选择最合适的模型——告诉SOTP管线叙事分部该用什么参数体系:
-- primary_anchor=revenue → B
-- primary_anchor=earnings → A/K/G (选K需满足NOPAT起点和终局条件)
-- primary_anchor=asset → D/H
+**当 primary_model=J 时（SOTP），各分部锚的判定规则**:
+
+`primary_anchor` 字段填 `sotp`（表示整体方法论）。各分部锚按以下规则独立判定:
+
+**事件驱动的分部** (`event_driven_segment`):
+事件改变了这个分部的什么 → 锚就落在那个维度。
+- 事件改变TAM/市占率/收入天花板 → anchor = revenue, 模型 = B
+- 事件改变利润率/成本结构/盈利能力 → anchor = earnings, 模型 = A/K/G
+- 事件改变资产价值/NAV → anchor = asset, 模型 = D/H
+将该分部信息写入 `event_driven_segment`: {segment, anchor}
+
+**其他分部**: 不由事件直接驱动，按其自身业务特征独立判定:
+- 有利润+可比PE对标 → earnings锚
+- 无利润+收入高增长 → revenue锚
+- 有利润但被周期压制 → earnings锚(正常化利润)
+- 重资产+可比PB → asset锚
+
+`sotp_primary_segment_model` 填入事件驱动分部的模型（B/A/K等），作为SOTP管线LLM-1的起点提示。
 
 ### 4d. G(PEG) 的使用约束
 

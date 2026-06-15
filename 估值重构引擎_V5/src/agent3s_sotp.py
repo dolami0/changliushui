@@ -391,10 +391,15 @@ Bear意味着事件叙事**不成立**——政策没落地/订单被抢/催化�
 | 锚 | 参数 | 代码公式 |
 |----|------|----------|
 | earnings | segment_revenue_yi, pe_target, segment_net_margin_pct | `segment_revenue_yi × 净利率% × PE` |
-| revenue | segment_revenue_yi, revenue_growth_3y_cagr_pct, target_ps | segment_revenue_yi x (1+CAGR%)^3 x target_ps |
+| revenue | segment_revenue_yi, [revenue_growth_3y_cagr_pct 或 forward_revenue_3y_yi], target_ps | 连续增长: segment_revenue_yi × (1+CAGR%)³ × target_ps. 0→1阶跃: forward_revenue_3y_yi × target_ps |
 
-**revenue 锚关键理解**: `target_ps` 是**第 3 年（终端年）的 PS**——代码把它乘以第 3 年的收入（已按 CAGR 增长 3 年）。它不是 trailing PS。
-心算校验：拿出你的参数算一遍—— segment_revenue_yi x (1 + CAGR%)^3 x target_ps ≈ 你剧本里这个分部应有的目标市值吗？如果差太远，调整 target_ps 或 CAGR。
+**revenue 锚两种增长模式**:
+- **连续增长** (成熟/成长业务): 提供 `revenue_growth_3y_cagr_pct`，代码从当前收入按CAGR复利3年到终局收入
+- **0→1阶跃** (pre-revenue/从0爆发): 当前收入≈0或极小，CAGR公式失效。**不要用CAGR从0推导**——直接基于事件冲击估3年后的收入:
+  `forward_revenue_3y_yi` = TAM × 事件驱动的市占率 × 时间线(3年后能拿到多少?)
+  例: AR光波导当前收入0.1亿，但事件(瑞声量产)打开千亿级TAM，3年后若获5%份额=50亿→forward_revenue_3y_yi=50
+
+`target_ps` 是**第3年(终端年)的PS**——不是trailing PS。心算校验: 你的终局收入×target_ps≈你剧本里的目标市值吗？
 | asset | segment_revenue_yi, target_pb, [segment_equity_yi] | `净资产 × PB`（无segment_equity_yi时按收入占比估算） |
 | pipeline | pos_pct, peak_sales_yi, discount_rate_pct | `峰值销售 × PoS% / (1+折现率%)` |
 | dcf | segment_revenue_yi, stage1_growth_pct, stage1_years(默认5), roic_assumed_pct, terminal_pe, segment_net_margin_pct | 阶段1: NOPAT逐年复利增长→FCFF=NOPAT×(1-RR), RR=g/ROIC封顶[0.3,0.9]. 阶段2: NOPAT_N×terminal_PE. 全部折现到现值 |
@@ -490,6 +495,30 @@ bear 不可推翻已发生的业务事实（如已出货产品→不应给0估�
 | **narrow_base_dominant** | 极窄, 几乎只有base | 必须有质变 | 趋势惯性保护 |
 
 **关键**: 不要用旧的 sudden/ongoing 概念。直接根据 2a 给出的 `distribution_shape` 选择对应的行。
+
+### 3a+. 事件冲击量级→分部参数幅度（SOTP核心——标准管线对齐）
+
+**在赋参数之前，必须先把事件冲击转化为每个分部的参数幅度。** SOTP的估值不是基于当前财务，而是基于事件冲击后的预期。
+
+对每个分部，回答三个问题:
+1. **事件直接冲击了哪个分部？** 冲击的是收入端(TAM/市占率)还是利润端(毛利率/净利率)？
+2. **冲击的幅度有多大？** 打折规则: 事件提供方向，实际幅度从行业参照系取中位数。例: 事件说"AR光学市场2030年3211万台(CAGR 140%)"，但你给苏大维格的CAGR不需要=140%——那是行业，公司是个体。取行业中位数增速(如80%)再打个8折(公司执行风险)。
+3. **每个分部的参数应该怎么动？**
+
+| 分部类型 | 增长模式 | 赋参方式 |
+|---------|---------|---------|
+| 成熟盈利分部 | 连续增长 | revenue_growth_3y_cagr_pct = 事件冲击后的行业增速×公司alpha折扣 |
+| 0→1爆发分部 | 阶跃增长 | **不用CAGR**。forward_revenue_3y_yi = TAM₃年 × 事件驱动的市占率 × 事件兑现概率。例: AR TAM₃年≈500亿 × 市占率5% × 兑现概率60% = 15亿 |
+| 传统稳定分部 | 低增长 | revenue_growth_3y_cagr_pct ≈ GDP增速，事件若无直接关联则不调整 |
+
+**0→1分部的forward_revenue_3y_yi推导链**（写入reasoning_trace）:
+```
+TAM估算: [行业数据来源] → 3年后总市场≈X亿
+市占率假设: 基于[竞争格局/客户验证/技术壁垒] → Y%
+事件兑现概率: 基于[事件确定性/时间线/政策持续性] → Z%
+→ forward_revenue_3y_yi = X × Y% × Z% = W亿
+同时赋 target_ps = [可比公司PS × 成长性溢价折扣]
+```
 
 ### 3b. 计价程度→upside 天花板
 
@@ -744,9 +773,9 @@ asymmetry_ratio = bull_upside / |bear_upside|
 
 ## 清单项 6: 输出
 
-- reasoning_trace 按清单项顺序组织。清单项3 必须包含以下子项（各写一条 trace，不可合并）: "清单项3a-分布形状+投资命题: ..." "清单项3b-计价天花板: ..." "清单项3c-风险映射: ..." "清单项3d-因果剧本(bear/base/bull各一段): ..." "清单项3e-约束确认: ..." "清单项3e-赋参数: ..." "清单项3e-叙事一致性检查: ..."
+- reasoning_trace 按清单项顺序组织。清单项3 必须包含以下子项（各写一条 trace，不可合并）: "清单项3a-分布形状+投资命题: ..." "清单项3a+-事件冲击量级→分部参数幅度: 对每个分部: 事件冲击了什么/幅度估算/打折理由/0→1分部写出TAM→市占率→forward_revenue推导链" "清单项3b-计价天花板: ..." "清单项3c-风险映射: ..." "清单项3d-因果剧本(bear/base/bull各一段): ..." "清单项3e-约束确认: ..." "清单项3e-赋参数: 对0→1分部明确使用forward_revenue_3y_yi而非CAGR..." "清单项3e-叙事一致性检查: ..."
 - `signal_audit`: **直接复制 2a 的 signal_audit 结论**（你不再做信号审核，只透传）
-- `data_gaps` 标注缺失的数据，引用 2a 已标注的数据异常。格式: "缺少[具体数据]，导致[具体判断]置信度下降"
+- `data_gaps` 标注缺失的数据，引用 2a 已标注的数据异常。格式: "缺少[具体数据]→影响[参数]→搜索建议:[精确搜索词]"——把搜索词写进字段，让LLM-2直接拿来搜
 - `preflight_check` 逐项自检格式: ["[OK] 清单项1素材吸收完成", "[OK] 清单项2引用2a审核结论完成", "[OK] 清单项3a-3e完成(含风险映射+约束确认+叙事一致性检查)", "[OK] 概率和=1.00", "[OK] upside单调递增,全参数经济含义自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
 - 输出纯 JSON，不要用 markdown 代码块包裹
 
@@ -795,7 +824,7 @@ asymmetry_ratio = bull_upside / |bear_upside|
     "probability_weighted_upside_pct": XX,
     "asymmetry_ratio": X.X
   },
-  "data_gaps": ["无缺口则写空数组[]。有缺口格式: 缺少[具体数据]，导致[具体判断]置信度下降"],
+  "data_gaps": ["格式: 缺少[具体数据]→影响[参数/分部]→搜索建议:[精确搜索词]。每个分部一个缺口——半导体/AR/传统各搜各的"],
   "change_request": [{"query": "搜索查询", "purpose": "填补什么数据缺口"}],
   "preflight_check": ["[OK] 清单项1完成", "[OK] 清单项2a-2d完成", "[OK] 清单项3a-3e完成", "[OK] 概率和=1.00", "[OK] 参数逐级递增,全参数自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
 }"""
@@ -809,9 +838,16 @@ SOTP_LLM2_PROMPT = """# 你是 SOTP 估值审阅官
 
 你的职责是审阅 LLM-1 的分部参数推演，对照代码计算的 SOTP 加总结果，补充缺失数据，纠正错误，输出完整最终报告。
 
-## 多轮对话与搜索（同标准管线，每轮最多 2 条搜索）
+## 搜索工具（单轮结构化查询，同标准管线）
 
-格式: `"search_requests": [{"query": "...", "purpose": "..."}]`。最终报告不输出 search_requests。
+格式: `"volc_query": "请提供以下信息:\n1. [分部1数据需求]\n2. [分部2数据需求]\n..."`。
+把所有SOTP各分部的搜索需求打包进一个结构化查询，火山引擎一次性处理。
+
+**⚠️ SOTP搜索铁律——各分部必须各自搜证**:
+1. **必须输出 volc_query**: data_gaps或change_request有内容时必须搜。SOTP的三个分部（半导体/AR/传统）各可能有独立缺口——在volc_query里各自一个子问题。
+2. **子问题覆盖所有分部**: volc_query的子问题数 >= 有数据缺口的分部数。不能三搜二漏一。
+3. **预搜索优先**: 先读D部分的volc预搜索结果，已覆盖的跳过，未覆盖的补进volc_query。
+4. **搜到关键信息→change_log**: 搜索发现与LLM-1假设矛盾（如"AR未量产"但实际已出货200万片），必须在change_log修正。
 
 ## 任务
 
@@ -855,7 +891,6 @@ LLM-2: 事件锚校验:
 你在 LLM-1 的输出基础上审阅修改，输出完整报告。包含 LLM-1 的所有字段 + 你的审阅追加:
 
 {
-  "segments": [{ "同 LLM-1，参数可能被修改" }],
   "scenario_valuation": { "scenario_details": { "bear/base/bull": { "完整参数" } } },
   "reasoning_trace": ["LLM-1: ...", "LLM-2: 审查-..."],
   "change_log": [{"path": "segments.0.base.target_ps", "old_value": 12, "new_value": 8, "reason": "...", "evidence": "..."}],
@@ -1493,10 +1528,17 @@ def _compute_segment_value(
         return None
 
     elif anchor == "revenue":
-        cagr = params.get("revenue_growth_3y_cagr_pct", 0)
+        # 两种模式:
+        #   Mode A (连续增长): LLM提供CAGR → future_revenue = revenue × (1+CAGR)³
+        #   Mode B (0→1阶跃): LLM基于事件冲击直接估3年后收入 → forward_revenue_3y_yi
+        forward_rev = params.get("forward_revenue_3y_yi")
+        if forward_rev and forward_rev > 0:
+            future_revenue = forward_rev
+        else:
+            cagr = params.get("revenue_growth_3y_cagr_pct", 0)
+            future_revenue = segment_revenue * (1 + cagr / 100) ** 3 if segment_revenue > 0 else 0
         ps = params.get("target_ps", 0)
-        if segment_revenue > 0 and ps > 0:
-            future_revenue = segment_revenue * (1 + cagr / 100) ** 3
+        if future_revenue > 0 and ps > 0:
             return round(future_revenue * ps, 1)
         return None
 
@@ -1838,7 +1880,7 @@ def _validate_sotp_specific(
         anchor = seg.get("anchor", "")
         key_params = {
             "earnings": ["pe_target", "segment_net_margin_pct"],
-            "revenue": ["revenue_growth_3y_cagr_pct", "target_ps"],
+            "revenue": ["revenue_growth_3y_cagr_pct", "forward_revenue_3y_yi", "target_ps"],
             "asset": ["target_pb"],
             "pipeline": ["pos_pct", "peak_sales_yi"],
             "dcf": ["stage1_growth_pct", "terminal_pe", "roic_assumed_pct"],
@@ -2169,10 +2211,15 @@ class SOTPScenarioAsymmetry:
 
         # ── Step 2.5: 合并 LLM-1 + LLM-2，LLM-2 为主体 ──
         cb(2.8, "合并输出")
-        # 保护 LLM-1 的 segments 数据
+        # 保护 LLM-1 的 segments 数据——LLM-2只通过change_log修改参数，不直接输出segments
         llm1_segments = result.get("segments", [])
         result = _merge_llm_outputs(result, llm2_result)
-        if not result.get("segments"):
+        # LLM-2可能输出了空的/残缺的segments → 强制用LLM-1的
+        llm2_segments = result.get("segments", [])
+        if not llm2_segments or not isinstance(llm2_segments, list) or len(llm2_segments) == 0:
+            result["segments"] = llm1_segments
+        elif not any(isinstance(s, dict) and s.get("anchor") for s in llm2_segments):
+            # LLM-2 segments存在但都是空壳（缺少anchor）
             result["segments"] = llm1_segments
 
         # 应用 change_log 中的参数修改
@@ -2194,6 +2241,25 @@ class SOTPScenarioAsymmetry:
                         target[parts[-1]] = new_val
             if changes:
                 print(f"  [SOTP] 应用了 {len(changes)} 条参数修改", flush=True)
+
+        # 验证 segments 完整性（重新计算前）
+        final_segments = result.get("segments", [])
+        valid_segs = 0
+        for i, seg in enumerate(final_segments):
+            if isinstance(seg, dict) and seg.get("anchor"):
+                sbd = seg.get("scenario_details", seg)
+                has_params = any(
+                    isinstance(sbd.get(sn), dict) and (
+                        sbd[sn].get("pe_target") or sbd[sn].get("target_ps") or
+                        sbd[sn].get("stage1_growth_pct") or sbd[sn].get("target_pb")
+                    ) for sn in ("bear", "base", "bull")
+                )
+                if has_params:
+                    valid_segs += 1
+        if len(final_segments) == 0:
+            print(f"  [SOTP] WARNING: segments为空, 无法重新计算!", flush=True)
+        elif valid_segs < len(final_segments):
+            print(f"  [SOTP] WARNING: 仅{valid_segs}/{len(final_segments)}个分部有可计算参数", flush=True)
 
         # 在 LLM-2 的参数上重新计算
         sotp_computed = _compute_sotp_from_llm(result, core)
@@ -2321,13 +2387,24 @@ class SOTPScenarioAsymmetry:
         if capital_diag["leverage_flag"] != "normal":
             print(f"  [SOTP capital] {capital_diag['leverage_flag']}: {capital_diag['note'][:120]}", flush=True)
 
+        # 从 scenario_details 中提取分录计算明细（_compute_sotp_from_llm已写入_segment_breakdown）
+        base_details = sv.get("scenario_details", {}).get("base", {})
+        computed_segments = base_details.get("_segment_breakdown", [])
+
         output["_sotp_breakdown"] = {
-            "segments": result.get("segments", []),
+            "segments": result.get("segments", []),           # LLM参数(含LLM-2修改)
+            "computed": computed_segments,                     # 代码计算的各分部值
             "scenario_details": sv.get("scenario_details", {}),
             "capital_structure": capital_diag,
         }
-        # 前端可读的 segments
-        output["segments"] = result.get("segments", [])
+        # 前端可读: 合并参数+计算值
+        enriched_segments = []
+        for i, seg in enumerate(result.get("segments", [])):
+            enriched = dict(seg)
+            if i < len(computed_segments):
+                enriched["_computed"] = computed_segments[i]
+            enriched_segments.append(enriched)
+        output["segments"] = enriched_segments
         output["llm2_change_log"] = result.get("_llm2_change_log", result.get("change_log", []))
         output["llm_split_version"] = result.get("_llm_split_version", "1-call")
 
