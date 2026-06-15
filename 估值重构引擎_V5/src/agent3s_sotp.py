@@ -888,7 +888,8 @@ LLM-2: 事件锚校验:
 每个修改附理由+证据。
 
 ### 任务 4: 最终判断 — 基于代码计算的 SOTP 加总数字:
-- 置信度、交易标注、预期差、监测 KPI、最终叙事
+- 置信度、交易标注、预期差、监测 KPI
+- 最终叙事: 150-300字精炼故事，不是审阅摘要。详见输出Schema中narrative字段的规范。
 
 ## 输出 Schema — 完整最终报告
 
@@ -902,7 +903,7 @@ LLM-2: 事件锚校验:
   "trade_annotation": { "tier": "★★★ 高赔率机会|★★☆ 中等赔率|★☆☆ 低赔率机会|☆☆☆ 规避", "total_score": "X/10", "dimension_scores": {"odds_quality": 0-3, "pricing_headroom": 0-3, "transmission_confidence": 0-3, "model_consistency": 0-3}, "tier_note": "...", "suggested_action": "..." },
   "monitoring_kpis": { "financial_verification_kpis": [{"name":"","baseline":"","target":"","frequency":"季度","verifies":""}], "event_milestone_kpis": [{"name":"","expected_timing":"","significance":"","verification_source":""}], "competition_signal_kpis": [{"name":"","current_state":"","trigger":"","action_if_triggered":""}], "risk_trigger_kpis": [{"name":"","linked_to":"","severity":"high|medium|low","monitor":""}] },
   "risk_triggers": {},
-  "narrative": "...",
+  "narrative": "<必填: 150-300字精炼投资叙事，非审阅摘要。SOTP叙事需覆盖: (1)公司由哪几个分部构成、各自核心逻辑 (2)分部间的关键矛盾或互补关系 (3)情景分叉条件——什么触发不同分部的同时兑现/证伪 (4)最关键的监测变量。你的审阅发现(参数修正、前瞻信号解读)已在change_log和reasoning_trace中——叙事里不必复述。禁止: 写市值数字、列举参数、逐分部复述估值结果。>",
   "expectation_gap": { "level": "市场更乐观|市场更悲观|预期相近|无法解码", "note": "..." },
   "validation_crosscheck": {}
 }

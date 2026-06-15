@@ -542,7 +542,7 @@ CAGR/增速: 高增速必须匹配高再投资率（RR=g/ROIC）。增速和 RR 
   "change_request": [
     {"query": "具体搜索查询", "purpose": "填补哪个数据缺口/验证哪个假设"}
   ],
-  "narrative": "投资叙事——200-400字，用自然语言把事件→参数→情景的完整故事串起来。包含：事件改变了什么、为什么用这个锚和模型、三个情景分别是什么路径、关键风险和催化剂。不要写市值数字。",
+  "narrative": "投资叙事——150-300字，精炼如基金经理内部备忘录。只需四句话骨架: (1)我们在押注什么——一句话核心逻辑 (2)核心矛盾在哪——正面叙事vs反面证据的张力 (3)三条路径分叉点——什么条件触发哪个情景 (4)什么会改变这个故事——最关键的监测变量。禁止: 复述参数(参数在scenario_details里)、重复推理链(reasoning_trace已有)、列举风险清单、写市值数字。叙事≠审阅摘要——叙事是故事，审阅在change_log和reasoning_trace里。",
   "preflight_check": ["[OK] 清单项1完成", "[OK] 清单项2a-2d完成", "[OK] 清单项3a-3e完成", "[OK] 概率和=1.00", "[OK] 参数逐级递增,全参数自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
 }
 """
@@ -930,7 +930,7 @@ change_log 每条格式:
     "risk_trigger_kpis": [{"name": "风险名称", "linked_to": "关联指标", "severity": "high|medium|low", "monitor": "监控频率"}]
   },
   "risk_triggers": { "bull_trigger": "...", "bear_trigger": "...", "monitoring_frequency": "季度" },
-  "narrative": "<必填: 基于LLM-1的叙事做审阅增强——保留LLM-1的核心故事线，融入你的审阅发现（参数修正、搜索验证结果、前瞻信号解读），形成200-500字的完整投资叙事。如果LLM-1的叙事有逻辑问题，在保留其框架的前提下修正。不要写市值数字——引用upside%即可。>",
+  "narrative": "<必填: 150-300字精炼投资叙事。不是审阅摘要——你的审阅发现已在change_log和reasoning_trace中。叙事只需四句话骨架: (1)核心押注逻辑 (2)核心矛盾 (3)情景分叉条件 (4)关键监测变量。LLM-1的叙事可能过长或含旧参数——你应重写为精炼版，融入审阅后修正的判断方向(如'前瞻信号偏空→近期路径阻力大于宏观叙事')，但不复述参数细节。禁止: 写市值数字、列举参数、重复change_log内容。>",
   "probability_rationale": "概率推导",
   "expectation_gap": { "level": "市场更乐观|市场更悲观|预期相近|无法解码", "note": "..." },
   "validation_crosscheck": { "validation_model": "...", "assessment": "..." },
@@ -2643,9 +2643,14 @@ def _merge_llm_outputs(llm1_output: dict, llm2_output: dict) -> dict:
             llm2_output["narrative"] += "\n\n【审阅意见】" + str(llm2_review)[:800]
     else:
         # 正常合并：LLM-2 产出了有效叙事
+        # V8.2: LLM-2 叙事若为完整重写(>200字)，直接采用，避免LLM-1旧参数(如PS=5x)
+        # 出现在读者第一眼位置；仅当LLM-2产出为简短审阅意见时才拼接LLM-1+LLM-2
         llm2_note = llm2_review or llm2_narrative
         if llm1_narrative and llm2_note and llm2_note != llm1_narrative:
-            llm2_output["narrative"] = llm1_narrative + "\n\n【审阅修正】" + llm2_note
+            if llm2_narrative and len(str(llm2_narrative)) > 200:
+                llm2_output["narrative"] = llm2_narrative
+            else:
+                llm2_output["narrative"] = llm1_narrative + "\n\n【审阅修正】" + llm2_note
         elif llm2_narrative and len(llm2_narrative) > 30:
             llm2_output["narrative"] = llm2_narrative
         elif llm1_narrative:

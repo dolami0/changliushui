@@ -392,9 +392,11 @@ def _extract_core_fields(raw_bundle: dict, stock_code: str) -> dict[str, Any]:
 
     # ── OCF TTM 双源同步: forward_looking 使用 Tushare 4季加总(更准确),
     #     回填 core.ocf_ttm_yi 消除与 investoday 单值 TTM 的不一致 ──
+    #     V8.2: 移除 fw_ocf>0 守卫——负经营现金流是合法的(如高速成长但回款慢的公司),
+    #     用 !=0 防止零值数据缺口覆盖真实数据。Tushare 4季加总 > investoday 黑盒TTM。
     fw_cf = fields.get("_forward_looking", {}).get("categories", {}).get("cashflow_quality", {})
     fw_ocf = fw_cf.get("ocf_to_ni", {}).get("ocf_ttm")
-    if fw_ocf is not None and isinstance(fw_ocf, (int, float)) and fw_ocf > 0:
+    if fw_ocf is not None and isinstance(fw_ocf, (int, float)) and fw_ocf != 0:
         core_ocf = fields.get("ocf_ttm_yi", 0)
         if abs(fw_ocf - core_ocf) > 0.01:  # 差异>0.01亿时同步
             fields["ocf_ttm_yi"] = round(fw_ocf, 2)
