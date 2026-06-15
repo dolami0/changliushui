@@ -89,14 +89,25 @@ SOTP_VOLC_QUERY = """{stock_name}({stock_code}) {product_keywords}。券商研�
 # Flash 模型生成火山 query 的 prompt — SOTP 分部数据获取
 VOLC_QUERY_GEN_PROMPT = """你是 SOTP 分部估值的数据获取助手。当前管线需要对 {stock_name}({stock_code}) 做分部估值（Sum of the Parts）：拆成不同业务线，各自独立估值后加总。
 
-火山引擎是一个结构化知识问答系统。给它一个清晰的 query，它会从券商研报、公司公告、行业数据中提取结构化的答案。
+火山引擎是一个结构化知识问答系统——不是关键词搜索引擎。给它一个结构化的自然语言query，它会从券商研报、公司公告、行业数据中提取答案。query的信息密度直接决定答案质量。
 
-根据以下叙事背景，生成一个查询该公司的 query。你想获取每个业务线的：
-- 收入规模和增速
-- 毛利率或净利率
-- 未来2-3年券商收入预测
-- 可比A股公司及估值倍数
-- 产能、出货量等运营数据
+根据以下叙事背景，生成一个查询该公司的query。要求:
+
+1. **编号结构**: 每个业务线一个编号，子问题用字母编号。格式:
+   "请提供{stock_name}各业务分部的以下数据，标注数据来源和时间:
+   1. [业务线A名称]
+      a) 2023-2025年各年收入、同比增速
+      b) 最新季度毛利率/净利率
+      c) 券商对未来2-3年的收入预测(注明是哪家券商的预测)
+      d) 核心客户/订单/出货量——如果有公告或研报提及
+      e) A股可比公司及当前估值水平(不要PE/PB数字,只要公司名称)
+   2. [业务线B名称] ..."
+
+2. **要求量化**: 每个问题都要具体数字。不要"增长良好"这种——要"同比增速X%"。
+
+3. **要求来源标注**: 让火山标注每个数据来自年报/券商研报/公司公告/行业报告。如果没有确切来源，让火山标注"推断"。
+
+4. **覆盖关键估值参数**: 收入/增速(定CAGR)、毛利率净利率(定盈利能力)、可比公司(定PE/PS参照系)、订单/出货(验证增长)、产能/扩产进度(验证供给)。
 
 叙事背景:
 {context}
@@ -838,16 +849,9 @@ SOTP_LLM2_PROMPT = """# 你是 SOTP 估值审阅官
 
 你的职责是审阅 LLM-1 的分部参数推演，对照代码计算的 SOTP 加总结果，补充缺失数据，纠正错误，输出完整最终报告。
 
-## 搜索工具（单轮结构化查询，同标准管线）
+## 多轮对话与搜索（同标准管线，每轮最多 2 条搜索）
 
-格式: `"volc_query": "请提供以下信息:\n1. [分部1数据需求]\n2. [分部2数据需求]\n..."`。
-把所有SOTP各分部的搜索需求打包进一个结构化查询，火山引擎一次性处理。
-
-**⚠️ SOTP搜索铁律——各分部必须各自搜证**:
-1. **必须输出 volc_query**: data_gaps或change_request有内容时必须搜。SOTP的三个分部（半导体/AR/传统）各可能有独立缺口——在volc_query里各自一个子问题。
-2. **子问题覆盖所有分部**: volc_query的子问题数 >= 有数据缺口的分部数。不能三搜二漏一。
-3. **预搜索优先**: 先读D部分的volc预搜索结果，已覆盖的跳过，未覆盖的补进volc_query。
-4. **搜到关键信息→change_log**: 搜索发现与LLM-1假设矛盾（如"AR未量产"但实际已出货200万片），必须在change_log修正。
+格式: `"search_requests": [{"query": "...", "purpose": "...", "source": "volc"}]`。最终报告不输出 search_requests。
 
 ## 任务
 
@@ -1537,7 +1541,7 @@ def _compute_segment_value(
         else:
             cagr = params.get("revenue_growth_3y_cagr_pct", 0)
             future_revenue = segment_revenue * (1 + cagr / 100) ** 3 if segment_revenue > 0 else 0
-        ps = params.get("target_ps", 0)
+        ps = params.get("target_ps") or 0
         if future_revenue > 0 and ps > 0:
             return round(future_revenue * ps, 1)
         return None
@@ -2211,18 +2215,9 @@ class SOTPScenarioAsymmetry:
 
         # ── Step 2.5: 合并 LLM-1 + LLM-2，LLM-2 为主体 ──
         cb(2.8, "合并输出")
-        # 保护 LLM-1 的 segments 数据——LLM-2只通过change_log修改参数，不直接输出segments
-        llm1_segments = result.get("segments", [])
         result = _merge_llm_outputs(result, llm2_result)
-        # LLM-2可能输出了空的/残缺的segments → 强制用LLM-1的
-        llm2_segments = result.get("segments", [])
-        if not llm2_segments or not isinstance(llm2_segments, list) or len(llm2_segments) == 0:
-            result["segments"] = llm1_segments
-        elif not any(isinstance(s, dict) and s.get("anchor") for s in llm2_segments):
-            # LLM-2 segments存在但都是空壳（缺少anchor）
-            result["segments"] = llm1_segments
 
-        # 应用 change_log 中的参数修改
+        # 应用 LLM-2 的 change_log 参数修改到 segments
         changes = result.get("change_log", [])
         if changes:
             segments = result.get("segments", [])
