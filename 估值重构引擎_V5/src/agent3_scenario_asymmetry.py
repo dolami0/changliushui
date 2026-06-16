@@ -1811,9 +1811,6 @@ def _call_llm_scenario(
 
 ## 行业研究
 {event_data.get('industry_expert_research','')}
-
-## 行业全貌
-{event_data.get('industry_expert_research','')}
 """
     # V6.3: 火山联网搜索补充数据
     volc = volc_data or {}

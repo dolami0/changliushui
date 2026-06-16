@@ -1,0 +1,132 @@
+{
+  "quality_grade": "B",
+  "summary": "管线整体质量较高，预研语料有深度且维度全面，但存在少数关键数字缺乏可信来源、报告间关于竞争对手进展的矛盾未化解、以及估值层吸收预研信息不够完整的问题。",
+  "layer1": {
+    "individual_quality": {
+      "N1_investment_theme": {
+        "depth": "deep",
+        "note": "叙事完整，包含公司本质、核心变量、预期差、风险量化。有具体财务数字和客户集中度数据。但部分引用未明确原始来源（如‘报告1/财报数据’较模糊）。"
+      },
+      "N2_industry": {
+        "depth": "deep",
+        "note": "产业链分析扎实，五力模型、壁垒演变、天花板测算均有量化支撑。明确标出下游议价能力为最大威胁，且与N1的客户风险互补。"
+      },
+      "N5_event_deduction": {
+        "depth": "deep",
+        "note": "事件传导链清晰，识别出‘竞争对手已量产’的矛盾并标记，瓶颈节点（设备进口依赖）分析具体。但‘35%设备依赖美国进口’未提供来源。"
+      },
+      "N3_adversarial": {
+        "depth": "adequate",
+        "note": "三个攻击方向完整，有存活强度和降级条件。但攻击3（估值）的理由偏弱，依赖历史规律而非具体公司数据。"
+      },
+      "N4_catalyst": {
+        "depth": "adequate",
+        "note": "日历表详细，列出证实/证伪条件。但部分事件（如SEMICON展会）对公司核心估值影响有限，优先级判断较为主观。"
+      }
+    },
+    "cross_consistency": {
+      "status": "minor_divergence",
+      "details": [
+        "N5/N3称国内竞争对手（长电、通富）已实现2.5D封装量产，N2同样提到‘已量产’，但N5在关键发现中又写‘第二轮分析显示尚未大规模量产，第三轮显示已量产’，前后矛盾未被调和。",
+        "N1与N2对下游议价能力判断存在细微分歧：N1认为偏弱，N2引用报告3认为有一定议价基础。但共识是客户集中制约议价上限。"
+      ]
+    },
+    "echoes": [
+      {
+        "claim": "公司国内2.5D封装市占率约85%",
+        "appears_in": [
+          "N1",
+          "N2"
+        ],
+        "same_source": true
+      },
+      {
+        "claim": "第一大客户收入占比约70%+",
+        "appears_in": [
+          "N1",
+          "N2",
+          "N5",
+          "N4"
+        ],
+        "same_source": true
+      }
+    ],
+    "blind_spots": [
+      "缺少对产能利用率当前绝对水平的量化讨论（N1仅提‘80%以上’，未统一口径）。",
+      "未深入分析技术路线替代风险（如3D封装对2.5D的冲击时机）。",
+      "没有从财务角度量化客户集中风险的弹性（如客户流失10%对EPS影响），N5虽有模拟但非统一口径。"
+    ]
+  },
+  "layer2": {
+    "baseline_absorption": {
+      "status": "partial",
+      "lost_signals": [
+        "N1明确前五大客户占比超90%，N4也列出现数字，但Baseline写‘客户集中度未披露’。",
+        "N1中段硅片加工业务的高毛利稳定性（40.6%）作为价值低估点未被Baseline吸收。",
+        "N2中‘竞争对手已量产’的竞争格局更新未体现在Baseline的护城河评级中（仍强调强壁垒）。"
+      ]
+    },
+    "anchor_chain": {
+      "baseline_anchor": "远期PS/产能，核心隐含假设为经营杠杆（产能利用率）",
+      "agent2_anchor": "产能利用率→毛利率弹性",
+      "agent3_variable": "产能利用率（85%/72%/48%）",
+      "drift": false
+    },
+    "scenario_coherence": {
+      "status": "coherent",
+      "note": "三情景围绕同一变量（产能利用率）展开，bull/base/bear叙事有质的差异且条件清晰。但熊市触发条件（大客户流失+技术绕过）在L1中有多个矛盾点，降低了可信度。"
+    },
+    "evidence_issues": [
+      {
+        "location": "N5事件推演-关键发现-脆弱性",
+        "claim": "35%关键键合设备依赖美国进口",
+        "has_source": false
+      },
+      {
+        "location": "N1投资主题-公司本质",
+        "claim": "公司是国内唯一实现14nm制程2.5D封装规模化量产的企业",
+        "has_source": false
+      },
+      {
+        "location": "Baseline-财务基线",
+        "claim": "零CAPEX与CAPEX/折旧比=6.86x并存（解释为产能消化期）",
+        "has_source": true
+      }
+    ]
+  },
+  "improvement_suggestions": [
+    {
+      "target": "rule",
+      "what": "要求预研报告中每个关键数字必须附带原始可追溯来源（如具体财报页码、新闻链接），避免模糊标注‘报告X’或行业常识。",
+      "why": "当前N1/N5中多个重要判断（技术垄断、设备依赖比例）缺少底层证据，影响可信度。"
+    },
+    {
+      "target": "template",
+      "what": "在L1交叉一致性检查中增加强制调和环节：当多份报告对同一事实（如竞争对手进展）出现矛盾时，必须给出最终裁决或明确不确定性等级。",
+      "why": "N5与N2/N3对竞争对手量产时间存在明显矛盾，未被下游吸收，导致估值链可能基于错误假设。"
+    },
+    {
+      "target": "interface",
+      "what": "优化基线地图的输入接口，确保所有L1中明确标注的‘关键量化后验证节点’（如前五大客户占比）被强制要求纳入财务基线章节。",
+      "why": "当前Baseline遗漏了N1/N4中已确认的前五大客户占比，削弱了与L1的信息连贯性。"
+    }
+  ],
+  "meta": {
+    "model": "deepseek-v4-flash",
+    "usage": {
+      "prompt_tokens": 13444,
+      "completion_tokens": 3753,
+      "total_tokens": 17197,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "completion_tokens_details": {
+        "reasoning_tokens": 2366
+      },
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 13444
+    },
+    "latency_ms": 49479,
+    "reviewed_at": "2026-06-16T07:41:10.153703+00:00"
+  }
+}
