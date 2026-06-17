@@ -940,7 +940,7 @@ def build_markdown_report(agent0_record: dict, a1: dict, a2: dict, a3: dict, age
         md += f"## 六、校验交叉验证: {vx.get('validation_model','?')} ({vx.get('validation_paradigm','?')})\n\n"
         md += f"| 指标 | 值 |\n|------|-----|\n"
         md += f"| 主模型估值 | {_n(vx.get('base_target_mcap_yi'))}亿 |\n"
-        md += f"| 校验模型估值 | {_n(vx.get('validation_mcap_yi')) if vx.get('validation_mcap_yi') is not None else '数据异常'}亿 |\n"
+        md += f"| 校验模型估值 | {_n(vx.get('validation_mcap_yi')) if vx.get('validation_mcap_yi') is not None else '不适用(亏损)'}亿 |\n"
         md += f"| 差异 | {_n(vx.get('gap_pct'))}% ({vx.get('gap_direction','?')}) |\n"
         md += f"| 判定 | {vx.get('assessment','?')} |\n\n"
 
