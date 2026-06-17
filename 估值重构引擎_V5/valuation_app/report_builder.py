@@ -716,7 +716,7 @@ def _sec_validation(vx, rd, gap, vs):
         parts.append(_card("校验交叉验证", _kv_table([
             ("校验模型", f'{vx.get("validation_model","?")} ({vx.get("validation_paradigm","?")})'),
             ("主模型估值", _fmt_yi(vx.get("base_target_mcap_yi"))),
-            ("校验模型估值", _fmt_yi(vx.get("validation_mcap_yi")) if vx.get("validation_mcap_yi") is not None else "数据异常"),
+            ("校验模型估值", _fmt_yi(vx.get("validation_mcap_yi")) if vx.get("validation_mcap_yi") is not None else "不适用(亏损)"),
             ("差异方向", vx.get("gap_direction","?")),
             ("判定", f'<strong>{vx.get("assessment","?")}</strong>'),
         ])))

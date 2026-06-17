@@ -462,11 +462,38 @@ class Scheduler:
         vs = a3.get("valuation_summary", {}) if isinstance(a3.get("valuation_summary"), dict) else {}
         conf = a3.get("confidence", {}) if isinstance(a3.get("confidence"), dict) else {}
         ta = a3.get("trade_annotation", {}) if isinstance(a3.get("trade_annotation"), dict) else {}
-        scenarios = a3.get("scenarios", []) if isinstance(a3.get("scenarios"), list) else []
+        scenario_details = a3.get("scenario_valuation", {}).get("scenario_details", {})
+        if not isinstance(scenario_details, dict):
+            scenario_details = {}
 
-        bear = next((s for s in scenarios if isinstance(s, dict) and "bear" in str(s.get("name", "")).lower()), {})
-        base = next((s for s in scenarios if isinstance(s, dict) and "base" in str(s.get("name", "")).lower()), {})
-        bull = next((s for s in scenarios if isinstance(s, dict) and "bull" in str(s.get("name", "")).lower()), {})
+        # 归一化: scenario_valuation dict → scenarios list（标准+ rNPV 通用）
+        # LLM 输出 probability 为 0-1 小数，转为 probability_pct; upside_pct 缺时从 target_mcap 兜底计算
+        scenarios = []
+        for sn in ("bear", "base", "bull"):
+            d = scenario_details.get(sn, {}) or {}
+            up = d.get("upside_pct")
+            if up is None:
+                tgt = d.get("target_mcap_yi") or d.get("total_value_yi", 0)
+                mcap = core.get("market_cap_yi", 0)
+                if tgt and mcap:
+                    try:
+                        up = round((float(tgt) / float(mcap) - 1) * 100, 1)
+                    except (ValueError, ZeroDivisionError):
+                        up = 0
+                else:
+                    up = 0
+            scenarios.append({
+                "name": sn,
+                "probability_pct": round(d.get("probability", 0) * 100, 1),
+                "upside_pct": up,
+                "target_mcap_yi": d.get("target_mcap_yi") or d.get("total_value_yi", 0),
+            })
+        a3["scenarios"] = scenarios
+        result["agent3"] = a3
+
+        bear = scenarios[0]
+        base = scenarios[1]
+        bull = scenarios[2]
 
         # ── 保存完整结构化 JSON（最优先，不依赖任何额外处理）──
         data_dir = Path(__file__).resolve().parent.parent / "reports" / "data"
@@ -539,11 +566,10 @@ class Scheduler:
             "event_date": agent0_record.get("bstudio_create_time", ""),
             "event_source": agent0_record.get("event_source", ""),
             "primary_model": routing.get("primary_model", ""),
-            "pipeline_type": pipeline_type,
             "prob_weighted_upside_pct": str(vs.get("probability_weighted_upside_pct", "")),
             "asymmetry_ratio": str(vs.get("asymmetry_ratio", "")),
             "current_mcap_billion": str(core.get("market_cap_yi", "")),
-            "prob_weighted_mcap_yi": str(vs.get("probability_weighted_mcap_yi", "")),
+            "prob_weighted_mcap_billion": str(vs.get("probability_weighted_mcap_yi", "")),
             "bear_prob": str(bear.get("probability_pct", "")),
             "bear_upside_pct": str(bear.get("upside_pct", "")),
             "base_prob": str(base.get("probability_pct", "")),

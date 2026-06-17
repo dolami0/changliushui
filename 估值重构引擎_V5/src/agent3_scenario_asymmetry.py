@@ -947,7 +947,7 @@ change_log 每条格式:
   "narrative": "<必填: 150-300字精炼投资叙事。不是审阅摘要——你的审阅发现已在change_log和reasoning_trace中。叙事只需四句话骨架: (1)核心押注逻辑 (2)核心矛盾 (3)情景分叉条件 (4)关键监测变量。LLM-1的叙事可能过长或含旧参数——你应重写为精炼版，融入审阅后修正的判断方向(如'前瞻信号偏空→近期路径阻力大于宏观叙事')，但不复述参数细节。禁止: 写市值数字、列举参数、重复change_log内容。>",
   "probability_rationale": "概率推导",
   "expectation_gap": { "level": "市场更乐观|市场更悲观|预期相近|无法解码", "note": "..." },
-  "validation_crosscheck": { "validation_model": "...", "assessment": "..." },
+  "validation_crosscheck": { "validation_model": "...", "validation_mcap_yi": <数值(亿),缺时null>, "assessment": "..." },
   "data_gaps": ["缺口格式: [已搜索:查询词] 原标题 — 搜索结果摘要"],
   "reasoning_trace": ["LLM-1: ...", "LLM-2: 审查-数据补充: 对N条缺口逐一搜索，结果如下...", "LLM-2: 审查-逻辑审查: ...", "LLM-2: 审查-参数修改: ...", "LLM-2: 审查-置信度: ...", "LLM-2: 审查-最终叙事: ..."]
 }
@@ -956,6 +956,7 @@ change_log 每条格式:
 - search_requests 字段仅在需要搜索时输出。最终报告不输出 search_requests。
 - scenario_details 里的参数体系由路由定的模型决定——如果你修改了参数，输出修改后的完整 scenario_details。
 - reasoning_trace: 保留 LLM-1 的全部 reasoning_trace，末尾追加你的审阅条目（以"LLM-2: 审查-XXX"开头）。
+- **validation_crosscheck**: validation_mcap_yi 必须为数值(亿)。你已在推理链中手算了校验估值(如"净利润0.51亿×合理PE 30x=15.3亿")——将手算结果填入此字段。若校验模型无法产出数值(如校验模型本身就不适用)，填 null。
 
 **⚠️ 关键铁律 #1: 禁止在 narrative 中写市值数字。** 估值由代码计算，不是由你估算。不要说"修正后市值约XX亿"或"公允价值约XX亿"——你写的数字和代码算出的必然不一致，会污染最终报告。写参数为什么这么设、逻辑为什么这么推演，让代码说话。
 
@@ -2393,7 +2394,7 @@ SOTP触发: {mn.get('sotp_triggered', False)}
                     '  "narrative": "完整叙事文字",\n'
                     '  "probability_rationale": "概率推导",\n'
                     '  "expectation_gap": {"level":"市场更乐观|市场更悲观|预期相近|无法解码", "note":"..."},\n'
-                    '  "validation_crosscheck": {"validation_model":"...", "assessment":"..."}\n'
+                    '  "validation_crosscheck": {"validation_model":"...", "validation_mcap_yi": <数值(亿),缺时null>, "assessment":"..."}\n'
                     "}\n\n"
                     "**常见 JSON 错误自查:**\n"
                     "- 字符串值中的双引号是否用反斜杠转义了？（如 \\\"某券商\\\"研报\\\"）\n"
@@ -3474,7 +3475,7 @@ def _assemble_final_output(
             vx["validation_mcap_yi"] = vm
             vx["gap_pct"] = round((vm / base_mcap - 1) * 100, 1)
         else:
-            vx["validation_mcap_yi"] = None  # 单位异常 → 前端显示"数据异常"
+            vx["validation_mcap_yi"] = None  # LLM 未提供有效数值
 
     # 兜底: validation_paradigm 缺失或非法时，由校验模型族推导
     VALID_PARADIGMS = {"盈利视角", "收入视角", "资产视角", "资源视角", "管线视角", "分拆视角", "与主模型相同"}

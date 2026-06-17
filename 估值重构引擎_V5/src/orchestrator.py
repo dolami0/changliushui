@@ -173,6 +173,10 @@ class Orchestrator:
             # ── WACC 预计算 (Agent-2a 定价工具需要) ──
             fetcher = DataFetcher()
             wacc_params = precompute_wacc(fetcher, stock_code, state.agent1_output)
+            # 写回 agent1 core fields —— Baseline/PreScreen/Agent-2/Agent-3 都从此读取
+            core_fields = state.agent1_output.get("packages", {}).get("core", {}).get("fields", {})
+            if isinstance(core_fields, dict):
+                core_fields["_wacc_decimal"] = wacc_params.get("wacc_pct", 10) / 100
 
             # ── 火山联网搜索 (移到2a之前: 券商分部拆分+可比估值→2a做锚判断用) ──
             volc_data_std = {}
