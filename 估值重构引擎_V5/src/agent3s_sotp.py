@@ -1525,7 +1525,7 @@ def _compute_segment_value(
         分部目标市值（亿元），None 表示参数不足无法计算
     """
     if anchor == "earnings":
-        pe = params.get("pe_target", 0)
+        pe = params.get("pe_target", 0) or 0
         net_margin = params.get("segment_net_margin_pct")
         if net_margin is None:
             # 后备: 旧字段 segment_margin_pct（向后兼容），再后备: 公司整体净利率
@@ -1543,11 +1543,11 @@ def _compute_segment_value(
         # 两种模式:
         #   Mode A (连续增长): LLM提供CAGR → future_revenue = revenue × (1+CAGR)³
         #   Mode B (0→1阶跃): LLM基于事件冲击直接估3年后收入 → forward_revenue_3y_yi
-        forward_rev = params.get("forward_revenue_3y_yi")
+        forward_rev = params.get("forward_revenue_3y_yi") or 0
         if forward_rev and forward_rev > 0:
             future_revenue = forward_rev
         else:
-            cagr = params.get("revenue_growth_3y_cagr_pct", 0)
+            cagr = params.get("revenue_growth_3y_cagr_pct", 0) or 0
             future_revenue = segment_revenue * (1 + cagr / 100) ** 3 if segment_revenue > 0 else 0
         ps = params.get("target_ps") or 0
         if future_revenue > 0 and ps > 0:
@@ -1555,12 +1555,12 @@ def _compute_segment_value(
         return None
 
     elif anchor == "asset":
-        pb = params.get("target_pb", 0)
+        pb = params.get("target_pb", 0) or 0
         total_revenue = core.get("revenue_ttm_yi", 1)
         if pb > 0 and total_revenue > 0:
             # 优先使用 LLM 提供的分部净资产（若提供）
-            segment_equity = params.get("segment_equity_yi")
-            if segment_equity is None or segment_equity <= 0:
+            segment_equity = params.get("segment_equity_yi") or 0
+            if segment_equity <= 0:
                 # 后备: 按收入占比估算（对重资产/轻资产混合的公司有偏差）
                 total_equity = core.get("total_equity_yi", 1)
                 segment_equity = total_equity * (segment_revenue / total_revenue)
@@ -1576,10 +1576,10 @@ def _compute_segment_value(
         return None
 
     elif anchor == "dcf":
-        g1 = params.get("stage1_growth_pct", 0) / 100
+        g1 = (params.get("stage1_growth_pct", 0) or 0) / 100
         years = int(params.get("stage1_years", 5) or 5)
-        term_pe = params.get("terminal_pe", 0)
-        roic_k = params.get("roic_assumed_pct", 0) / 100
+        term_pe = params.get("terminal_pe", 0) or 0
+        roic_k = (params.get("roic_assumed_pct", 0) or 0) / 100
         wacc_k = core.get("_wacc_decimal", 0.10)
 
         net_margin = params.get("segment_net_margin_pct")
