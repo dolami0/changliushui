@@ -2588,7 +2588,7 @@ def _apply_llm2_changes(llm1_output: dict, llm2_output: dict) -> bool:
         path = change.get("path", "")
         new_val = change.get("new_value")
         if new_val is None:
-            print(f"  [Agent3] ⚠️ change_log new_value 为空, 跳过: path={path}", flush=True)
+            print(f"  [Agent3] WARN: change_log new_value为空, 跳过: path={path}", flush=True)
             continue
         parts = path.split(".")
         target = details
@@ -2600,7 +2600,7 @@ def _apply_llm2_changes(llm1_output: dict, llm2_output: dict) -> bool:
             change["old_value"] = old
             applied += 1
         else:
-            print(f"  [Agent3] ⚠️ change_log path 目标key不存在, 跳过: {path}", flush=True)
+            print(f"  [Agent3] WARN: change_log path目标key不存在, 跳过: {path}", flush=True)
 
     # 追加修改记录到 reasoning_trace
     llm1_output.setdefault("reasoning_trace", []).append(

@@ -2242,7 +2242,7 @@ class SOTPScenarioAsymmetry:
                 parts = path.split(".")
                 new_val = c.get("new_value")
                 if new_val is None:
-                    print(f"  [SOTP] ⚠️ change_log new_value 为空, 跳过: path={path}", flush=True)
+                    print(f"  [SOTP] WARN: change_log new_value为空, 跳过: path={path}", flush=True)
                     continue
                 # path like "segments.0.base.target_ps" or "segments.1.bull.revenue_growth_3y_cagr_pct"
                 if parts[0] == "segments" and len(parts) >= 4:
@@ -2256,11 +2256,11 @@ class SOTPScenarioAsymmetry:
                             target[parts[-1]] = new_val
                             applied += 1
                         else:
-                            print(f"  [SOTP] ⚠️ change_log path 目标key不存在, 跳过: {path}", flush=True)
+                            print(f"  [SOTP] WARN: change_log path目标key不存在, 跳过: {path}", flush=True)
             if applied:
                 print(f"  [SOTP] 应用了 {applied}/{len(changes)} 条参数修改", flush=True)
             else:
-                print(f"  [SOTP] ⚠️ change_log 有{len(changes)}条但无一实际应用", flush=True)
+                print(f"  [SOTP] WARN: change_log有{len(changes)}条但无一实际应用", flush=True)
 
         # 验证 segments 完整性（重新计算前）— 按锚类型逐分部校验
         final_segments = result.get("segments", [])
