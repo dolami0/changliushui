@@ -2583,9 +2583,13 @@ def _apply_llm2_changes(llm1_output: dict, llm2_output: dict) -> bool:
         details = {item.get("name", item.get("scenario", "")): item for item in details}
         llm1_output["scenario_valuation"]["scenario_details"] = details
 
+    applied = 0
     for change in changes:
         path = change.get("path", "")
         new_val = change.get("new_value")
+        if new_val is None:
+            print(f"  [Agent3] ⚠️ change_log new_value 为空, 跳过: path={path}", flush=True)
+            continue
         parts = path.split(".")
         target = details
         for part in parts[:-1]:
@@ -2594,10 +2598,13 @@ def _apply_llm2_changes(llm1_output: dict, llm2_output: dict) -> bool:
             old = target[parts[-1]]
             target[parts[-1]] = new_val
             change["old_value"] = old
+            applied += 1
+        else:
+            print(f"  [Agent3] ⚠️ change_log path 目标key不存在, 跳过: {path}", flush=True)
 
     # 追加修改记录到 reasoning_trace
     llm1_output.setdefault("reasoning_trace", []).append(
-        f"[LLM-2 参数修改] 应用了 {len(changes)} 条修改: "
+        f"[LLM-2 参数修改] 应用了 {applied}/{len(changes)} 条修改: "
         + "; ".join(f"{c['path']}: {c.get('old_value','?')} → {c['new_value']} ({c.get('reason','?')[:50]})"
                     for c in changes)
     )
