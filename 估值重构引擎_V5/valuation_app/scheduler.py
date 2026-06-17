@@ -468,9 +468,10 @@ class Scheduler:
 
         # 归一化: scenario_valuation dict → scenarios list（标准+ rNPV 通用）
         # LLM 输出 probability 为 0-1 小数，转为 probability_pct; upside_pct 缺时从 target_mcap 兜底计算
+        # 保留原始 scenario_details 的全部锚参数（cagr/ps/penetration等），仅覆盖汇总字段
         scenarios = []
         for sn in ("bear", "base", "bull"):
-            d = scenario_details.get(sn, {}) or {}
+            d = dict(scenario_details.get(sn, {}) or {})  # 浅拷贝保留全部锚参数
             up = d.get("upside_pct")
             if up is None:
                 tgt = d.get("target_mcap_yi") or d.get("total_value_yi", 0)
@@ -482,12 +483,10 @@ class Scheduler:
                         up = 0
                 else:
                     up = 0
-            scenarios.append({
-                "name": sn,
-                "probability_pct": round(d.get("probability", 0) * 100, 1),
-                "upside_pct": up,
-                "target_mcap_yi": d.get("target_mcap_yi") or d.get("total_value_yi", 0),
-            })
+            d["name"] = sn
+            d["probability_pct"] = round(d.pop("probability", 0) * 100, 1)
+            d["upside_pct"] = up
+            scenarios.append(d)
         a3["scenarios"] = scenarios
         result["agent3"] = a3
 
