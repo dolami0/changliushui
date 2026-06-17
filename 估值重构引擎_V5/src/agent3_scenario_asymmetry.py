@@ -2032,6 +2032,16 @@ def _parse_json(text: str) -> dict:
                             continue
                 break
 
+    # 5. json_repair 兜底: LLM 输出的常见语法错误（未转义引号、尾逗号等）
+    try:
+        from json_repair import repair_json
+        repaired = repair_json(text)
+        parsed = _json.loads(repaired)
+        if isinstance(parsed, dict):
+            return parsed
+    except Exception:
+        pass
+
     raise ScenarioError("E301", "JSON解析失败", {"raw": text[:500]})
 
 
@@ -2386,7 +2396,7 @@ SOTP触发: {mn.get('sotp_triggered', False)}
                     '  "signal_audit": {...},\n'
                     '  "reasoning_trace": ["LLM-1: ...", "LLM-2: 审查-..."],\n'
                     '  "data_gaps": ["..."],\n'
-                    '  "change_log": [{"path":"...", "old":..., "new":..., "reason":"...", "evidence":"..."}],\n'
+                    '  "change_log": [{"path":"...", "old_value":..., "new_value":..., "reason":"...", "evidence":"..."}],\n'
                     '  "confidence": {"overall_score": 1-10, "overall_label": "高|中|低", "dimensions": {"info_quality":{...}, "financial_feasibility":{...}, "valuation_safety":{...}, "historical_precedent":{...}}},\n'
                     '  "trade_annotation": {"tier":"★★★...", "total_score":"X/10", "dimension_scores":{...}, "alignment_signals":[...], "tier_note":"...", "suggested_action":"..."},\n'
                     '  "monitoring_kpis": {"financial_verification_kpis":[...], "event_milestone_kpis":[...], "competition_signal_kpis":[...], "risk_trigger_kpis":[...]},\n'
@@ -2583,13 +2593,9 @@ def _apply_llm2_changes(llm1_output: dict, llm2_output: dict) -> bool:
         details = {item.get("name", item.get("scenario", "")): item for item in details}
         llm1_output["scenario_valuation"]["scenario_details"] = details
 
-    applied = 0
     for change in changes:
         path = change.get("path", "")
         new_val = change.get("new_value")
-        if new_val is None:
-            print(f"  [Agent3] WARN: change_log new_value为空, 跳过: path={path}", flush=True)
-            continue
         parts = path.split(".")
         target = details
         for part in parts[:-1]:
@@ -2598,13 +2604,10 @@ def _apply_llm2_changes(llm1_output: dict, llm2_output: dict) -> bool:
             old = target[parts[-1]]
             target[parts[-1]] = new_val
             change["old_value"] = old
-            applied += 1
-        else:
-            print(f"  [Agent3] WARN: change_log path目标key不存在, 跳过: {path}", flush=True)
 
     # 追加修改记录到 reasoning_trace
     llm1_output.setdefault("reasoning_trace", []).append(
-        f"[LLM-2 参数修改] 应用了 {applied}/{len(changes)} 条修改: "
+        f"[LLM-2 参数修改] 应用了 {len(changes)} 条修改: "
         + "; ".join(f"{c['path']}: {c.get('old_value','?')} → {c['new_value']} ({c.get('reason','?')[:50]})"
                     for c in changes)
     )

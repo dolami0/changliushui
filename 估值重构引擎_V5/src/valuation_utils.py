@@ -64,7 +64,18 @@ def parse_json(text: str) -> dict:
                 return parsed2
             except json.JSONDecodeError:
                 pass
-        return {"_parse_error": "JSON解析失败", "_raw": text[:500]}
+
+    # 3. json_repair 兜底: 未转义引号、尾逗号等 LLM 常见 JSON 错误
+    try:
+        from json_repair import repair_json
+        repaired = repair_json(text)
+        parsed = json.loads(repaired)
+        if isinstance(parsed, dict):
+            return parsed
+    except Exception:
+        pass
+
+    return {"_parse_error": "JSON解析失败", "_raw": text[:500]}
 
 
 # ═══════════════════════════════════════
