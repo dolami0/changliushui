@@ -293,6 +293,7 @@ def build_baseline_user_message(
     agent0_output: dict,
     agent1_output: dict,
     volc_data: dict | None = None,
+    event_data: dict | None = None,
 ) -> str:
     """构建 baseline agent 的用户消息。
 
@@ -363,10 +364,10 @@ ROIC vs WACC: {roic:.1f}% vs {wacc:.1f}% → {'创造价值' if roic > wacc else
 它们通过 event_data 直接流向 Agent-2 和 Agent-3。
 
 ### 投资主题（公司本质、核心叙事、核心变量及弹性、预期差、关键风险）
-{agent0_output.get('investment_theme','（无）')}
+{event_data.get('investment_theme','（无）') if event_data else '（无）'}
 
 ### 产业链报告（价值链位置、竞争结构、价值捕获、替代威胁、天花板量化）
-{agent0_output.get('industry_expert_research','（无）')}
+{event_data.get('industry_expert_research','（无）') if event_data else '（无）'}
 
 ## 火山联网搜索（券商研报/可比公司/市场预期）
 
@@ -409,6 +410,7 @@ class BaselineMapDrawer:
         agent0_output: dict,
         agent1_output: dict,
         volc_data: dict | None = None,
+        event_data: dict | None = None,
     ) -> dict:
         """
         执行投资地图绘制。
@@ -426,6 +428,7 @@ class BaselineMapDrawer:
         user_msg = build_baseline_user_message(
             stock_code, stock_name,
             agent0_output, agent1_output, volc_data,
+            event_data=event_data,
         )
 
         try:

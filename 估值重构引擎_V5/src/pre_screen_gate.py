@@ -271,10 +271,20 @@ def _get_core_financials(agent1_output: dict) -> dict:
     return result
 
 
+def _build_baseline_section(baseline_report: str) -> str:
+    """注入 Baseline 投资地图全文。"""
+    if not baseline_report:
+        return ""
+    return f"""## 投资地图（Baseline输出，描述公司的实际业务线、产业位置和投资主线）
+{baseline_report}
+"""
+
+
 def _build_pre_screen_user_message(
     event_data: dict,
     agent1_output: dict,
     stock_code: str,
+    baseline_report: str = "",
 ) -> str:
     """构建预筛用户消息 — 显式分离"事件端"和"个股端"。
 
@@ -303,22 +313,28 @@ def _build_pre_screen_user_message(
 **事件逆向风险**:
 {event_data.get('adversarial_thinking', '')}
 
-# ── 个股端: Agent-0 为该标的提取的投资主题 ──
-这是该个股当前的核心叙事——它决定了"这只股票因为什么涨"。
+# ── 个股端: 业务构成 + 核心叙事 ──
+事件可能冲击公司的任一条业务线，不限于当前的核心叙事。「投资主题」告诉你市场在交易什么故事，「背景知识」和「产业链报告」告诉你公司实际有哪些业务线——同源性判断必须对照两者，不能只看叙事。
 
-**个股投资主题**:
+**个股投资主题（当前市场在交易什么故事）**:
 {event_data.get('investment_theme', '')}
+
+**个股业务背景（公司实际经营哪些业务线）**:
+{event_data.get('knowledge_supplement', '')}
 
 **个股事件推演 (T+30/90/180)**:
 {event_data.get('event_deduction', '')}
 
+{_build_baseline_section(baseline_report)}
+
 # ── 核心问题 ──
 对比上面的「事件端」和「个股端」:
 - 事件讲的是: ________ (什么产业变革？)
-- 个股讲的是: ________ (什么驱动股价？)
-- 这两个故事是同一个驱动力，还是两条平行线？
+- 个股的实际业务: ________ (有哪些业务线？事件是否打到其中至少一条？)
+- 个股的当前叙事: ________ (市场在交易什么？事件是否改变或强化了这个叙事？)
+- 事件与个股的关系是同一驱动力、部分重叠、还是两条平行线？
 
-请按系统指令完成4维评分。特别警惕: 行业标签相同(如都涉及"军工"、"芯片"、"新能源")不等于驱动力同源。"""
+请按系统指令完成4维评分。特别警惕: 行业标签相同(如都涉及"军工"、"芯片"、"新能源")不等于驱动力同源。反之，当前核心叙事不同不等于事件打不到个股——公司可能有未被市场充分定价的业务线恰好被事件激活。"""
 
 
 # ═══════════════════════════════════════
@@ -347,6 +363,7 @@ class PreScreenGate:
         event_data: dict,
         agent1_output: dict,
         stock_code: str,
+        baseline_report: str = "",
     ) -> PreScreenResult:
         """
         执行预筛判断。
@@ -359,7 +376,10 @@ class PreScreenGate:
         t0 = time.time()
 
         # ── 构建用户消息 ──
-        user_msg = _build_pre_screen_user_message(event_data, agent1_output, stock_code)
+        user_msg = _build_pre_screen_user_message(
+            event_data, agent1_output, stock_code,
+            baseline_report=baseline_report,
+        )
 
         # ── 调用 Flash ──
         raw = _call_flash_pre_screen(PRE_SCREEN_SYSTEM, user_msg, self.api_key)

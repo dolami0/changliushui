@@ -825,12 +825,13 @@ asymmetry_ratio = bull_upside / |bear_upside|
       {SEGMENT_PARAMS_EXAMPLE}
     },
     {
-      "segment": "其他业务(副锚合并)",
+      "segment": "其他稳态业务(副锚)",
       "anchor": "earnings", "segment_revenue_yi": 4.9, "is_primary": false,
       "segment_rationale": "<=60字，说明收入来源依据",
       "base": {"pe_target": 15, "segment_net_margin_pct": 12}
     }
   ],
+  // ⚠️ 分部数量: 默认1个叙事主锚+1个副锚。只有当剩余业务的经济特征确实无法合并(如一条盈利一条亏损、或锚类型不同)时，才拆为2个副锚。禁止超过2个副锚。
   "scenario_valuation": {
     "scenario_details": {SCENARIO_PARAMS_EXAMPLE},
     "probability_weighted_mcap_yi": XX,
@@ -839,7 +840,7 @@ asymmetry_ratio = bull_upside / |bear_upside|
   },
   "data_gaps": ["格式: 缺少[具体数据]→影响[参数/分部]→搜索建议:[精确搜索词]。每个分部一个缺口——半导体/AR/传统各搜各的"],
   "change_request": [{"query": "搜索查询", "purpose": "填补什么数据缺口"}],
-  "preflight_check": ["[OK] 清单项1完成", "[OK] 清单项2a-2d完成", "[OK] 清单项3a-3e完成", "[OK] 概率和=1.00", "[OK] 参数逐级递增,全参数自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出"]
+  "preflight_check": ["[OK] 清单项1完成", "[OK] 清单项2a-2d完成", "[OK] 清单项3a-3e完成", "[OK] 概率和=1.00", "[OK] 参数逐级递增,全参数自检通过", "[OK] WACC未修改", "[OK] 纯JSON输出", "[OK] 所有分部参数完整: 主锚分部有bear+base+bull三情景完整参数; 副锚分部有base完整参数; 每个分部的参数与anchor类型匹配(earnings→pe_target+segment_net_margin_pct; revenue→target_ps+revenue_growth_3y_cagr_pct或forward_revenue_3y_yi; asset→target_pb; dcf→stage1_growth_pct+roic_assumed_pct+terminal_pe+segment_net_margin_pct)"]
 }"""
 
 
@@ -910,9 +911,11 @@ LLM-2: 事件锚校验:
   "validation_crosscheck": {}
 }
 
-核心约束: WACC 不可改 / 概率和=1.0 / 参数修改必须有证据 / 输出纯 JSON / **禁止在 narrative 中写任何市值数字——估值由代码计算，你不应该自己估算**
+核心约束: WACC 不可改 / 概率和=1.0 / 参数修改必须有证据 / 输出纯 JSON / **禁止在 narrative 中写任何市值数字——估值由代码计算，你不应该自己估算** / **分部总数≤3(1主锚+最多2副锚)，禁止新建超过此限的分部，相似业务合并**
 
 **⚠️ 关键铁律: change_log 不能为空。** 如果你的 narrative 里写了"分部PS太高"、"低毛利分部不应享受高PS"、"可比公司选错了"，你必须在 change_log 里给出对应的参数修改。narrative 里的每个审阅发现都必须能在 change_log 里找到对应的条目。只有一种情况 change_log 可以为空：你确认 LLM-1 的每个分部参数都完美无误。但这种情况下你的 narrative 也不应该包含任何批评。
+
+**⚠️ 分部参数完整性: 每个分部必须有与anchor匹配的完整参数。earnings锚→pe_target+segment_net_margin_pct; revenue锚→target_ps+(revenue_growth_3y_cagr_pct或forward_revenue_3y_yi); asset锚→target_pb。新建分部时必须保证base参数齐全，否则代码无法计算该分部价值。
 """
 
 
@@ -1529,6 +1532,8 @@ def _compute_segment_value(
             net_margin = params.get("segment_margin_pct")
         if net_margin is None:
             net_margin = core.get("net_margin_pct", 0)
+        net_margin = net_margin or 0  # .get()在key存在但值为None时不返回default
+        segment_revenue = segment_revenue or 0
         if pe > 0 and segment_revenue > 0 and net_margin > 0:
             segment_net_profit = segment_revenue * net_margin / 100
             return round(segment_net_profit * pe, 1)
@@ -1563,9 +1568,9 @@ def _compute_segment_value(
         return None
 
     elif anchor == "pipeline":
-        pos = params.get("pos_pct", 0)
-        peak = params.get("peak_sales_yi", 0)
-        rate = params.get("discount_rate_pct", 15)
+        pos = (params.get("pos_pct", 0) or 0) / 100  # pos_pct=25 → 0.25
+        peak = params.get("peak_sales_yi", 0) or 0
+        rate = params.get("discount_rate_pct", 15) or 0
         if peak > 0 and pos > 0 and rate > 0:
             return round(peak * pos / (1 + rate / 100), 1)
         return None
@@ -1582,6 +1587,8 @@ def _compute_segment_value(
             net_margin = params.get("segment_margin_pct")
         if net_margin is None:
             net_margin = core.get("net_margin_pct", 0)
+        net_margin = net_margin or 0
+        segment_revenue = segment_revenue or 0
 
         if g1 <= 0 or term_pe <= 0 or roic_k <= 0 or segment_revenue <= 0 or net_margin <= 0:
             return None
@@ -2091,8 +2098,13 @@ class SOTPScenarioAsymmetry:
             与标准 Agent-3 格式兼容的输出 dict
         """
         cb = progress_cb or (lambda s, n: None)
-        event_data = event_data or {}
-        wacc_params = wacc_params or {}
+        # ── 入参防御: 防止上游传入非dict类型(如字符串)导致 .get() 崩溃 ──
+        data_package = _safe_dict(data_package)
+        agent2a_output = _safe_dict(agent2a_output)
+        agent2b_output = _safe_dict(agent2b_output) if agent2b_output else {}
+        event_data = _safe_dict(event_data)
+        wacc_params = _safe_dict(wacc_params)
+        volc_data = _safe_dict(volc_data) if volc_data else {}
         core = _get_core_fields(data_package)
 
         # ── Step 0: 火山数据（orchestrator预取, 免重复搜索）──
@@ -2113,7 +2125,7 @@ class SOTPScenarioAsymmetry:
         mcap_yi = core.get("market_cap_yi", 100)
         nopat_ratio = nopat_yi / max(mcap_yi, 1)
         anchor_2a = (agent2a_output or {}).get("market_narrative", {}).get("primary_anchor", "earnings")
-        if agent2b_output:
+        if agent2b_output and isinstance(agent2b_output, dict):
             rd_check = agent2b_output.get("routing_decision", {})
             if isinstance(rd_check, dict):
                 sotp_model = rd_check.get("sotp_primary_segment_model", "B")
@@ -2240,24 +2252,38 @@ class SOTPScenarioAsymmetry:
             if changes:
                 print(f"  [SOTP] 应用了 {len(changes)} 条参数修改", flush=True)
 
-        # 验证 segments 完整性（重新计算前）
+        # 验证 segments 完整性（重新计算前）— 按锚类型逐分部校验
         final_segments = result.get("segments", [])
+        def _seg_has_params(seg: dict, anchor: str, scenarios: list) -> bool:
+            """检查分部在指定场景中是否有该锚类型的必需参数。"""
+            anchor_key = {"earnings": "pe_target", "revenue": ("target_ps", "revenue_growth_3y_cagr_pct", "forward_revenue_3y_yi"),
+                          "asset": "target_pb", "dcf": "stage1_growth_pct", "pipeline": "pos_pct"}
+            required = anchor_key.get(anchor)
+            if isinstance(required, tuple):
+                required = required[0]  # 取第一个作为主检查
+            for sn in scenarios:
+                params = seg.get(sn, {})
+                if isinstance(params, dict) and params.get(required):
+                    return True
+            return False
+
         valid_segs = 0
         for i, seg in enumerate(final_segments):
-            if isinstance(seg, dict) and seg.get("anchor"):
-                sbd = seg.get("scenario_details", seg)
-                has_params = any(
-                    isinstance(sbd.get(sn), dict) and (
-                        sbd[sn].get("pe_target") or sbd[sn].get("target_ps") or
-                        sbd[sn].get("stage1_growth_pct") or sbd[sn].get("target_pb")
-                    ) for sn in ("bear", "base", "bull")
-                )
-                if has_params:
-                    valid_segs += 1
+            if not isinstance(seg, dict) or not seg.get("anchor"):
+                print(f"  [SOTP] WARNING: segment[{i}] 无anchor, 跳过", flush=True)
+                continue
+            anchor = seg.get("anchor", "")
+            is_primary = seg.get("is_primary", False)
+            scenarios = ("bear", "base", "bull") if is_primary else ("base",)
+            if _seg_has_params(seg, anchor, scenarios):
+                valid_segs += 1
+            else:
+                seg_name = seg.get("segment", f"#{i}")
+                print(f"  [SOTP] WARNING: {seg_name}(anchor={anchor},primary={is_primary}) 缺少{anchor}锚必需参数, 无法计算", flush=True)
         if len(final_segments) == 0:
             print(f"  [SOTP] WARNING: segments为空, 无法重新计算!", flush=True)
         elif valid_segs < len(final_segments):
-            print(f"  [SOTP] WARNING: 仅{valid_segs}/{len(final_segments)}个分部有可计算参数", flush=True)
+            print(f"  [SOTP] WARNING: 仅{valid_segs}/{len(final_segments)}个分部有可计算参数, 缺少参数的分部将被跳过", flush=True)
 
         # 在 LLM-2 的参数上重新计算
         sotp_computed = _compute_sotp_from_llm(result, core)

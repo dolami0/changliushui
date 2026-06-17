@@ -170,30 +170,6 @@ class Orchestrator:
                     {"missing": critical_missing, "stock_code": stock_code},
                 )
 
-            # ── 灵光预筛 (V6.2): Flash模型4维快速评估（评测模式跳过）──
-            t0 = time.time()
-            if self._eval_mode:
-                cb("pre_screen", 1, 1, "done", "评测模式跳过预筛")
-                state.pre_screen_result = PreScreenResult(total_score=40, passed=True, summary="评测模式跳过")
-            else:
-                cb("pre_screen", 1, 1, "running", "灵光预筛(标的-事件匹配)")
-                _gate = PreScreenGate(api_key=self.api_key)
-                state.pre_screen_result = _gate.run(
-                    event_data, state.agent1_output, stock_code,
-                )
-            state.step_times["pre_screen"] = round(time.time() - t0, 2)
-            ps = state.pre_screen_result
-            if ps.passed:
-                cb("pre_screen", 1, 1, "done",
-                   f"PASS {ps.total_score}/40 "
-                   f"同源{ps.homology} 暴露{ps.exposure} 弹性{ps.elasticity} 地位{ps.position}")
-            else:
-                state.status = "pre_screened_out"
-                state.completed_at = datetime.now(timezone.utc).isoformat()
-                cb("pre_screen", 1, 1, "done",
-                   f"BLOCK: {ps.cut_reason[:60]}")
-                return self._assemble_result(state)
-
             # ── WACC 预计算 (Agent-2a 定价工具需要) ──
             fetcher = DataFetcher()
             wacc_params = precompute_wacc(fetcher, stock_code, state.agent1_output)
@@ -273,6 +249,7 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
                     stock_code, stock_name,
                     state.agent0_output, state.agent1_output,
                     volc_data=volc_data_std,
+                    event_data=event_data,
                 )
                 state.baseline_report = _bl_result.get("baseline_report", "")
                 state.step_times["baseline"] = round(time.time() - t0, 2)
@@ -284,6 +261,31 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
                 state.baseline_report = ""
                 state.step_times["baseline"] = round(time.time() - t0, 2)
                 cb("baseline", 0, 0, "done", f"失败: {str(e)[:40]}")
+
+            # ── 灵光预筛 (V6.2→V8.3: 移至Baseline之后，可利用投资地图做业务结构匹配) ──
+            t0 = time.time()
+            if self._eval_mode:
+                cb("pre_screen", 1, 1, "done", "评测模式跳过预筛")
+                state.pre_screen_result = PreScreenResult(total_score=40, passed=True, summary="评测模式跳过")
+            else:
+                cb("pre_screen", 1, 1, "running", "灵光预筛(标的-事件匹配)")
+                _gate = PreScreenGate(api_key=self.api_key)
+                state.pre_screen_result = _gate.run(
+                    event_data, state.agent1_output, stock_code,
+                    baseline_report=state.baseline_report,
+                )
+            state.step_times["pre_screen"] = round(time.time() - t0, 2)
+            ps = state.pre_screen_result
+            if ps.passed:
+                cb("pre_screen", 1, 1, "done",
+                   f"PASS {ps.total_score}/40 "
+                   f"同源{ps.homology} 暴露{ps.exposure} 弹性{ps.elasticity} 地位{ps.position}")
+            else:
+                state.status = "pre_screened_out"
+                state.completed_at = datetime.now(timezone.utc).isoformat()
+                cb("pre_screen", 1, 1, "done",
+                   f"BLOCK: {ps.cut_reason[:60]}")
+                return self._assemble_result(state)
 
             # ── Agent-2: 统一路由判决 (V8: 合并 2a+2b) ──
             cb("agent2", 1, 1, "running", "统一路由(锚+光谱+模型+计价)")
