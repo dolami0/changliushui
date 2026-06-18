@@ -33,6 +33,7 @@ from agent3_scenario_asymmetry import (
     PARAM_SELF_CHECK_MAP,
     SCENARIO_PARAMS_MAP,
     _fix_trade_annotation,
+    _verify_change_log,
     _assemble_final_output,
     _augment_trace_with_fixes,
     MODEL_NAMES,
@@ -2251,6 +2252,18 @@ class SOTPScenarioAsymmetry:
                         target[parts[-1]] = new_val
             if changes:
                 print(f"  [SOTP] 应用了 {len(changes)} 条参数修改", flush=True)
+            # ── change_log 审计: 校验修改是否与最终参数一致 ──
+            if changes:
+                segments_for_audit = result.get("segments", [])
+                audit_warnings = _verify_change_log(changes, segments_for_audit, "sotp")
+                if audit_warnings:
+                    for w in audit_warnings:
+                        print(f"  [SOTP change-audit] {w}", flush=True)
+                result.setdefault("reasoning_trace", []).append(
+                    f"[系统修正] change_log审计: {len(changes)}条修改, "
+                    f"{'全部一致' if not audit_warnings else f'{len(audit_warnings)}条不一致: ' + '; '.join(audit_warnings[:3])}"
+                )
+                result["_change_audit_warnings"] = audit_warnings
 
         # 验证 segments 完整性（重新计算前）— 按锚类型逐分部校验
         final_segments = result.get("segments", [])

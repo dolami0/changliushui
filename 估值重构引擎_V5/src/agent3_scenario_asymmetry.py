@@ -3038,6 +3038,73 @@ def _is_monotonic(vals: list[str]) -> bool:
 
 
 # ═══════════════════════════════════════
+# Step 1.5c: change_log 审计验证（不驱动计算，仅校验一致性）
+# ═══════════════════════════════════════
+
+def _verify_change_log(change_log: list, final_params, pipeline: str = "standard") -> list[str]:
+    """验证 change_log 条目与最终参数一致。返回 warning 列表。
+
+    change_log 是审计 trail，不驱动计算——LLM-2 直接输出完整参数块，
+    merge 后覆盖 LLM-1。此函数检验 change_log 中的 new_value 是否与
+    最终参数匹配，发现不一致时记录但不中断管线。
+    """
+    warnings = []
+    if not change_log or not isinstance(change_log, list):
+        return warnings
+
+    for i, entry in enumerate(change_log):
+        if not isinstance(entry, dict):
+            continue
+        path = entry.get("path", "")
+        expected = entry.get("new_value")
+        if expected is None:
+            warnings.append(f"change_log[{i}]: new_value为空, path={path}")
+            continue
+
+        parts = path.split(".")
+        if pipeline == "sotp":
+            if parts[0] == "segments" and len(parts) >= 4:
+                try:
+                    idx = int(parts[1])
+                except ValueError:
+                    continue
+                if not isinstance(final_params, list) or idx >= len(final_params):
+                    continue
+                target = final_params[idx]
+                for p in parts[2:-1]:
+                    if not isinstance(target, dict):
+                        target = {}
+                        break
+                    target = target.get(p, {})
+            else:
+                continue  # skip non-segments paths in SOTP (如 scenario_valuation.xxx)
+        else:
+            target = final_params
+            for p in parts[:-1]:
+                if not isinstance(target, dict):
+                    target = {}
+                    break
+                target = target.get(p, {})
+
+        if not isinstance(target, dict):
+            continue
+        actual = target.get(parts[-1])
+        if actual is None:
+            warnings.append(f"change_log[{i}]: {path}={expected} ← 最终参数中不存在此key")
+        elif isinstance(expected, (int, float)) and isinstance(actual, (int, float)):
+            if abs(float(expected) - float(actual)) > 0.01:
+                warnings.append(
+                    f"change_log[{i}]: {path} change_log={expected} ≠ 实际={actual}"
+                )
+        elif str(expected) != str(actual):
+            warnings.append(
+                f"change_log[{i}]: {path} change_log={expected} ≠ 实际={actual}"
+            )
+
+    return warnings
+
+
+# ═══════════════════════════════════════
 # Step 1.6: 修正交易标注文字（消除数值-文字脱节）
 # ═══════════════════════════════════════
 
@@ -3840,6 +3907,20 @@ class ScenarioAsymmetry:
         # ── Step 2.5: LLM-2 输出为主体，代码在其参数上重算 ──
         cb(5, "合并+重算")
         llm_output = _merge_llm_outputs(llm1_output, llm2_output)
+
+        # ── change_log 审计: 校验 LLM-2 声明的修改是否与最终参数一致 ──
+        changes = llm_output.get("change_log", [])
+        if changes:
+            details = llm_output.get("scenario_valuation", {}).get("scenario_details", {})
+            change_warnings = _verify_change_log(changes, details, "standard")
+            if change_warnings:
+                for w in change_warnings:
+                    print(f"  [Agent3 change-audit] {w}", flush=True)
+            llm_output.setdefault("reasoning_trace", []).append(
+                f"[系统修正] change_log审计: {len(changes)}条修改, "
+                f"{'全部一致' if not change_warnings else f'{len(change_warnings)}条不一致: ' + '; '.join(change_warnings[:3])}"
+            )
+            llm_output["_change_audit_warnings"] = change_warnings
 
         # 在 LLM-2 的参数上重新计算（如果 LLM-2 改了参数）
         computed = _compute_from_assumptions(
