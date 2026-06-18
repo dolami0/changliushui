@@ -960,7 +960,7 @@ change_log 每条格式:
 
 **⚠️ 关键铁律 #1: 禁止在 narrative 中写市值数字。** 估值由代码计算，不是由你估算。不要说"修正后市值约XX亿"或"公允价值约XX亿"——你写的数字和代码算出的必然不一致，会污染最终报告。写参数为什么这么设、逻辑为什么这么推演，让代码说话。
 
-**⚠️ 关键铁律 #2: change_log 不能为空。** 如果你的 narrative 里写了"XX参数缺乏支撑"、"YY被低估"、"ZZ假设不合理"，你必须在 change_log 里给出对应的参数修改。narrative 里的每个审阅发现都必须能在 change_log 里找到对应的条目。只有一种情况 change_log 可以为空：你确认 LLM-1 的每个参数都完美无误。但这种情况下你的 narrative 也不应该包含任何批评。
+**⚠️ 关键铁律 #2: change_log 与 reasoning_trace 一一对应。** reasoning_trace 中每条"审查-参数修改"（如"base CAGR 从40%降至30%"）必须在 change_log 数组中有对应的结构化条目（path + old_value + new_value + reason + evidence）。禁止只在 reasoning_trace 里描述修改但在 change_log 里留空。两者数量必须一致：如果在 reasoning_trace 里写了 3 条参数修改，change_log 就必须有 3 条。只有一种情况 change_log 可以为空：你确认 LLM-1 的每个参数都完美无误，且 reasoning_trace 里没有任何参数修改内容。
 """
 
 
@@ -2959,6 +2959,85 @@ def _compute_from_assumptions(sv: dict, model: str, core: dict) -> dict:
 
 
 # ═══════════════════════════════════════
+# Step 1.5b: preflight_check 最终参数覆盖
+# ═══════════════════════════════════════
+
+def _finalize_preflight(pf: list, details: dict, model: str) -> list:
+    """用代码计算值覆盖 preflight_check 中 LLM 手写的参数行，消除陈旧数值。
+
+    LLM-1 在 preflight_check 中写了参数（如 PS:3/8/12），LLM-2 审阅后修改了参数
+    但不会更新 preflight_check 文字 → 陈旧数值保留在报告中，与 scenario_details 矛盾。
+    """
+    if not isinstance(pf, list):
+        return pf
+    cleaned = [line for line in pf if not _is_param_check_line(line, model)]
+    param_line = _build_param_check_line(details, model)
+    if param_line:
+        cleaned.append(param_line)
+    return cleaned
+
+
+def _is_param_check_line(line: str, model: str) -> bool:
+    """检测 preflight_check 行是否包含陈旧的参数描述。"""
+    if not isinstance(line, str):
+        return False
+    keywords = ["参数逐级递增", "全参数经济含义自检", "PS:", "CAGR:", "PE=", "递增"]
+    return any(kw in line for kw in keywords)
+
+
+def _build_param_check_line(details: dict, model: str) -> str:
+    """从 scenario_details 生成代码计算的参数校验行。"""
+    parts = []
+    bear = details.get("bear", {}) or {}
+    base = details.get("base", {}) or {}
+    bull = details.get("bull", {}) or {}
+
+    # 收集各情景的锚参数
+    model_params = {
+        "A": [("roic_assumed_pct", "ROIC%"), ("pe_target", "PE")],
+        "B": [("revenue_growth_3y_cagr_pct", "CAGR%"), ("target_ps", "PS")],
+        "C": [("roic_assumed_pct", "ROIC%"), ("pe_target", "PE")],
+        "D": [("target_roe_pct", "ROE%"), ("target_pb", "PB")],
+        "E": [("ebitda_growth_pct", "EBITDA g%"), ("target_ev_ebitda", "EV/EBITDA")],
+        "F": [("pos_pct", "PoS%"), ("peak_sales_yi", "峰值销售")],
+        "G": [("earnings_growth_pct", "EPS g%"), ("pe_target", "PE")],
+        "H": [("nav_discount_pct", "NAV折价%")],
+        "I": [("normalized_roic_pct", "ROIC%"), ("normalized_pe", "PE")],
+        "K": [("stage1_growth_pct", "g1%"), ("terminal_pe", "终值PE")],
+    }
+    param_keys = model_params.get(model[0] if model else "A", [])
+
+    for key, label in param_keys:
+        vals = []
+        for sn in ("bear", "base", "bull"):
+            d = details.get(sn, {}) or {}
+            v = d.get(key)
+            if v is not None:
+                vals.append(str(v))
+        if vals:
+            parts.append(f"{label}: {'/'.join(vals)}{' 递增' if _is_monotonic(vals) else ''}")
+
+    if not parts:
+        return ""
+    probs = []
+    for sn in ("bear", "base", "bull"):
+        p = details.get(sn, {}).get("probability", 0) if isinstance(details.get(sn), dict) else 0
+        if p:
+            probs.append(f"{float(p)*100:.0f}%")
+    prob_str = f"概率: {'/'.join(probs)}, " if probs else ""
+
+    return f"[系统修正] {prob_str}{'; '.join(parts)}"
+
+
+def _is_monotonic(vals: list[str]) -> bool:
+    try:
+        nums = [float(v) for v in vals]
+        return nums[0] <= nums[1] <= nums[2] or nums[0] >= nums[1] >= nums[2]
+    except (ValueError, IndexError):
+        return False
+
+
+# ═══════════════════════════════════════
 # Step 1.6: 修正交易标注文字（消除数值-文字脱节）
 # ═══════════════════════════════════════
 
@@ -3581,7 +3660,11 @@ def _assemble_final_output(
             sv,
             llm_original_values or {},
         ),
-        "preflight_check": llm_output.get("preflight_check", []),
+        "preflight_check": _finalize_preflight(
+            llm_output.get("preflight_check", []),
+            sv.get("scenario_details", {}),
+            primary,
+        ),
         "probability_rationale": llm_output.get("probability_rationale", ""),
         "risk_triggers": llm_output.get("risk_triggers", {}),
         "narrative": llm_output.get("narrative", ""),

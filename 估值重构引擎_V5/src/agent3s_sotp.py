@@ -913,7 +913,7 @@ LLM-2: 事件锚校验:
 
 核心约束: WACC 不可改 / 概率和=1.0 / 参数修改必须有证据 / 输出纯 JSON / **禁止在 narrative 中写任何市值数字——估值由代码计算，你不应该自己估算** / **分部总数≤3(1主锚+最多2副锚)，禁止新建超过此限的分部，相似业务合并**
 
-**⚠️ 关键铁律: change_log 不能为空。** 如果你的 narrative 里写了"分部PS太高"、"低毛利分部不应享受高PS"、"可比公司选错了"，你必须在 change_log 里给出对应的参数修改。narrative 里的每个审阅发现都必须能在 change_log 里找到对应的条目。只有一种情况 change_log 可以为空：你确认 LLM-1 的每个分部参数都完美无误。但这种情况下你的 narrative 也不应该包含任何批评。
+**⚠️ 关键铁律: change_log 与 reasoning_trace 一一对应。** reasoning_trace 中每条"审查-参数修改"（如"base CAGR 从40%降至30%"）必须在 change_log 数组中有对应的结构化条目（path + old_value + new_value + reason + evidence）。禁止只在 reasoning_trace 里描述修改但在 change_log 里留空。两者数量必须一致：如果在 reasoning_trace 里写了 3 条参数修改，change_log 就必须有 3 条。只有一种情况 change_log 可以为空：你确认 LLM-1 的每个分部参数都完美无误，且 reasoning_trace 里没有任何参数修改内容。
 
 **⚠️ 分部参数完整性: 每个分部必须有与anchor匹配的完整参数。earnings锚→pe_target+segment_net_margin_pct; revenue锚→target_ps+(revenue_growth_3y_cagr_pct或forward_revenue_3y_yi); asset锚→target_pb。新建分部时必须保证base参数齐全，否则代码无法计算该分部价值。
 """
