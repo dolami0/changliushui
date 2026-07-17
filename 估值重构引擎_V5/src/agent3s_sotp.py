@@ -418,6 +418,8 @@ Bear意味着事件叙事**不成立**——政策没落地/订单被抢/催化�
 `target_ps` 是**第3年(终端年)的PS**——不是trailing PS。心算校验: 你的终局收入×target_ps≈你剧本里的目标市值吗？
 | asset | segment_revenue_yi, target_pb, [segment_equity_yi] | `净资产 × PB`（无segment_equity_yi时按收入占比估算） |
 | pipeline | pos_pct, peak_sales_yi, discount_rate_pct | `峰值销售 × PoS% / (1+折现率%)` |
+
+**⚠️ 字段名铁律: 上表列出的字段名是代码唯一识别的key。禁止使用任何变体**: 不许把 `pe_target` 写成 `normalized_pe`/`target_pe`/`PE_target`; 不许把 `segment_net_margin_pct` 写成 `normalized_roic_pct`/`segment_net_margin`/`net_margin`; 不许把 `revenue_growth_3y_cagr_pct` 写成 `cagr`/`growth_rate`。代码按key名精确匹配——key名错了=参数被忽略=该分部估值为0。
 | dcf | segment_revenue_yi, stage1_growth_pct, stage1_years(默认5), roic_assumed_pct, terminal_pe, segment_net_margin_pct | 阶段1: NOPAT逐年复利增长→FCFF=NOPAT×(1-RR), RR=g/ROIC封顶[0.3,0.9]. 阶段2: NOPAT_N×terminal_PE. 全部折现到现值 |
 
 **dcf 锚适用场景**: **仅限earnings锚分部使用**。适用于分部当前盈利(NOPAT>0.5亿且NOPAT/市值>0.8%)、高增长(>25%)、行业终局清晰(3-7年后增速回落+稳态PE可判断)的标的。dcf能建模"增长→利润→现金流"的完整路径。**revenue锚分部应使用revenue锚(PS+TAM)——dcf从NOPAT出发,revenue锚意味着利润路径不清晰,两者范式不可混淆。**
@@ -1576,10 +1578,19 @@ def _compute_segment_value(
     """
     if anchor == "earnings":
         pe = params.get("pe_target", 0)
+        if not pe:
+            # fallback: LLM 有时用 normalized_pe 或其他变体
+            pe = params.get("normalized_pe", 0) or params.get("target_pe", 0)
         net_margin = params.get("segment_net_margin_pct")
         if net_margin is None:
             # 后备: 旧字段 segment_margin_pct（向后兼容），再后备: 公司整体净利率
             net_margin = params.get("segment_margin_pct")
+        if net_margin is None:
+            # 后备: LLM 有时给 normalized_roic_pct 而非 segment_net_margin_pct
+            # ROIC ≈ NOPAT/(营收×IC周转率), 对轻资产服务类业务 ROIC≈净利率
+            roic = params.get("normalized_roic_pct")
+            if roic is not None and roic > 0:
+                net_margin = roic
         if net_margin is None:
             net_margin = core.get("net_margin_pct", 0)
         net_margin = net_margin or 0  # .get()在key存在但值为None时不返回default
