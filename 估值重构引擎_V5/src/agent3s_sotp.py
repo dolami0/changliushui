@@ -36,6 +36,8 @@ from agent3_scenario_asymmetry import (
     _verify_change_log,
     _assemble_final_output,
     _augment_trace_with_fixes,
+    _detect_revenue_base_depression,
+    _audit_llm2_omissions,
     MODEL_NAMES,
     MODEL_FAMILIES,
     MODEL_PARAM_NAMES_MAP,
@@ -510,6 +512,12 @@ bear 不可推翻已发生的业务事实（如已出货产品→不应给0估�
 
 **关键**: 不要用旧的 sudden/ongoing 概念。直接根据 2a 给出的 `distribution_shape` 选择对应的行。
 
+**timing 约束（重要）**: `timing_certainty`（1-10）在 2a 的 event_profile 中定义——它只描述"事件**何时**发生"的时间确定性，**不**描述"事件**有多大**的量级。
+
+- **timing≥7（精确窗口）**: 概率可集中在 base，但 bull CAGR/PS **必须**受硬数据约束。精确时间窗口≈市场已部分定价→剩余 alpha 空间可能更小。
+- **timing≤4（模糊窗口）**: 时间不确定性→体现在 bear 概率，不是拉高 bull 的理由。不确定性不是想象力的许可证。
+- **事件的量级由硬数据决定**（分部收入基数、在手订单、产能上限、TAM、可比公司估值中枢），timing 不改变其中任何一个。
+
 ### 3a+. 事件冲击量级→分部参数幅度（SOTP核心——标准管线对齐）
 
 **在赋参数之前，必须先把事件冲击转化为每个分部的参数幅度。** SOTP的估值不是基于当前财务，而是基于事件冲击后的预期。
@@ -810,13 +818,13 @@ asymmetry_ratio = bull_upside / |bear_upside|
   "signal_audit": {
     "step2a_restate": ["[合同负债] 当前值=0.13亿 (↑1.1σ, 历史均值=0.08亿)", "..."],
     "step2b_match": [
-      {"signal": "合同负债", "match": "支撑", "source_level": "L4", "basis": "合同负债跳升验证订单落地——行业数据(L4)与财务数据同向"},
-      {"signal": "化合物半导体材料毛利率", "match": "时序错位", "source_level": "L3", "basis": "FY2025年报GM=23.2%远低于叙事宣称75%+(L3:券商研报)。数据截止早于事件窗口，不判为矛盾"},
-      {"signal": "业绩预告(FY2025预减)", "match": "削弱", "source_level": "L5", "basis": "公司公告(L5)预减。预告窗口与事件窗口有时序差异，不构成证伪，但揭示bull利润弹性依赖极大基数效应"}
+      {"signal": "【示例-必须用实际信号替换】", "match": "支撑/削弱/时序错位", "source_level": "L1-L5", "basis": "<=50字，说明判断依据。必须引用产品结构数据中的实际产品名和数字，禁止照抄此示例"},
+      {"signal": "【示例-必须替换】", "match": "时序错位", "source_level": "L3", "basis": "<=50字，说明判断依据。必须引用当前标的的实际产品线，禁止照抄示例文本"},
+      {"signal": "【示例-必须替换】", "match": "削弱", "source_level": "L5", "basis": "<=50字，说明判断依据"}
     ],
-    "step2c_product_restate": "化合物半导体材料: 收入1.38亿(占12.9%,同比+146%),GM=23.2%(vs公司整体20.3%)",
-    "step2d_score": 6,
-    "score_rationale": "合同负债+在建工程支撑,预告预减(时序错位)不扣分,化合物半导体GM与叙事存在差距但属时序错位"
+    "step2c_product_restate": "【必填-从用户消息'产品结构数据'表中逐产品抄录: 产品名: 收入XX(占X%, 同比±X%), GM=X%。禁止照抄此示例文本】",
+    "step2d_score": null,
+    "score_rationale": "【必填-基于实际信号判断写评分理由】"
   },
   "segments": [
     {
@@ -1427,6 +1435,7 @@ def _build_sotp_user_message(
 - SOTP触发理由: {mn.get('sotp_rationale','?')}
 - 锚冲突: {mn.get('anchor_conflict','') or '无'}
 - 事件分布形状: {ep.get('event_profile',{}).get('distribution_shape','?')} — {ep.get('event_profile',{}).get('shape_rationale','?')[:150]}
+- timing_certainty: {ep.get('event_profile',{}).get('timing_certainty','?')}/10 — **此值只影响概率分配的确定程度，不影响CAGR/PS的量级**
 - 计价程度: {pa.get('overall_priced_in','?')}（{pa.get('priced_in_estimate','?')}）
 - 剩余催化: {pa.get('residual_catalyst','?')[:200]}
 - 信号评分: {sa.get('step2d_score','?')}/10 — {sa.get('score_rationale','?')[:200]}
@@ -1435,6 +1444,34 @@ def _build_sotp_user_message(
 {_format_pricing_tool(agent2a_output)}
 - Agent-2b 路由: 主模型={_get_2b_info(agent2b_output)}, 叙事主锚分部模型={_get_sotp_primary_model(agent2b_output)}
 
+## ⚡ 基数异常警示（TTM营收可能不反映真实经营能力）
+"""
+    # ── 注入基数异常检测结果 ──
+    dep = core.get("_revenue_base_depressed")
+    if dep and dep.get("detected"):
+        msg += f"""
+> **{dep.get('forward_hint', '')}**
+>
+> 具体指引：
+> - 对于revenue锚的分部，在分部参数中使用 `forward_revenue_3y_yi`（3年后该分部收入，单位亿）
+>   替代 `revenue_growth_3y_cagr_pct`。代码会自动优先使用 forward_revenue_3y_yi。
+> - bear: 保守转化率下的3年后收入
+> - base: 正常转化率下的3年后收入
+> - bull: 满产满销或超预期转化下的3年后收入
+> - target_ps 仍然需要设定——forward_revenue只替代CAGR推导的收入，PS倍数仍需独立判断。
+>
+"""
+    # ── 高timing 额外提醒 ──
+    timing_val = ep.get('event_profile', {}).get('timing_certainty', 0)
+    if isinstance(timing_val, (int, float)) and timing_val >= 7:
+        msg += f"""
+> ⚠️ **高timing提醒**: timing_certainty={timing_val}/10意味着事件时间窗口非常精确。
+> 精确的催化剂日期→市场已部分price-in该预期→**剩余alpha空间可能比低timing事件更小**。
+> 不要因timing高而给高CAGR/PS。用硬数据（订单/产能/可比PS）锚定参数幅度。
+> timing高=你可更确信概率分配，不是你可更乐观地拉高参数。
+>
+"""
+    msg += """
 ## 二、事件素材 — 当前情形的一手数据，是估值参数的主要锚定来源
 
 > **数据层级原则**: 以下来自事件/行业的产能、价格、利用率、客户认证、供需缺口等信息，
@@ -1556,7 +1593,7 @@ def _compute_segment_value(
         # 两种模式:
         #   Mode A (连续增长): LLM提供CAGR → future_revenue = revenue × (1+CAGR)³
         #   Mode B (0→1阶跃): LLM基于事件冲击直接估3年后收入 → forward_revenue_3y_yi
-        forward_rev = params.get("forward_revenue_3y_yi")
+        forward_rev = params.get("forward_revenue_3y_yi") or params.get("forward_revenue_3y_yi_semi")
         if forward_rev and forward_rev > 0:
             future_revenue = forward_rev
         else:
@@ -1675,8 +1712,13 @@ def _compute_sotp_total(
         # 非主锚分部：始终使用 base 参数（不受事件驱动）
         if not is_primary:
             params = seg.get("base", {})
+            # fallback: LLM 可能将参数嵌套在 scenario_params 下
+            if not params:
+                params = seg.get("scenario_params", {}).get("base", {})
         else:
             params = seg.get(scenario_name, {})
+            if not params:
+                params = seg.get("scenario_params", {}).get(scenario_name, {})
 
         # 防御 LLM 输出格式错误：params 必须是 dict
         if not isinstance(params, dict):
@@ -2120,6 +2162,9 @@ class SOTPScenarioAsymmetry:
         volc_data = _safe_dict(volc_data) if volc_data else {}
         core = _get_core_fields(data_package)
 
+        # ── TTM基数异常检测（仅对B模型有意义）──
+        core["_revenue_base_depressed"] = _detect_revenue_base_depression(core)
+
         # ── Step 0: 火山数据（orchestrator预取, 免重复搜索）──
         if volc_data and volc_data.get("volc_text"):
             print(f"  [SOTP] 使用预取火山数据 ({len(volc_data.get('volc_text',''))} chars)", flush=True)
@@ -2249,19 +2294,44 @@ class SOTPScenarioAsymmetry:
         changes = result.get("change_log", [])
         if changes:
             segments = result.get("segments", [])
+            # 合法的 segment 路径第二级（scenario name 或 scenario_params）
+            _valid_seg_paths = {"bear", "base", "bull", "scenario_params",
+                                "anchor", "segment", "segment_revenue_yi", "is_primary",
+                                "segment_rationale"}
             for c in changes:
                 path = c.get("path", "")
                 parts = path.split(".")
                 new_val = c.get("new_value")
-                # path like "segments.0.base.target_ps" or "segments.1.bull.revenue_growth_3y_cagr_pct"
-                if parts[0] == "segments" and len(parts) >= 4:
-                    idx = int(parts[1])
-                    if idx < len(segments):
-                        target = segments[idx]
-                        for p in parts[2:-1]:
-                            target = target.get(p, {})
-                        c["old_value"] = target.get(parts[-1])
-                        target[parts[-1]] = new_val
+                if parts[0] != "segments" or len(parts) < 3:
+                    continue  # 非 segment 路径, 由 _merge_llm_outputs 或 scenario 路径处理
+                idx = int(parts[1])
+                if idx >= len(segments):
+                    continue
+                seg = segments[idx]
+                is_primary = seg.get("is_primary", True)
+
+                if len(parts) == 3:
+                    # ── 3-part: segments.N.field (segment 元数据) ──
+                    field = parts[2]
+                    if field in ("bear", "base", "bull"):
+                        print(f"  [SOTP] ⚠️ change_log 3-part缺少参数名(跳过): {path}", flush=True)
+                        continue
+                    c["old_value"] = seg.get(field)
+                    seg[field] = new_val
+                elif len(parts) >= 4:
+                    # ── 4+-part: segments.N.{scenario|scenario_params}.param ──
+                    if parts[2] not in _valid_seg_paths:
+                        print(f"  [SOTP] ⚠️ change_log路径非法(跳过): {path} (parts[2]={parts[2]})", flush=True)
+                        continue
+                    # 非主锚只读 base, 对 bear/bull 的修改告警
+                    if not is_primary and parts[2] in ("bear", "bull"):
+                        print(f"  [SOTP] ⚠️ change_log设置非主锚{parts[2]}参数(仅base生效,跳过): {path}", flush=True)
+                        continue
+                    target = seg
+                    for p in parts[2:-1]:
+                        target = target.get(p, {})
+                    c["old_value"] = target.get(parts[-1])
+                    target[parts[-1]] = new_val
             if changes:
                 print(f"  [SOTP] 应用了 {len(changes)} 条参数修改", flush=True)
             # ── change_log 审计: 校验修改是否与最终参数一致 ──
@@ -2288,6 +2358,9 @@ class SOTPScenarioAsymmetry:
                 required = required[0]  # 取第一个作为主检查
             for sn in scenarios:
                 params = seg.get(sn, {})
+                # fallback: LLM 可能将参数嵌套在 scenario_params 下
+                if not params:
+                    params = seg.get("scenario_params", {}).get(sn, {})
                 if isinstance(params, dict) and params.get(required):
                     return True
             return False
@@ -2375,15 +2448,22 @@ class SOTPScenarioAsymmetry:
         sotp_warnings = _validate_sotp_specific(result, sv_details, core)
         validation_warnings.extend(sotp_warnings)
 
+        # ── LLM-2 遗漏审计 (E309) ──
+        omission_warnings = _audit_llm2_omissions(result)
+        if omission_warnings:
+            validation_warnings.extend(omission_warnings)
+            print(f"  [SOTP omission-audit] warnings: {[w['code'] for w in omission_warnings]}", flush=True)
+
         # ── 强制跨族底线校验 (与标准Agent-3一致) ──
         mandatory_xcheck = _mandatory_cross_validation(
             core, result, agent2b_output or {},
         )
-        if mandatory_xcheck:
+        # 总是记录（包括 skipped 状态，方便调试）
+        result["_code_cross_validation"] = mandatory_xcheck
+        if mandatory_xcheck and not mandatory_xcheck.get("skipped"):
             existing_xcheck = result.get("validation_crosscheck", {})
             if existing_xcheck and existing_xcheck.get("validation_strategy") == "self_validation":
                 mandatory_xcheck["_overrides_llm_selfcheck"] = True
-            result["_code_cross_validation"] = mandatory_xcheck
 
         if validation_warnings:
             codes = [w["code"] for w in validation_warnings]

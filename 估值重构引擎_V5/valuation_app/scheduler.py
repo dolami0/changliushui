@@ -10,10 +10,21 @@ import json
 import logging
 import os
 import sys
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+# 兜底: 确保异常日志写入文件, 防止静默崩溃
+_log_file = Path(__file__).resolve().parent.parent / "scheduler.log"
+_handler = logging.FileHandler(str(_log_file), encoding="utf-8")
+_handler.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+logger.addHandler(_handler)
+logger.setLevel(logging.INFO)
+# 同时输出到 stderr (uvicorn 会捕获)
+_stderr_handler = logging.StreamHandler(sys.stderr)
+_stderr_handler.setFormatter(logging.Formatter("[SCHEDULER %(levelname)s] %(message)s"))
+logger.addHandler(_stderr_handler)
 
 
 class Scheduler:
@@ -27,14 +38,19 @@ class Scheduler:
         self.detail_db_id = config.get("detail_database_id", "")
         self.interval = config.get("polling_interval_sec", 600)
         self.server_port = config.get("server_port", 8080)
+        # 单条管线超时: 默认取轮询间隔的80%或3600s中更小的, 既给足时间又保证下一轮不会被阻塞超过一轮
+        _cfg_timeout = config.get("record_timeout_sec", 0)
+        self._record_timeout = _cfg_timeout if _cfg_timeout > 0 else min(3600, int(self.interval * 0.8))
         self._task: asyncio.Task | None = None
         self._running = False
+        self._completed_ids: set[str] = set()  # 同session内已标记的记录，防Coze API失败导致重复处理
         self.last_poll_at: str | None = None
         self.next_poll_at: str | None = None
         # 运行时状态（供 dashboard 查询）
         self.active_jobs: list[dict] = []
         self.completed_jobs: list[dict] = []
         self.current_poll_status: str = "idle"
+        self._polling: bool = False
         self._latest_review: dict | None = None  # 最新一轮审阅结果
         self._fail_tracker: dict[str, int] = {}    # {record_id: 连续失败次数} 防止无限重试
         self._fail_tracker_date: str = ""           # 重置日期（跨天清零）
@@ -81,11 +97,16 @@ class Scheduler:
 
     async def _poll(self) -> list[dict]:
         """执行一轮：查询 → 批量处理 → 写结果"""
+        if self._polling:
+            logger.info("上一轮轮询尚未完成，跳过本次")
+            return []
+        self._polling = True
         self.current_poll_status = "polling"
         self.last_poll_at = datetime.now(timezone.utc).isoformat()
         try:
             return await asyncio.to_thread(self._poll_sync)
         except Exception:
+            self._polling = False
             self.current_poll_status = "idle"
             raise
 
@@ -93,6 +114,7 @@ class Scheduler:
         try:
             return self._poll_sync_inner()
         finally:
+            self._polling = False
             self.current_poll_status = "idle"
             self.active_jobs = []
 
@@ -103,12 +125,38 @@ class Scheduler:
             logger.info("本轮无待处理记录")
             return []
 
-        logger.info(f"发现 {len(records)} 条待处理记录")
+        # 2. (stock_code, event_date) 去重: 同股同日保留最新一条, 其余直接标记完成
+        by_key: dict[tuple, list[dict]] = {}
+        deduped_strays: list[dict] = []  # stock_code 为空的记录, 后续脏检查处理
+        for r in records:
+            code = (r.get("stock_code", "") or "").strip()
+            if not code:
+                deduped_strays.append(r)
+                continue
+            evt_date = (
+                r.get("bstudio_create_time", "") or r.get("event_date", "") or r.get("created_at", "")
+            ).strip()[:10]
+            key = (code, evt_date)
+            by_key.setdefault(key, []).append(r)
+        deduped = []
+        for (code, evt_date), recs in by_key.items():
+            recs.sort(key=lambda r: r.get("created_at", ""), reverse=True)
+            deduped.append(recs[0])
+            for stale in recs[1:]:
+                sid = stale.get("id", "")
+                logger.info(f"[DEDUP] 同股同日重复, 跳过: stock={code} date={evt_date} id={sid}")
+                try:
+                    self.coze.mark_record_complete(self.agent0_db_id, sid)
+                except Exception as e:
+                    logger.error(f"[DEDUP] 标记重复记录失败: stock={code} id={sid} — {e}")
+        records = deduped + deduped_strays
+
+        logger.info(f"待处理: {len(records)} 条 (原始 {len(by_key)} 个(stock_code,event_date)组合)")
         self.active_jobs = [{"stock_code": r.get("stock_code", "?"),
                              "stock_name": r.get("stock_name", "?"),
                              "status": "queued"} for r in records]
 
-        # 2. 获取 DeepSeek API Key
+        # 3. 获取 DeepSeek API Key
         config_path = Path(__file__).resolve().parent / "config.json"
         with open(config_path, encoding="utf-8") as f:
             cfg = json.load(f)
@@ -134,150 +182,92 @@ class Scheduler:
                         logger.error(f"标记无效记录失败: id={record_id}")
                 continue
 
+            # ── 同session去重 ──
+            record_id = rec.get("id", "")
+            if record_id and record_id in self._completed_ids:
+                logger.info(f"[DEDUP] 跳过已处理记录: stock={stock_code} id={record_id}")
+                continue
+
             job = {"stock_code": stock_code,
                    "stock_name": rec.get("stock_name", "?"),
                    "status": "running"}
             job_statuses.append(job)
             self.active_jobs = job_statuses
 
-            # ── 防竞态: 提前标记complete → 并发轮询不会重复处理 ──
             record_id = rec.get("id", "")
-            if record_id:
-                try:
-                    self.coze.mark_record_complete(self.agent0_db_id, record_id)
-                except Exception:
-                    pass  # 标记失败不阻塞管线
+            rec_timeout = getattr(self, '_record_timeout', 600)
+            result = None
 
+            # ── 超时保护: 单条记录最长 _record_timeout 秒 ──
+            _exec = ThreadPoolExecutor(max_workers=1)
             try:
-                result = self.runner.run_single(rec, deepseek_key)
-                results.append(result)
-
-                # ── V6.2: 灵光预筛拦截 ──
-                if result.get("status") == "pre_screened_out":
-                    job["status"] = "pre_screened_out"
-                    stock_code = rec.get("stock_code", "")
-                    stock_name = rec.get("stock_name", "")
-                    pre_screen = result.get("pre_screen", {})
-                    record_id = rec.get("id", "")
-                    if record_id:
-                        try:
-                            self.coze.update_records(
-                                self.agent0_db_id,
-                                [
-                                    {"field_name": "pre_screen_score",
-                                     "value": str(pre_screen.get("total_score", 0))},
-                                    {"field_name": "pre_screen_detail",
-                                     "value": json.dumps(pre_screen, ensure_ascii=False, default=str)[:15000]},
-                                ],
-                                {"logic": "and", "conditions": [
-                                    {"left": "id", "operation": "equal", "right": record_id}
-                                ]},
-                            )
-                            self.coze.mark_record_complete(self.agent0_db_id, record_id)
-                            logger.info(
-                                f"[PreScreen] BLOCK {stock_code}({stock_name}): "
-                                f"总分{pre_screen.get('total_score','?')}/40 — "
-                                f"{pre_screen.get('cut_reason','?')[:100]}"
-                            )
-                        except Exception as e:
-                            logger.error(f"[PreScreen] 写入源表失败: {rec.get('stock_code')} — {e}")
-                    continue  # 跳过 done/error 分支，不写入输出表
-
-                if result.get("status") == "done":
-                    stock_code = rec.get("stock_code", "")
-                    stock_name = rec.get("stock_name", "")
-
-                    # Report 阶段: 写入 Coze + 保存报告
-                    self._emit_report_progress(stock_code, stock_name, 1, 2,
-                                               "写入Coze输出表", "running")
-                    write_ok = False
-                    ts = datetime.now().strftime("%Y%m%d_%H%M")
-                    if self.output_db_id:
-                        try:
-                            ts = self._write_result_to_coze_v5(rec, result, deepseek_key)
-                            write_ok = True
-                        except Exception as e:
-                            ts = datetime.now().strftime("%Y%m%d_%H%M")
-                            logger.error(f"写入输出表失败: {e}")
-                    record_id = rec.get("id", "")
-                    if record_id and write_ok:
-                        self.coze.mark_record_complete(self.agent0_db_id, record_id)
-                    self._emit_report_progress(stock_code, stock_name, 1, 2,
-                                               "写入Coze输出表", "done")
-
-                    # Report 阶段: step 2 构建 HTML
-                    self._emit_report_progress(stock_code, stock_name, 2, 2,
-                                               "构建Markdown报告", "running")
-                    self._emit_report_progress(stock_code, stock_name, 2, 2,
-                                               "构建Markdown报告", "done")
-
-                    job["status"] = "done"
-                    report_url = f"http://localhost:{self.server_port}/report/{stock_code}_{ts}"
-                    self.completed_jobs.append({
-                        "stock_code": stock_code,
-                        "stock_name": stock_name,
-                        "status": "done",
-                        "completed_at": datetime.now(timezone.utc).isoformat(),
-                        "report_url": report_url,
-                        "upside_pct": result.get("agent3", {}).get("valuation_summary", {}).get("probability_weighted_upside_pct", 0),
-                    })
-                else:
-                    job["status"] = "error"
-                    logger.error(f"管线处理失败: {rec.get('stock_code')} — "
-                                 f"{result.get('error','未知错误')[:120]}")
-                    # 重试上限: 连续3次失败后强制标记完成，防止无限重试消耗 token
-                    rid = rec.get("id", "")
-                    if rid:
-                        if self._fail_tracker_date != datetime.now().strftime("%Y%m%d"):
-                            self._fail_tracker.clear()
-                            self._fail_tracker_date = datetime.now().strftime("%Y%m%d")
-                        fails = self._fail_tracker.get(rid, 0) + 1
-                        self._fail_tracker[rid] = fails
-                        if fails >= 2:
-                            logger.warning(
-                                f"记录 {rid}({rec.get('stock_code')}) 连续失败{fails}次，"
-                                f"强制标记完成以中断重试循环"
-                            )
-                            # is_complete 已在管线开始前设为 true，无需再设
-                        else:
-                            logger.info(f"记录 {rid} 失败 {fails}/3 次，退回 false 以重试")
-                            try:
-                                self.coze.update_records(
-                                    self.agent0_db_id,
-                                    [{"field_name": "is_complete", "value": "false"}],
-                                    {"logic": "and", "conditions": [
-                                        {"left": "id", "operation": "equal", "right": rid}
-                                    ]},
-                                )
-                            except Exception as e:
-                                logger.error(f"退回is_complete失败: {e}")
-
+                _future = _exec.submit(self.runner.run_single, rec, deepseek_key)
+                result = _future.result(timeout=rec_timeout)
+            except FuturesTimeoutError:
+                logger.error(f"处理 {rec.get('stock_code', '?')} 超时(>{rec_timeout}s)，强制中断")
+                job["status"] = "error"
+                results.append({"agent0": rec, "status": "error", "error": f"单记录超时(>{rec_timeout}s)"})
+                self._handle_failure(rec)
+                continue
             except Exception as e:
                 logger.error(f"处理 {rec.get('stock_code', '?')} 失败: {e}")
                 job["status"] = "error"
                 results.append({"agent0": rec, "status": "error", "error": str(e)})
-                # 异常同样计入重试上限
-                rid = rec.get("id", "")
-                if rid:
-                    if self._fail_tracker_date != datetime.now().strftime("%Y%m%d"):
-                        self._fail_tracker.clear()
-                        self._fail_tracker_date = datetime.now().strftime("%Y%m%d")
-                    fails = self._fail_tracker.get(rid, 0) + 1
-                    self._fail_tracker[rid] = fails
-                    if fails >= 2:
-                        logger.warning(f"记录 {rid} 连续异常{fails}次，强制标记完成")
-                        # is_complete 已在管线开始前设为 true，无需再设
-                    else:
-                        try:
-                            self.coze.update_records(
-                                self.agent0_db_id,
-                                [{"field_name": "is_complete", "value": "false"}],
-                                {"logic": "and", "conditions": [
-                                    {"left": "id", "operation": "equal", "right": rid}
-                                ]},
-                            )
-                        except Exception as e2:
-                            logger.error(f"退回is_complete失败: {e2}")
+                self._handle_failure(rec)
+                continue
+            finally:
+                _exec.shutdown(wait=False)  # 不等待卡死线程
+
+            # ── 管线成功，处理结果 ──
+            results.append(result)
+
+            if result.get("status") == "pre_screened_out":
+                job["status"] = "pre_screened_out"
+                stock_code = rec.get("stock_code", "")
+                stock_name = rec.get("stock_name", "")
+                pre_screen = result.get("pre_screen", {})
+                record_id = rec.get("id", "")
+                if record_id:
+                    try:
+                        self.coze.update_records(
+                            self.agent0_db_id,
+                            [{"field_name": "pre_screen_score", "value": str(pre_screen.get("total_score", 0))},
+                             {"field_name": "pre_screen_detail", "value": json.dumps(pre_screen, ensure_ascii=False, default=str)[:15000]}],
+                            {"logic": "and", "conditions": [{"left": "id", "operation": "equal", "right": record_id}]},
+                        )
+                        self.coze.mark_record_complete(self.agent0_db_id, record_id)
+                        logger.info(f"[PreScreen] BLOCK {stock_code}({stock_name}): 总分{pre_screen.get('total_score','?')}/40 — {pre_screen.get('cut_reason','?')[:100]}")
+                    except Exception as e:
+                        logger.error(f"[PreScreen] 写入源表失败: {rec.get('stock_code')} — {e}")
+                continue
+
+            if result.get("status") == "done":
+                stock_code = rec.get("stock_code", "")
+                stock_name = rec.get("stock_name", "")
+                self._emit_report_progress(stock_code, stock_name, 1, 2, "写入Coze输出表", "running")
+                ts = datetime.now().strftime("%Y%m%d_%H%M")
+                if self.output_db_id:
+                    try:
+                        ts = self._write_result_to_coze_v5(rec, result, deepseek_key)
+                    except Exception as e:
+                        ts = datetime.now().strftime("%Y%m%d_%H%M")
+                        logger.error(f"写入输出表失败: {e}")
+                self._emit_report_progress(stock_code, stock_name, 1, 2, "写入Coze输出表", "done")
+                self._emit_report_progress(stock_code, stock_name, 2, 2, "构建Markdown报告", "running")
+                self._emit_report_progress(stock_code, stock_name, 2, 2, "构建Markdown报告", "done")
+                job["status"] = "done"
+                report_url = f"http://localhost:{self.server_port}/report/{stock_code}_{ts}"
+                self.completed_jobs.append({
+                    "stock_code": stock_code, "stock_name": stock_name, "status": "done",
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "report_url": report_url,
+                    "upside_pct": result.get("agent3", {}).get("valuation_summary", {}).get("probability_weighted_upside_pct", 0),
+                })
+                self._ensure_complete(rec, record_id)
+            else:
+                job["status"] = "error"
+                logger.error(f"管线处理失败: {rec.get('stock_code')} — {result.get('error','未知错误')[:120]}")
+                self._handle_failure(rec)
 
         # 4. 跨股赔率排序
         try:
@@ -303,6 +293,52 @@ class Scheduler:
 
         self.next_poll_at = Scheduler._next_hour_local().isoformat()
         return results
+
+    # ═══════════════════════════════════════
+    # 去重辅助
+    # ═══════════════════════════════════════
+
+    def _ensure_complete(self, rec: dict, record_id: str):
+        """管线成功 → 确保 Coze 侧 is_complete=true"""
+        if not record_id:
+            return
+        if record_id in self._completed_ids:
+            return
+        try:
+            self.coze.mark_record_complete(self.agent0_db_id, record_id)
+            self._completed_ids.add(record_id)
+        except Exception as e:
+            logger.error(f"[MARK] 补标失败(不影响结果): stock={rec.get('stock_code','?')} — {e}")
+
+    def _handle_failure(self, rec: dict):
+        """管线失败 → 按重试上限决定是否强制标记完成"""
+        rid = rec.get("id", "")
+        if not rid:
+            return
+        if self._fail_tracker_date != datetime.now().strftime("%Y%m%d"):
+            self._fail_tracker.clear()
+            self._fail_tracker_date = datetime.now().strftime("%Y%m%d")
+        fails = self._fail_tracker.get(rid, 0) + 1
+        self._fail_tracker[rid] = fails
+        if fails >= 2:
+            logger.warning(f"记录 {rid}({rec.get('stock_code')}) 连续失败{fails}次，强制标记完成")
+            try:
+                self.coze.mark_record_complete(self.agent0_db_id, rid)
+                self._completed_ids.add(rid)
+            except Exception as e:
+                logger.error(f"强制标记也失败: {rec.get('stock_code')} — {e}")
+        else:
+            logger.info(f"记录 {rid} 失败 {fails}/2 次，退回 is_complete=false 等待重试")
+            try:
+                self.coze.update_records(
+                    self.agent0_db_id,
+                    [{"field_name": "is_complete", "value": "false"}],
+                    {"logic": "and", "conditions": [
+                        {"left": "id", "operation": "equal", "right": rid}
+                    ]},
+                )
+            except Exception as e:
+                logger.error(f"退回is_complete失败: {e}")
 
     # ═══════════════════════════════════════
     # 每日审阅报告
