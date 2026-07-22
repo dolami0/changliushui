@@ -146,7 +146,7 @@ def _gen_volc_query(
     context_parts.append(f"叙事详情: {mn.get('narrative_summary', '')}")
     context_parts.append(f"估值锚: primary={mn.get('primary_anchor', '')}")
     if mn.get('sotp_rationale'):
-        context_parts.append(f"SOTP理由: {mn.get('sotp_rationale', '')[:300]}")
+        context_parts.append(f"SOTP理由: {mn.get('sotp_rationale', '')}")
     for sa in (sas or [])[:5]:
         context_parts.append(f"分部: {sa.get('segment', '')} | 锚={sa.get('anchor', '')} | 收入占比≈{sa.get('revenue_share_pct', '?')}%")
 
@@ -1430,17 +1430,17 @@ def _build_sotp_user_message(
 ## 一、前置裁决 — Agent-2a 叙事诊断 + Agent-2b 路由（已审核，可直接信任，不可推翻）
 
 - 主锚: {primary}
-- 锚证据: {mn.get('primary_anchor_evidence','?')[:200]}
+- 锚证据: {mn.get('primary_anchor_evidence','?')}
 - 核心赌注: {mn.get('core_bet','?')}
-- 叙事总结: {mn.get('narrative_summary','?')[:300]}
+- 叙事总结: {mn.get('narrative_summary','?')}
 - 生命周期: {mn.get('narrative_lifecycle','?')}
 - SOTP触发理由: {mn.get('sotp_rationale','?')}
 - 锚冲突: {mn.get('anchor_conflict','') or '无'}
-- 事件分布形状: {ep.get('event_profile',{}).get('distribution_shape','?')} — {ep.get('event_profile',{}).get('shape_rationale','?')[:150]}
+- 事件分布形状: {ep.get('event_profile',{}).get('distribution_shape','?')} — {ep.get('event_profile',{}).get('shape_rationale','?')}
 - timing_certainty: {ep.get('event_profile',{}).get('timing_certainty','?')}/10 — **此值只影响概率分配的确定程度，不影响CAGR/PS的量级**
 - 计价程度: {pa.get('overall_priced_in','?')}（{pa.get('priced_in_estimate','?')}）
-- 剩余催化: {pa.get('residual_catalyst','?')[:200]}
-- 信号评分: {sa.get('step2d_score','?')}/10 — {sa.get('score_rationale','?')[:200]}
+- 剩余催化: {pa.get('residual_catalyst','?')}
+- 信号评分: {sa.get('step2d_score','?')}/10 — {sa.get('score_rationale','?')}
 - 信号审核: {_format_signal_audit(sa)}
 {_format_anchor_shift(mn)}
 {_format_pricing_tool(agent2a_output)}
@@ -1564,6 +1564,7 @@ def _compute_segment_value(
     params: dict,
     segment_revenue: float,
     core: dict,
+    product_gm: float | None = None,
 ) -> float | None:
     """计算单个分部的目标市值。
 
@@ -1572,6 +1573,7 @@ def _compute_segment_value(
         params: LLM 输出的该分部该情景参数
         segment_revenue: 该分部的估算收入（亿元）
         core: 公司整体财务数据字典
+        product_gm: 该分部对应产品的毛利率(可选, 用于净利率fallback)
 
     Returns:
         分部目标市值（亿元），None 表示参数不足无法计算
@@ -1579,25 +1581,29 @@ def _compute_segment_value(
     if anchor == "earnings":
         pe = params.get("pe_target", 0)
         if not pe:
-            # fallback: LLM 有时用 normalized_pe 或其他变体
             pe = params.get("normalized_pe", 0) or params.get("target_pe", 0)
         net_margin = params.get("segment_net_margin_pct")
+        fallback_reason = ""
         if net_margin is None:
-            # 后备: 旧字段 segment_margin_pct（向后兼容），再后备: 公司整体净利率
             net_margin = params.get("segment_margin_pct")
+            if net_margin is not None:
+                fallback_reason = "旧字段segment_margin_pct"
         if net_margin is None:
-            # 后备: LLM 有时给 normalized_roic_pct 而非 segment_net_margin_pct
-            # ROIC ≈ NOPAT/(营收×IC周转率), 对轻资产服务类业务 ROIC≈净利率
             roic = params.get("normalized_roic_pct")
             if roic is not None and roic > 0:
                 net_margin = roic
+                fallback_reason = "normalized_roic_pct→净利率"
         if net_margin is None:
             net_margin = core.get("net_margin_pct", 0)
-        net_margin = net_margin or 0  # .get()在key存在但值为None时不返回default
+            fallback_reason = f"公司整体净利率{net_margin}%(可能低估该分部利润率)"
+        net_margin = net_margin or 0
         segment_revenue = segment_revenue or 0
         if pe > 0 and segment_revenue > 0 and net_margin > 0:
             segment_net_profit = segment_revenue * net_margin / 100
-            return round(segment_net_profit * pe, 1)
+            result = round(segment_net_profit * pe, 1)
+            if fallback_reason:
+                params["_fallback_net_margin"] = fallback_reason
+            return result
         return None
 
     elif anchor == "revenue":
@@ -1953,7 +1959,35 @@ def _validate_sotp_specific(
                 "message": f"分部收入占比之和={total_share:.1f}%（应≈100%）",
             })
 
-    # Check 4: 分部级 monotonic 参数递增
+    # Check 4: 分部参数完整性 — 必填字段缺失时标注 fallback 来源
+    for seg in segments:
+        anchor = seg.get("anchor", "")
+        seg_name = seg.get("segment", "?")
+        if anchor == "earnings":
+            for sn in ("bear", "base", "bull") if seg.get("is_primary", True) else ("base",):
+                s = seg.get(sn, {})
+                pe = s.get("pe_target") or s.get("normalized_pe")
+                nm = s.get("segment_net_margin_pct")
+                fb = s.get("_fallback_net_margin", "")
+                if pe and nm is None and fb:
+                    warnings.append({
+                        "code": "E405", "level": "SOTP",
+                        "message": f"分部'{seg_name}' {sn}情景 segment_net_margin_pct缺失, 回退: {fb}",
+                    })
+
+    # Check 5: 分部参数完整性 — asset锚target_pb缺失
+    for seg in segments:
+        anchor = seg.get("anchor", "")
+        if anchor == "asset":
+            for sn in ("bear", "base", "bull") if seg.get("is_primary", True) else ("base",):
+                s = seg.get(sn, {})
+                if not s.get("target_pb"):
+                    warnings.append({
+                        "code": "E406", "level": "SOTP",
+                        "message": f"分部'{seg.get('segment','?')}' {sn}情景 asset锚缺少target_pb, 该分部估值可能为0",
+                    })
+
+    # Check 6: 分部级 monotonic 参数递增
     for seg in segments:
         if not seg.get("is_primary", True):
             continue

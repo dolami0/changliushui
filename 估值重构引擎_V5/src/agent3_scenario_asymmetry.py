@@ -2461,9 +2461,8 @@ SOTP触发: {mn.get('sotp_triggered', False)}
                 print(f"  [LLM-2] 原始输出已保存: {_diag}", flush=True)
             except Exception:
                 pass
-            # 保留完整原始输出（最多 20000 字符），截断防止 token 爆炸
-            # 旧逻辑只传 content[:500]→LLM 看到碎片产出了空 JSON
-            preserved = content[:20000] if len(content) > 20000 else content
+            # 保留完整原始输出，让LLM看到全部内容后修复JSON格式
+            preserved = content
             messages.append({
                 "role": "assistant",
                 "content": preserved
@@ -2616,7 +2615,7 @@ def _call_volc_search(query: str, purpose: str = "") -> str:
     try:
         from agent3s_sotp import _call_volc
         resp = _call_volc(query)
-        return resp[:2000] if resp else f"搜索无结果: {query}"
+        return resp if resp else f"搜索无结果: {query}"
     except Exception as e:
         return f"搜索异常: {query} ({e})"
 
@@ -2626,7 +2625,7 @@ def _call_bocha_search(query: str, purpose: str = "") -> str:
     try:
         from agents.tools import bocha_search
         resp = bocha_search(query, count=5, freshness="oneYear")
-        return f"[博查-外网搜索]\n{resp[:2000]}" if resp else f"搜索无结果: {query}"
+        return f"[博查-外网搜索]\n{resp}" if resp else f"搜索无结果: {query}"
     except Exception as e:
         return f"搜索异常: {query} ({e})"
 
