@@ -1709,7 +1709,7 @@ def _compute_sotp_total(
 
     for seg in segments:
         if not isinstance(seg, dict):
-            print(f"  [SOTP] ⚠️ segment不是dict, 跳过: type={type(seg).__name__}", flush=True)
+            print(f"  [SOTP] [WARN] segment不是dict, 跳过: type={type(seg).__name__}", flush=True)
             continue
 
         seg_name = seg.get("segment", "?")
@@ -1739,7 +1739,7 @@ def _compute_sotp_total(
 
         # 防御 LLM 输出格式错误：params 必须是 dict
         if not isinstance(params, dict):
-            print(f"  [SOTP] ⚠️ {seg_name}/{scenario_name} params不是dict: type={type(params).__name__} val={str(params)[:200]}", flush=True)
+            print(f"  [SOTP] [WARN] {seg_name}/{scenario_name} params不是dict: type={type(params).__name__} val={str(params)[:200]}", flush=True)
             params = {}
 
         seg_val = _compute_segment_value(anchor, params, seg_revenue, core)
@@ -1842,7 +1842,7 @@ def _compute_sotp_from_llm(
             prob = defaults.get(scenario_name, 0.15)
             details[scenario_name]["probability"] = prob
             details[scenario_name]["_probability_fallback"] = True
-            print(f"  [SOTP] ⚠️ {scenario_name}概率兜底: LLM未输出→使用默认{prob}", flush=True)
+            print(f"  [SOTP] [WARN] {scenario_name}概率兜底: LLM未输出->使用默认{prob}", flush=True)
         probs.append(prob)
 
         if current_mcap > 0:
@@ -2359,18 +2359,18 @@ class SOTPScenarioAsymmetry:
                     # ── 3-part: segments.N.field (segment 元数据) ──
                     field = parts[2]
                     if field in ("bear", "base", "bull"):
-                        print(f"  [SOTP] ⚠️ change_log 3-part缺少参数名(跳过): {path}", flush=True)
+                        print(f"  [SOTP] [WARN] change_log 3-part缺少参数名(跳过): {path}", flush=True)
                         continue
                     c["old_value"] = seg.get(field)
                     seg[field] = new_val
                 elif len(parts) >= 4:
                     # ── 4+-part: segments.N.{scenario|scenario_params}.param ──
                     if parts[2] not in _valid_seg_paths:
-                        print(f"  [SOTP] ⚠️ change_log路径非法(跳过): {path} (parts[2]={parts[2]})", flush=True)
+                        print(f"  [SOTP] [WARN] change_log路径非法(跳过): {path} (parts[2]={parts[2]})", flush=True)
                         continue
                     # 非主锚只读 base, 对 bear/bull 的修改告警
                     if not is_primary and parts[2] in ("bear", "bull"):
-                        print(f"  [SOTP] ⚠️ change_log设置非主锚{parts[2]}参数(仅base生效,跳过): {path}", flush=True)
+                        print(f"  [SOTP] [WARN] change_log设置非主锚{parts[2]}参数(仅base生效,跳过): {path}", flush=True)
                         continue
                     target = seg
                     for p in parts[2:-1]:
