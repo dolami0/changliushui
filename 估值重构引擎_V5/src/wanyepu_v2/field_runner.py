@@ -68,26 +68,32 @@ FIELD_CN = {
 # LLM 调用
 # ══════════════════════════════════════════════════════
 
-def call_deepseek(system: str, user: str, max_tokens: int = 4096, temperature: float = 0, max_retries: int = 3) -> str:
-    """调用 DeepSeek，返回文本。失败重试 max_retries 次。"""
+def call_deepseek(system: str, user: str, max_tokens: int = 4096, temperature: float = 0, max_retries: int = 3, thinking: bool = True) -> str:
+    """调用 DeepSeek，返回文本。失败重试 max_retries 次。
+
+    thinking=True: 用于探针设计（需要创造性）
+    thinking=False: 用于合并报告（需要严格忠实于探针结论，避免幻觉）
+    """
     for attempt in range(max_retries):
         try:
+            payload = {
+                "model": DEEPSEEK_MODEL,
+                "temperature": temperature,
+                "max_tokens": max_tokens,
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user},
+                ],
+            }
+            if thinking:
+                payload["thinking"] = {"type": "enabled"}
             r = requests.post(
                 DEEPSEEK_URL,
                 headers={
                     "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
                     "Content-Type": "application/json",
                 },
-                json={
-                    "model": DEEPSEEK_MODEL,
-                    "temperature": temperature,
-                    "max_tokens": max_tokens,
-                    "messages": [
-                        {"role": "system", "content": system},
-                        {"role": "user", "content": user},
-                    ],
-                    "thinking": {"type": "enabled"},
-                },
+                json=payload,
                 timeout=120,
             )
             data = r.json()
@@ -510,9 +516,14 @@ def design_deep_probes(
 # ══════════════════════════════════════════════════════
 
 def merge_probes(field_name: str, probe_results: list[dict], llm_fn=None, verbose: bool = True) -> str:
-    """将N个独立探针结论合并为字段报告。"""
+    """将N个独立探针结论合并为字段报告。
+
+    用 thinking=False 调用：合并是严格的"忠实于探针结论"任务，
+    不需要创造性推理。thinking 模式在 temperature=0 时仍可能产生
+    幻觉（如把"数十亿元"写成"几百万元"），关闭后输出更稳定。
+    """
     if llm_fn is None:
-        llm_fn = call_deepseek
+        llm_fn = lambda system, user, max_tokens, **kw: call_deepseek(system, user, max_tokens=max_tokens, thinking=False)
     conclusions_text = "\n\n---\n\n".join(
         f"## 探针{i+1}: {p['name']}\n{p['conclusion']}"
         for i, p in enumerate(probe_results)

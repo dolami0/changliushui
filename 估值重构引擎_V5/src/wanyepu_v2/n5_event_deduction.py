@@ -9,7 +9,12 @@ import json
 import re
 import time
 
-from .field_runner import call_deepseek, volc_search, CURRENT_DATE
+from .field_runner import call_deepseek as _call_deepseek, volc_search, CURRENT_DATE
+
+
+def call_deepseek(system: str, user: str, max_tokens: int = 4096, **kw) -> str:
+    """N5 事件推演统一用 thinking=False — 忠实于搜索结果，避免幻觉。"""
+    return _call_deepseek(system, user, max_tokens=max_tokens, thinking=False)
 
 
 # ══════════════════════════════════════════════════════
