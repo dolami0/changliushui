@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>追踪令 · 长流水</title>
+<style>
+  :root {
+    --bg: #08090a;
+    --surface: #111316;
+    --surface2: #17191d;
+    --border: #1e2025;
+    --border2: #2a2d33;
+    --text: #e8eaed;
+    --text2: #9aa0ab;
+    --text3: #5f646e;
+    --green: #34d399;
+    --green-bg: rgba(52,211,153,.1);
+    --red: #f87171;
+    --red-bg: rgba(248,113,113,.1);
+    --amber: #fbbf24;
+    --amber-bg: rgba(251,191,36,.1);
+    --blue: #60a5fa;
+    --blue-bg: rgba(96,165,250,.1);
+    --purple: #a78bfa;
+    --purple-bg: rgba(167,139,250,.1);
+    --ring: rgba(96,165,250,.4);
+  }
+  * { box-sizing:border-box; margin:0; padding:0 }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, 'Noto Sans SC', sans-serif;
+    font-size: 13px; line-height: 1.55; -webkit-font-smoothing: antialiased;
+    min-height:100vh;
+  }
+  ::-webkit-scrollbar { width:4px } ::-webkit-scrollbar-track { background:transparent }
+  ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:4px }
+
+  /* ── Top Bar ── */
+  .topbar {
+    position:sticky; top:0; z-index:10;
+    background: rgba(8,9,10,.85); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+    border-bottom: 1px solid var(--border); padding: 16px 24px;
+  }
+  .topbar-inner { max-width:1280px; margin:0 auto; display:flex; align-items:center; justify-content:space-between }
+  .topbar h1 { font-size:18px; font-weight:700; letter-spacing:-.3px }
+  .topbar h1 span { color:var(--text3); font-weight:400 }
+  .topbar-stats { display:flex; gap:24px; font-size:12px; color:var(--text2) }
+  .topbar-stats strong { color:var(--text) }
+  .stat-up { color:var(--green) }
+  .dot-live { display:inline-block; width:6px; height:6px; background:var(--green); border-radius:50%; margin-right:6px; animation:pulse 2s ease infinite }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  /* ── Layout ── */
+  .layout { max-width:1280px; margin:0 auto; padding:24px; display:flex; gap:20px }
+  .sidebar { width:220px; flex-shrink:0 }
+  .main { flex:1; min-width:0 }
+  .sidebar-card {
+    background:var(--surface); border:1px solid var(--border); border-radius:14px;
+    padding:18px; margin-bottom:12px;
+  }
+  .sidebar-card h3 { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--text3); margin-bottom:12px }
+  .sidebar-card .filter-item {
+    display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:6px;
+    font-size:12px; color:var(--text2); cursor:pointer; margin-bottom:2px;
+  }
+  .sidebar-card .filter-item:hover { background:var(--surface2); color:var(--text) }
+  .filter-item .count { margin-left:auto; color:var(--text3); font-size:11px }
+  .filter-item.active { background:var(--blue-bg); color:var(--blue) }
+  .filter-item.active .count { color:var(--blue) }
+  .filter-dot { width:7px; height:7px; border-radius:50% }
+  .filter-dot.g { background:var(--green) } .filter-dot.a { background:var(--amber) } .filter-dot.r { background:var(--red) }
+
+  .portfolio-mini {
+    background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:18px;
+  }
+  .portfolio-mini h3 { font-size:11px; font-weight:600; text-transform:uppercase; letter-spacing:1px; color:var(--text3); margin-bottom:10px }
+  .pf-row { display:flex; justify-content:space-between; font-size:12px; padding:4px 0; color:var(--text2) }
+  .pf-row .val { color:var(--text); font-weight:500 }
+
+  /* ── Card Grid ── */
+  .card-grid { display:flex; flex-direction:column; gap:16px }
+
+  /* ── Tracker Card ── */
+  .tcard {
+    background:var(--surface); border:1px solid var(--border); border-radius:16px;
+    overflow:hidden; transition: all .25s ease;
+    animation: cardIn .5s ease both;
+  }
+  .tcard:nth-child(1) { animation-delay:0s }
+  .tcard:nth-child(2) { animation-delay:.08s }
+  .tcard:nth-child(3) { animation-delay:.16s }
+  @keyframes cardIn { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
+  .tcard:hover { border-color:var(--border2); box-shadow:0 0 0 1px rgba(255,255,255,.03), 0 8px 32px rgba(0,0,0,.4) }
+
+  /* card header */
+  .tcard-hd {
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 18px 22px; cursor:pointer;
+  }
+  .tcard-hd:hover { background:var(--surface2) }
+  .tcard-id { display:flex; align-items:center; gap:12px }
+  .tcard-id .sig-ring {
+    width:10px; height:10px; border-radius:50%; flex-shrink:0;
+  }
+  .sig-ring.s-buy { background:var(--green); box-shadow:0 0 10px rgba(52,211,153,.5) }
+  .sig-ring.s-hold { background:var(--amber); box-shadow:0 0 10px rgba(251,191,36,.4) }
+  .sig-ring.s-strong { background:#c084fc; box-shadow:0 0 12px rgba(192,132,252,.6) }
+  .tcard-name { font-size:15px; font-weight:700; color:var(--text) }
+  .tcard-code { font-size:12px; color:var(--text3); margin-left:2px; font-weight:400 }
+  .tcard-badges { display:flex; gap:8px; align-items:center }
+  .pill {
+    font-size:10.5px; padding:3px 10px; border-radius:20px; font-weight:600; letter-spacing:.2px;
+  }
+  .pill-buy { background:var(--green-bg); color:var(--green) }
+  .pill-hold { background:var(--amber-bg); color:var(--amber) }
+  .pill-strong { background:rgba(192,132,252,.15); color:#c084fc }
+  .pill-tier { background:var(--blue-bg); color:var(--blue) }
+  .pill-new { background:rgba(52,211,153,.08); color:var(--green); border:1px solid rgba(52,211,153,.2) }
+  .tcard-chevron { color:var(--text3); font-size:14px; transition:.2s }
+  .tcard.open .tcard-chevron { transform:rotate(180deg) }
+
+  /* card body */
+  .tcard-bd { display:none; padding:0 22px 20px }
+  .tcard.open .tcard-bd { display:block }
+
+  /* section label */
+  .sec-label {
+    font-size:9.5px; font-weight:700; text-transform:uppercase; letter-spacing:1.5px;
+    color:var(--text3); margin-bottom:10px; margin-top:6px;
+  }
+
+  /* thesis bar */
+  .thesis-bar-wrap { display:flex; align-items:center; gap:14px; margin-bottom:18px }
+  .thesis-num { font-size:26px; font-weight:800; min-width:44px; text-align:center; letter-spacing:-1px }
+  .thesis-track { flex:1; height:5px; background:var(--border2); border-radius:3px; overflow:hidden }
+  .thesis-fill { height:100%; border-radius:3px; transition:width .6s cubic-bezier(.4,0,.2,1) }
+  .thesis-tag { font-size:11px; color:var(--text2); min-width:48px; text-align:right }
+
+  /* pillar dots */
+  .pillars { display:flex; gap:10px; margin-bottom:18px }
+  .pdot {
+    flex:1; text-align:center; padding:10px 6px;
+    background:var(--surface2); border-radius:10px; border:1px solid transparent;
+  }
+  .pdot .pn { font-size:11px; font-weight:600; margin-bottom:3px; color:var(--text) }
+  .pdot .ps { font-size:12px; font-weight:700 }
+  .pdot .pl { font-size:10px; color:var(--text3); margin-top:1px }
+  .ps-ok { color:var(--green) } .ps-warn { color:var(--amber) } .ps-risk { color:var(--red) }
+
+  /* catalyst timeline */
+  .ct-line { position:relative; padding-left:18px; margin-bottom:16px }
+  .ct-line::before { content:''; position:absolute; left:6px; top:4px; bottom:4px; width:1.5px; background:var(--border2) }
+  .ct-node { position:relative; padding:5px 0 5px 18px; font-size:12px; color:var(--text2); display:flex; align-items:baseline; gap:8px }
+  .ct-node::before { content:''; position:absolute; left:-12px; top:10px; width:6px; height:6px; border-radius:50%; background:var(--border2) }
+  .ct-node.done { color:var(--text3) } .ct-node.done::before { background:var(--green) }
+  .ct-node.done .ct-ev { text-decoration:line-through; color:var(--text3) }
+  .ct-node.now::before { background:var(--blue); box-shadow:0 0 0 4px var(--blue-bg) }
+  .ct-date { font-size:11px; color:var(--text3); min-width:42px; font-weight:500 }
+  .ct-pill { font-size:9.5px; padding:1px 5px; border-radius:4px; font-weight:600 }
+  .ct-p0 { background:rgba(248,113,113,.12); color:var(--red) }
+  .ct-p1 { background:var(--amber-bg); color:var(--amber) }
+
+  /* valuation gauge */
+  .val-wrap { margin-bottom:16px }
+  .val-track {
+    height:4px; border-radius:2px; position:relative; margin:10px 0 6px;
+    background:linear-gradient(to right, var(--red) 0%, var(--amber) 35%, var(--green) 65%, var(--blue) 100%);
+  }
+  .val-needle {
+    position:absolute; top:-5px; width:2px; height:14px; background:var(--text); border-radius:1px; transform:translateX(-50%);
+    box-shadow:0 0 8px rgba(255,255,255,.15);
+  }
+  .val-zone { display:flex; justify-content:space-between; font-size:10px; color:var(--text3); margin-bottom:2px }
+  .val-info { font-size:11px; color:var(--text2) }
+
+  /* factor strips */
+  .strip { display:flex; gap:8px; margin-bottom:14px }
+  .strip-item { flex:1; text-align:center; padding:10px 6px; border-radius:10px; background:var(--surface2) }
+  .strip-item .sv { font-size:13px; font-weight:700; margin-bottom:2px }
+  .strip-item .sl { font-size:10px; color:var(--text3) }
+  .sv-up { color:var(--green) } .sv-warn { color:var(--amber) } .sv-down { color:var(--red) } .sv-purple { color:var(--purple) }
+  .strip-proprietary { background:rgba(167,139,250,.04); border:1px solid rgba(167,139,250,.1) }
+
+  /* signal row */
+  .sig-row { display:flex; gap:12px; margin-bottom:10px }
+  .sig-cell {
+    flex:1; background:var(--surface2); border-radius:12px; padding:14px; text-align:center;
+  }
+  .sig-letter { font-size:32px; font-weight:900; line-height:1; letter-spacing:-1px }
+  .sig-label { font-size:10px; color:var(--text3); margin-top:4px; font-weight:500 }
+  .l-s { color:#c084fc } .l-a { color:var(--blue) } .l-b { color:var(--amber) }
+  .pos-detail { font-size:12px; color:var(--text2); line-height:1.9; text-align:left }
+  .pos-detail b { color:var(--text); font-weight:600 }
+  .return-big { font-size:22px; font-weight:800; letter-spacing:-.5px }
+  .r-up { color:var(--green) } .r-flat { color:var(--text3) }
+
+  /* actions */
+  .tcard-acts { display:flex; gap:8px; padding:14px 22px; border-top:1px solid var(--border); margin-top:4px }
+  .btn {
+    flex:1; padding:9px 0; border-radius:8px; font-size:12px; cursor:pointer;
+    text-align:center; border:1px solid var(--border2); background:transparent; color:var(--text2);
+    transition:all .15s; font-family:inherit;
+  }
+  .btn:hover { background:var(--surface2); color:var(--text); border-color:var(--border2) }
+  .btn.pri { background:var(--blue); color:#fff; border-color:var(--blue); font-weight:600 }
+  .btn.pri:hover { opacity:.9 }
+  .btn.danger:hover { background:var(--red-bg); color:var(--red); border-color:rgba(248,113,113,.3) }
+
+  @media(max-width:860px) {
+    .layout { flex-direction:column; padding:16px }
+    .sidebar { width:100%; display:flex; gap:12px; overflow-x:auto }
+    .sidebar-card { flex:1; min-width:140px }
+    .tcard-hd { padding:14px 16px }
+    .tcard-bd { padding:0 16px 16px }
+    .strip { flex-wrap:wrap }
+    .strip-item { min-width:60px }
+    .sig-row { flex-direction:column }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <h1>追踪令 <span>· 长流水</span></h1>
+    <div class="topbar-stats">
+      <span><span class="dot-live"></span><strong>3</strong> 追踪中</span>
+      <span>总仓位 <strong>65%</strong></span>
+      <span>累计 <strong class="stat-up">+18.7%</strong></span>
+      <span>夏普 <strong>1.4</strong></span>
+    </div>
+  </div>
+</div>
+
+<div class="layout">
+  <!-- sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-card">
+      <h3>信号筛选</h3>
+      <div class="filter-item active"><span class="filter-dot g"></span>全部<span class="count">3</span></div>
+      <div class="filter-item"><span class="filter-dot g"></span>买入 S/A<span class="count">2</span></div>
+      <div class="filter-item"><span class="filter-dot a"></span>持有 B<span class="count">1</span></div>
+      <div class="filter-item"><span class="filter-dot r"></span>减仓/清仓<span class="count">0</span></div>
+    </div>
+    <div class="portfolio-mini">
+      <h3>虚拟总仓</h3>
+      <div class="pf-row"><span>总资金</span><span class="val">100 万</span></div>
+      <div class="pf-row"><span>持仓市值</span><span class="val">64.8 万</span></div>
+      <div class="pf-row"><span>现金</span><span class="val">35.2 万</span></div>
+      <div class="pf-row"><span>累计收益</span><span class="val" style="color:var(--green)">+18.7%</span></div>
+      <div class="pf-row"><span>最大回撤</span><span class="val" style="color:var(--red)">-8.3%</span></div>
+    </div>
+  </div>
+
+  <!-- main cards -->
+  <div class="main">
+    <div class="card-grid">
+
+      <!-- ═══ Card 1: 盛合晶微 ═══ -->
+      <div class="tcard open">
+        <div class="tcard-hd" onclick="this.parentElement.classList.toggle('open')">
+          <div class="tcard-id">
+            <div class="sig-ring s-buy"></div>
+            <div>
+              <span class="tcard-name">盛合晶微</span><span class="tcard-code">688820</span>
+            </div>
+          </div>
+          <div class="tcard-badges">
+            <span class="pill pill-buy">A 买入</span>
+            <span class="pill pill-tier">★★☆</span>
+            <span class="tcard-chevron">▾</span>
+          </div>
+        </div>
+        <div class="tcard-bd">
+
+          <div class="sec-label">论点健康度</div>
+          <div class="thesis-bar-wrap">
+            <div class="thesis-num" style="color:var(--blue)">7.2</div>
+            <div class="thesis-track"><div class="thesis-fill" style="width:72%;background:var(--blue)"></div></div>
+            <div class="thesis-tag">加强中</div>
+          </div>
+          <div class="pillars">
+            <div class="pdot"><div class="pn">需求</div><div class="ps ps-ok">8.5</div><div class="pl">✓</div></div>
+            <div class="pdot"><div class="pn">壁垒</div><div class="ps ps-ok">8.0</div><div class="pl">✓</div></div>
+            <div class="pdot"><div class="pn">盈利</div><div class="ps ps-warn">6.0</div><div class="pl">△</div></div>
+            <div class="pdot"><div class="pn">客户</div><div class="ps ps-warn">5.5</div><div class="pl">△</div></div>
+            <div class="pdot"><div class="pn">产能</div><div class="ps ps-ok">7.0</div><div class="pl">✓</div></div>
+          </div>
+
+          <div class="sec-label">催化剂</div>
+          <div class="ct-line">
+            <div class="ct-node done"><span class="ct-date">6/15</span><span class="ct-pill ct-p0">P0</span><span class="ct-ev">DeepSeek-V4 上线</span></div>
+            <div class="ct-node now"><span class="ct-date">8/20</span><span class="ct-pill ct-p0">P0</span>半年报 · 营收增速验证</div>
+            <div class="ct-node"><span class="ct-date">10月</span><span class="ct-pill ct-p1">P1</span>限售股解禁</div>
+          </div>
+
+          <div class="sec-label">估值区间</div>
+          <div class="val-wrap">
+            <div class="val-track"><div class="val-needle" style="left:28%"></div></div>
+            <div class="val-zone"><span>🐻 Bear 38</span><span>📊 Base 55</span><span>🐂 Bull 82</span></div>
+            <div class="val-info">当前 42.5 · bear-base 底部 · 收敛度 0.26 · 距 base +29% · 距 bull +93%</div>
+          </div>
+
+          <div class="sec-label">技术确认</div>
+          <div class="strip">
+            <div class="strip-item"><div class="sv sv-up">多头排列</div><div class="sl">MA趋势</div></div>
+            <div class="strip-item"><div class="sv sv-up">收缩→扩张</div><div class="sl">ATR(20)</div></div>
+            <div class="strip-item"><div class="sv sv-up">+2.1σ 放量</div><div class="sl">成交量</div></div>
+            <div class="strip-item"><div class="sv sv-up">MA60 上方</div><div class="sl">价格位置</div></div>
+            <div class="strip-item"><div class="sv sv-up">全面共振</div><div class="sl">综合评定</div></div>
+          </div>
+
+          <div class="sec-label">独有因子</div>
+          <div class="strip strip-proprietary">
+            <div class="strip-item"><div class="sv sv-purple">+35% 超预期</div><div class="sl">业绩预告</div></div>
+            <div class="strip-item"><div class="sv sv-purple">+2.8σ 跳升</div><div class="sl">合同负债</div></div>
+            <div class="strip-item"><div class="sv sv-up">转正加速</div><div class="sl">扣非净利润</div></div>
+            <div class="strip-item"><div class="sv sv-up">1/2 已兑现</div><div class="sl">催化剂</div></div>
+            <div class="strip-item"><div class="sv sv-purple">连增 3 周</div><div class="sl">北向资金</div></div>
+          </div>
+
+          <div class="sig-row">
+            <div class="sig-cell"><div class="sig-letter l-a">A</div><div class="sig-label">择时信号</div></div>
+            <div class="sig-cell"><div class="pos-detail">
+              建议仓位 <b>8%</b> · 入场 <b>42-45</b><br>
+              止损 <b>38</b> (-10%) · 止盈 <b>65</b> (+53%)
+            </div></div>
+            <div class="sig-cell"><div class="return-big r-up">+23.5%</div><div class="sig-label">虚拟持仓 · 成本 41.2 · 7.5%</div></div>
+          </div>
+
+        </div>
+        <div class="tcard-acts">
+          <button class="btn">📋 定数录</button>
+          <button class="btn">🔄 手动巡检</button>
+          <button class="btn pri">📊 更新仓位</button>
+          <button class="btn danger">移除</button>
+        </div>
+      </div>
+
+      <!-- ═══ Card 2: 宏达电子 ═══ -->
+      <div class="tcard">
+        <div class="tcard-hd" onclick="this.parentElement.classList.toggle('open')">
+          <div class="tcard-id">
+            <div class="sig-ring s-hold"></div>
+            <div>
+              <span class="tcard-name">宏达电子</span><span class="tcard-code">300726</span>
+            </div>
+          </div>
+          <div class="tcard-badges">
+            <span class="pill pill-hold">B 持有</span>
+            <span class="pill pill-tier">★★☆</span>
+            <span class="tcard-chevron">▾</span>
+          </div>
+        </div>
+        <div class="tcard-bd">
+
+          <div class="sec-label">论点健康度</div>
+          <div class="thesis-bar-wrap">
+            <div class="thesis-num" style="color:var(--amber)">5.8</div>
+            <div class="thesis-track"><div class="thesis-fill" style="width:58%;background:var(--amber)"></div></div>
+            <div class="thesis-tag">维持</div>
+          </div>
+          <div class="pillars">
+            <div class="pdot"><div class="pn">军用</div><div class="ps ps-ok">7.5</div><div class="pl">✓</div></div>
+            <div class="pdot"><div class="pn">民品</div><div class="ps ps-risk">3.0</div><div class="pl">✗</div></div>
+            <div class="pdot"><div class="pn">订单</div><div class="ps ps-warn">5.5</div><div class="pl">△</div></div>
+            <div class="pdot"><div class="pn">毛利</div><div class="ps ps-ok">7.0</div><div class="pl">✓</div></div>
+          </div>
+
+          <div class="sec-label">催化剂</div>
+          <div class="ct-line">
+            <div class="ct-node done"><span class="ct-date">5/10</span><span class="ct-pill ct-p1">P1</span><span class="ct-ev">Q1 军品订单确认</span></div>
+            <div class="ct-node now"><span class="ct-date">8/28</span><span class="ct-pill ct-p0">P0</span>半年报 · 验证民品拐点</div>
+          </div>
+
+          <div class="sec-label">估值区间</div>
+          <div class="val-wrap">
+            <div class="val-track"><div class="val-needle" style="left:62%"></div></div>
+            <div class="val-zone"><span>🐻 Bear 22</span><span>📊 Base 30</span><span>🐂 Bull 42</span></div>
+            <div class="val-info">当前 28.3 · 接近 base · 收敛度 0.75 · 安全边际收窄</div>
+          </div>
+
+          <div class="sec-label">技术确认</div>
+          <div class="strip">
+            <div class="strip-item"><div class="sv sv-warn">交织</div><div class="sl">MA趋势</div></div>
+            <div class="strip-item"><div class="sv sv-warn">正常</div><div class="sl">ATR(20)</div></div>
+            <div class="strip-item"><div class="sv sv-warn">缩量</div><div class="sl">成交量</div></div>
+            <div class="strip-item"><div class="sv sv-warn">MA60 附近</div><div class="sl">价格位置</div></div>
+            <div class="strip-item"><div class="sv sv-warn">中性</div><div class="sl">综合评定</div></div>
+          </div>
+
+          <div class="sec-label">独有因子</div>
+          <div class="strip strip-proprietary">
+            <div class="strip-item"><div class="sv sv-up">+12% 略超</div><div class="sl">业绩预告</div></div>
+            <div class="strip-item"><div class="sv sv-warn">正常 -0.3σ</div><div class="sl">合同负债</div></div>
+            <div class="strip-item"><div class="sv sv-up">稳定盈利</div><div class="sl">扣非净利润</div></div>
+            <div class="strip-item"><div class="sv sv-warn">0/2 待验证</div><div class="sl">催化剂</div></div>
+            <div class="strip-item"><div class="sv sv-down">连减 2 周</div><div class="sl">北向资金</div></div>
+          </div>
+
+          <div class="sig-row">
+            <div class="sig-cell"><div class="sig-letter l-b">B</div><div class="sig-label">择时信号</div></div>
+            <div class="sig-cell"><div class="pos-detail">
+              建议仓位 <b>4%</b> · 入场 <b>25-27</b><br>
+              止损 <b>21</b> (-22%) · 止盈 <b>38</b> (+34%)
+            </div></div>
+            <div class="sig-cell"><div class="return-big r-up">+8.2%</div><div class="sig-label">虚拟持仓 · 成本 26.2 · 4.0%</div></div>
+          </div>
+
+        </div>
+        <div class="tcard-acts">
+          <button class="btn">📋 定数录</button>
+          <button class="btn">🔄 手动巡检</button>
+          <button class="btn pri">📊 更新仓位</button>
+          <button class="btn danger">移除</button>
+        </div>
+      </div>
+
+      <!-- ═══ Card 3: 瑞华泰 ═══ -->
+      <div class="tcard">
+        <div class="tcard-hd" onclick="this.parentElement.classList.toggle('open')">
+          <div class="tcard-id">
+            <div class="sig-ring s-strong"></div>
+            <div>
+              <span class="tcard-name">瑞华泰</span><span class="tcard-code">688323</span>
+            </div>
+          </div>
+          <div class="tcard-badges">
+            <span class="pill pill-strong">S 强买</span>
+            <span class="pill pill-tier">★★★</span>
+            <span class="pill pill-new">新入</span>
+            <span class="tcard-chevron">▾</span>
+          </div>
+        </div>
+        <div class="tcard-bd">
+
+          <div class="sec-label">论点健康度</div>
+          <div class="thesis-bar-wrap">
+            <div class="thesis-num" style="color:var(--green)">8.1</div>
+            <div class="thesis-track"><div class="thesis-fill" style="width:81%;background:var(--green)"></div></div>
+            <div class="thesis-tag">新论点</div>
+          </div>
+          <div class="pillars">
+            <div class="pdot"><div class="pn">国产替代</div><div class="ps ps-ok">9.0</div><div class="pl">✓</div></div>
+            <div class="pdot"><div class="pn">PI 缺口</div><div class="ps ps-ok">8.5</div><div class="pl">✓</div></div>
+            <div class="pdot"><div class="pn">涨价</div><div class="ps ps-warn">6.5</div><div class="pl">△</div></div>
+            <div class="pdot"><div class="pn">产能</div><div class="ps ps-ok">8.0</div><div class="pl">✓</div></div>
+          </div>
+
+          <div class="sec-label">催化剂</div>
+          <div class="ct-line">
+            <div class="ct-node now"><span class="ct-date">7/15</span><span class="ct-pill ct-p0">P0</span>PI 薄膜涨价公告</div>
+            <div class="ct-node"><span class="ct-date">8/25</span><span class="ct-pill ct-p0">P0</span>半年报 · 毛利率改善</div>
+            <div class="ct-node"><span class="ct-date">Q4</span><span class="ct-pill ct-p1">P1</span>新产线投产</div>
+          </div>
+
+          <div class="sec-label">估值区间</div>
+          <div class="val-wrap">
+            <div class="val-track"><div class="val-needle" style="left:12%"></div></div>
+            <div class="val-zone"><span>🐻 Bear 30</span><span>📊 Base 52</span><span>🐂 Bull 88</span></div>
+            <div class="val-info">当前 34.8 · 深贴 bear · 收敛度 0.18 · 距 base +49% · 距 bull +153%</div>
+          </div>
+
+          <div class="sec-label">技术确认</div>
+          <div class="strip">
+            <div class="strip-item"><div class="sv sv-up">多头排列</div><div class="sl">MA趋势</div></div>
+            <div class="strip-item"><div class="sv sv-up">收缩中</div><div class="sl">ATR(20)</div></div>
+            <div class="strip-item"><div class="sv sv-up">+1.8σ 放量</div><div class="sl">成交量</div></div>
+            <div class="strip-item"><div class="sv sv-up">突破 MA120</div><div class="sl">价格位置</div></div>
+            <div class="strip-item"><div class="sv sv-up">全面共振</div><div class="sl">综合评定</div></div>
+          </div>
+
+          <div class="sec-label">独有因子</div>
+          <div class="strip strip-proprietary">
+            <div class="strip-item"><div class="sv sv-purple">待发预告</div><div class="sl">业绩预告</div></div>
+            <div class="strip-item"><div class="sv sv-purple">+3.1σ 跳升</div><div class="sl">合同负债</div></div>
+            <div class="strip-item"><div class="sv sv-purple">首次转正</div><div class="sl">扣非净利润</div></div>
+            <div class="strip-item"><div class="sv sv-up">0/3 待验证</div><div class="sl">催化剂</div></div>
+            <div class="strip-item"><div class="sv sv-purple">首周净买</div><div class="sl">北向资金</div></div>
+          </div>
+
+          <div class="sig-row">
+            <div class="sig-cell"><div class="sig-letter l-s">S</div><div class="sig-label">择时信号</div></div>
+            <div class="sig-cell"><div class="pos-detail">
+              建议仓位 <b>10%</b> · 入场 <b>33-36</b><br>
+              止损 <b>28</b> (-18%) · 止盈 <b>78</b> (+124%)
+            </div></div>
+            <div class="sig-cell"><div class="return-big r-flat">—</div><div class="sig-label">待建仓 · 目标仓位 10%</div></div>
+          </div>
+
+        </div>
+        <div class="tcard-acts">
+          <button class="btn">📋 定数录</button>
+          <button class="btn">🔄 手动巡检</button>
+          <button class="btn pri">📊 更新仓位</button>
+          <button class="btn danger">移除</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

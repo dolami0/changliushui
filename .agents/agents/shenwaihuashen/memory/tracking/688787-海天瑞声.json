@@ -16,7 +16,7 @@
       "quantifiedTarget": "视觉GM>30%，应用服务GM>25%，综合GM≥48%",
       "status": "on_track",
       "verificationDate": "2026-08-31",
-      "lastChecked": "2026-06-12",
+      "lastChecked": "2026-06-19",
       "history": [
         {
           "date": "2026-06-08",
@@ -32,6 +32,16 @@
           "date": "2026-06-12",
           "actual": "Q1 GM=56.4%回升(季节性)。综合GM从FY2025 48.1%改善趋势待半年报确认。",
           "trend": "up"
+        },
+        {
+          "date": "2026-06-15",
+          "actual": "Q1 GM=56.4%回升(季节性)。今日+0.70%平淡，AI数据要素叙事未变。7月备案名单+8月半年报为双验证点。",
+          "trend": "up"
+        },
+        {
+          "date": "2026-06-19",
+          "actual": "+2.9%温和上行。AI数据要素叙事稳固。7月备案+8月半年报双验证格局不变。",
+          "trend": "up"
         }
       ]
     },
@@ -41,7 +51,7 @@
       "quantifiedTarget": "H1境内收入增速>50%，ToG订单>1亿",
       "status": "on_track",
       "verificationDate": "2026-08-31",
-      "lastChecked": "2026-06-12",
+      "lastChecked": "2026-06-19",
       "history": [
         {
           "date": "2026-06-08",
@@ -57,6 +67,16 @@
           "date": "2026-06-12",
           "actual": "Q1 ToG合同+100%。6/8国家数据局政策+L5算法备案新规。7月首批备案名单待公布。",
           "trend": "up"
+        },
+        {
+          "date": "2026-06-15",
+          "actual": "ToG合同+100%持续。6/8政策后未新增公开信息。7月首批名单是关键催化。",
+          "trend": "up"
+        },
+        {
+          "date": "2026-06-19",
+          "actual": "ToG合同+100%持续。7月首批名单即将公布（最强催化）。",
+          "trend": "up"
         }
       ]
     },
@@ -66,7 +86,7 @@
       "quantifiedTarget": "H1 OCF>0且OCF/NI>0.5x",
       "status": "pending",
       "verificationDate": "2026-08-31",
-      "lastChecked": "2026-06-12",
+      "lastChecked": "2026-06-19",
       "history": [
         {
           "date": "2026-06-08",
@@ -82,6 +102,16 @@
           "date": "2026-06-12",
           "actual": "FY2025 OCF同比-93.8%。H1改善情况待半年报验证。ToG业务回款仍是核心风险。",
           "trend": "flat"
+        },
+        {
+          "date": "2026-06-15",
+          "actual": "OCF H1改善情况待半年报。ToG回款仍是核心风险。无新数据。",
+          "trend": "flat"
+        },
+        {
+          "date": "2026-06-19",
+          "actual": "OCF改善待半年报。ToG回款季节性特征，H1数据关键。无新变化。",
+          "trend": "flat"
         }
       ]
     },
@@ -91,7 +121,7 @@
       "quantifiedTarget": "H1语音收入降幅<5% YoY",
       "status": "at_risk",
       "verificationDate": "2026-08-31",
-      "lastChecked": "2026-06-12",
+      "lastChecked": "2026-06-19",
       "history": [
         {
           "date": "2026-06-08",
@@ -107,6 +137,16 @@
           "date": "2026-06-12",
           "actual": "FY2025语音1.50亿(-8.7%)，GM 75.5%支撑利润。降幅是否收窄待H1验证。",
           "trend": "down"
+        },
+        {
+          "date": "2026-06-15",
+          "actual": "智能语音降幅待H1验证。GM 75.5%支撑利润但萎缩趋势未改。",
+          "trend": "down"
+        },
+        {
+          "date": "2026-06-19",
+          "actual": "智能语音萎缩趋势未改。GM 75.5%支撑利润。H1验证拐点。",
+          "trend": "down"
         }
       ]
     },
@@ -116,7 +156,7 @@
       "quantifiedTarget": "≥3个试验区订单，单笔>3000万",
       "status": "on_track",
       "verificationDate": "2026-12-31",
-      "lastChecked": "2026-06-12",
+      "lastChecked": "2026-06-19",
       "history": [
         {
           "date": "2026-06-08",
@@ -131,6 +171,16 @@
         {
           "date": "2026-06-12",
           "actual": "6/8算法备案新规已发布(L5)。7月首批名单。政策→订单转化周期3-6月。",
+          "trend": "up"
+        },
+        {
+          "date": "2026-06-15",
+          "actual": "6/8算法备案新规已发布。7月首批名单公布在即。政策→订单转化监控中。",
+          "trend": "up"
+        },
+        {
+          "date": "2026-06-19",
+          "actual": "6/8算法备案新规余温。7月名单公布窗口临近。",
           "trend": "up"
         }
       ]
@@ -194,7 +244,7 @@
       "sourceDetail": "国家数据局官网+央视新闻",
       "sourceNote": "已触发✅ 6/8发布，当日股价+10.88%",
       "status": "triggered",
-      "lastChecked": "2026-06-12"
+      "lastChecked": "2026-06-19"
     },
     {
       "date": "2026-07-08前",
@@ -207,7 +257,7 @@
       "sourceDetail": "分析师推测时间窗口",
       "sourceNote": "⚠️ 信源等级L3。公司未给出指引。政策→订单转化通常3-6个月",
       "status": "pending",
-      "lastChecked": "2026-06-12"
+      "lastChecked": "2026-06-19"
     },
     {
       "date": "2026-08",
@@ -220,7 +270,7 @@
       "sourceDetail": "上交所定期报告",
       "sourceNote": "🔴 Critical Catalyst——不可失败",
       "status": "pending",
-      "lastChecked": "2026-06-12"
+      "lastChecked": "2026-06-19"
     },
     {
       "date": "2026-08",
@@ -233,7 +283,7 @@
       "sourceDetail": "公司公告",
       "sourceNote": "规模待确认",
       "status": "pending",
-      "lastChecked": "2026-06-12"
+      "lastChecked": "2026-06-19"
     },
     {
       "date": "2026-10",
@@ -245,7 +295,7 @@
       "sourceLevel": "L5",
       "sourceDetail": "上交所定期报告",
       "status": "pending",
-      "lastChecked": "2026-06-12"
+      "lastChecked": "2026-06-19"
     },
     {
       "date": "2026-12",
@@ -257,7 +307,7 @@
       "sourceLevel": "L3",
       "sourceDetail": "分析师推测+调研纪要",
       "status": "pending",
-      "lastChecked": "2026-06-12"
+      "lastChecked": "2026-06-19"
     },
     {
       "date": "2027-03",
@@ -269,7 +319,7 @@
       "sourceLevel": "L5",
       "sourceDetail": "上交所定期报告",
       "status": "pending",
-      "lastChecked": "2026-06-12"
+      "lastChecked": "2026-06-19"
     },
     {
       "date": "2026-06-08",
@@ -282,7 +332,7 @@
       "sourceDetail": "2026-06-08 国家网信办公告",
       "sourceNote": "已发布。7月地方首批备案启动。",
       "status": "triggered",
-      "lastChecked": "2026-06-12"
+      "lastChecked": "2026-06-19"
     }
   ],
   "basePrice": 139.38,
@@ -316,6 +366,26 @@
       "return_pct": 10.4,
       "mv_change_pct": -2.6,
       "note": "巡检。AI数据要素政策催化持续。7月首批算法备案名单临近。MV+10.4%。等8月半年报验证GM+OCF改善。"
+    },
+    {
+      "date": "2026-06-15",
+      "price": 154.9,
+      "pe": 421.87,
+      "mv_yi": 93.44,
+      "return_pct": 11.1,
+      "mv_change_pct": 0.7,
+      "pct_chg_daily": 0.7,
+      "note": "巡检。平淡交易日+0.70%。MV 93.44亿(从92.83亿+0.7%)。7月首批算法备案名单公布前，股价温和整理。等8月半年报硬验证。"
+    },
+    {
+      "date": "2026-06-19",
+      "price": 159.39,
+      "pe": 434.1,
+      "mv_yi": 96.15,
+      "return_pct": 14.3,
+      "mv_change_pct": 2.9,
+      "pct_chg_daily": 2.9,
+      "note": "巡检。+2.9%稳步上行。MV 96.15亿，温和修复。7月算法备案名单公布在即（核心催化）。当前较建档基准+15.3%，市场在提前定价备案预期。 | 4日累计: +2.9%"
     }
   ],
   "positionLog": [],
@@ -378,6 +448,32 @@
       "invalidatedAssumptions": [],
       "newUnknowns": [],
       "narrativeTension": "stable"
+    },
+    {
+      "version": 4,
+      "date": "2026-06-15T22:00:00",
+      "thesis": "AI数据要素产业化的核心受益标的——语音标注国内第一(市占~19%)+政企ToG数据要素先发卡位。国家数据局6/8政策打开了政府/国央企百亿级增量市场，2025年视觉+214%/应用服务+1300%验证需求爆发。核心验证点：视觉/应用服务GM能否随规模效应改善(视觉27.6%→30%+,应用21.0%→25%+)——低毛利ToG项目能否通过标准化变成可持续的高毛利产品。最大结构性问题：GM一年崩塌18ppt(66.5%→48.1%)，OCF恶化-93.8%。",
+      "conviction": 48,
+      "delta": "平淡交易日+0.70%。MV 93.44亿(从92.83亿+0.7%)。7月首批算法备案名单公布前，股价温和整理。等8月半年报硬验证。",
+      "trigger": "每日巡检",
+      "narrative": "6/15平淡+0.70%，MV 93.44亿。7月首批算法备案名单公布前股价温和整理。AI数据要素政策催化(6/8)已触发但市场在等待第二波催化剂(备案名单+半年报)。核心矛盾未变：GM结构性崩塌(66.5%→48.1%)能否在H1出现拐点？OCF恶化能否改善？当前股价+11.1%(vs建档基准)已部分定价政策催化，进一步上行需要半年报硬数据。7月备案名单入选→ToG叙事确认；8月半年报GM+OCF→基本面拐点确认。双验证点密集期。",
+      "verifiedAssumptions": [],
+      "invalidatedAssumptions": [],
+      "newUnknowns": [],
+      "narrativeTension": "stable"
+    },
+    {
+      "version": 5,
+      "date": "2026-06-19T22:00:00",
+      "thesis": "AI数据要素产业化的核心受益标的——语音标注国内第一(市占~19%)+政企ToG数据要素先发卡位。国家数据局6/8政策打开了政府/国央企百亿级增量市场，2025年视觉+214%/应用服务+1300%验证需求爆发。核心验证点：视觉/应用服务GM能否随规模效应改善(视觉27.6%→30%+,应用21.0%→25%+)——低毛利ToG项目能否通过标准化变成可持续的高毛利产品。最大结构性问题：GM一年崩塌18ppt(66.5%→48.1%)，OCF恶化-93.8%。",
+      "conviction": 48,
+      "delta": "+2.9%稳步上行。MV 96.15亿，温和修复。7月算法备案名单公布在即（核心催化）。当前较建档基准+15.3%，市场在提前定价备案预期。",
+      "trigger": "每日巡检",
+      "narrative": "+2.9%至159.39。MV 96.15亿(+14.3% vs基准)。7月首批算法备案名单→近期最强催化。当前股价已在温和定价备案预期。若入选名单→ToG叙事获确认→估值修复至105-120亿(Base)。若未入选→短期回调至140-145区间。8月半年报GM+OCF是硬数据验证。",
+      "verifiedAssumptions": [],
+      "invalidatedAssumptions": [],
+      "newUnknowns": [],
+      "narrativeTension": "stable"
     }
   ],
   "aShareTracking": {
@@ -400,8 +496,8 @@
   },
   "reviewSchedule": {
     "nextFullReview": "2026-08-31(半年报)",
-    "nextQuickCheck": "2026-06-13(明日巡检)",
-    "lastCheck": "2026-06-12(巡检)",
+    "nextQuickCheck": "2026-06-20(明日巡检)",
+    "lastCheck": "2026-06-19(巡检)",
     "patrolFrequency": "每日 22:00"
   },
   "track_status": "active"

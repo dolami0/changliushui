@@ -1,0 +1,218 @@
+{
+  "stockCode": "300369",
+  "stockName": "绿盟科技",
+  "track_status": "active",
+  "thesis": "国内老牌网安厂商(Tier 2)，正从传统安全产品商向AI安全（风云卫+清风卫）转型。2026Q1营收+0.25%停滞，GM骤降至44.6%。海油发展4960万合同(L5确认)验证运营商/能源赛道标杆复制能力。美国首次AI模型出口管制(6/12)情绪面催化国产替代，但对绿盟传导链过长(禁Claude≠绿盟受益)。当前PS 1.86x PB 1.85x为行业最低档，隐含市场零增长预期。核心验证：8月半年报Q2营收能否突破停滞+GM能否回升至50%+。",
+  "conviction": 40,
+  "decisionDate": "2026-06-12",
+  "decision": "有条件通过",
+  "recommendedPosition": 3,
+  "actualPosition": 0,
+  "entryCondition": "半年报(8月)Q2营收≥7亿且GM≥48%后建仓2-3%。若同时AI安全独立合同>5000万可加至5%。当前不建议建仓——Anthropic事件处于评估加固期(数周)，政策走向未定。",
+  "entryPriceTarget": 5.0,
+  "pillars": [
+    {
+      "name": "AI安全产品化+商业化",
+      "expectation": "风云卫(告警降噪>95%)+清风卫(AI-UTM)从标杆案例向规模化复制。2026年AI安全收入≥3亿。",
+      "quantifiedTarget": "2026年AI安全收入≥3亿，占营收≥10%",
+      "status": "pending",
+      "verificationDate": "2027-04-30",
+      "lastChecked": "2026-06-12",
+      "history": [
+        {
+          "date": "2026-06-12",
+          "actual": "风云卫已在运营商/金融形成标杆案例，正向能源/政府复制。海油发展4960万合同(L5确认)。但AI安全收入未单独披露，量化数据缺失。",
+          "trend": "flat"
+        }
+      ]
+    },
+    {
+      "name": "Q2营收拐点确认",
+      "expectation": "Q1营收+0.25%为底部，Q2营收≥7亿(环比+92%季节性+同比+10-15%)，全年营收≥28亿",
+      "quantifiedTarget": "2026H1营收≥10.5亿，全年≥28亿",
+      "status": "pending",
+      "verificationDate": "2026-08-31",
+      "lastChecked": "2026-06-12",
+      "history": [
+        {
+          "date": "2026-06-12",
+          "actual": "Q1营收3.64亿(+0.25% YoY)，几乎零增长。公司5/18表示'年初至今订单稳步增长'但未量化。Q2营收待8月半年报验证。",
+          "trend": "flat"
+        }
+      ]
+    },
+    {
+      "name": "毛利率恢复",
+      "expectation": "Q1 GM 44.6%(骤降9.3pp vs FY2025 53.9%)为季节性低点，Q2恢复至48-50%，H2恢复至52%+",
+      "quantifiedTarget": "2026全年GM≥50%",
+      "status": "at_risk",
+      "verificationDate": "2027-04-30",
+      "lastChecked": "2026-06-12",
+      "history": [
+        {
+          "date": "2026-06-12",
+          "actual": "FY2025 GM 53.88%→Q1 44.60%(-9.28pp)。可能原因：低毛利第三方产品Q1占比偏高+收入低基数下固定成本摊薄差。需Q2确认是否为结构性下降。",
+          "trend": "down"
+        }
+      ]
+    },
+    {
+      "name": "Anthropic事件→国产替代催化",
+      "expectation": "美AI模型管制推动国内政企加速采购国产安全方案，绿盟作为国产网安厂商间接受益",
+      "quantifiedTarget": "2026H2政企安全采购中国产方案占比提升5pp+",
+      "status": "pending",
+      "verificationDate": "2027-04-30",
+      "lastChecked": "2026-06-12",
+      "history": [
+        {
+          "date": "2026-06-12",
+          "actual": "6/12美商务部首次对已发布AI模型(Fable 5/Mythos 5)实施出口管制。事件真实(L5)，但对绿盟传导链过长(禁Claude≠绿盟受益)，且股价6月-12%未反应催化。",
+          "trend": "flat"
+        }
+      ]
+    }
+  ],
+  "risks": [
+    {
+      "name": "AI安全产品化失败",
+      "probability": "中",
+      "impact": "风云卫/清风卫无法规模化→绿盟永远困在传统安全厂商估值(PS 1-2x)，被奇安信/深信服永久性拉开差距",
+      "monitoring": "跟踪AI安全独立合同公告+半年报新兴业务收入占比"
+    },
+    {
+      "name": "传统产品持续失速",
+      "probability": "中",
+      "impact": "政府客户预算收紧+运营商采购节奏放缓→安全产品收入零增长或下滑→整体营收增速<5%",
+      "monitoring": "跟踪每季安全产品分项收入增速"
+    },
+    {
+      "name": "Anthropic事件催化消退",
+      "probability": "中",
+      "impact": "美国短期内解除管制→'国产替代'情绪退潮→股价可能回吐事件溢价(如有)",
+      "monitoring": "跟踪美国AI管制政策动向(6-9月评估加固期)"
+    },
+    {
+      "name": "Q1 GM下降趋势延续",
+      "probability": "低-中",
+      "impact": "若Q2 GM仍<48%→全年GM<50%→扭亏目标更难实现→估值继续承压",
+      "monitoring": "半年报+三季报GM变化"
+    }
+  ],
+  "exitConditions": [
+    "半年报Q2营收<6.5亿或GM<46%→不建仓，转为观望",
+    "已建仓后连续两季营收增速<5%→减仓50%",
+    "Anthropic管制解除+无其他催化→减仓50%(催化剂消退)",
+    "奇安信/深信服在运营商/能源获取大额AI安全合同→减仓50%(竞对侵蚀)",
+    "全年GM<48%且亏损扩大→清仓(基本面恶化)"
+  ],
+  "catalystCalendar": [
+    {
+      "date": "2026-08",
+      "event": "半年报：Q2营收+GM+AI安全收入首次硬验证",
+      "type": "财报",
+      "impact": "H",
+      "bull": "Q2营收≥7.5亿+GM≥50%+AI安全收入≥1.5亿",
+      "bear": "Q2营收<6.5亿或GM<46%或AI安全收入<5000万",
+      "sourceLevel": "L5",
+      "sourceDetail": "2026年半年报",
+      "sourceNote": "最重要验证点——决定叙事是否进入'确认期'",
+      "status": "pending",
+      "lastChecked": "2026-06-12"
+    },
+    {
+      "date": "2026-06至2026-09",
+      "event": "美国AI模型出口管制走向(评估加固后是否解除vs长期化)",
+      "type": "政策",
+      "impact": "H",
+      "bull": "管制长期化/扩大化→国产替代刚需确立",
+      "bear": "短期解除→催化消退→情绪面利空",
+      "sourceLevel": "L5",
+      "sourceDetail": "美商务部+Anthropic评估进度",
+      "sourceNote": "6/12事件，目前处于'评估加固期(数周)'。若短期解除则传导演弱",
+      "status": "pending",
+      "lastChecked": "2026-06-12"
+    },
+    {
+      "date": "2026-10",
+      "event": "三季报：9M营收+AI安全占比二次验证",
+      "type": "财报",
+      "impact": "H",
+      "bull": "9M营收≥21亿+AI安全占比>10%",
+      "bear": "9M营收<18亿",
+      "sourceLevel": "L5",
+      "sourceDetail": "2026年三季报",
+      "sourceNote": "若半年报通过而三季报回落→假突破风险",
+      "status": "pending",
+      "lastChecked": "2026-06-12"
+    },
+    {
+      "date": "持续",
+      "event": "千万级独立AI安全合同公告(非集采捆绑)",
+      "type": "公司",
+      "impact": "M",
+      "bull": "公告获运营商/能源/金融千万级AI安全独立项目",
+      "bear": "2026年底前无任何独立AI安全项目公告",
+      "sourceLevel": "L5",
+      "sourceDetail": "待公司公告",
+      "sourceNote": "海油4960万包含安全运营，非纯AI安全。需独立AI安全合同验证产品化能力",
+      "status": "pending",
+      "lastChecked": "2026-06-12"
+    }
+  ],
+  "basePrice": 5.84,
+  "baseMarketCap": 47.34,
+  "baseDate": "2026-06-12",
+  "priceLog": [
+    {
+      "date": "2026-06-12",
+      "price": 5.84,
+      "pe": null,
+      "mv_yi": 47.34,
+      "return_pct": 0.0,
+      "mv_change_pct": 0.0,
+      "note": "建档基准价。6月累计跌-11.8%，Anthropic事件日仅+1.4%，市场未按A0催化叙事定价。"
+    }
+  ],
+  "positionLog": [],
+  "valuationComparison": {
+    "date": "2026-06-12",
+    "method": "反向DCF+可比公司+三情景独立建模",
+    "scenarios": {
+      "bear": { "myCAGR": 0, "myPS": 1.2, "myReturn": -34.1, "upCAGR": null, "upPS": null, "upReturn": null },
+      "base": { "myCAGR": 5, "myPS": 2.5, "myReturn": 53.3, "upCAGR": null, "upPS": null, "upReturn": null },
+      "bull": { "myCAGR": 10, "myPS": 4.0, "myReturn": 187.5, "upCAGR": null, "upPS": null, "upReturn": null }
+    },
+    "myWeightedReturn": 69.4,
+    "upWeightedReturn": null,
+    "myAsymmetry": 5.5,
+    "upAsymmetry": null,
+    "verdict": "A0显著高估(概率加权MC 120.9亿 vs 独立 80.1亿)，主因：①中国移动3.2亿集采未证实→营收假设需下调 ②Q2 +45-55%为A0估算无官方来源 ③Anthropic事件传导过弱(3+断点)。独立估值更保守但可信度更高。"
+  },
+  "aShareTracking": {
+    "pledgeCheck": { "lastChecked": "2026-06-12", "result": "待首次月度专检" },
+    "unlockCheck": { "lastChecked": "2026-06-12", "result": "待首次月度专检" },
+    "marginCheck": { "lastChecked": "2026-06-12", "result": "待首次月度专检" },
+    "insiderTrading": { "lastChecked": "2026-06-12", "result": "待首次月度专检" }
+  },
+  "reviewSchedule": {
+    "nextFullReview": "2026-08-31(半年报)",
+    "nextQuickCheck": "2026-06-13(明日巡检)",
+    "lastCheck": "2026-06-12(建档)",
+    "patrolFrequency": "每日 22:00"
+  },
+  "thesisLog": [
+    {
+      "version": 1,
+      "date": "2026-06-12T22:00:00",
+      "thesis": "国内老牌网安厂商(Tier 2)，正从传统安全产品商向AI安全（风云卫+清风卫）转型。Q1营收+0.25%停滞，GM骤降至44.6%。海油4960万合同(L5确认)。美国首次AI模型出口管制(6/12)情绪面催化。PS 1.86x PB 1.85x为行业最低档。核心验证：8月半年报。",
+      "conviction": 40,
+      "delta": "今日建档。关键发现：①中国移动3.2亿集采未被公开证实(实际可见~750万)；②Q1 GM -9.3pp恶化；③Anthropic事件传导链过长(禁Claude≠绿盟受益)；④股价6月-12%未随催化上涨。海油4960万L5确认。PS 1.86x提供安全边际。",
+      "trigger": "建档",
+      "narrative": "今日建档。A0报告核心数据缺失(中国移动3.2亿未证实/Q2+45-55%无来源)。独立验证将营收和估值假设大幅下调。Anthropic事件传导须警惕——禁Claude≠绿盟受益(类比泰和:海外涨价≠公司受益)。等待8月半年报。",
+      "verifiedAssumptions": ["海油发展4960万合同(L5确认)", "Anthropic出口管制事件(L5真实)", "PS 1.86x/PB 1.85x估值底部"],
+      "invalidatedAssumptions": ["中国移动3.2亿集采(公开信息仅见~750万分散小单)", "Q2 +45-55%营收增速(无官方来源)", "A0 OCF 3.8亿 vs tushare 2.16亿(口径差异)"],
+      "newUnknowns": ["Q2营收能否突破停滞", "Q1 GM骤降是否为结构性", "Anthropic管制是否长期化", "AI安全产品化节奏(风云卫/清风卫)"],
+      "narrativeTension": "stable"
+    }
+  ]
+}

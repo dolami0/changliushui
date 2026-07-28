@@ -1,0 +1,2932 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>长流水 — 事件驱动型十倍股猎杀系统 开发文档</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #fafbfc;
+    --border: #e7eaf0;
+    --text: #1c1e24;
+    --text-dim: #5e6673;
+    --accent: #4d6bfe;
+    --link: #4d6bfe;
+    --note-bg: #f0f5ff; --note-border: #4d6bfe; --note-text: #1e3a8a;
+    --warn-bg: #fff9ed; --warn-border: #f59e0b; --warn-text: #78350f;
+    --code-bg: #f5f6f8; --code-text: #1c1e24;
+    --table-head: #fafbfc;
+    --table-stripe: #fafbfc;
+    --inline-code-bg: #f0f2f5; --inline-code-color: #4d6bfe;
+  }
+  * { box-sizing:border-box; margin:0; padding:0 }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 5px; height: 5px }
+  ::-webkit-scrollbar-track { background: transparent }
+  ::-webkit-scrollbar-thumb { background: #dde0e5; border-radius: 10px }
+  ::-webkit-scrollbar-thumb:hover { background: #c4c8d0 }
+  * { scrollbar-width: thin; scrollbar-color: #dde0e5 transparent }
+
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans SC', sans-serif;
+    font-size: 15px; line-height: 1.72;
+    -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* ── Sidebar ── */
+  nav {
+    position:fixed; top:0; left:0; width: 270px; height:100vh;
+    background: var(--surface); border-right: 1px solid var(--border);
+    overflow-y:auto; padding: 0; z-index: 90;
+  }
+  .nav-brand {
+    padding: 30px 24px 22px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+  }
+  .nav-logo {
+    font-size: 22px; font-weight: 700; color: var(--text);
+    letter-spacing: 6px; display: flex; align-items: center; gap: 10px;
+  }
+  .nav-dot {
+    display: inline-block; width: 10px; height: 10px;
+    background: #22c55e; border-radius: 50%;
+    box-shadow: 0 0 8px rgba(34,197,94,.4), 0 0 20px rgba(34,197,94,.15);
+    animation: dotPulse 2s ease-in-out infinite;
+  }
+  @keyframes dotPulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(34,197,94,.4), 0 0 20px rgba(34,197,94,.15) }
+    50% { box-shadow: 0 0 14px rgba(34,197,94,.6), 0 0 32px rgba(34,197,94,.25) }
+  }
+  .nav-subtitle { font-size: 12px; color: #9ca3af; margin-top: 6px; font-weight: 400; letter-spacing: 1px }
+
+  .nav-section-label {
+    font-size: 10px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 1.2px; color: #b0b8c1; padding: 16px 24px 8px;
+    border-top: 1px solid var(--border); margin-top: 12px;
+  }
+  .nav-section-label:first-of-type { border-top: none; margin-top: 0 }
+
+  nav a {
+    display:block; color: var(--text-dim); text-decoration:none;
+    font-size: 13px; padding: 5px 24px; font-weight: 400;
+    transition: all .12s; line-height: 1.6;
+    border-left: 2px solid transparent;
+  }
+  nav a:hover { color: var(--accent); background: rgba(77,107,254,.05); border-left-color: var(--accent) }
+  nav .l2 { padding-left: 40px; font-size: 12.5px }
+  nav .l3 { padding-left: 56px; font-size: 12px; color: #8b919e }
+
+  .nav-footer {
+    padding: 20px 24px; border-top: 1px solid var(--border);
+    margin-top: 16px; font-size: 11px; color: #b0b8c1; line-height: 1.7;
+  }
+
+  /* main */
+  main { margin-left: 260px; padding: 48px 72px 80px; max-width: 960px }
+
+  /* headings */
+  h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.3px; color: var(--text); margin-bottom: 8px }
+  h2 { font-size: 20px; font-weight: 600; color: var(--text); margin: 52px 0 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); letter-spacing: -0.2px }
+  h3 { font-size: 16px; font-weight: 600; color: var(--text); margin: 34px 0 12px; letter-spacing: -0.1px }
+  h4 { font-size: 15px; font-weight: 600; color: var(--text); margin: 24px 0 10px }
+  h2 + .sub { margin-top: -12px }
+
+  /* text */
+  p { margin-bottom: 14px; color: var(--text-dim) }
+  strong { color: var(--text); font-weight: 600 }
+  ul, ol { margin: 8px 0 16px 24px; color: var(--text-dim) }
+  li { margin-bottom: 5px; padding-left: 2px }
+  li::marker { color: #c0c5cc }
+
+  /* links */
+  a { color: var(--link); text-decoration: none }
+  a:hover { text-decoration: underline }
+
+  /* inline code */
+  :not(pre) > code {
+    background: var(--inline-code-bg); color: var(--inline-code-color);
+    padding: 2px 6px; border-radius: 4px; font-size: 13.5px;
+    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+    font-weight: 500;
+  }
+
+  /* code blocks */
+  pre {
+    background: var(--code-bg); color: var(--code-text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 18px 22px; overflow-x:auto;
+    font-size: 13px; line-height: 1.65;
+    margin: 12px 0 22px;
+    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+    font-weight: 400;
+  }
+  pre code { background: none; padding: 0; color: inherit; font-weight: inherit }
+
+  /* tables */
+  table {
+    width:100%; border-collapse: collapse;
+    margin: 16px 0 22px; font-size: 13.5px;
+    border: 1px solid var(--border); border-radius: 8px;
+    overflow: hidden;
+  }
+  th {
+    background: var(--table-head); font-weight: 600; font-size: 12.5px;
+    color: var(--text-dim); letter-spacing: 0.2px; text-transform: none;
+  }
+  th, td { padding: 10px 16px; text-align:left; border-bottom: 1px solid var(--border) }
+  tr:last-child td { border-bottom: none }
+  tr:nth-child(even) td { background: var(--table-stripe) }
+
+  /* badges */
+  .badge { display:inline-block; padding:2px 10px; border-radius:12px; font-size:12px; margin-right:6px; font-weight:500 }
+  .b-accent { background:#eef2ff; color:#4d6bfe }
+  .b-note { background:#e0f2fe; color:#0369a1 }
+
+  /* diagram */
+  .mermaid {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: 22px 24px; margin: 18px 0;
+    font-family: 'SF Mono', 'JetBrains Mono', Consolas, monospace;
+    font-size: 12px; line-height: 1.5; white-space:pre; overflow-x:auto;
+    color: var(--code-text);
+  }
+
+  /* callouts */
+  .note {
+    background: var(--note-bg); border-left: 3px solid var(--note-border);
+    padding: 13px 18px; margin: 18px 0; font-size: 14px;
+    border-radius: 0 6px 6px 0; color: var(--note-text);
+  }
+  .warn {
+    background: var(--warn-bg); border-left: 3px solid var(--warn-border);
+    padding: 13px 18px; margin: 18px 0; font-size: 14px;
+    border-radius: 0 6px 6px 0; color: var(--warn-text);
+  }
+  .sub { font-size: 13px; color: var(--text-dim); margin-bottom: 16px }
+  .tag { display:inline-block; padding:1px 7px; border-radius:10px; font-size:11px; margin-right:5px; background:#f3f4f6; color:var(--text-dim) }
+  hr { border:none; border-top: 1px solid var(--border); margin: 48px 0 }
+
+  /* ── Mobile Toggle Button ── */
+  .nav-toggle {
+    display: none; position: fixed; top: 12px; left: 12px; z-index: 100;
+    width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--surface); cursor: pointer; align-items: center; justify-content: center;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+  }
+  .nav-toggle span { display:block; width:18px; height:2px; background:var(--text); border-radius:2px; position:relative; transition:.2s }
+  .nav-toggle span::before, .nav-toggle span::after {
+    content:''; display:block; width:18px; height:2px; background:var(--text); border-radius:2px;
+    position:absolute; transition:.2s;
+  }
+  .nav-toggle span::before { top:-6px }
+  .nav-toggle span::after { top:6px }
+
+  /* ── Mobile Overlay ── */
+  .nav-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.3); z-index:89 }
+
+  @media (max-width:900px) {
+    body { font-size: 14px; line-height: 1.7 }
+    .nav-toggle { display: flex }
+    nav {
+      transform: translateX(-100%); transition: transform .25s cubic-bezier(.4,0,.2,1);
+      width: min(280px, 85vw); box-shadow: 2px 0 20px rgba(0,0,0,.12);
+      z-index: 91;
+    }
+    nav.open { transform: translateX(0) }
+    .nav-overlay.open { display: block; z-index: 89 }
+    main {
+      margin-left:0; padding: 56px 16px 40px;
+      max-width: 100%; overflow-x: hidden;
+    }
+    h1 { font-size: 20px }
+    h2 { font-size: 16px; margin-top: 36px }
+    h3 { font-size: 14.5px }
+    h4 { font-size: 13.5px }
+    p { max-width: 100% }
+
+    /* code blocks: respect viewport */
+    pre {
+      padding: 12px 14px; font-size: 11px; line-height: 1.55;
+      border-radius: 6px; margin: 10px 0 18px;
+    }
+
+    /* tables: horizontal scroll on narrow screens */
+    table { font-size: 12px; display:block; overflow-x:auto; -webkit-overflow-scrolling:touch }
+    th, td { padding: 7px 10px; white-space:nowrap }
+
+    /* diagrams */
+    .mermaid { font-size: 9px; padding: 12px 14px; line-height: 1.35 }
+
+    /* callouts */
+    .note, .warn { padding: 10px 14px; font-size: 13px }
+  }
+
+  @media (max-width:480px) {
+    main { padding: 50px 12px 32px }
+    h1 { font-size: 18px }
+    h2 { font-size: 15px }
+    pre { font-size: 10.5px; padding: 10px 12px }
+    .mermaid { font-size: 8px }
+  }
+</style>
+</head>
+<body>
+
+<button class="nav-toggle" onclick="toggleNav()" aria-label="菜单"><span></span></button>
+<div class="nav-overlay" id="overlay" onclick="toggleNav()"></div>
+<nav id="sidebar">
+  <div class="nav-brand">
+    <div class="nav-logo">
+      <span class="nav-dot"></span>
+      长流水
+    </div>
+    <div class="nav-subtitle">青山长流水，天天有钱花</div>
+  </div>
+
+  <div class="nav-section-label">系统总览</div>
+  <a href="#s1">一、系统定位</a>
+  <a href="#s2">二、系统全景架构</a>
+  <a href="#s3" class="l2">2.1 五层架构</a>
+  <a href="#s4" class="l2">2.2 事件分流规则</a>
+  <a href="#s5">三、天机卷 · 事件板块</a>
+  <a href="#s6" class="l2">3.1 天机卷数据表</a>
+  <a href="#s7" class="l2">3.2 调度器桥接</a>
+
+  <div class="nav-section-label">望气台 · 产业链分析</div>
+  <a href="#s8">四、管线A：产业链分析</a>
+  <a href="#s9" class="l2">4.1 LLM #1 节点分析</a>
+  <a href="#s10" class="l2">4.2 LLM #2 候选股评分</a>
+  <a href="#s11" class="l2">4.3 V3 案例库 (42例)</a>
+
+  <div class="nav-section-label">天眼司 · 万业谱预研</div>
+  <a href="#s12">五、管线B：万业谱预研</a>
+  <a href="#s13" class="l2">5.1 Python 版 (3层Agent)</a>
+  <a href="#s14" class="l2">5.2 Coze DAG 版 (8节点)</a>
+  <a href="#s15" class="l2">5.3 5维语料产出</a>
+
+  <div class="nav-section-label">估值殿 · 定数录引擎</div>
+  <a href="#s16">六、管线C：估值引擎 V8</a>
+  <a href="#s17" class="l2">6.1 PreScreen 预筛</a>
+  <a href="#s18" class="l2">6.2 Agent-0 预路由</a>
+  <a href="#s19" class="l2">6.3 Agent-1 数据锻造</a>
+  <a href="#s20" class="l2">6.4 Baseline 投资地图</a>
+  <a href="#s21" class="l2">6.5 Agent-2 统一路由</a>
+  <a href="#s22" class="l2">6.6 Agent-3 情景估值</a>
+  <a href="#s23" class="l3">6.6.1 LLM-1 参数推导</a>
+  <a href="#s24" class="l3">6.6.2 代码计算层</a>
+  <a href="#s25" class="l3">6.6.3 LLM-2 审阅</a>
+
+  <div class="nav-section-label">宗门法器 · 扩展</div>
+  <a href="#s26">七、分支管线 (SOTP/rNPV)</a>
+  <a href="#s29">八、身外化身 Agent 检视</a>
+  <a href="#s30">九、追踪司 · 追踪令</a>
+  <a href="#s31">十、藏经阁 · LOOP 工程</a>
+
+  <div class="nav-section-label">附录</div>
+  <a href="#s32">LLM 配置汇总</a>
+  <a href="#s33">外部 API 汇总</a>
+  <a href="#s34">环境配置</a>
+  <a href="#s35">错误码参考</a>
+  <a href="#s36">性能基准</a>
+  <a href="#s37">关键设计决策</a>
+  <a href="#s50">择时系统 (Agent-4)</a>
+  <a href="#s51">产出→交易 全流程</a>
+  <a href="#s38">System Prompt 全文</a>
+  <a href="#s39" class="l2">A.1 Agent-2 路由判官</a>
+  <a href="#s40" class="l2">A.2 Agent-3 LLM-1 情景推导</a>
+  <a href="#s41" class="l2">A.3 Agent-3 LLM-2 审阅官</a>
+  <a href="#s42" class="l2">A.4 Baseline 投资地图</a>
+  <a href="#s43" class="l2">A.5 PreScreen 预筛</a>
+  <a href="#s44" class="l2">A.6 万业谱 Agent 系列 (7个)</a>
+  <a href="#s45" class="l2">A.7 Coze 工作流 5字段</a>
+  <a href="#s46" class="l2">A.8 产业链分析 Prompt (4个)</a>
+  <a href="#s47" class="l2">A.9 rNPV 管线 Prompt (2个)</a>
+  <a href="#s48" class="l2">A.10 审阅系统 Prompt (2个)</a>
+  <a href="#s49">目录结构</a>
+
+  <div class="nav-footer">
+    青山长流水 · 天天有钱花<br>
+    十司联动 · 以 AI 大阵<br>
+    驱动投研全链路
+  </div>
+</nav>
+
+<main>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h1>长流水 (Changliushui)</h1>
+<p style="font-size:18px;color:var(--text-dim);font-weight:500;letter-spacing:-.2px">事件驱动型十倍股猎杀系统 — 完整开发文档</p>
+<p>
+  <span class="badge b-accent">版本 V8.3</span>
+  <span class="badge b-note">2026-07-17</span>
+  <span class="tag">commit e7fccb3 · 与运行代码同步</span>
+</p>
+
+<div class="note">
+  <strong>文档用途：</strong>基于当前全部后端代码 (<code>估值重构引擎_V5/</code>) 的完整系统文档。涵盖从 Coze 云端事件捕获到 Python 估值引擎、再到追踪令信号输出的全链路。用于系统重构参考。
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s1">一、系统定位</h2>
+
+<h3>六条市场定律</h3>
+
+<ol>
+  <li><strong>每年都有站上风口的股票。</strong>取得重大突破、赚到大钱的公司，年年都会出现。</li>
+  <li><strong>真正的交易机会都有过硬的逻辑。</strong>是大势，是能基于公开信息做出判断的，不是内幕、不是运气。</li>
+  <li><strong>价格围绕价值上下波动。</strong>估值的锚始终存在，只是市场情绪会让它偏离。</li>
+  <li><strong>上涨 10 倍的股票必先上涨 2 倍。</strong>十倍股不是一天涨出来的，中途有充足的确认和入场窗口。</li>
+  <li><strong>A 股的制度和市场环境总会给人入场参与十倍股的机会。</strong>跌停、回调、恐慌、质疑——都是门。</li>
+  <li><strong>信息不是太少，是太多。</strong>核心瓶颈不是"找不到信息"，而是"被无关信息淹没"。</li>
+</ol>
+
+<h3>长流水的工作方式</h3>
+
+<p>基于以上定律，长流水的目标不是"预测股价"，而是做<strong>信息的过滤和聚焦</strong>：</p>
+
+<table>
+  <tr><th>阶段</th><th>做什么</th><th>核心手段</th></tr>
+  <tr>
+    <td><strong>1. 过滤噪音</strong></td>
+    <td>从海量产业资讯中排除无关事件、蹭概念标的、已充分定价的机会</td>
+    <td>LLM 分类 + 同源性判断 + 产业链定位</td>
+  </tr>
+  <tr>
+    <td><strong>2. 识别范式</strong></td>
+    <td>只关注能形成十倍股范式的机会——事件驱动、利润截留、估值有空间</td>
+    <td>LLM 总结 + V3 案例库模式匹配 + 产业链利润流分析</td>
+  </tr>
+  <tr>
+    <td><strong>3. 估值推演</strong></td>
+    <td>判断当前定价是否已经透支了故事的预期——还没充分定价的才值得深追</td>
+    <td>LLM 叙事→参数推导 + 代码估值计算 + LLM 审阅修正</td>
+  </tr>
+  <tr>
+    <td><strong>4. 持续追踪</strong></td>
+    <td>对筛选出的标的建立论点档案，持续跟踪论点变化、催化剂兑现、价格波动</td>
+    <td>追踪令系统 + 支柱评分卡 + 催化剂日历</td>
+  </tr>
+  <tr>
+    <td><strong>5. 择时买卖</strong></td>
+    <td>基于论点验证/证伪 + 价格偏离度，输出买卖信号</td>
+    <td>信号灯（买/持/减/卖）+ 风险触发器</td>
+  </tr>
+</table>
+
+<div class="note">
+  <strong>核心洞察：</strong>LLM 的真正价值不在"推理深度"——而在<strong>分类和总结</strong>。海量信息中，99% 与十倍股无关。LLM 的任务是快速排除那 99%，让人的注意力集中在剩下的 1% 上。提示词编排调优是系统的核心，代码是辅助。
+</div>
+
+<h3>LLM 的角色</h3>
+<p>LLM 在长流水中不是"黑箱决策者"，而是<strong>分类器 + 总结器 + 搜索引擎编排器</strong>：</p>
+<ul>
+  <li><strong>分类：</strong>事件类型识别、锚类型判定、模型选择——把信息放进对的格子</li>
+  <li><strong>总结：</strong>从多源语料中提炼核心叙事、关键变量、脆弱点——让人能快速理解</li>
+  <li><strong>编排：</strong>决定搜索什么、何时搜索、何时停止——把搜索成本控制在合理范围</li>
+  <li><strong>所有算术由代码执行</strong> — LLM 不直接计算市值/PE/涨幅。估值可靠性由代码保证</li>
+</ul>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s2">二、系统全景架构</h2>
+
+<h3 id="s3">2.1 五层架构</h3>
+
+<div class="mermaid">
+                        ┌──────────────────────────────┐
+                        │  第0层: Coze 事件板块 (云端)   │
+                        │  bstudio 监控 → 天机卷写入     │
+                        └────────────┬─────────────────┘
+                                     │ HTTP API 拉取 (每1800s)
+                                     ▼
+                        ┌──────────────────────────────┐
+                        │  第1层: 调度器 (Python 本地)   │
+                        │  fetch → lock → 分发          │
+                        └────────────┬─────────────────┘
+                                     │
+                          ┌──────────┴──────────┐
+                          │   mode 字段分流      │
+                          └──────────┬──────────┘
+                                     │
+              ┌──────────────────────┼──────────────────────┐
+              │                      │                      │
+              ▼                      ▼                      ▼
+   ┌──────────────┐    ┌──────────────────────┐    ┌──────────┐
+   │ 个股模式      │    │ 产业模式              │    │ 丢弃     │
+   │ (有明确标的)  │    │ (赛道/政策/趋势)      │    │          │
+   └──────┬───────┘    └──────────┬───────────┘    └──────────┘
+          │                       │
+          │                       ▼
+          │            ┌──────────────────────┐
+          │            │  管线A: 产业链分析    │
+          │            │  8步: 轻搜→粗判→深搜  │
+          │            │  →精析→提名→评分      │
+          │            └──────────┬───────────┘
+          │                       │ 最优个股 + 节点分析
+          │                       ▼
+          │            ┌──────────────────────┐
+          └───────────▶│  管线B: 万业谱预研    │
+                       │  3层Agent / 8节点DAG  │
+                       │  产出: 5维语料        │
+                       └──────────┬───────────┘
+                                  │ 预研语料
+                                  ▼
+                       ┌──────────────────────┐
+                       │  管线C: 估值引擎 V8   │
+                       │  PreScreen → Agent-0  │
+                       │  → Agent-1 → Baseline │
+                       │  → Agent-2 → Agent-3  │
+                       │  产出: 概率加权报告    │
+                       └──────────┬───────────┘
+                                  │
+                                  ▼
+                       ┌──────────────────────┐
+                       │  第4层: 追踪令        │
+                       │  Agent检视 → 论点档案 │
+                       │  → 持续追踪 → 买卖信号│
+                       └──────────────────────┘
+</div>
+
+<h3 id="s4">2.2 事件分流规则</h3>
+
+<table>
+  <tr><th>天机卷 mode</th><th>触发管线</th><th>说明</th></tr>
+  <tr><td><code>个股模式</code></td><td>管线B → 管线C</td><td>已有明确个股标的，直接进入预研+估值</td></tr>
+  <tr><td><code>产业模式</code></td><td>管线A → 管线B → 管线C</td><td>行业/政策事件，先分析产业链再找最优个股</td></tr>
+  <tr><td><code>level &lt; 4</code></td><td>丢弃</td><td>资讯重要度不足，不进入处理</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s5">三、第0层：Coze 事件板块（云端）</h2>
+
+<p>整个系统的原始事件流运行在 <strong>Coze 平台</strong>上，与 Python 估值引擎完全解耦。这是系统的<strong>唯一事件入口</strong>。</p>
+
+<h3 id="s6">3.1 天机卷 (Tianjijuan) — 事件数据表</h3>
+<p>Coze 云端数据库 ID: <code>7479116110479048754</code></p>
+
+<table>
+  <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+  <tr><td><code>stock_code</code></td><td>string</td><td>关联个股代码（可为空，表示产业级事件）</td></tr>
+  <tr><td><code>stock_name</code></td><td>string</td><td>关联个股名称</td></tr>
+  <tr><td><code>news_content</code></td><td>string</td><td>原始资讯全文（HTML，后续清洗）</td></tr>
+  <tr><td><code>knowledge</code></td><td>string</td><td>背景知识补充</td></tr>
+  <tr><td><code>step_one</code></td><td>string</td><td>Agent-0 初步分析结论</td></tr>
+  <tr><td><code>mode</code></td><td>string</td><td>"个股模式" / "产业模式" — 决定分流方向</td></tr>
+  <tr><td><code>level</code></td><td>string</td><td>资讯重要度 0-5（0=尘外, 5=道变）≥4 才进入处理</td></tr>
+  <tr><td><code>is_analyzed</code></td><td>string</td><td>"true" = 已处理，不再拉取</td></tr>
+  <tr><td><code>is_analyzing</code></td><td>string</td><td>"true" = 处理中锁，防止并发重复</td></tr>
+  <tr><td><code>bstudio_create_time</code></td><td>datetime</td><td>事件捕获时间（排序依据）</td></tr>
+</table>
+
+<h3 id="s7">3.2 调度器桥接</h3>
+<p>Python 端通过 <code>config.json</code> 中的 <code>scheduler_enabled=true</code> 启动周期性轮询：</p>
+
+<pre># 调度器配置 (config.json)
+{
+  "scheduler_enabled": true,
+  "tianji_poll_interval_sec": 1800,    # 天机卷轮询间隔 30分钟
+  "polling_interval_sec": 3600         # 主轮询间隔 60分钟
+}</pre>
+
+<p>调度器工作流程：</p>
+<ol>
+  <li><code>fetch_unprocessed_records(limit=5)</code> — 查询 mode=个股模式, level≥4, is_analyzed≠true, is_analyzing≠true 的记录</li>
+  <li><code>lock_record(id)</code> — 设置 is_analyzing="true" 防止并发</li>
+  <li>执行管线 (A→B→C)</li>
+  <li><code>mark_tianji_processed(id)</code> — 标记 is_analyzed="true"</li>
+</ol>
+
+<div class="note">
+  <strong>事件写入：</strong>Coze 端的 Bot Studio (bstudio) 持续监控财经新闻/公司公告/券商研报并写入天机卷。mode 和 level 由 bstudio 在写入时设定。
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s8">四、管线A：产业链利润流分析 (V8.2 三阶段架构)</h2>
+<p class="sub">文件: <code>src/industry_chain_workflow.py</code> (1594行) | 触发: mode=产业模式</p>
+
+<p>产业事件不直接跳入个股分析。先理解产业链节点上的利润分配，再找节点内最具赔率的标的。这避免了"看到新闻→想到熟悉的大票→忽略产业链上游的真正赢家"的认知偏差。</p>
+
+<div class="note">
+  <strong>V8.2 核心升级：从一趟搜索到三阶段分析。</strong>旧版本问题：LLM 一趟搜索后粗判节点→定向深搜只覆盖粗判排名靠前的节点→"粗判选谁谁赢"的自证预言。新架构：轻搜粗判全部节点→所有节点深度均等（并行深搜上限4个节点）→LLM在均等信息基础上做精析。消除了粗判阶段的幸存者偏差。
+</div>
+
+<h3>三阶段管线</h3>
+
+<h4>Step 1a: 轻量预搜索 (2×Volc 并行)</h4>
+<pre>Q1: 产业链结构与利润截留
+Q2: TAM 与进入壁垒
+API: Volc Agent (Bot ID: 7640524154441156122) | Timeout: 90s | 并行: 2 workers</pre>
+
+<h4>Step 1b: LLM #1 粗判全部节点 (Flash)</h4>
+<pre>模型: deepseek-v4-flash | max_tokens: 8192 | temperature: 0
+
+输入: 轻搜结果
+输出: 识别所有产业链节点 (上限4个) + 粗排利润截留能力 → 输出 top_two
+
+禁止: 提及具体上市公司名称或市值/PE/股价</pre>
+
+<h4>Step 1c: 定向深搜 — 全节点均等 (每节点1×Volc，全节点并行)</h4>
+<pre>所有节点（上限4个）均进行定向深搜。每节点覆盖:
+  利润分配 + 竞争格局 + 技术壁垒 + TAM
+
+并行: max_workers = nodes × 2 | Timeout: 90s/节点
+
+关键: 不再只搜粗判排名靠前的节点——所有节点信息均等，消除"粗判选谁谁赢"的自证预言</pre>
+
+<h4>Step 2: LLM #1 精析 (Flash, tool-use: fetch_url ≤2次)</h4>
+<pre>模型: deepseek-v4-flash | max_tokens: 30720 | temperature: 0 | thinking: enabled
+工具: 仅 fetch_url (最多2个URL——优先打开最缺关键数字的结果)
+搜索: 已完成，LLM不再做搜索
+
+输出完整产业链分析JSON:
+- chain_overview
+- profit_flow_analysis (5维评估 + 证据标注: "搜索发现" vs "推断")
+- top_two_nodes (含 what_to_look_for + key_risk)
+
+利润截留评分: 1-100分 (节点间相对比较)
+隐性上游优先原则: 体积小、价值密度高、认证壁垒极强的上游环节截留最多利润</pre>
+<pre>Q1: 产业链结构与利润截留
+  - 列出所有上游/中游/下游环节、核心产品及代表公司
+  - 评估每个节点的利润截留能力（毛利率/集中度/议价力/增值占比）
+
+Q2: TAM 与进入壁垒
+  - 每个节点的国内 TAM（2025实际 + 2030预估，亿元）
+  - 进入壁垒（认证周期/技术门槛/客户绑定/切换成本）
+  - 需求弹性：事件对各节点的拉动强度排序
+
+API: https://open.feedcoopapi.com/agent_api/agent/chat/completion
+Bot ID: 7640524154441156122 | Timeout: 90s | 并行: 2 workers</pre>
+
+<h4>Step 1b: LLM #1 粗判节点 (Flash)</h4>
+<pre>模型: deepseek-v4-flash | max_tokens: 8192 | temperature: 0
+
+输入: 轻搜结果（2次Volc的结构化报告）
+输出: {"industry":"", "all_nodes":[{name,position,profit_potential}], "top_two":[{node_name,rough_score,why}]}
+
+禁止: 提及具体上市公司名称、引用市值/PE/股价</pre>
+
+<h4>Step 1c: 定向深搜 (每节点1×Volc，全节点并行)</h4>
+<pre>每个节点的查询覆盖:
+  1. 利润分配：毛利率、净利率、利润截留能力
+  2. 竞争格局：市场份额、CR3/CR5、头部企业
+  3. 技术壁垒：认证周期、客户绑定、切换成本
+  4. TAM：国内市场规模(亿元)，2025实际+2030预估
+
+并行: max_workers = len(nodes) × 2 | Timeout: 90s/节点</pre>
+
+<h4>Step 2: LLM #1 精析 (Flash, tool-use)</h4>
+<pre>模型: deepseek-v4-flash | max_tokens: 30720 | temperature: 0 | thinking: enabled
+工具: fetch_url（最多2个URL，仅读取摘要不足的全文——优先打开缺关键数字的结果）
+搜索策略: 搜索已由代码层完成，LLM不再做搜索，仅读URL补充精确数据
+
+输出: {
+  chain_overview: {industry, event_summary, nodes[]},
+  profit_flow_analysis: [每个节点的5维评估 + 证据标注],
+  top_two_nodes: [含 what_to_look_for: "此节点内什么特征的公司会胜出"]
+}</pre>
+
+<h3 id="s9">4.1 LLM #1: 五维利润截留评估</h3>
+
+<table>
+  <tr><th>维度</th><th>评估内容</th><th>评分示例</th></tr>
+  <tr><td>1. 议价能力</td><td>对上游能否压价？对下游能否提价？</td><td>high / medium / low</td></tr>
+  <tr><td>2. 集中度</td><td>寡头还是散兵？CR3/CR5</td><td>high / medium / low</td></tr>
+  <tr><td>3. 转换成本</td><td>认证周期/产线绑定/监管壁垒</td><td>high / medium / low</td></tr>
+  <tr><td>4. 增值比例</td><td>该节点贡献最终产品价值的百分比</td><td>具体数值</td></tr>
+  <tr><td>5. 需求弹性</td><td>事件直接拉动该节点需求，还是间接蹭到？</td><td>high / medium / low</td></tr>
+</table>
+
+<h4>隐性上游优先原则</h4>
+<p>产业链利润往往向"隐性上游"集中——体积小、价值密度高、认证壁垒极强的上游环节（芯片、特种材料、核心元器件），而非显眼的中游总装。</p>
+<ul>
+  <li>若某上游环节占下游成品成本 &lt;5% 但断供即瘫痪 → 利润截留极高</li>
+  <li>中游总装即使产值大，若竞争分散、切换成本低，利润截留反而不如隐性上游</li>
+  <li>不无限向上游追溯：只考虑一阶直接供应商</li>
+</ul>
+
+<h4>利润截留评分 (1-100)</h4>
+<table>
+  <tr><th>分数</th><th>含义</th></tr>
+  <tr><td>90-100</td><td>绝对龙头节点（市占>50%+毛利率>30%+切换成本极高）</td></tr>
+  <tr><td>70-89</td><td>强截留节点（寡头格局+高壁垒+高增值占比）</td></tr>
+  <tr><td>50-69</td><td>中等截留节点</td></tr>
+  <tr><td>30-49</td><td>弱截留节点</td></tr>
+  <tr><td>1-29</td><td>几乎不截留</td></tr>
+</table>
+
+<h4>Step 3: Volc 节点公司搜索 (2×并行)</h4>
+<pre>每节点1次Volc查询，搜索A股公司列表
+优先市值 20-300 亿范围内的标的（市值>300亿在后续环节被剔除）
+输出: 每家公司: 主营匹配 + 竞争壁垒 + 业绩与催化</pre>
+
+<h4>Step 4: LLM #2 提名 (Flash)</h4>
+<pre>模型: deepseek-v4-flash | max_tokens: 8192 | temperature: 0
+
+输入: 节点信息 + LLM #1报告 + Volc节点公司列表
+输出: {"nominations": [{stock_name, node_name, reason}] × 5}
+
+规则: 优先从Volc搜索结果提取公司，不足5只时用A股知识补足到5只。不需要填代码。</pre>
+
+<h4>Step 4.5: Tushare 代码校验</h4>
+<pre>用 tushare stock_basic 全量A股索引，4级名称匹配:
+  1. 精确名称匹配 → df['name'] == name
+  2. 名称包含匹配 → 按名称长度排序取最短
+  3. 核心词匹配 → 去地名/公司后缀后模糊匹配
+  4. 关键词匹配 → 最后2-4字符匹配
+
+含3次重试。失败时返回空代码（不阻塞管线）</pre>
+
+<h4>Step 5: 数据富化 (Tushare 批量 + Volc 个股并行)</h4>
+<pre>A. Tushare 批量 (含3次重试):
+   - daily_basic: 市值/PE/PB/流通盘/换手率
+   - fina_indicator: ROE/ROA/毛利率/净利率/负债率
+   - income: 营收/营业利润/扣非净利润 (元→亿 /1e8)
+   - 同比趋势计算 (上期 vs 当期)
+
+B. Volc Agent 个股投资地图 (仅搜索市值≤300亿的, 3并行):
+   - 主营匹配 + 竞争壁垒 + 近期催化 + 差异化
+
+C. 数据质量标记: full / partial / missing</pre>
+
+<h3 id="s10">4.2 LLM #2: 十倍股赔率评分 (Pro, tool-use)</h3>
+
+<pre>模型: deepseek-v4-pro | max_tokens: 30720 | temperature: 0 | thinking: enabled | reasoning_effort: high
+工具: bocha_search + fetch_url（最多搜索1次，仅补充定性信息）
+
+评分前硬过滤: 市值 > 300亿 → 直接剔除，不进入评分</pre>
+
+<h4>前置判定: 黑洞 vs 弹射</h4>
+<p>市值&lt;100亿的公司，低市值可能是因为被错杀的潜力股（弹射），也可能是因为业务在持续毁灭价值（黑洞）。</p>
+
+<table>
+  <tr><th>黑洞信号（出现任一 → impact ≤ 5）</th><th>弹射信号（可正常评分）</th></tr>
+  <tr><td>毛利率 &lt; 15%</td><td>毛利率 > 25%，亏损来自研发/扩张投入</td></tr>
+  <tr><td>资产负债率 > 70% 且净利率 &lt; -30%</td><td>资产负债率 &lt; 60%</td></tr>
+  <tr><td>营业利润亏损额 > 营收的50%</td><td>营收同比转正或环比改善</td></tr>
+  <tr><td>营收同比持续下滑(连续两期)</td><td>扣非亏损在收窄</td></tr>
+</table>
+
+<h4>四维评分 (1-10分)</h4>
+
+<table>
+  <tr><th>维度</th><th>权重</th><th>核心评估</th></tr>
+  <tr>
+    <td>1. 事件冲击比 (impact)</td><td>45%</td>
+    <td>
+      节点卡位质量 × 市值天花板折价系数<br>
+      卡位: 10=绝对龙头, 7=核心玩家, 4=有实质业务, 1=蹭概念<br>
+      市值: &lt;50亿→×0.9-1.0, 50-100→×0.8-0.95, 100-200→×0.65-0.85, 200-300→×0.5-0.7
+    </td>
+  </tr>
+  <tr>
+    <td>2. V3 模式匹配</td><td>25%</td>
+    <td>
+      10=亏损反转型(寒武纪型), 7=隐形冠军型(九安型)<br>
+      4=加速成长型(中际型), 1=周期β型(协创型)<br>
+      未匹配→4分(中性)
+    </td>
+  </tr>
+  <tr>
+    <td>3. 叙事亮点</td><td>20%</td>
+    <td>独特性/稀缺性 + 催化剂具体性 + 预期差 + 验证路径</td>
+  </tr>
+  <tr>
+    <td>4. 唯一性溢价</td><td>10%</td>
+    <td>按实际可触及的细分市场竞争格局（不是整个行业）</td>
+  </tr>
+</table>
+
+<p><strong>总分 = impact×0.45 + v3match×0.25 + narrative×0.20 + scarcity×0.10</strong></p>
+<p><strong>阈值硬规则:</strong> 所有候选股 total_score 均 &lt; 6.5 → top_pick = "无高赔率标的"。禁止虚高打分凑数。</p>
+
+<h4>Pass 2 机制</h4>
+<p>若节点1最高分 &lt; 6.5 → 自动触发 Pass 2: 提名节点2候选股 → 代码校验 → 数据富化 → 混合评分排序</p>
+
+<h3 id="s11">4.3 V3 案例库 (42例A股十倍股)</h3>
+<p>核心统计: 起涨市值中位数 39亿 | ROIC 中位数 0.4% | PE 中位数 44 | 90% 处于中高利润截留节点</p>
+<p><strong>起涨时财务数据往往平庸甚至差——关键是事件兑现后的弹性。</strong>案例库是加分项参考，不是及格线。未找到相似模式 → 不扣分。</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s12">五、管线B：万业谱预研（事件 → 5维语料）</h2>
+
+<p>管线B有两个互为备份的实现，产出的语料格式兼容：</p>
+
+<table>
+  <tr><th>实现</th><th>位置</th><th>运行环境</th><th>架构</th></tr>
+  <tr>
+    <td><strong>Python 版</strong></td>
+    <td><code>wanyepu_pipeline.py</code> + <code>agents/</code></td>
+    <td>本地 Python 进程</td>
+    <td>3层自适应 Agent（事件消化→探针分配+并行执行→总装+写入）</td>
+  </tr>
+  <tr>
+    <td><strong>Coze DAG 版</strong></td>
+    <td><code>coze_workflow/</code></td>
+    <td>Coze 平台 DAG</td>
+    <td>8节点线性链（N0→N1→N2-N6并行→N7→N8）</td>
+  </tr>
+</table>
+
+<h3 id="s13">5.1 Python 版: 3层自适应 Agent 架构</h3>
+
+<pre>第1层: 事件消化 (digest_agent)
+  → 判定事件类型 (7种) + 生成初版行业研究和投资主题
+
+第2层: 探针分配 (probe_allocator) + 并行执行 (field_agent)
+  → 基于事件类型匹配探针模板
+  → 为每个需要深化的字段运行 field_agent:
+     adversarial_thinking, future, event_deduction
+     (industry_expert_research 和 investment_theme 可选深化)
+
+第3层: 总装 (assembler) + 写入 (write to 万业谱 DB)
+  → 去重 + 交叉验证 + 标记天机卷已处理</pre>
+
+<p>调度器调用入口:</p>
+<pre># wanyepu_pipeline.py
+def run_pipeline(limit=5):
+    records = fetch_unprocessed_records(limit)  # 从天机卷拉取
+    for record in records:
+        result = run_pipeline_record(record)     # 3层Agent处理
+        mark_tianji_processed(record_id)          # 标记完成</pre>
+
+<h3 id="s14">5.2 Coze DAG 版: 8节点工作流</h3>
+
+<pre>N0(Code): 股票代码验证 — 新浪行情API
+  ↓
+N1(LLM/Flash): 事件消化 + 15探针自由设计
+  ↓
+┌─ N2(Code): 投资主题 探针执行+合并 ────┐
+├─ N3(Code): 行业研究 探针执行+合并 ────┤
+├─ N4(Code): 逆向推演 探针执行+合并 ────┤  5个并行节点
+├─ N5(Code): 催化日历 探针执行+合并 ────┤
+└─ N6(Code): 事件推演 探针执行+合并 ────┘
+  ↓
+N7(LLM/Flash): 总装 + 去重 + 交叉验证
+  ↓
+N8(Code): 写入万业谱 Coze DB + 标记天机卷</pre>
+
+<h4>5.2.1 节点配置差异</h4>
+<table>
+  <tr><th>节点</th><th>FIELD_NAME</th><th>PRIOR_FIELDS</th><th>PROBE_MIN</th><th>PROBE_MAX</th></tr>
+  <tr><td>N2</td><td>investment_theme</td><td>[]</td><td>3</td><td>6</td></tr>
+  <tr><td>N3</td><td>industry_expert_research</td><td>[investment_theme]</td><td>3</td><td>6</td></tr>
+  <tr><td>N4</td><td>adversarial_thinking</td><td>[investment_theme, industry]</td><td>3</td><td>5</td></tr>
+  <tr><td>N5</td><td>future</td><td>[theme, industry, adversarial]</td><td>2</td><td>4</td></tr>
+  <tr><td>N6</td><td>event_deduction</td><td>[全部前4个]</td><td>2</td><td>4</td></tr>
+</table>
+
+<p>设计原则: <strong>顺序推进 + 信息递归收敛</strong>。每个字段基于前序报告设计更深探针——像人类分析师每一步基于前序认知提出更深的问题。</p>
+
+<h4>5.2.2 单探针执行 (field_node.py 内部流程)</h4>
+<pre>Step 1: read_prior_reports — 按 PRIOR_FIELDS 顺序读取已完成字段的报告
+Step 2: design_probes — LLM(Flash) 基于前序认知设计探针
+Step 3: ThreadPool 并行执行 — 每个探针独立上下文, bocha_search ≤2次/探针
+Step 4: merge_probes — LLM(Flash) 按字段专属模板合并为报告
+
+单探针 LLM: deepseek-v4-flash | max_tokens: 8192 | temperature: 0 | thinking: enabled
+工具: bocha_search（最多2次/探针，Function Calling模式）</pre>
+
+<h3 id="s15">5.3 5维语料产出</h3>
+
+<table>
+  <tr><th>维度</th><th>产出内容</th></tr>
+  <tr>
+    <td><strong>投资主题</strong></td>
+    <td>核心叙事、变革证据链、关注度评估、估值锚与信息差、关键验证节点</td>
+  </tr>
+  <tr>
+    <td><strong>行业研究</strong></td>
+    <td>产业链位置与需求确定度、供给格局与价值捕获、卡点检查与反方证据（Serenity 4条）、天花板量化</td>
+  </tr>
+  <tr>
+    <td><strong>逆向推演</strong></td>
+    <td>核心假设脆弱性、两大失效测试、利益博弈与利润挤压、外部冲击、论点破裂条件。魔鬼代言人不能敷衍</td>
+  </tr>
+  <tr>
+    <td><strong>催化日历</strong></td>
+    <td>结构化时间表（预计时间/事件/证实条件/证伪条件/优先级 P0/P1/P2）</td>
+  </tr>
+  <tr>
+    <td><strong>事件推演</strong></td>
+    <td>T+30/90/180传导路径、论点破裂场景、历史案例参考、事实矛盾裁决</td>
+  </tr>
+</table>
+
+<p>N7 总装阶段执行<strong>去重+交叉验证</strong>：行业研究 vs 投资主题是否自洽？逆向推演 vs 事件推演逻辑是否一致？不一致处标注"存在分歧"。</p>
+
+<p>N8 写入万业谱 Coze DB (<code>7639784337973477386</code>)，14个字段，每字段截断 10000-15000 字符。</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s16">六、管线C：估值引擎 V8（语料 + 数据 → 估值报告）</h2>
+<p class="sub">文件: <code>src/orchestrator.py</code> (~1200行) | 核心编排器</p>
+
+<h3>4-Agent 架构 + 前置关卡</h3>
+
+<pre>
+PreScreen Gate (Flash, Fail-open)
+  │ 4维评分: 同源性+暴露度+弹性+产业链地位
+  │ 同源性&lt;4 → 拦截
+  ▼
+Agent-0 预路由 (规则引擎, 无LLM, 280行)
+  │ 行业分类→数据需求清单
+  │ 事件标签→专项数据包
+  ▼
+Agent-1 数据锻造 (无LLM, 789行)
+  │ 30+ investoday端点 + 10 Tushare端点 并行抓取
+  │ 8项交叉验证 + 数据质量评分
+  ▼
+Agent-Baseline 投资地图 (Pro, 1次调用, 508行)
+  │ 6维投资地图 (Markdown, ~2000-4000 tokens)
+  ▼
+Agent-2 统一路由判官 (Pro, 1次调用, 995行)
+  │ 6步推理链: 理解公司→识别锚→事件光谱→模型选择→计价判断→信号审核
+  ▼
+Agent-3 情景估值+非对称性 (Pro × 2, 4161行)
+  ├─ LLM-1: 参数推导 (thinking=max)
+  ├─ 代码: 估值计算
+  └─ LLM-2: 搜索审阅 (多轮对话)
+  ▼
+最终报告: 概率加权涨幅 + 交易标注 + KPI + 追踪框架
+</pre>
+
+<h3 id="s17">6.1 PreScreen 预筛关卡</h3>
+<p class="sub">文件: <code>src/pre_screen_gate.py</code> (455行)</p>
+
+<pre>模型: deepseek-v4-flash | max_tokens: 4096 | temperature: 0 | thinking: enabled</pre>
+
+<h4>四维评分 (每维 1-10)</h4>
+
+<table>
+  <tr><th>维度</th><th>核心问题</th><th>拦截规则</th></tr>
+  <tr>
+    <td>1. 叙事-事件同源性 ★核心拦截</td>
+    <td>个股上涨的驱动力和事件的催化剂是否来自同一源头？<br>常见陷阱: 同标签≠同驱动。军工标签相同但驱动逻辑完全不同→平行线</td>
+    <td><strong>同源性 &lt; 4 → 直接拦截</strong></td>
+  </tr>
+  <tr>
+    <td>2. 暴露度</td>
+    <td>事件对标的业务的实际影响程度<br>轨道A(成熟型): 相关收入占比<br>轨道B(验证突破型): 产品已验证、收入尚未起量</td>
+    <td>无硬拦截</td>
+  </tr>
+  <tr>
+    <td>3. 个股弹性</td>
+    <td>市值 + 经营杠杆 + 流通盘 + 估值弹性<br>&lt;50亿=8-10, >500亿=1-3</td>
+    <td>无硬拦截</td>
+  </tr>
+  <tr>
+    <td>4. 产业链地位</td>
+    <td>核心节点(唯一/第一) → 边缘节点(无壁垒)</td>
+    <td>无硬拦截</td>
+  </tr>
+</table>
+
+<h4>通过规则 (双重门槛)</h4>
+<pre>核心一: 同源性 ≥ 4（不是平行线）
+核心二: 总分满足市值阶梯:
+  市值 ≤ 300亿 → 总分 ≥ 20
+  市值 ≤ 500亿 → 总分 ≥ 28
+  市值 > 500亿 → 总分 ≥ 28
+
+裁量调整: 允许 ±3 分。必须有具体理由，格式: "裁量+2: &lt;理由&gt;"</pre>
+
+<div class="warn">
+  <strong>Fail-open 设计：</strong>Flash 模型调用失败 → 默认放行。JSON 解析失败 → 默认放行。系统倾向"宁可生成可能有瑕疵的估值，也不静默丢弃标的"。
+</div>
+
+<h3 id="s18">6.2 Agent-0: 预路由 (规则引擎，无LLM)</h3>
+<p class="sub">文件: <code>src/agent0_pre_router.py</code> (280行)</p>
+
+<h4>行业 → 专项数据包映射</h4>
+<table>
+  <tr><th>行业</th><th>专项数据</th></tr>
+  <tr><td>医药/生物</td><td>pipeline（管线进度/临床数据/峰值销售）</td></tr>
+  <tr><td>有色金属/矿业</td><td>reserves（资源储量/品位/开采成本）</td></tr>
+  <tr><td>电子/半导体</td><td>capacity（产能/良率/利用率/设备明细）</td></tr>
+  <tr><td>软件/互联网</td><td>subscribers/ARPU（用户数/付费率/客单价）</td></tr>
+  <tr><td>银行/金融</td><td>NPL（不良率/拨备覆盖率/净息差）</td></tr>
+  <tr><td>化工</td><td>capacity/utilization（产能/开工率/价差）</td></tr>
+  <tr><td>房地产</td><td>NAV（项目储备/土储/净负债）</td></tr>
+</table>
+
+<p>输出 data_requirements: core_mandatory, specialized_optional, optional_ignore 三包。</p>
+<p>模型提示 (_infer_model_hint): 非绑定，最终选择由 Agent-2 决定。</p>
+
+<h3 id="s19">6.3 Agent-1: 数据锻造 (纯代码，无LLM)</h3>
+<p class="sub">文件: <code>src/agent1_data_forge.py</code> (789行)</p>
+
+<h4>三阶段并行数据抓取</h4>
+
+<p><strong>Phase 1: investoday 核心数据 (8个端点并行)</strong></p>
+<pre>quote, valuation(含行业排名+历史分位), income TTM, balance TTM,
+cashflow TTM, fin_der_inds(ROIC/EBIT/EBITDA), profit_ability, industries</pre>
+
+<p><strong>Phase 2: investoday 专项数据 (6个端点并行)</strong></p>
+<pre>dupont, segment_revenue, analyst_consensus, operating_review, score, event_window_prices</pre>
+
+<p><strong>Phase 3: Tushare 补充数据 (10个端点并行)</strong></p>
+<pre>ts_daily, ts_daily_basic, ts_bs_q, ts_income_q, ts_cf_q,
+ts_fina_ind, ts_fina_mainbz, ts_forecast, ts_express, ts_shareholder</pre>
+
+<h4>8项交叉验证</h4>
+<table>
+  <tr><th>验证项</th><th>investoday 来源</th><th>Tushare 来源</th><th>容差</th></tr>
+  <tr><td>毛利率</td><td>fin-der-inds.gross_margin</td><td>fina_indicator.grossprofit_margin</td><td>±3pp</td></tr>
+  <tr><td>净利率</td><td>fin-der-inds.net_margin</td><td>fina_indicator.netprofit_margin</td><td>±3pp</td></tr>
+  <tr><td>ROE</td><td>dupont.roe</td><td>fina_indicator.roe</td><td>±3pp</td></tr>
+  <tr><td>ROIC</td><td>fin-der-inds.roic</td><td>— (仅investoday)</td><td>—</td></tr>
+  <tr><td>EPS</td><td>income-ttm.eps</td><td>— (仅investoday)</td><td>—</td></tr>
+  <tr><td>资产负债率</td><td>balance-ttm 计算</td><td>fina_indicator.debt_to_assets</td><td>±5pp</td></tr>
+  <tr><td>营收TTM</td><td>income-ttm.revenue_ttm</td><td>income.total_revenue</td><td>±10%</td></tr>
+  <tr><td>经营现金流</td><td>cashflow-ttm.operating_cf</td><td>cashflow</td><td>±20%</td></tr>
+</table>
+
+<h4>数据质量评分</h4>
+<pre>overall_data_quality_score =
+  core_completeness × 0.50
+  + cross_validation_pass_rate × 0.30
+  + specialized_completeness × 0.15
+  + tushare_availability × 0.05</pre>
+
+<div class="warn">
+  <strong>E101 硬终止：</strong>core_package 关键字段缺失 → 管线终止。这是整个系统唯一的硬终止条件。
+</div>
+
+<h3 id="s20">6.4 Agent-Baseline: 投资地图</h3>
+<p class="sub">文件: <code>src/agent_baseline.py</code> (508行)</p>
+
+<pre>模型: deepseek-v4-pro | max_tokens: 8192 | temperature: 0.1 | thinking: enabled | reasoning_effort: max
+
+输入: Agent-0预研语料(仅公司基本面字段) + Agent-1财务数据 + 火山搜索
+输出: 六维投资地图 (Markdown, ~2000-4000 tokens)</pre>
+
+<h4>六维结构</h4>
+<table>
+  <tr><th>维度</th><th>内容</th></tr>
+  <tr><td>一、公司身份与收入结构</td><td>核心业务/商业模式、产品分部表格(收入/占比/毛利率/增速)、成熟/成长/亏损业务标注</td></tr>
+  <tr><td>二、财务基线</td><td>规模、盈利质量、成本结构、现金流(OCF/NI)、ROIC vs WACC</td></tr>
+  <tr><td>三、产业位置</td><td>五力分析(标注最凶猛力量)、护城河三层拆解(技术/资本/认证)、客户集中度</td></tr>
+  <tr><td>四、增长轨迹</td><td>历史增速趋势、产能与利用率、前瞻信号、弹性关系</td></tr>
+  <tr><td>五、投资主线与脆弱点</td><td>核心叙事、估值锚、关键假设、每条假设的脆弱分析(反面证据+降级条件+反身性风险)</td></tr>
+  <tr><td>六、量化锚点</td><td>表格: 锚点|当前值|来源|置信度。产能/价格/市占率/壁垒/财务/弹性</td></tr>
+</table>
+
+<p>思维禁区: 不做估值判断、不分析事件、不模糊（有数字就用数字）、不编造、不省略负面信息、不选择性吸收。</p>
+
+<h3 id="s21">6.5 Agent-2: 统一路由判官 (V8核心)</h3>
+<p class="sub">文件: <code>src/agent2_unified.py</code> (995行)</p>
+
+<pre>模型: deepseek-v4-pro | max_tokens: 40960 | temperature: 0 | thinking: enabled | reasoning_effort: high</pre>
+
+<div class="note">
+  <strong>V8 架构变化：</strong>V6/V7 中 Agent-2 拆分为 2a(叙事诊断)+2b(模型路由)。V8 合并为单次 LLM 调用。根因：2a→2b 拆分制造了职责边界模糊，两个LLM独立判断同一件事。合并后消除序列化交接损耗（-30s延迟, -40% tokens）。
+</div>
+
+<h4>6步强制推理链</h4>
+
+<p><strong>第一步: 理解这家公司</strong> — 消费投资地图，建立公司画像。</p>
+
+<p><strong>第二步: 识别估值锚</strong> — 核心问题：市场在根据什么给这家公司定价？</p>
+<ul>
+  <li><strong>SOTP 先判（必须最先做）：</strong>用单一PE或PS给全部业务估值，会不会严重扭曲至少一个业务的价值？→ 会 → primary_anchor=sotp, primary_model=J</li>
+  <li><strong>叙事→锚判断：</strong>"收入爆发/TAM扩张"→revenue, "盈利拐点/利润率修复"→earnings, "资产重估"→asset, "管线获批"→pipeline</li>
+  <li><strong>事件优先法则：</strong>事件驱动的叙事是默认锚。内部经营叙事不能单独作为切换锚的理由</li>
+  <li><strong>数字验证：</strong>用定量定价工具验证。注意PE极高可能是周期底部分母压制而非高增长</li>
+</ul>
+
+<p><strong>第三步: 事件光谱诊断</strong> — 三维度(0-10) → 分布形状:</p>
+<table>
+  <tr><th>维度</th><th>0分端</th><th>10分端</th></tr>
+  <tr><td>timing_certainty</td><td>完全随机</td><td>精确到日</td></tr>
+  <tr><td>outcome_binaryness</td><td>连续谱</td><td>非此即彼</td></tr>
+  <tr><td>precedent_richness</td><td>史无前例</td><td>大量参照</td></tr>
+</table>
+
+<p>维度→分布形状映射: wide_bimodal / wide_bimodal_date_anchored / wide_unimodal / narrow_concentrated / narrow_base_dominant</p>
+
+<p><strong>第四步: 模型选择</strong> — 三层优先级：锚匹配 → 叙事契合度 → 模型-数据兼容性</p>
+
+<h4>10模型目录</h4>
+<table>
+  <tr><th>模型</th><th>锚</th><th>一句话描述</th><th>代码公式</th></tr>
+  <tr><td><strong>A</strong></td><td>earnings</td><td>ROIC-RR DCF: ROIC驱动再投资率→永续增长</td><td>IC × ROIC% × PE</td></tr>
+  <tr><td><strong>K</strong></td><td>earnings</td><td>两阶段DCF: 高增长→终值PE</td><td>ΣFCFF_t/(1+WACC)^t + NOPAT_N×PE/(1+WACC)^N</td></tr>
+  <tr><td><strong>G</strong></td><td>earnings</td><td>PEG: 增速锚定PE</td><td>IC × ROIC% × min(PE, PEG×增速)</td></tr>
+  <tr><td><strong>I</strong></td><td>earnings</td><td>盈利正常化: 周期中值利润替代TTM</td><td>投入资本 × 正常化ROIC% × 正常化PE</td></tr>
+  <tr><td><strong>B</strong></td><td>revenue</td><td>PS+TAM: 收入×PS</td><td>Revenue × (1+CAGR)³ × PS</td></tr>
+  <tr><td><strong>D</strong></td><td>asset</td><td>PB-ROE: ROE改善→PB扩张</td><td>Equity × PB</td></tr>
+  <tr><td><strong>H</strong></td><td>asset</td><td>NAV: 资产重估</td><td>Equity / (1−NAV折价%)</td></tr>
+  <tr><td><strong>E</strong></td><td>resource</td><td>EV/EBITDA+资源: 储量价值</td><td>EBITDA×(1+g) × EV/EBITDA − 净负债</td></tr>
+  <tr><td><strong>F</strong></td><td>pipeline</td><td>rNPV: 概率加权现金流折现</td><td>峰值销售 × PoS / (1+r)^t</td></tr>
+  <tr><td><strong>J</strong></td><td>sotp</td><td>SOTP: 分部独立估值后加总</td><td>Σ分部估值 + 净现金</td></tr>
+</table>
+
+<p><strong>第五步: 计价判断</strong> — not_priced / partially / fully / unknown + priced_in_estimate (定量百分比)</p>
+<p><strong>第六步: 信号审核 (轻量级)</strong> — 前瞻信号与叙事方向对比，匹配度评分 0-10</p>
+
+<h4>代码约束清单 (Code Advisory)</h4>
+<p>代码层为每个模型生成技术可行性观测——这是<strong>观测不是闸门</strong>。LLM可以不同意代码判断，但必须在 code_constraints_discussion 中给出理由。</p>
+
+<p>Fallback机制: LLM不可用时，_fallback() 提供纯代码路由（硬约束字典）。</p>
+
+<h4>K模型后验证 (V8.2 新增)</h4>
+<p><code>_post_validate()</code> 实现了针对K模型（两阶段DCF）的安全网：当NOPAT &lt; 0.5亿 且 NOPAT/市值 &lt; 0.8%，并且 LLM 未在 <code>code_constraints_discussion</code> 中回应此约束时，自动将主模型从K降级为A或B。这在K模型被选用于营收极低/亏损标的时防止了"终值占80%+"的不可靠估值。</p>
+
+<h3 id="s22">6.6 Agent-3: 情景估值 + 非对称性</h3>
+<p class="sub">文件: <code>src/agent3_scenario_asymmetry.py</code> (4161行，整个系统最大文件)</p>
+
+<p>核心设计模式: <strong>LLM-1 推导参数 → 代码计算估值 → LLM-2 审阅修正</strong></p>
+
+<h3 id="s23">6.6.1 Phase 1: 代码预计算 (无LLM)</h3>
+
+<h4>WACC 计算</h4>
+<pre>rf: 10年期国债收益率 (investoday economic/gover-bond-yield)
+beta: vs CSI 300, 1年日线数据
+ERP: 动态ERP（波动率调整）
+信用利差: 按负债率分档
+WACC = rf + beta × ERP + credit_spread</pre>
+
+<h4>BS 画像</h4>
+<pre>盈利锚 → 反向DCF（二分法求隐含永续增速 g）
+收入锚 → 隐含CAGR（PS → 3年收入CAGR）
+资产锚 → 隐含ROE改善（PB → ROE gap）</pre>
+
+<h3 id="s23">6.6.1 Phase 2: LLM-1 情景推导</h3>
+
+<pre>模型: deepseek-v4-pro | max_tokens: 40960 | temperature: 0.1 | thinking: enabled | reasoning_effort: max | timeout: 600s</pre>
+
+<p>角色: <strong>达摩达兰式的估值重构师</strong>。核心能力不是计算，而是用故事驾驭数字，用数字检验故事。</p>
+
+<h4>数据+故事双螺旋</h4>
+<p>没有故事的数字是尸体，没有数字的故事是童话。叙事决定数字的输入，数字反推叙事的可信度。二者必须严丝合缝。</p>
+
+<h4>执行清单 (递进推理链，不可跳步)</h4>
+
+<table>
+  <tr><th>清单项</th><th>内容</th></tr>
+  <tr><td>1. 素材吸收</td><td>三件东西交汇: ①投资地图(事件前画像) ②市场定价模型(2a诊断结论) ③事件(推演+逆向+日历)</td></tr>
+  <tr><td>2. 引用2a诊断</td><td>信任2a的结论，直接引用。不重做信号审核</td></tr>
+  <tr><td>3a. 分布形状</td><td>事件性质→参数上限。bimodal→宽双峰, unimodal→宽单峰, narrow→窄集中</td></tr>
+  <tr><td>3b. 事件冲击量级</td><td>涨价/降本→NOPAT起点跳升；放量/产能扩张→量增CAGR；新市场/产品→结构升级</td></tr>
+  <tr><td>3c. 投资命题</td><td>"如果-那么"命题 + 因果分叉点 + 证伪条件</td></tr>
+  <tr><td>3c-补充. CAGR拆解</td><td>CAGR = 量增(%) + 纯涨价(%) + 结构升级(%)。信息质量标注(硬数据/强推断/弱推断/推测/自行假设)</td></tr>
+  <tr><td>3d. 因果剧本</td><td>先写故事不赋参数。风险映射(引用baseline脆弱点+补充事件特有风险)。Bear不可推翻已发生事实</td></tr>
+  <tr><td>3e. 赋参数</td><td>参数=baseline(理解起点)+event(变数)。PE/PS锚定可比公司法，禁止缩放。按来源置信度打折</td></tr>
+</table>
+
+<h4>参数打折规则 (按来源置信度)</h4>
+<table>
+  <tr><th>来源</th><th>折扣</th><th>示例</th></tr>
+  <tr><td>公司公告的产能/价格</td><td>不打折或&lt;10%</td><td>已公告的产能扩张计划</td></tr>
+  <tr><td>行业专家纪要/券商预测</td><td>10-30%</td><td>有行业验证但非公司确认</td></tr>
+  <tr><td>分析师空间测算/目标利润率</td><td>20-40%</td><td>方向对但数字粗</td></tr>
+</table>
+<p>每条打折必须在 reasoning_trace 中显式标注: 锚点原文→置信度→打折幅度→打折后数字→理由。</p>
+
+<h4>三情景参数约束</h4>
+<ul>
+  <li>bear &lt; base &lt; bull（逐级递增，禁止相同数值）</li>
+  <li>PE/PS/PB 升降方向必须与因果剧本一致</li>
+  <li>概率由因果链条推导（不由模板）。bear需要N个独立环节同时崩塌→联合概率就是小概率</li>
+  <li>概率和 = 1.0</li>
+</ul>
+
+<h3 id="s24">6.6.2 Phase 3: 代码计算层 (无LLM)</h3>
+
+<p>对 LLM-1 的三情景参数，用精确公式计算估值。这是系统最关键的可靠性保障——<strong>LLM不做算术</strong>。</p>
+
+<pre>模型A: MCAP = IC × (ROIC%/100) × PE
+模型B: MCAP = Revenue × (1+CAGR)³ × PS
+模型D: MCAP = Equity × PB
+模型K: MCAP = Σ[FCFF_t/(1+WACC)^t] + NOPAT_N×PE/(1+WACC)^N  (逐期折现, RR封顶[0.3,0.9])
+
+产出:
+  - 每情景: target_mcap_yi, upside_pct
+  - 概率加权: weighted_mcap, weighted_upside
+  - ROIC审计: ROIC vs WACC, g vs ROIC×RR 一致性
+  - 跨族校验: 校验模型估值 (如有)</pre>
+
+<h3 id="s25">6.6.3 Phase 4: LLM-2 审阅 + 搜索</h3>
+
+<pre>模型: deepseek-v4-pro | max_tokens: 40960 | temperature: 0.1 | thinking: enabled
+多轮对话: 最多3轮, 每轮最多2次并行搜索 (volc/bocha)</pre>
+
+<p>角色: <strong>估值审阅官</strong>。不是重新估值，而是审阅LLM-1的参数推演，对照代码计算的估值结果，补充缺失数据，纠正错误，输出最终报告。</p>
+
+<h4>5个任务 (按顺序)</h4>
+
+<table>
+  <tr><th>任务</th><th>内容</th><th>关键规则</th></tr>
+  <tr><td>Task 0: 事件锚点校验</td><td>从事件素材提取所有量化锚点(价格/产能/时间线)，与LLM-1参数逐项对比</td><td>算差距→判理由→做结论。合理就写"合理"，不合理就写change_log</td></tr>
+  <tr><td>Task 0.5: 前瞻信号验证</td><td>搜索最新数据对照LLM-1解读。每类异常至少搜1次</td><td>事件管天花板，前瞻信号管脚下路。各管各的时间维度。<strong>语料优先规则(V8.3):</strong> Agent-0预研语料中的数字锚点（产能/价格/市占率）已含公司公告/研报数据——直接引用，禁止通过搜索"未找到"来推翻。搜索结果仅补充语料中确实缺失的信息</td></tr>
+  <tr><td>Task 1: 数据补充</td><td>逐条搜索LLM-1的data_gaps和change_request</td><td>必搜清单，不是参考</td></tr>
+  <tr><td>Task 2: 逻辑审查</td><td>从reasoning_trace追溯: 每个参数有依据吗？引用数据一致吗？风险有体现吗？</td><td>禁止搜索可比公司PE/PS（来自baseline和行业知识）</td></tr>
+  <tr><td>Task 3: 参数修改</td><td>发现问题必须改，不能只写"置信度低"</td><td><strong>跨锚污染铁律 (V8.3):</strong> 收入锚模型(B/PS+TAM)禁止用"ROIC &lt; WACC"作为下调PS的理由。ROIC是利润锚指标，与PS锚定逻辑无关。下调PS的唯一合法依据: 可比公司PS中枢、增长质量、盈利转化效率、事件揭示的具体风险</td></tr>
+  <tr><td>Task 4: 最终判断</td><td>基于代码计算的<strong>实际upside数字</strong>: 四维置信度、交易标注、KPI、叙事</td><td>禁止在narrative中写市值数字。估值由代码计算</td></tr>
+</table>
+
+<h4>公司声明解读框架 (A股适配)</h4>
+<table>
+  <tr><th>级别</th><th>识别词</th><th>含义</th><th>参数影响</th></tr>
+  <tr>
+    <td><strong>硬否认</strong></td>
+    <td>"终止/放弃/不再推进/无计划"</td>
+    <td>公司主动关闭此方向</td>
+    <td>大幅: bull概率↓15-20pct</td>
+  </tr>
+  <tr>
+    <td><strong>审慎澄清</strong></td>
+    <td>"目前未/尚未/暂未/占比较低/处于早期"</td>
+    <td>描述当前状态,不否认未来</td>
+    <td>温和: 近期CAGR↓, bear概率+3-5pct</td>
+  </tr>
+  <tr>
+    <td><strong>矛盾信号</strong></td>
+    <td>同时"未应用"+"计划量产/送样中"</td>
+    <td>管线推进中但尚未兑现</td>
+    <td>时间调整: 推迟bull兑现1-2年</td>
+  </tr>
+</table>
+
+<p><strong>铁律:</strong> "尚未/暂未" ≠ "证伪"。公司的行动比言辞更能反映真实意图。</p>
+
+<h4>change_log 格式</h4>
+<pre>每条格式:
+  path: 参数路径（如 "base.target_ps"）
+  old_value: 原值
+  new_value: 新值
+  reason: 修改原因
+  evidence: 支撑证据（搜索来源或逻辑推理）
+
+铁律: change_log 与 reasoning_trace 一一对应。两者数量必须一致。
+铁律: 货币/单位混淆是最常见致命错误。换算过程必须显式写出。</pre>
+
+<h4>Agent-3 最终报告 JSON Schema</h4>
+<pre>{
+  scenario_valuation: { scenario_details: {bear, base, bull} },
+  growth_path_decomposition: {...},
+  signal_audit: {...},
+  reasoning_trace: ["LLM-1: ...", "LLM-2: 事件锚校验: ...", "LLM-2: 前瞻信号-{指标}: ...", "LLM-2: 审查-参数修改: ..."],
+  data_gaps: [...],
+  change_log: [{path, old_value, new_value, reason, evidence}],
+  confidence: { overall_score, dimensions: {info_quality, financial_feasibility, valuation_safety, historical_precedent} },
+  trade_annotation: { tier: "★★★/★★☆/★☆☆/☆☆☆", total_score, dimension_scores: {odds_quality, pricing_headroom, transmission_confidence, model_consistency} },
+  monitoring_kpis: { financial_verification_kpis, event_milestone_kpis, competition_signal_kpis, risk_trigger_kpis },
+  narrative: "150-300字。禁止写市值数字",
+  probability_rationale: "...",
+  expectation_gap: { level: "市场更乐观/市场更悲观/预期相近/无法解码", note: "..." },
+  validation_crosscheck: { validation_model, validation_mcap_yi, assessment }
+}</pre>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s26">七、分支管线</h2>
+
+<h3 id="s27">7.1 SOTP 分部估值 (primary_model=J)</h3>
+<p class="sub">文件: <code>src/agent3s_sotp.py</code> (2475行)</p>
+<p>触发: Agent-2判定多业务混在一起会产生系统性偏差</p>
+<p>架构: LLM-1 每分部独立赋参 → 代码每分部独立计算 → 加总+净现金 → LLM-2 多轮审阅</p>
+<p>5种分部锚: earnings / revenue / asset / pipeline / dcf</p>
+
+<h3 id="s28">7.2 rNPV 创新药估值 (primary_model=F)</h3>
+<p class="sub">文件: <code>src/rnpv/agent1r_pipeline_data.py</code> (323行) + <code>src/rnpv/agent2r_scenario.py</code> (1121行)</p>
+<p>触发: Agent-2判定primary_model=F（创新药/生物科技）</p>
+<p>架构: 火山引擎搜索(通用+每药物深入) → Flash提取管线数据 → Pro LLM-1推导PoS/峰值/时间线 → 代码计算rNPV → LLM-2审阅</p>
+<p>核心公式: rNPV = Σ[PoS_i × Peak_Sales_i × 3 / (1+r)^t_i]。专利期倍数固定3×。</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s29">八、身外化身 Agent 检视关卡</h2>
+
+<p>估值报告产出后，不直接进入追踪。由身外化身 Agent 做最终检视：</p>
+
+<table>
+  <tr><th>检视维度</th><th>检查内容</th></tr>
+  <tr><td>报告质量</td><td>参数-推理-叙事是否自洽？有无明显逻辑漏洞？</td></tr>
+  <tr><td>赔率判断</td><td>概率加权upside是否与叙事方向一致？</td></tr>
+  <tr><td>风险认知</td><td>关键脆弱点是否被充分讨论？bear情景是否合理？</td></tr>
+  <tr><td>操作可行性</td><td>市值/流动性是否可交易？</td></tr>
+</table>
+
+<p>决策: 进入追踪 / 有条件通过 / 放弃。</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s30">九、追踪令系统</h2>
+
+<p>进入追踪清单的标的，由追踪令系统持续监控：</p>
+
+<h3>论点档案 (每个追踪标的维护)</h3>
+<ul>
+  <li><strong>投资论点：</strong>核心叙事 + 关键假设</li>
+  <li><strong>支柱评分卡：</strong>每支柱 1-10 分，定期更新</li>
+  <li><strong>催化剂日历：</strong>已兑现/待兑现/已证伪</li>
+  <li><strong>价格追踪日志：</strong>关键价位 + 事件驱动波动记录</li>
+</ul>
+
+<h3>信号输出</h3>
+<table>
+  <tr><th>信号</th><th>触发条件</th></tr>
+  <tr><td>🟢 买入</td><td>催化剂兑现 + 论点加强 + 价格未充分反映</td></tr>
+  <tr><td>🟡 持有</td><td>论点 intact + 催化剂按预期推进</td></tr>
+  <tr><td>🟠 减仓</td><td>部分支柱削弱 + 风险信号激活</td></tr>
+  <tr><td>🔴 卖出</td><td>核心假设证伪 + 论点逻辑链断裂</td></tr>
+</table>
+
+<p>数据存储: 每个标的独立 JSON 文件（<code>.agents/agents/shenwaihuashen/memory/tracking/*.json</code>），可 git 版本追溯。</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s31">十、LOOP 工程: 系统自我进化</h2>
+
+<pre>
+预研语料库 (万业谱)
+  ↓
+估值引擎 → 审计日志 (audit_logs/)
+  ↓
+DreamLoop 微观聚合
+  ├─ accumulate(): 每次估值完成→写审计日志
+  ├─ dream(): 加载最近7天日志→微观聚合→LLM模式发现
+  └─ accept()/reject(): 人工审核→更新提示词/参数
+  ↓
+提示词/参数自动升级 (人工审核后生效)
+</pre>
+
+<p>评测驱动迭代: eval_mode=True 在 frozen 历史数据上运行，对比系统输出与事后真实涨幅。</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s32">十一、LLM 配置汇总</h2>
+
+<table>
+  <tr><th>调用点</th><th>模型</th><th>Temp</th><th>Thinking</th><th>Reasoning</th><th>Max Tokens</th><th>调用次数/标的</th></tr>
+  <tr><td>产业链 LLM-1 粗判</td><td>flash</td><td>0</td><td>—</td><td>—</td><td>8192</td><td>1</td></tr>
+  <tr><td>产业链 LLM-1 精析</td><td>flash</td><td>0</td><td>enabled</td><td>—</td><td>30720</td><td>1</td></tr>
+  <tr><td>产业链 LLM-2 提名</td><td>flash</td><td>0</td><td>—</td><td>—</td><td>8192</td><td>1-2</td></tr>
+  <tr><td>产业链 LLM-2 评分</td><td>pro</td><td>0</td><td>enabled</td><td>high</td><td>30720</td><td>1-2</td></tr>
+  <tr><td>万业谱 事件消化</td><td>flash</td><td>0</td><td>enabled</td><td>—</td><td>4096</td><td>1</td></tr>
+  <tr><td>万业谱 探针执行×5</td><td>flash</td><td>0</td><td>enabled</td><td>—</td><td>8192</td><td>5+15</td></tr>
+  <tr><td>万业谱 总装+去重</td><td>flash</td><td>0</td><td>enabled</td><td>—</td><td>8192</td><td>1</td></tr>
+  <tr><td>PreScreen 预筛</td><td>flash</td><td>0</td><td>enabled</td><td>—</td><td>4096</td><td>1</td></tr>
+  <tr><td>Baseline 投资地图</td><td>pro</td><td>0.1</td><td>enabled</td><td>max</td><td>8192</td><td>1</td></tr>
+  <tr><td>Agent-2 路由判官</td><td>pro</td><td>0</td><td>enabled</td><td>high</td><td>40960</td><td>1</td></tr>
+  <tr><td>Agent-3 LLM-1 推演</td><td>pro</td><td>0.1</td><td>enabled</td><td>max</td><td>40960</td><td>1</td></tr>
+  <tr><td>Agent-3 LLM-2 审阅</td><td>pro</td><td>0.1</td><td>enabled</td><td>—</td><td>40960</td><td>1(多轮)</td></tr>
+</table>
+
+<p>全部调用 <code>https://api.deepseek.com/chat/completions</code> | API Key: <code>DEEPSEEK_API_KEY</code></p>
+
+<p>每标的 LLM 调用总量: ~25 次 (含 Coze 工作流探针)</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s33">十二、外部 API 汇总</h2>
+
+<table>
+  <tr><th>服务</th><th>端点/方式</th><th>用途</th><th>认证</th><th>调用频率/标的</th></tr>
+  <tr>
+    <td><strong>DeepSeek</strong></td>
+    <td><code>https://api.deepseek.com/chat/completions</code></td>
+    <td>全部 LLM 推理</td>
+    <td>Bearer DEEPSEEK_API_KEY</td>
+    <td>~25 次</td>
+  </tr>
+  <tr>
+    <td><strong>investoday</strong></td>
+    <td>npx investoday-api CLI</td>
+    <td>A股金融数据主源 (40+端点, 6层)</td>
+    <td>INVESTODAY_API_KEY</td>
+    <td>~30 次</td>
+  </tr>
+  <tr>
+    <td><strong>Tushare Pro</strong></td>
+    <td>Python SDK</td>
+    <td>A股金融数据辅源 (10端点) + 代码校验</td>
+    <td>TUSHARE_TOKEN</td>
+    <td>~10 次</td>
+  </tr>
+  <tr>
+    <td><strong>火山引擎 Agent</strong></td>
+    <td><code>https://open.feedcoopapi.com/agent_api/agent/chat/completion</code></td>
+    <td>产业链/个股联网搜索 (结构化报告)</td>
+    <td>Bearer VOLC_AGENT_KEY</td>
+    <td>~10 次</td>
+  </tr>
+  <tr>
+    <td><strong>Bocha Search</strong></td>
+    <td><code>https://api.bochaai.com/v1/web-search</code></td>
+    <td>A股实时信息搜索 + URL全文抓取</td>
+    <td>Bearer BOCHA_KEY</td>
+    <td>~30 次</td>
+  </tr>
+  <tr>
+    <td><strong>Coze 云数据库</strong></td>
+    <td><code>https://api.coze.cn/v1/databases</code></td>
+    <td>语料/报告持久化</td>
+    <td>Bearer COZE_SAT_TOKEN</td>
+    <td>~2 次</td>
+  </tr>
+  <tr>
+    <td><strong>新浪行情</strong></td>
+    <td><code>hq.sinajs.cn</code> / <code>suggest3.sinajs.cn</code></td>
+    <td>股票代码验证 (Coze N0节点)</td>
+    <td>无</td>
+    <td>1 次</td>
+  </tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s34">十三、环境配置</h2>
+
+<h3>必需密钥 (5项)</h3>
+<pre># .env 文件 (估值重构引擎_V5/.env)
+DEEPSEEK_API_KEY=sk-xxxxxxxx    # DeepSeek LLM API
+COZE_SAT_TOKEN=sat_xxxxxxxx     # Coze 云数据库
+INVESTODAY_API_KEY=xxxxxxxx     # investoday 金融数据
+TUSHARE_TOKEN=xxxxxxxxxxxxx     # Tushare Pro 金融数据
+VOLC_AGENT_KEY=xxxxxxxx         # 火山引擎 Agent 搜索</pre>
+
+<h3>应用配置 (config.json)</h3>
+<pre>{
+  "coze_workspace_id": "7470107954512379931",
+  "scheduler_enabled": true,
+  "tianji_poll_interval_sec": 1800,
+  "polling_interval_sec": 3600,
+  "agent0_database_id": "7639784337973477386",  // 万业谱
+  "output_database_id": "7640094415800860724",
+  "detail_database_id": "7644911309938589711",
+  "server_host": "0.0.0.0",
+  "server_port": 8080
+}</pre>
+
+<h3>Python 依赖</h3>
+<pre>anthropic>=0.39.0    # (可能用于Claude API, 当前未激活)
+pyyaml>=6.0          # endpoint_mapping.yaml 解析
+fastapi>=0.110.0     # API 服务器
+uvicorn>=0.29.0      # ASGI 服务器
+
+隐式依赖 (未声明):
+requests             # 所有 HTTP 调用 (DeepSeek/Volc/Coze/Bocha)
+tushare              # Tushare Pro SDK
+json_repair          # LLM输出JSON修复 (parse_json兜底)</pre>
+
+<div class="warn">
+  <strong>硬编码密钥位置（需在重构时解决）：</strong><br>
+  <code>src/coze_workflow/n3_field_probes.py</code> — DEEPSEEK_KEY, BOCHA_KEY<br>
+  <code>src/coze_workflow/n9_writer.py</code> — COZE_TOKEN, DB_WANYEPU, DB_TIANJI<br>
+  Coze Code节点无法读取.env文件。重构时建议将密钥配置为Coze工作流变量。
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s35">十四、错误码参考</h2>
+
+<table>
+  <tr><th>错误码</th><th>来源</th><th>含义</th><th>处理</th></tr>
+  <tr><td><strong>E101</strong></td><td>Agent-1</td><td>core_package 关键字段缺失</td><td><strong>硬终止</strong></td></tr>
+  <tr><td>E102</td><td>Agent-1</td><td>investoday 部分端点超时</td><td>降级, quality=partial</td></tr>
+  <tr><td>E103</td><td>Agent-1</td><td>Tushare 不可达</td><td>跳过交叉验证</td></tr>
+  <tr><td>E104</td><td>Agent-1</td><td>交叉验证差异超容差</td><td>标记不阻塞</td></tr>
+  <tr><td>E301</td><td>Agent-3</td><td>LLM-1 JSON 解析失败</td><td>重试</td></tr>
+  <tr><td>E302</td><td>Agent-3</td><td>LLM-1 API 超时</td><td>重试</td></tr>
+  <tr><td>E303</td><td>Agent-3</td><td>LLM-2 API 错误</td><td>LLM-1 + 代码修正模式</td></tr>
+  <tr><td>E304</td><td>Agent-3</td><td>ROIC vs WACC 矛盾</td><td>标注不阻塞</td></tr>
+  <tr><td>E305</td><td>Agent-3</td><td>g vs ROIC×RR 不一致</td><td>标注不阻塞</td></tr>
+  <tr><td>E306</td><td>Agent-3</td><td>PB-ROE 地板校验失败</td><td>标注不阻塞</td></tr>
+  <tr><td>E307</td><td>Agent-3</td><td>参数-叙事一致性失败</td><td>标注不阻塞</td></tr>
+  <tr><td>E309</td><td>Agent-3 LLM-2</td><td>LLM-1 遗漏重大前瞻信号，LLM-2 未做实质性修正</td><td>强制修正 (概率/CAGR/PS 至少改一项)</td></tr>
+  <tr><td>E400</td><td>Agent-3</td><td>代码计算异常</td><td>LLM原文 fallback</td></tr>
+  <tr><td>E401</td><td>Agent-3</td><td>概率和≠1.0</td><td>自动归一化</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s36">十五、性能基准</h2>
+
+<table>
+  <tr><th>阶段</th><th>正常模式</th><th>评测模式</th></tr>
+  <tr><td>管线A (产业链分析)</td><td>3-5分钟</td><td>跳过(或离线模式)</td></tr>
+  <tr><td>管线B (万业谱预研)</td><td>3-5分钟</td><td>跳过</td></tr>
+  <tr><td>PreScreen</td><td>5-15s (1次Flash)</td><td>5-15s</td></tr>
+  <tr><td>Agent-0</td><td>&lt;1s (规则引擎)</td><td>&lt;1s</td></tr>
+  <tr><td>Agent-1</td><td>15-30s (30+ API并行)</td><td>跳过</td></tr>
+  <tr><td>Agent-Baseline</td><td>30-60s (1次Pro)</td><td>30-60s</td></tr>
+  <tr><td>Agent-2</td><td>45-90s (1次Pro)</td><td>45-90s</td></tr>
+  <tr><td>Agent-3 LLM-1</td><td>60-180s (1次Pro, thinking=max)</td><td>60-180s</td></tr>
+  <tr><td>Agent-3 代码计算</td><td>&lt;1s</td><td>&lt;1s</td></tr>
+  <tr><td>Agent-3 LLM-2</td><td>60-180s (多轮+搜索)</td><td>60-180s</td></tr>
+  <tr><td><strong>管线C 总计</strong></td><td><strong>~4-7分钟</strong></td><td><strong>~3-5分钟</strong></td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s37">十六、关键设计决策</h2>
+
+<h3>1. 信息过滤优先，而非分析优先</h3>
+<p>系统的第一性问题是"这个事件/标的值得看吗"。PreScreen 同源性判断、产业链无关排除、市值硬过滤——每层都在排除。LLM 的价值首先在于"把 99% 的无关信息排除掉"，而非对每个标的都深度分析。</p>
+
+<h3>2. 提示词编排是核心，代码是辅助</h3>
+<p>系统的核心能力在提示词。每一步 LLM 调用的 System Prompt 经过了反复调优——推理链顺序、思维禁区、打分锚定、证据纪律。代码负责数据抓取和算术计算，不替代 LLM 的判断。</p>
+
+<h3>3. 产业链先行，个股后行</h3>
+<p>产业事件不直接跳入个股分析。先理解产业链节点上的利润分配，再找节点内最具赔率的标的。这避免了"看到新闻→想到熟悉的大票→忽略产业链上游的真正赢家"的认知偏差。产业链分析已演进为三阶段架构——轻搜粗判→定向深搜→精析——以消除"粗判选谁谁赢"的自证预言。</p>
+
+<h3>4. LLM 不做算术</h3>
+<p>所有市值/PE/涨幅计算由代码执行。LLM 负责参数推导和逻辑审查。这消除了 LLM 算术错误（最常见失败模式）。Agent-3 的 LLM-1→代码→LLM-2 三明治结构是这个原则的工程体现。V8.2 新增了 LLM-2 前瞻信号硬约束——如果 LLM-1 遗漏重大信号，LLM-2 必须做出实质性参数修正（E309）。</p>
+
+<h3>5. Fail-open 默认放行</h3>
+<p>PreScreen 失败→放行。Tushare 不可达→跳过。LLM 不可用→Fallback。唯一硬终止是核心财务数据完全缺失（E101）。系统倾向"宁可看一个不那么完美的机会，也不错过一个真正的十倍股"。</p>
+
+<h3>6. V8 合并 Agent-2a+2b</h3>
+<p>V6/V7 中 Agent-2 拆分为 2a（叙事诊断）和 2b（模型路由），两个 LLM 独立判断同一件事。V8 合并为单次调用——消除序列化交接损耗和 route drift。V8.2 强化了事件优先法则：当多条叙事并存时，事件驱动的叙事是默认锚。</p>
+
+<h3>7. 持续追踪比单次估值更重要</h3>
+<p>估值报告是起点，不是终点。十倍股不是一天涨出来的（定律 4），中途有充足的确认窗口。追踪令系统的论点档案、支柱评分卡、催化剂日历——这些持续追踪机制才是真正捕捉十倍股的关键。</p>
+
+<h3>8. 搜索模组统一化（V8.2）</h3>
+<p>全管线搜索从 Bocha 迁移至火山引擎 Agent（结构化输出），三条管线（标准/SOTP/rNPV）共用统一搜索接口。火山引擎返回结构化报告而非碎片链接，信息密度更高。Bocha 作为辅助搜索工具保留在 Coze 工作流中。</p>
+
+<h3>9. change_log 审计验证 (V8.3)</h3>
+<p><code>_verify_change_log</code> 自动剥离 <code>scenario_valuation.scenario_details</code> 前缀，修复了 B 模型 LLM-2 校正全部失效的系统性 bug——LLM-2 输出的 change_log path 带有完整路径前缀（如 <code>scenario_valuation.scenario_details.base.target_ps</code>），而校验函数期望裸字段名，导致所有 B 模型的 LLM-2 修正被静默丢弃。</p>
+
+<h3>10. ROIC 跨锚污染铁律 (V8.3)</h3>
+<p>LLM-2 提示词新增硬规则：收入锚模型（B/PS+TAM）禁止用"ROIC &lt; WACC"作为下调 PS 的理由。ROIC 是利润锚指标，与 PS 锚定逻辑无关。用 ROIC 低来压 PS = 估值框架的跨锚污染。下调 PS 的唯一合法依据是：可比公司 PS 中枢、增长质量（增速/可见度/确定性）、盈利转化效率（毛利率→净利率的转化路径），以及事件揭示的具体风险（客户集中度/技术替代/产能天花板）。</p>
+
+<h3>11. SOTP Schema 防污染 (V8.3)</h3>
+<p>SOTP 提示词中的硬编码示例数据（如瑞华泰"化合物半导体 1.38 亿"）替换为占位符，防止 LLM 惰性复制示例数据导致跨标的估值污染。</p>
+
+<h3>12. 事件语料优先规则 (V8.3)</h3>
+<p>移除事件语料的 500 字符截断。新增"语料优先规则"：Agent-0 预研数据已在语料中的数字锚点（产能/价格/市占率）直接引用，不依赖最后一次搜索——因为搜索可能失败或返回过时信息，而已生成的预研语料经过了交叉验证。</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s50">十七、择时系统 (Agent-4) — 规划中</h2>
+
+<p>选股回答"该不该买"（论点对不对），择时回答"现在能不能买"（价格好不好）。两套正交的信号体系，不能混淆。</p>
+
+<h3>设计原则</h3>
+
+<div class="note">
+  <strong>核心洞察：</strong>择时因子必须与估值引擎的产出形成闭环。不是独立的技术分析层，而是对定数录结论的"市场面验证"。每个择时信号都应该能回答一个问题——"市场正在以什么速度、朝什么方向、带着多少确信度，朝我们的估值区间移动？"
+</div>
+
+<h3>三组择时因子</h3>
+
+<h4>第一组：技术指标 — 趋势与结构确认</h4>
+
+<p>技术指标不单独做买卖决策，而是提供<strong>趋势方向、动量强度、波动率环境</strong>三个维度的客观描述。选用的都是大周期、少噪音的指标：</p>
+
+<table>
+  <tr><th>指标</th><th>用途</th><th>参数</th><th>为什么用它而不是其他</th></tr>
+  <tr>
+    <td><strong>MA60/MA120/MA250</strong></td>
+    <td>中长期趋势方向</td>
+    <td>季度/半年/年线</td>
+    <td>十倍股全程在 MA60 上方运行。跌破 MA120 且论点 intact 是最佳入场区间。MA250 是最后的底线</td>
+  </tr>
+  <tr>
+    <td><strong>ATR(20) 波动率</strong></td>
+    <td>波动率环境判断</td>
+    <td>20 日</td>
+    <td>波动率收缩→扩张的转换点往往是主升浪起点。不需要判断方向，只需要判断"风暴前的平静"</td>
+  </tr>
+  <tr>
+    <td><strong>成交量异常检测</strong></td>
+    <td>资金参与度</td>
+    <td>20 日均量 ×2σ</td>
+    <td>十倍股起涨时普遍伴随放量。无量上涨是脆弱信号。放量下跌+论点 intact 可能是机会</td>
+  </tr>
+  <tr>
+    <td><strong>价格结构（支撑/阻力）</strong></td>
+    <td>入场/止损参考</td>
+    <td>关键价位</td>
+    <td>与定数录的 bear-base-bull 区间叠加。bear 估值 + 技术支撑 → 最强入场信号</td>
+  </tr>
+</table>
+
+<p><strong>不用 MACD/RSI/KDJ 的原因：</strong>它们假设价格围绕均值振荡。十倍股的价格行为是趋势+突破+范式切换——在上涨过程中会反复触发"超买"，用振荡指标择时会让你在 2 倍的时候就下车。</p>
+
+<h4>第二组：独有因子 — 论点验证与催化剂追踪</h4>
+
+<p>这组因子是长流水的核心竞争力来源。它们直接验证估值引擎的假设链条，从"故事讲得通"到"故事正在发生"。</p>
+
+<table>
+  <tr><th>因子</th><th>数据源</th><th>定义</th><th>信号阈值</th><th>对十倍股为什么有效</th></tr>
+  <tr>
+    <td><strong>业绩预告超预期</strong></td>
+    <td>Tushare forecast</td>
+    <td>预告净利润上限 / 分析师一致预期 - 1</td>
+    <td>&gt;30% → 强确认<br>0-30% → 弱确认<br>&lt;0 → 预警</td>
+    <td>A 股强制披露制度（±50%变动必须预告）意味着十倍股在爆发期每年至少有 2-4 次官方业绩确认。第一次正向预告是论点成立的第一个硬信号</td>
+  </tr>
+  <tr>
+    <td><strong>合同负债跳升</strong></td>
+    <td>Tushare balancesheet Q</td>
+    <td>合同负债 QoQ 增速 - 过去 8Q 中位数增速（σ 偏离）</td>
+    <td>&gt;2σ → 需求爆发<br>1-2σ → 趋势确认<br>&lt;1σ → 中性</td>
+    <td>合同负债 = 已收客户钱但还没交货。是收入确认前 1-2Q 的领先指标。Agent-1 已经在计算此因子（前瞻信号面板）</td>
+  </tr>
+  <tr>
+    <td><strong>扣非净利润转正加速</strong></td>
+    <td>Tushare income Q</td>
+    <td>扣非净利润 TTM &gt; 0 且过去 4Q 二阶导 &gt; 0</td>
+    <td>首次转正 → 强信号<br>持续加速 → 趋势确认</td>
+    <td>A 股十倍股最典型的起涨状态。市场按"垃圾"定价 → 扣非转正瞬间 → 定价框架从"赌"变成"算" → 估值范式切换</td>
+  </tr>
+  <tr>
+    <td><strong>催化剂兑现度</strong></td>
+    <td>追踪令系统</td>
+    <td>已兑现催化剂数 / 总待验证数 + 支柱评分变化方向</td>
+    <td>核心催化剂兑现 → S/A 信号<br>催化剂miss → 降级/预警</td>
+    <td>十倍股的每一波主升浪几乎都对应一个催化剂兑现。这不是巧合——催化剂是市场重新定价的锚点</td>
+  </tr>
+  <tr>
+    <td><strong>价格-价值收敛度</strong></td>
+    <td>定数录估值区间</td>
+    <td>(当前价格 - bear估值) / (base估值 - bear估值)</td>
+    <td>&lt;0 在bear下方 → 极佳<br>0-0.5 bear-base → 良好<br>0.5-1 base附近 → 合理<br>&gt;1 超base → 偏高</td>
+    <td>定律 3（价格围绕价值波动）+ 定律 5（A 股总给入场机会）。价格跌入 bear-base 区间且论点 intact → 最佳入场点。不需要技术指标来告诉你"便宜"</td>
+  </tr>
+  <tr>
+    <td><strong>机构行为验证</strong></td>
+    <td>Tushare fund_daily / 北向资金</td>
+    <td>机构持股比例变化 + 北向持仓变化（连续周度方向）</td>
+    <td>连续增持 → 强确认<br>方向分歧 → 中性<br>连续减持 → 预警</td>
+    <td>不是"跟庄"——是验证"聪明钱是否也在押注同一论点"。机构在十倍股起涨前普遍有建仓痕迹</td>
+  </tr>
+</table>
+
+<h4>第三组：市场动态 — 大环境与情绪</h4>
+
+<p>前两组回答的是"个股好不好"和"价格对不对"。这一组回答的是"大环境配不配合"。</p>
+
+<table>
+  <tr><th>因子</th><th>数据源</th><th>定义</th><th>信号含义</th></tr>
+  <tr>
+    <td><strong>行业热度</strong></td>
+    <td>investoday industry-quote/realtime + 行业涨幅排名</td>
+    <td>行业指数 20 日涨幅排名（申万 L2/L3 分位）+ 行业内成分股上涨比例</td>
+    <td>行业 Top 20% + 成分股 &gt;60% 上涨 → 板块共振，个股上涨有行业支撑。行业 Bottom 20% → 个股逆势上涨需要更强的个股逻辑支撑</td>
+  </tr>
+  <tr>
+    <td><strong>市场情绪</strong></td>
+    <td>investoday stock/score 情绪分 + 全市场涨跌比 + 涨停家数/跌停家数</td>
+    <td>综合情绪指数 0-100，结合个股情绪得分与历史分位</td>
+    <td>极度恐惧(&lt;20) + 论点 intact → 逆向入场机会。极度贪婪(&gt;80) + 催化剂即将兑现 → 警惕利好出尽</td>
+  </tr>
+  <tr>
+    <td><strong>资金面</strong></td>
+    <td>investoday capital-flow + 融资融券余额趋势</td>
+    <td>主力净流入方向 + 融资余额变化趋势 + M1/M2 剪刀差</td>
+    <td>个股主力流入 + 行业资金流入 + 宏观流动性宽松 → 三级共振，资金面最优状态</td>
+  </tr>
+  <tr>
+    <td><strong>市场注意力</strong></td>
+    <td>investoday report/research + 互动问答</td>
+    <td>研报覆盖数变化（加速/稳定/下降）+ 互动易问答量趋势</td>
+    <td>注意力峰值 + 价格在 bull 附近 → 离场预警。注意力低谷 + 论点 intact → 入场窗口。十倍股的顶部往往对应注意力峰值，而不是估值峰值</td>
+  </tr>
+  <tr>
+    <td><strong>宏观背景</strong></td>
+    <td>investoday economic/* + bond-yield</td>
+    <td>国债收益率方向 + M1/M2 剪刀差 + 社融趋势</td>
+    <td>确定仓位中枢。宽货币+宽信用 → 可偏高仓位。紧货币+紧信用 → 降低整体敞口。中观和微观信号优先于宏观</td>
+  </tr>
+  <tr>
+    <td><strong>风格切换</strong></td>
+    <td>申万风格指数（大盘/小盘/成长/价值）</td>
+    <td>小盘成长 / 大盘价值的相对强弱 20 日趋势</td>
+    <td>A 股十倍股绝大多数出现在小盘成长风格占优的周期。当市场偏向大盘价值时，十倍股策略的胜率系统性降低——此时应降低新开仓频率，但不影响现有论点</td>
+  </tr>
+</table>
+
+<h3>Agent-4 择时判官架构</h3>
+
+<pre>
+输入:
+  ┌─────────────────────────────────────────────┐
+  │ 定数录 (Agent-3 产出)                        │
+  │  ├─ bear/base/bull 估值区间                  │
+  │  ├─ 论点 + 支柱评分卡                        │
+  │  ├─ 催化剂日历 + 兑现状态                    │
+  │  └─ 前瞻信号面板 (合同负债/应收/存货等)       │
+  ├─────────────────────────────────────────────┤
+  │ 技术指标数据 (新增)                          │
+  │  ├─ MA60/120/250 位置关系                    │
+  │  ├─ ATR(20) 波动率环境                       │
+  │  └─ 成交量异常检测                           │
+  ├─────────────────────────────────────────────┤
+  │ 独有因子数据 (部分已有, 部分新增)             │
+  │  ├─ 业绩预告超预期 (Tushare forecast)        │
+  │  ├─ 合同负债跳升 (已在前瞻信号面板, 标记即可) │
+  │  ├─ 扣非转正加速 (Tushare income Q)          │
+  │  ├─ 催化剂兑现度 (追踪令系统)                │
+  │  ├─ 价格-价值收敛度 (定数录 + 实时行情)      │
+  │  └─ 机构行为验证 (Tushare + 北向)            │
+  ├─────────────────────────────────────────────┤
+  │ 市场动态数据 (部分已有, 部分新增)             │
+  │  ├─ 行业热度 (investoday industry)           │
+  │  ├─ 市场情绪 (综合得分 + 涨跌比)              │
+  │  ├─ 资金面 (capital-flow + 融资融券)          │
+  │  ├─ 注意力 (研报覆盖变化 + 互动问答量)        │
+  │  ├─ 宏观背景 (国债/M1M2/社融)                 │
+  │  └─ 风格切换 (申万风格指数)                  │
+  └─────────────────────────────────────────────┘
+
+LLM 调用: deepseek-v4-pro | max_tokens: 8192 | temperature: 0
+
+Prompt 核心逻辑（非完整 Prompt）:
+  "这是估值殿给这只股票的定数录。它的论点有 N 个支柱，
+   当前 X 个已验证、Y 个待观察、Z 个存疑。
+   催化剂兑现进度: A/B。
+   当前价格在 bear-base-bull 区间的 [位置]。
+   技术面: MA 排列 [多头/空头/交织], 波动率 [收缩/扩张/正常], 成交量 [放量/缩量/正常]。
+   独有因子: 业绩预告 [超预期/符合/不及], 合同负债 [跳升/正常/下降],
+   扣非 [转正加速/转正减速/亏损], 机构 [增持/分歧/减持]。
+   市场环境: 行业热度 [Top%/Mid%/Bottom%], 市场情绪 [贪婪/中性/恐惧],
+   资金面 [三级共振/二重/单独/弱势], 风格 [小盘成长/大盘价值]。
+   基于以上，判断当前是否构成入场/加仓/持有/减仓/清仓信号。
+   给出建议仓位比例和止损位/目标位。"
+
+输出:
+  {
+    signal: "S|A|B|C|D",
+    signal_rationale: "信号推导过程 ≥60字",
+    position_advice: { suggested_pct: "建议仓位%", entry_zone: "入场区间", stop_loss: "止损价", target: "目标价" },
+    dimension_scores: {
+      fundamental: { score: 1-10, note: "论点验证进度+支柱评分" },
+      technical: { score: 1-10, note: "趋势+波动率+量价" },
+      proprietary: { score: 1-10, note: "独有因子综合判断" },
+      market: { score: 1-10, note: "大环境配合度" }
+    },
+    risk_flags: ["需要关注的风险信号"],
+    next_checkpoint: "下一次择时重评估的时间或条件"
+  }</pre>
+
+<h3>综合交易信号矩阵</h3>
+
+<table>
+  <tr><th colspan="2" rowspan="2" style="text-align:center">信号矩阵</th><th colspan="4" style="text-align:center">技术面 + 市场面</th></tr>
+  <tr><th>强势共振</th><th>中性</th><th>弱势背离</th></tr>
+  <tr>
+    <td rowspan="3" style="writing-mode:vertical-lr;text-align:center;font-weight:700">基本面<br>论点</td>
+    <td><strong>论点加强</strong></td>
+    <td style="background:#dcfce7">S 强买<br>重仓 8-10%</td>
+    <td style="background:#f0fdf4">A 买入<br>标准仓 5-8%</td>
+    <td style="background:#fffbeb">B 关注<br>轻仓 2-5%<br>等待技术面好转</td>
+  </tr>
+  <tr>
+    <td><strong>论点维持</strong></td>
+    <td style="background:#f0fdf4">A 买入<br>标准仓 5-8%</td>
+    <td style="background:#fffbeb">B 持有<br>维持现有仓位</td>
+    <td style="background:#fff7ed">C 观望<br>减仓至 2-3%<br>或不操作</td>
+  </tr>
+  <tr>
+    <td><strong>论点削弱</strong></td>
+    <td style="background:#fffbeb">B 减仓观察<br>趁技术面好减仓</td>
+    <td style="background:#fef2f2">C 观望<br>减仓至 2% 以下</td>
+    <td style="background:#fef2f2">D 卖出<br>清仓<br>核心假设证伪</td>
+  </tr>
+</table>
+
+<p><strong>信号级别定义：</strong></p>
+<table>
+  <tr><th>级别</th><th>基本面条件</th><th>技术+市场条件</th><th>建议仓位</th><th>行动</th></tr>
+  <tr><td><strong>S 强买</strong></td><td>核心催化剂刚兑现 + 支柱评分 ≥ 7.5</td><td>趋势多头 + 价格在 bear-base 之间 + 行业共振 + 资金流入</td><td>8-10%</td><td>重点加仓</td></tr>
+  <tr><td><strong>A 买入</strong></td><td>论点加强中 + 催化剂待验证 + 支柱评分 ≥ 6.5</td><td>趋势健康 + 价格合理 + 无明显负面</td><td>5-8%</td><td>标准建仓/加仓</td></tr>
+  <tr><td><strong>B 关注/持有</strong></td><td>论点成立但验证尚早 / 部分支柱存疑</td><td>任何</td><td>2-5%</td><td>轻仓等待催化剂 / 维持现有仓位</td></tr>
+  <tr><td><strong>C 观望</strong></td><td>论点有疑问 / 多个支柱处于 at_risk</td><td>趋势走弱或市场不配合</td><td>&lt;2%</td><td>不操作 / 趁反弹减仓</td></tr>
+  <tr><td><strong>D 卖出</strong></td><td>核心假设被证伪 / 支柱评分 &lt; 4.0</td><td>不限</td><td>0%</td><td>清仓</td></tr>
+</table>
+
+<div class="note">
+  <strong>仓位中枢的宏观调节：</strong>在 S/A/B/C/D 的个股仓位之上，还有一个全局仓位中枢。当宏观环境处于"宽货币+宽信用"时，所有个股仓位建议不变。当"紧货币+紧信用"时，所有个股仓位建议下调 1/3。当风格切换为大盘价值主导时，降低十倍股策略新开仓频率，但不影响现有论点持仓。
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s51">十八、估值引擎产出 → 交易下单 全流程</h2>
+
+<p>从定数录报告生成到最终买卖执行，系统通过七个阶段将"分析结论"转化为"交易动作"。每个阶段有明确的输入、决策逻辑和输出。</p>
+
+<h3>全景流程</h3>
+
+<div class="mermaid">
+  ═══════════════════════════════════════════════════════
+  阶段一：自动化管线 (引擎产出)
+  ═══════════════════════════════════════════════════════
+
+  天机卷事件 (L4/L5)
+       │
+       ▼
+  管线 A→B→C (产业链→预研→估值)
+       │
+       ▼
+  定数录: 从事件触发到潜在估值区间的完整链路
+  含: 概率加权涨幅 / 三情景 / 交易标注 / 论点 / 催化剂
+
+
+  ═══════════════════════════════════════════════════════
+  ★ 人工决策关口 ★
+  ═══════════════════════════════════════════════════════
+
+  用户阅读定数录 + AI 审阅意见
+  判断: 逻辑成立? 赔率足够? 值得追踪?
+    │
+    ├─ ✅ 加入追踪令 ──→ 进入阶段二
+    └─ ❌ 放弃 (记录原因)
+
+
+  ═══════════════════════════════════════════════════════
+  阶段二：追踪令模块 (持续运转)
+  ═══════════════════════════════════════════════════════
+
+  ┌─────────────────────────────────────────────────┐
+  │                追踪令卡片                        │
+  │                                                 │
+  │  ┌──────────┐ ┌──────────┐ ┌──────────────────┐ │
+  │  │ 每日巡检  │ │ 量化择时  │ │ 仓位管理         │ │
+  │  │ ·价格日志 │ │ ·技术指标 │ │ ·S/A/B/C/D 信号  │ │
+  │  │ ·催化剂  │ │ ·独有因子 │ │ ·建议仓位%       │ │
+  │  │ ·财报    │ │ ·市场动态 │ │ ·止损/止盈       │ │
+  │  └──────────┘ └──────────┘ └──────────────────┘ │
+  │                                                 │
+  │  ┌──────────┐                    ┌──────────┐   │
+  │  │ 虚拟建仓  │ ──────────────→   │  复盘    │   │
+  │  │ ·模拟下单 │                    │ ·论点回顾 │   │
+  │  │ ·虚拟持仓 │                    │ ·信号准确性│   │
+  │  │ ·收益率  │                    │ ·策略迭代 │   │
+  │  └──────────┘                    └──────────┘   │
+  └─────────────────────────────────────────────────┘
+</div>
+
+<h3>追踪令卡片 — 所有后续开发的核心载体</h3>
+
+<p>从架构上看，整个系统分为两大阶段，中间有一个<strong>人工决策关口</strong>：</p>
+
+<div class="mermaid">
+  ┌─────────────────────────────────────────────────────────┐
+  │ 阶段一：自动化管线 (引擎产出)                             │
+  │                                                         │
+  │  天机卷事件 → 管线A(产业链) → 管线B(预研) → 管线C(估值)  │
+  │     │                                                   │
+  │     ▼                                                   │
+  │  定数录: 事件→潜在估值 的完整链路                         │
+  │  含: 概率加权涨幅 / 三情景估值 / 交易标注 / 论点 / 催化剂 │
+  └─────────────────────────┬───────────────────────────────┘
+                            │
+                            ▼
+  ┌─────────────────────────────────────────────────────────┐
+  │ ★ 人工决策关口                                          │
+  │                                                         │
+  │  用户结合 AI 建议 (身外化身 Agent 审阅意见)               │
+  │  判断: 这个标的的逻辑是否成立？赔率是否足够？             │
+  │                                                         │
+  │     ✅ 加入追踪令 ←── 进入阶段二                         │
+  │     ❌ 放弃 (记录原因, 事件重大变化时可重新触发)          │
+  └─────────────────────────┬───────────────────────────────┘
+                            │ 加入追踪令
+                            ▼
+  ┌─────────────────────────────────────────────────────────┐
+  │ 阶段二：追踪令模块 (持续运转)                             │
+  │                                                         │
+  │  ┌─────────┐  ┌──────────┐  ┌──────────┐  ┌─────────┐  │
+  │  │ 每日巡检 │  │ 量化择时  │  │ 仓位管理  │  │ 虚拟建仓 │  │
+  │  │         │  │ + 因子   │  │          │  │         │  │
+  │  │·价格日志│  │·技术指标  │  │·S/A/B/C/D│  │·模拟下单│  │
+  │  │·催化剂  │  │·独有因子  │  │  →仓位%  │  │·虚拟持仓│  │
+  │  │·财报    │  │·市场动态  │  │·止损止盈 │  │·收益率  │  │
+  │  └────┬────┘  └────┬─────┘  └────┬─────┘  └────┬────┘  │
+  │       │            │             │              │       │
+  │       └────────────┼─────────────┼──────────────┘       │
+  │                    │             │                      │
+  │                    ▼             ▼                      │
+  │              ┌──────────────────────┐                   │
+  │              │       复盘           │                   │
+  │              │ 论点验证回顾         │                   │
+  │              │ 择时信号准确性       │                   │
+  │              │ → 策略迭代 + DreamLoop│                  │
+  │              └──────────────────────┘                   │
+  └─────────────────────────────────────────────────────────┘
+</div>
+
+<div class="note">
+  <strong>核心架构决策：</strong>管线是自动化的事件→估值链路。追踪令是人工确认后的持续运转模块。两条线由<strong>人的判断</strong>连接。AI 提供审阅意见和数据支撑，最终"加不加入追踪令"是人做的决定。加入之后，追踪令模块接管一切后续工作——巡检、择时、仓位、建仓、复盘——都在这一个模块内闭环。
+</div>
+
+<h4>追踪令模块承载的全部功能</h4>
+
+<table>
+  <tr><th>模块</th><th>功能</th><th>频率</th><th>输入</th><th>输出</th><th>状态</th></tr>
+  <tr>
+    <td><strong>生成追踪令</strong></td>
+    <td>定数录 → 人工确认 → 论点档案写入 JSON</td>
+    <td>事件驱动</td>
+    <td>定数录 + AI 审阅意见</td>
+    <td>追踪令 JSON (论点/支柱/催化剂/KPI)</td>
+    <td><span class="badge b-accent">已有</span></td>
+  </tr>
+  <tr>
+    <td><strong>每日巡检</strong></td>
+    <td>价格日志追加、催化剂到期检查、财报/预告/事件监听、价格偏离预警</td>
+    <td>每日自动</td>
+    <td>实时行情 + 天机卷 + Tushare</td>
+    <td>更新 price_log、catalyst status、论点状态</td>
+    <td><span class="badge b-accent">已有</span></td>
+  </tr>
+  <tr>
+    <td><strong>量化择时 + 因子</strong></td>
+    <td>三组因子 → Agent-4 综合判断 → 交易信号</td>
+    <td>每周 + 催化剂触发</td>
+    <td>技术指标 + 独有因子 + 市场动态 + 论点状态</td>
+    <td>S/A/B/C/D 信号 + 仓位% + 止损/止盈</td>
+    <td><span class="badge b-note">规划中</span></td>
+  </tr>
+  <tr>
+    <td><strong>仓位管理</strong></td>
+    <td>基于信号矩阵计算建议仓位；止损/止盈触发 → 自动调整；宏观环境→全局仓位中枢调节</td>
+    <td>信号驱动 + 持续监控</td>
+    <td>交易信号 + 当前仓位 + 宏观状态</td>
+    <td>目标仓位%、止损价、止盈价</td>
+    <td><span class="badge b-note">规划中</span></td>
+  </tr>
+  <tr>
+    <td><strong>虚拟建仓</strong></td>
+    <td>基于择时信号模拟下单 → 追踪虚拟持仓收益率 → 验证策略有效性后再实盘</td>
+    <td>信号驱动</td>
+    <td>交易信号 + 实时价格</td>
+    <td>虚拟成交记录 → 虚拟持仓 → 收益率曲线</td>
+    <td><span class="badge b-note">规划中</span></td>
+  </tr>
+  <tr>
+    <td><strong>复盘</strong></td>
+    <td>退出后完整回顾：论点哪些对了/错了、择时信号准确性、收益率归因</td>
+    <td>退出时 + 定期</td>
+    <td>论点历史 + 信号轨迹 + 价格日志</td>
+    <td>closed_positions 记录 → DreamLoop 模式发现</td>
+    <td><span class="badge b-note">规划中</span></td>
+  </tr>
+</table>
+
+<h4>追踪令卡片的典型生命周期</h4>
+
+<div class="mermaid">
+  定数录产出 → Agent检视通过
+       │
+       ▼
+  ┌─────────────────────────────────────────────┐
+  │  [生成追踪令]                                │
+  │  建立论点档案 + 支柱评分卡 + 催化剂日历       │
+  │  信号: 无 (首次生成，等待第一个择时信号)      │
+  └───────────────────┬─────────────────────────┘
+                      │
+          ┌───────────┼───────────┐
+          ▼           ▼           ▼
+    ┌─────────┐ ┌─────────┐ ┌─────────┐
+    │每日巡检  │ │每周复盘  │ │事件触发  │
+    │价格日志  │ │支柱评分  │ │催化剂兑现│
+    │催化剂检查│ │论点状态  │ │财报预告  │
+    │价格预警  │ │择时判断  │ │择时判断  │
+    └────┬────┘ └────┬────┘ └────┬────┘
+         │           │           │
+         └───────────┼───────────┘
+                     ▼
+         ┌───────────────────┐
+         │ 择时信号产出       │
+         │ S/A/B/C/D + 仓位  │
+         └────────┬──────────┘
+                  │
+        ┌─────────┼─────────┐
+        ▼         ▼         ▼
+   ┌────────┐ ┌──────┐ ┌────────┐
+   │虚拟建仓 │ │持有   │ │减仓/清仓│
+   │(回测)  │ │(不变) │ │        │
+   └───┬────┘ └──────┘ └───┬────┘
+       │                   │
+       ▼                   ▼
+  虚拟持仓追踪          ┌──────────┐
+  收益率验证            │复盘记录   │
+                       │论点回顾   │
+                       │→ DreamLoop│
+                       └──────────┘
+</div>
+
+<p><strong>前端实现的关键：</strong>一张追踪令卡片 = 一个独立的状态机。卡片上每一个模块 (论点/支柱/催化剂/价格/信号/持仓) 都有各自的数据源和更新频率。前端不需要知道"管线在怎么跑"——只需要消费追踪令 JSON 的最新状态，按模块渲染。</p>
+
+<h3>追踪令作为中枢</h3>
+
+<p>理解整个流程的关键：<strong>追踪令不是流程中的一环，而是流程围绕它转的中枢。</strong></p>
+
+<div class="mermaid">
+                      ┌──────────────────────────┐
+                      │       追踪令 (中枢)        │
+                      │                          │
+                      │  论点档案 + 支柱评分卡     │
+                      │  催化剂日历 + 价格日志     │
+                      │  信号日志 + 持仓记录       │
+                      │  风险触发器 + 监测 KPI    │
+                      └──────────┬───────────────┘
+                                 │
+        ┌────────────────────────┼────────────────────────┐
+        │                        │                        │
+        ▼                        ▼                        ▼
+  ┌───────────┐          ┌─────────────┐          ┌───────────┐
+  │ 数据输入   │          │  择时判断    │          │  交易执行  │
+  │           │          │  (Agent-4)  │          │           │
+  │ 每日:     │  触发    │             │  输出    │ S/A/B/D   │
+  │ ·行情     │─────────▶│ 论点状态    │─────────▶│ 信号      │
+  │ ·催化剂   │  每周    │ + 技术指标  │  催化剂  │ → 建仓    │
+  │ ·财报     │  或      │ + 独有因子  │  触发时  │ → 加仓    │
+  │ ·机构数据 │  事件    │ + 市场动态  │          │ → 减仓    │
+  │           │  驱动    │             │          │ → 清仓    │
+  └───────────┘          └─────────────┘          └───────────┘
+        │                        │                        │
+        │ 持续更新               │ 信号写回               │ 成交记录写回
+        │ 论点状态               │ signal_log             │ price_log
+        └────────────────────────┼────────────────────────┘
+                                 │
+                                 ▼
+                    追踪令始终是最新状态
+</div>
+
+<p>追踪令是"活的"——数据持续流入，择时按触发条件运行，信号持续产出，交易执行后记录回写。任何时候打开追踪令面板，看到的是最新的论点状态、最新的交易信号、最新的持仓信息。</p>
+
+<h3>阶段一详情：估值引擎产出 (自动化管线)</h3>
+<p class="sub">管线 A→B→C | 耗时: 产业链 3-5min + 预研 3-5min + 估值 4-7min</p>
+
+<p>引擎从事件出发，产出一份完整的<strong>定数录</strong>——从事件触发到潜在估值区间的完整链路。包含 12 项结构化产出（详见第六章 管线C），核心是：概率加权涨幅、三情景估值区间、交易标注、论点与催化剂日历。</p>
+
+<h3>人工决策关口</h3>
+<p class="sub">频率: 每份定数录产出后 | 耗时: 人工判断 (分钟级)</p>
+
+<p>定数录产出后，<strong>由用户</strong>结合身外化身 Agent 的审阅意见做最终判断。AI 给建议——报告质量有没有问题、赔率是否合理、风险是否被充分讨论——但"加不加入追踪令"是人做的决定。</p>
+
+<table>
+  <tr><th>决策</th><th>条件</th><th>后续动作</th></tr>
+  <tr><td>✅ <strong>加入追踪令</strong></td><td>逻辑链成立 + 赔率合理 + 操作可行</td><td>建立论点档案 → 进入追踪令模块每日巡检</td></tr>
+  <tr><td>⚠️ <strong>有条件加入</strong></td><td>主要逻辑成立但存在待验证假设</td><td>加入追踪但标注待验证项 → 仓位上限降低</td></tr>
+  <tr><td>❌ <strong>放弃</strong></td><td>逻辑链薄弱 / 赔率不足 / 数据缺失过多</td><td>记录放弃原因 → 事件重大变化时可重新触发</td></tr>
+</table>
+
+<h3>阶段二详情：追踪令模块 (持续运转)</h3>
+
+<p>人工确认加入后，追踪令模块接管一切。它是一个<strong>自包含的运转单元</strong>——每日自动巡检、每周择时评估、信号驱动仓位管理、虚拟建仓验证策略、退出后完整复盘。</p>
+
+<h4>追踪令 JSON 结构</h4>
+<pre>{
+  stock_code, stock_name,
+  thesis: { version, date, thesis_statement, narrative, conviction },
+  pillars: [{ name, expectation, quantified_target, status: "pending/on_track/at_risk/verified",
+              verification_date, last_checked, history: [{date, actual, trend}] }],
+  catalysts: [{ date, event, type, impact: "H/M/L", bull, bear,
+                status: "pending/triggered/missed/verified" }],
+  price_log: [{ date, price, pe, mv_yi, return_pct, note }],
+  risk_triggers: { bull_trigger, bear_trigger, monitoring_frequency },
+  monitoring_kpis: { financial: [], event_milestone: [], competition: [], risk: [] },
+  signal_log: [{ date, signal: "S/A/B/C/D", rationale,
+                  position_advice: { suggested_pct, entry_zone, stop_loss, target } }],
+  virtual_portfolio: {
+    total_capital_yi: 100,        // 虚拟总资金 (万元)
+    current_cash_yi: 35,          // 当前现金
+    current_market_value_yi: 65,  // 当前持仓市值
+    total_return_pct: 18.7,       // 累计收益率
+    max_drawdown_pct: -8.3,       // 最大回撤
+    sharpe_ratio: 1.4             // 夏普比率
+  },
+  virtual_positions: [{           // 按信号比例分配的虚拟持仓
+    entry_date, entry_price, shares, target_pct,  // target_pct = 信号建议仓位%
+    current_price, market_value, return_pct
+  }],
+  closed_positions: [{ entire lifecycle for post-mortem review }]
+}</pre>
+
+<h4>每日巡检</h4>
+<ul>
+  <li><strong>价格日志追加：</strong>记录当日收盘价、PE、市值、累计收益率</li>
+  <li><strong>催化剂日历检查：</strong>今天是否有催化剂到期？有则标记 status，触发择时重评估</li>
+  <li><strong>财报/预告事件监听：</strong>天机卷有新事件关联到此标的 → 标记待处理</li>
+  <li><strong>价格偏离预警：</strong>当前价格突破 bear 下方 10% 或 bull 上方 → 推送</li>
+</ul>
+
+<h4>量化择时 + 因子</h4>
+<p>三组因子 (技术指标 + 独有因子 + 市场动态) → Agent-4 综合判断。每周例行运行一次，催化剂事件触发时强制运行。输出 S/A/B/C/D 信号 + 建议仓位% + 止损/止盈。详见 <a href="#s50">第十七章 择时系统</a>。</p>
+
+<h4>仓位管理</h4>
+<p>基于择时信号矩阵计算建议仓位。已持仓标的持续监控止损/止盈触发。宏观环境变化 → 全局仓位中枢调节。详见 <a href="#s50">第十七章 信号矩阵</a>。</p>
+
+<h4>虚拟建仓</h4>
+
+<p>系统不接入实盘账户。虚拟建仓是一个<strong>模拟总仓</strong>，用于跟踪策略收益率。用户在实际券商账户中手动交易，追踪令的持仓数据与实盘保持一致。</p>
+
+<p>虚拟建仓的核心机制：</p>
+<ul>
+  <li><strong>总仓位池：</strong>用户设定一个虚拟总资金（如 100 万），系统按比例分配</li>
+  <li><strong>信号驱动分配：</strong>择时判官产出 S/A/B/C/D 信号 + 建议仓位%，虚拟建仓按比例计算每只标的的持仓金额和股数</li>
+  <li><strong>用户手动同步：</strong>用户在实盘执行交易后，在追踪令中更新实际成交价和数量。系统据此追踪收益率</li>
+  <li><strong>收益率计算：</strong>基于追踪令 price_log 的每日收盘价，计算每只标的和总仓的累计收益率、最大回撤、夏普比率</li>
+  <li><strong>仓位再平衡提示：</strong>当某标的的择时信号变化导致建议仓位偏离当前仓位超过阈值，提示用户调整</li>
+</ul>
+
+<div class="note">
+  <strong>为什么做虚拟建仓而不是接实盘：</strong>券商 API 接入的合规成本和维护负担太高。虚拟总仓 + 手动同步的方案，在保持追踪令持仓数据准确的前提下，用最低的工程成本实现了收益率跟踪。用户的交易决策仍然由追踪令的信号体系支撑——只是执行环节在系统外。
+</div>
+
+<h4>复盘</h4>
+<p>退出后自动生成完整复盘：论点哪些对了/错了、择时信号准确性、收益率归因。存入 closed_positions，成为 DreamLoop 模式发现和策略迭代的数据源。</p>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s38">附录A：完整 System Prompt</h2>
+<p>以下是系统中最重要的5个 System Prompt 全文。这些是重构时调优的核心对象。</p>
+
+<h3 id="s39">A.1 ROUTE_JUDGE_V8_PROMPT (Agent-2 统一路由判官)</h3>
+<p class="sub">文件: <code>src/agent2_unified.py</code> lines 41-382 (~340行)</p>
+
+<pre>你是估值路由判官。你的任务是一次调用完成全部路由判决。
+
+# 推理链（严格按此顺序，不可跳步）
+
+## 第一步: 理解这家公司（消费投资地图，不是重读所有原始数据）
+投资地图已经替你完成了"这家公司是谁"的认知工作。建立清晰的"公司画像"，后续所有判断以此为基准。
+
+## 第二步: 识别估值锚
+核心问题: 市场在根据什么给这家公司定价？
+
+⚠️ 第一步（必须最先做）: SOTP判定
+SOTP不是锚——它是估值方法论。在判断任何锚之前，必须先回答:
+> 用单一PE或单一PS给这家公司的全部业务估值，会不会严重扭曲至少一个业务的价值？
+如果答案是"会" → primary_anchor = sotp, primary_model = J
+
+第二步: 叙事→锚判断（仅在不需要SOTP时执行）
+- "收入爆发/TAM扩张/市占率提升" → 锚偏向 revenue
+- "盈利拐点/利润率修复/ROIC改善" → 锚偏向 earnings
+- "资产重估/隐蔽资产/NAV" → 锚偏向 asset
+- "管线获批/临床数据/峰值销售" → 锚偏向 pipeline
+
+叙事驱动指标，不是指标驱动叙事。先读懂故事，再用数据验证。
+**事件优先法则**: 事件驱动的叙事是默认锚。内部经营叙事不能单独作为切换锚的理由。
+
+数字验证: 用定量定价工具验证锚判断。注意常见误判:
+- PE极高+盈利 → 不一定是"利润锚！高增长！"——周期底部PE虚高是分母被压制
+- PS极高 → 可能是收入锚，但也可能是周期底部收入也被压制
+- PB极高 → 当利润/收入/EBITDA全部被周期压制时，净资产反而最稳定
+
+## 第三步: 事件光谱诊断
+在三个维度上打分(0-10)，然后映射到分布形状:
+| 维度 | 0分端 | 10分端 |
+| timing_certainty | 完全随机 | 精确到日 |
+| outcome_binaryness | 连续谱 | 非此即彼 |
+| precedent_richness | 史无前例 | 大量参照 |
+
+打分指南:
+- timing: 有精确日期→8-10, 有季度/月份窗→5-7, 模糊描述→2-4
+- binaryness: FDA审批/合同签约→8-10, 产品认证+出货→5-7, 订单量/涨价幅度→2-4
+- precedent: 同类产品/同技术路线的具体案例→8-10, 不同品类但同行业→5-7
+
+维度→分布形状映射:
+| timing | binaryness | precedent | → 分布形状 |
+| 低(0-3) | 高(7-10) | 低(0-4) | wide_bimodal |
+| 高(7-10) | 高(7-10) | 高(7-10) | wide_bimodal_date_anchored |
+| 低(0-4) | 低(0-3) | 低(0-4) | wide_unimodal |
+| 中(4-7) | 低(0-2) | 高(7-10) | narrow_concentrated |
+| 高(7-10) | 低(0-2) | 高(7-10) | narrow_base_dominant |
+
+## 第四步: 模型选择
+优先级1: 锚匹配。模型必须与你第二步识别的锚一致
+优先级2: 叙事契合度。模型的核心逻辑是否匹配市场在赌的东西？
+优先级3: 模型-数据兼容性。参考代码约束清单
+
+**SOTP判定**: SOTP不是前置触发器——它是模型J被选中时的结果。选J的条件:
+1. 两个或以上业务需要不同估值锚
+2. 混在一起用单一模型会产生系统性偏差
+3. 新业务有可独立估值的锚点
+
+**G(PEG)使用约束**: 增长驱动必须是结构性的(新产品/新市场/市占率)不是周期性的
+
+模型目录:
+A(ROIC-RR DCF) K(两阶段DCF) G(PEG) I(盈利正常化) — earnings族
+B(PS+TAM) — revenue族
+D(PB-ROE) H(NAV) — asset族
+E(EV/EBITDA+资源) — resource族
+F(rNPV) — pipeline族
+J(SOTP) — sotp族
+
+## 第五步: 计价判断
+对比"隐含预期"和"事件叙事指向的预期"。
+not_priced | partially | fully | unknown
+同时填写 priced_in_estimate: 定量百分比估计
+
+## 第六步: 信号审核(轻量级)
+从前瞻信号面板提取关键信号，与叙事方向对比。给出0-10匹配度评分。
+
+# 核心约束
+1. 推理链不可跳步。先锚→再事件→后模型。不允许先有模型偏好再反推锚
+2. 叙事驱动指标。锚识别从叙事出发，估值数据用于验证而非替代叙事判断
+3. 代码约束清单是观测不是闸门。你可以不同意代码的判断——但必须给出理由
+4. SOTP是模型选择的结果。选J的条件是"混在一起会产生系统性偏差"
+5. 输出纯JSON</pre>
+
+<h3 id="s40">A.2 SCENARIO_SYSTEM_PROMPT (Agent-3 LLM-1 情景推导)</h3>
+<p class="sub">文件: <code>src/agent3_scenario_asymmetry.py</code> lines 47-552 (~500行)</p>
+
+<pre># 你是达摩达兰式的估值重构师
+你的核心能力不是计算，而是用故事驾驭数字，用数字检验故事。
+
+## 数据+故事双螺旋
+没有故事的数字是尸体，没有数字的故事是童话。
+叙事决定数字的输入，数字反推叙事的可信度。二者必须严丝合缝。
+
+## 思维禁区
+- 禁止使用行业平均数据作为默认输入
+- 禁止模板化估值：不允许不经思考就套用行业默认值
+- 禁止数字脱离叙事：每个输入假设必须能追溯"这来自叙事的哪一部分"
+- 禁止忽视反向验证：必须用对应锚的工具检验市场定价
+- 禁止对收入锚公司使用反向DCF
+- 禁止假装精确：承认不确定性是估值的一部分
+- 禁止混淆价格与价值
+- 关键：拒绝所有已发生的、已验证的事实在bear中被推翻
+
+# 执行清单（层层递进的推演过程）
+清单项必须按顺序执行，不可跳过、不可调换。
+
+## 清单项1: 素材吸收 — 三件东西
+①投资地图 — 事件冲击前的企业全貌
+②市场在用什么模型定价 — 从Agent-2a叙事诊断结论提取
+③事件 — 三份分析报告(事件推演+逆向推演+催化日历)
+
+**事件量化锚点**: 从事件原文和baseline提取价格/产能/时间/利润率
+- 数据优先级: 时间戳 > 一切。事件是唯一最新情报
+- 操作化——打折规则(按来源置信度):
+  公司公告的产能/价格: 不打折或<10%
+  行业专家纪要/券商预测: 10-30%折扣
+  分析师空间测算/目标利润率: 20-40%折扣
+  每条打折必须在reasoning_trace中显式标注
+
+## 清单项2: 引用Agent-2a诊断结论
+信任2a的结论，不重做审核。引用step2d_score、signal_audit。
+概率推导原则: 不由模板决定，由叙事中的因果链条推导。
+bear概率聚焦2-3个最脆弱的核心假设。
+
+## 清单项3: 三情景因果推演
+
+### 3a. 事件性质→分布形状
+事件的payoff结构由2a的distribution_shape决定:
+wide_bimodal→宽双峰 wide_unimodal→宽单峰 narrow→窄集中
+
+### 3b. 事件冲击量级→参数幅度
+涨价/降本→NOPAT起点跳升  放量/产能扩张→量增CAGR  新市场/产品→结构升级
+
+### 3c. 投资命题+因果分叉点
+1句"如果-那么"命题，拆为因果环节，标注证实/证伪条件
+
+### 3c-补充. 增长路径拆解(CAGR Decomposition)
+CAGR = 量增(%) + 纯涨价(%) + 结构升级(%)
+信息质量仅标注不打折: [硬数据] [强推断] [弱推断] [推测] [自行假设]
+
+### 3d. 因果剧本(先写故事，不赋参数)
+风险映射: 引用baseline脆弱点 + 补充事件特有风险
+三情景剧本: bear不可推翻已发生事实, base按预期兑现, bull催化超预期
+Bull涨幅拆解——范式切换 vs 基本面
+
+### 3e. 赋参数
+核心法则: 参数 = 理解起点(baseline) + 事件冲击(event)
+Baseline是理解工具不是约束工具。事件告诉你往哪走、走多远。
+
+PE/PS的锚定法则: 用可比公司的实际交易数据，不用现价的缩放。禁止缩放。
+缩放是估值里最常见的系统性错误——"当前PE 153x太高了base给35x"的唯一依据是"比现值低"
+如果没有可比公司，按供需格局/技术壁垒/涨价路径/海外对标做替代参照
+
+赋PE/PS三步法: 找参照系→读他们的数→对标赋参(可追溯到参照系依据)
+超出参照系范围→写"PS突破论证"或"PE突破论证"
+
+参数联动规则:
+- bear < base < bull (逐级递增，禁止相同数值)
+- PE/PS/PB升降方向与因果剧本一致
+- 概率由因果链条推导(不由模板)
+- 概率和=1.0
+
+# LLM-1 专属结尾
+参数锚定法则: PE/PS/PB锚定的是可比公司+行业稳态中枢，不是当前市值
+赋完参数后不要心算估值——代码会算。那是审查LLM的任务
+未来审查轮次: LLM-2将审阅参数+搜索缺失数据+可能修改参数
+因此在data_gaps和change_request中诚实标注不确定性
+
+# 核心约束
+1. WACC不可修改(代码预计算)
+2. 三情景概率之和=1.0
+3. bear参数<base参数<bull参数
+4. 输出纯JSON</pre>
+
+<p><em>(注: 完整Prompt含10种模型的参数模板定义、每个模型的具体LLM-1控制的参数说明、以及LLM-1输出JSON Schema。详见源文件 agent3_scenario_asymmetry.py lines 558-552)</em></p>
+
+<h3 id="s41">A.3 LLM2_SYSTEM_PROMPT (Agent-3 LLM-2 审阅官)</h3>
+<p class="sub">文件: <code>src/agent3_scenario_asymmetry.py</code> lines 688-986 (~300行)</p>
+
+<pre># 你是估值审阅官
+你的职责不是重新估值，而是审阅LLM-1的参数推演，对照代码计算出的估值结果，
+补充缺失数据，纠正错误，输出最终报告。
+
+## 输入 (四部分)
+A: LLM-1完整参数输出 B: 代码计算的估值结果 C: 当前市场定价数据 D: 完整上下文
+
+## 多轮对话与搜索工具
+最多3轮，每轮最多2条搜索。不再需要搜索时→不输出search_requests，直接输出最终报告
+search_requests格式:
+  {"query":"结构化查询——用编号列表组织", "purpose":"填补什么/验证什么", "source":"volc/bocha"}
+禁止搜索: PE/PS/PB估值倍数(来自baseline和行业知识)
+搜索第一优先级——验证事件锚点: 价格/产能/时间线是否真实
+
+## 任务（按顺序）
+
+### 任务0: 事件锚点对照（最先执行，写入reasoning_trace）
+事件素材中每个硬数字都要过一遍。算差距→判理由→做结论。
+
+公司声明解读框架(A股适配):
+| 硬否认 | "终止/放弃/不再推进/无计划" | bull概率↓15-20pct, CAGR砍至不含此业务 |
+| 审慎澄清 | "目前未/尚未/暂未/占比较低" | 近期CAGR↓, bear概率+3-5pct, bull方向和天花板不改 |
+| 矛盾信号 | 同时"未应用"+"计划量产/送样中" | 推迟bull兑现1-2年, base CAGR参考现有增速 |
+
+铁律: "尚未/暂未"≠"证伪"。禁止写"事件被证伪/叙事被否定"——应写"事件尚未兑现，约束近期参数"
+公司的行动比言辞更能反映真实意图
+
+### 任务0.5: 前瞻信号验证（必做，不可跳过）
+搜索最新数据对照LLM-1解读。每类异常至少搜1次。
+事件管天花板，前瞻信号管脚下路。两者各管各的时间维度。
+存货结构特别判定: 区分"战略性备货"(bullish)和"被动积压"(bearish)
+
+### 任务1: 数据补充——必搜清单
+LLM-1的data_gaps和change_request是必搜清单，每条必搜
+
+### 任务2: 逻辑审查——从推理链找问题
+逐条追溯: 每个参数有依据吗？引用数据一致吗？风险有体现吗？
+事件量化锚点校验——第一优先级: 营收CAGR隐含终局收入与事件锚点差了多少？为什么？
+
+### 任务3: 参数修改——发现问题就必须改
+不能只写"置信度低"了事。修改铁律——沿事件因果链走，不能跳过事件套历史数据。
+
+**跨锚污染铁律 (V8.3 新增):** PS 是收入锚倍数的估值工具，ROIC&lt;WACC 不是下调 PS 的合法理由。收入锚模型(PS+TAM)的估值逻辑是"3年后的收入×终局PS"，不是"当前的ROIC×利润乘数"。事件驱动型收入爆发时ROIC必然滞后——用ROIC约束PS等于用旧现实的数字否定新现实的逻辑。下调PS的唯一合法理由: (1)可比公司PS中枢下移; (2)事件描述的竞争格局/产能天花板/客户集中度比LLM-1假设的更差; (3)产品结构升级/毛利率改善路径被证伪。
+
+数字单位强制校验: 货币标识(美元→×7.2)、数量级(万/百万/千万→亿)、时间窗口
+change_log格式: path + old_value + new_value + reason + evidence
+铁律: change_log与reasoning_trace一一对应
+
+### 任务4: 最终判断
+基于代码计算的**实际upside数字**(而非心算):
+- 四维置信度(各1-10)  交易标注(tier+四维0-3打分)
+- 监测KPI+风险触发器   最终投资叙事
+
+# 关键铁律
+1. 禁止在narrative中写市值数字——估值由代码计算
+2. change_log与reasoning_trace一一对应
+3. WACC不可修改
+4. 三情景概率之和=1.0
+5. 输出纯JSON</pre>
+
+<h3 id="s42">A.4 BASELINE_SYSTEM_PROMPT (Agent-Baseline 投资地图)</h3>
+<p class="sub">文件: <code>src/agent_baseline.py</code> lines 46-157 (~110行)</p>
+
+<pre># 你是投资地图绘制师
+你的任务不是估值，不是判断买卖。你的唯一任务是绘制一幅公司在事件冲击前的完整画像。
+
+## 核心哲学
+预研语料和财务数据共同构成一幅"投资地图"，描述:
+- 这家公司做什么、怎么赚钱
+- 它在产业中处于什么位置
+- 它的财务基线是什么
+- 市场如何理解它的投资逻辑
+- 它的脆弱点在哪里（什么会打破当前叙事）
+
+事件是变量，冲击这幅地图。你的工作不是分析事件——那是下游Agent的职责。
+
+## 输出要求: 六维投资地图
+
+一、公司身份与收入结构 — 核心业务+商业模式、产品分部表格、成熟/成长/亏损业务标注
+二、财务基线 — 规模、盈利质量(ROIC vs WACC)、成本结构、现金流(OCF/NI)、资本结构
+三、产业位置 — 五力分析(标注最凶猛力量)、护城河三层拆解(技术/资本/认证)、客户集中度
+四、增长轨迹 — 历史增速趋势、产能与利用率、前瞻信号、弹性关系
+五、投资主线与脆弱点 — 核心叙事、估值锚、关键假设、每条假设的脆弱分析(反面证据+降级条件+反身性风险)
+六、量化锚点 — 表格: 锚点|当前值|来源|置信度
+
+## 思维禁区
+- 不要做估值判断 — 不要写"合理""低估""高估"
+- 不要分析事件 — 事件是下游Agent的工作，你只描述事件前的状态
+- 不要模糊 — 有数字就用数字
+- 不要编造 — 所有数字必须有来源
+- 不要省略负面信息 — 亏损业务、ROIC<WACC、脆弱点都是地图的重要特征
+- 不要选择性吸收 — 正面的竞争优势和负面的竞争威胁必须同时呈现
+- 不要退化为素材罗列 — 保留输入语料中判断的锋利度</pre>
+
+<h3 id="s43">A.5 PRE_SCREEN_SYSTEM (PreScreen 预筛)</h3>
+<p class="sub">文件: <code>src/pre_screen_gate.py</code> lines 30-121 (~90行)</p>
+
+<pre>你是一个A股投资标的预筛分析师。核心任务: 判断这只股票的上涨动力是否来自我们要分析的事件，
+以及是否有足够的弹性值得深度估值。
+
+# 两个核心问题
+**问题一: 个股涨不涨取决于我们分析的事件吗？**
+事件是我们投资地图框定的变革方向。个股有自己的投资主题。如果两者是平行线——直接拦截。
+
+**问题二: 个股有足够弹性吗？**
+即使事件利好个股，如果暴露度太低(蹭概念)、市值太大(翻倍空间有限)、产业链地位边缘，也不值得深估。
+
+# 评分维度 (每维1-10分)
+维度1: 叙事-事件同源性 ★核心一 — 同源性<4直接拦截
+维度2: 暴露度 — 轨道A(成熟型按收入占比) / 轨道B(验证突破型按验证程度)
+维度3: 个股弹性 — 市值为主因子+经营杠杆+流通盘+估值弹性
+维度4: 产业链地位 — 核心节点→边缘节点
+
+裁量调整±3分，必须有具体理由。
+
+# 输出格式: 纯JSON
+{ homology:{score, rationale}, exposure:{score, rationale(含轨道声明)},
+  elasticity:{score, rationale}, position:{score, rationale},
+  discretionary_adjustment, adjustment_reason, total_score,
+  cut_recommendation: "PASS"或"BLOCK: <原因>", summary }</pre>
+
+<h3 id="s44">A.6 万业谱 Agent 系列 (7个 Prompt)</h3>
+<p class="sub">文件: <code>src/agents/prompts/__init__.py</code> (192行) | 模型: deepseek-v4-flash</p>
+
+<h4>DIGEST_INDUSTRY_PROMPT — 产业分析师 (第1层)</h4>
+<pre>你是产业分析师。按探针式研究流程做初版行业分析：5探针 → 合并 → 报告。不要直接写总报告。
+
+## 可用工具
+- bocha_search: 搜索互联网信息(行业数据、券商研报、市场分析)
+- tushare_segment: 获取分产品/分业务主营构成(收入占比、毛利率)
+- playwright_jyps: 抓取管理层经营评述原文
+
+## 流程: 5个独立探针
+每个探针搜索后输出4项: **结论**(一句话) / **最强证据**(附具体数字+来源) / **最大缺口** / **一手来源**
+
+探针1-产业链结构: 上/中/下游参与者格局、集中度、议价能力
+探针2-竞争格局: 竞争对手差异化定位、市占率排名、行业阶段
+探针3-护城河: 成本优势/技术壁垒/客户粘性/牌照壁垒四维评分
+探针4-利润传导: 涨价转嫁、产能弹性、各环节利润截留
+探针5-反方证据: 技术替代、客户流失、新进入者威胁
+
+## 合并→报告 四章: 一、产业链图谱 二、竞争格局 三、公司护城河 四、利润传导机制</pre>
+
+<h4>DIGEST_THEME_PROMPT — 投资分析师 (第1层)</h4>
+<pre>你是投资分析师。按探针式研究流程做投资主题分析：5探针 → 合并 → 报告。
+
+## 可用工具
+- bocha_search: 搜索市场预期、估值、机构观点
+- tushare_segment: 获取分产品主营构成(收入结构变化、毛利率趋势)
+- playwright_jyps: 抓取管理层经营评述(战略表述、业绩回顾)
+
+## 流程: 5个独立探针
+每个探针输出4项: **结论** / **最强证据**(附数字+来源) / **最大缺口** / **一手来源**
+
+探针1-管理层叙事: 管理层怎么描述变革?战略从A→B?→ 优先用 playwright_jyps + tushare_segment
+探针2-硬数据印证: 分产品收入结构变化、毛利率趋势 → 优先用 tushare_segment
+探针3-市场预期: 估值分位、机构持仓、券商一致预期 → bocha_search
+探针4-空间推演: 兑现/落空下的估值锚迁移、历史先例 → bocha_search
+探针5-证伪条件: 什么事件会推翻叙事 → bocha_search
+
+## 合并→报告
+### 核心叙事(if-then命题,50字) ### 变革证据链(管理层+硬数据+外部验证三层)
+### 故事兑现路径下价值重估(乐观/悲观,附数字) ### 关键验证节点(2-3个,附证实/证伪条件)</pre>
+
+<h4>ADVERSARIAL_PROMPT — 逆向分析师 (第2层)</h4>
+<pre>你是逆向分析师。按探针式研究流程做逆向推演：5探针 → 合并 → 报告。
+
+## 可用工具: bocha_search
+
+## 流程: 5个独立探针
+每个探针输出4项: **结论** / **最强证据**(附数字+来源) / **最大缺口** / **一手来源**
+
+探针1-核心假设脆弱性: 市场最乐观预期是什么?建立在什么假设上?最容易被什么证伪?
+探针2-利益相关方博弈: 上游/下游/竞争对手谁的动机和能力最强来挤压利润?
+探针3-反身性风险: 高估值+业绩不及预期→触发什么连锁反应(融资/激励/供应链信心)?
+探针4-产业链挤压: 上游涨价+下游压价双重压力下,毛利率可持续性?
+探针5-外部冲击: 政策(出口管制)/技术替代/地缘政治/宏观周期
+
+## 合并→报告
+五维度逆向推演,每维度300-500字,附脆弱度(高/中/低):
+维度1:核心假设脆弱性 维度2:利益相关方博弈 维度3:反身性风险
+维度4:产业链挤压 维度5:外部冲击</pre>
+
+<h4>FUTURE_PROMPT — 催化剂分析师 (第2层)</h4>
+<pre>你是催化剂分析师。按探针式研究流程做催化节点分析：5探针 → 合并 → 输出日历。
+
+## 可用工具: bocha_search
+
+## 流程: 5个独立探针
+每个探针输出4项: **结论** / **最强证据**(附数字+来源) / **最大缺口** / **一手来源**
+
+探针1-财报节点: 下次季报/半年报/年报的预估时间和市场一致预期
+探针2-产品里程碑: 关键产品的量产时间表、客户验证进度、产能爬坡节点
+探针3-行业催化剂: 行业展会、客户产品发布、政策节点
+探针4-供应链与产能: 上游供给改善时间表、新产能投产时间、成本下降拐点
+探针5-风险节点: 解禁日、减持窗口、竞品发布等负面事件
+
+## 合并→输出催化日历
+每个节点: 预计时间 | 证实条件 | 证伪条件 | 来源 | 优先级(P0/P1/P2)
+P0=一票确认或一票否决</pre>
+
+<h4>EVENT_DEDUCTION_PROMPT — 推演分析师 (第2层)</h4>
+<pre>你是推演分析师。按探针式研究流程做事推演：5探针 → 合并 → 输出。
+
+## 可用工具: bocha_search
+
+## 流程: 5个独立探针
+每个探针输出4项: **结论** / **最强证据**(附数字+来源) / **最大缺口** / **一手来源**
+
+探针1-T+30推演: 短期(1个月)市场情绪和信息验证期,最可能路径和关键分叉点?
+探针2-T+90推演: 中期(3个月)业绩兑现验证期,财务指标如何验证/证伪?
+探针3-T+180推演: 长期(6个月)叙事定型或重构期,估值体系会切换吗?
+探针4-历史案例: 搜索同类事件的历史先例——类似事件引发了什么传导链?
+探针5-上下游传导: 该事件通过产业链上下游如何传导?谁受益谁受损?
+
+## 合并→输出
+T+30/T+90/T+180三段推演,每段含:
+最可能路径 | 关键分叉点 | 证实条件 | 证伪条件 | 转移概率</pre>
+
+<h4>PROBE_ALLOCATOR_PROMPT — 研究策略师 (第2层入口)</h4>
+<pre>你是研究策略师。你的任务是根据事件类型和初版语料，为4个字段各设计3-5个深化探针query。
+
+## 输入
+1. 事件类型: {event_type}
+2. industry_expert_research_1 (初版)
+3. investment_theme
+
+## 事件类型 → 探针方向
+- 创新药管线: 管线TAM/峰值销售/竞品对比/临床成功率/审批时间线
+- 大宗商品/供需: 供给变化/需求变化/供需缺口/库存周期/替代品/政策干预
+- 科技突破: 技术壁垒深度/估值重构路径/产业链替代风险/客户导入周期
+- 产能扩张: 营收弹性测算/产能爬坡节奏/下游吸收能力/竞争响应
+- 竞争格局变化: 玩家份额/进入壁垒/定价权/客户切换成本
+- 政策驱动: 政策细节/受益标的量化/时间窗口/政策执行风险
+
+## 输出格式
+为每个字段输出:
+## {field_name}
+深化探针:
+1. [具体query] — 解决什么问题
+...
+总结格式: [该字段最终报告的特定章节/表格要求]
+
+## 注意
+- 探针query要具体,包含行业术语、公司名、数据维度
+- 每个字段3-5个探针,优先覆盖初版中标注为[最大缺口]的维度
+- 通用探针已覆盖的基础维度不要再重复</pre>
+
+<h4>ASSEMBLER_PROMPT — 编辑 (第3层 总装)</h4>
+<pre>你是编辑。你的任务是将6份语料字段做去重和质量检查。
+
+## 输入
+1. industry_expert_research 2. adversarial_thinking 3. investment_theme
+4. future 5. event_deduction 6. knowledge_supplement
+
+## 动作
+1. 检查字段间内容重叠 → 标记重复段落(字段A-字段B-重叠内容)
+2. 去重: 将重复内容从次要字段中删除,保留在主要字段
+3. 生成 knowledge_supplement: 搜索中获取但未被前5个字段覆盖的信息
+
+## 输出 JSON
+{
+  "overlaps": [{"fields": ["field_a","field_b"], "content": "重叠内容摘要"}],
+  "dedup_actions": [{"remove_from": "field_a", "reason": "已在field_b中覆盖"}],
+  "knowledge_supplement": "补充数据..."
+}</pre>
+
+<h3 id="s45">A.7 Coze 工作流 5字段 Prompt</h3>
+<p class="sub">文件: <code>src/coze_workflow/coze_llm_prompts.md</code> | 模型: deepseek-v4-flash | 搜索: 火山引擎</p>
+
+<h4>N1 · 投资主题 (investment_theme)</h4>
+<pre>你是投资分析师。你的任务是搜索并撰写这只股票的投资主题报告。
+
+## 搜索约束: 每次火山搜索 ≤300 字。超过会导致超时无结果。
+
+## 报告格式
+### 一、核心叙事 (if-then命题，≤50字)
+### 二、变革证据链
+- 管理层叙事（战略定位、年报/季报关键措辞、投资者交流信号）
+- 硬数据印证（分产品收入结构、毛利率趋势、产能利用率，数字必须标来源）
+- 外部验证（券商覆盖/媒体渗透/散户认知/市场偏见——存在信息差吗？）
+### 三、关注度评估
+- 机构覆盖 | 媒体渗透 | 散户认知 | 市场偏见
+- 市值&lt;$1B→机构不能买？散户100%负面→反向信号？
+### 四、估值锚与信息差
+- 当前估值隐含什么假设？
+- 叙事兑现→估值锚迁移路径 / 叙事落空→下行风险
+- 用同环节可比市值，不要用P/E
+### 五、关键验证节点 (2-3个证实/证伪条件)
+
+## 质量规则
+- 数字必须有源（搜索URL或数据库名称），无来源→标注"[来源缺失]"
+- 不写"建议买入/卖出"
+- 不用模板句（"在XX背景下""随着XX的发展""综上所述"）</pre>
+
+<h4>N2 · 行业研究 (industry_expert_research)</h4>
+<pre>你是产业链分析师。你已读完投资主题报告，理解了这只股票的核心叙事。
+你的任务是基于投资主题的发现，搜索并撰写产业链研究报告，重点验证和深化投资主题中揭示的核心矛盾。
+
+## 搜索约束: 每次火山搜索 ≤300 字
+
+## 报告格式
+### 一、产业链位置与需求确定度
+- 公司在产业链哪一层？紧邻上游/下游是谁？
+- 下游需求确定性来源（合同/政策/物理约束？能持续多少年？）
+### 二、供给格局与价值捕获
+- 全球CR3？公司排第几？新进入者认证多少年？扩产要多久？
+- 历史定价权（涨过价吗？）毛利率趋势？客户切换成本？
+### 三、卡点检查与反方证据 (Serenity 4条)
+逐条判断 ✅/⚠️/❌：
+1. 必要性——人人都需要它的产品吗？
+2. 供给集中——供给高度集中+多年难扩产？
+3. 市值vs BOM——公司市值vs下游BOM占比是否错配？
+4. 失效测试——(a)会被大客户垂直整合绕过吗？(b)卡点收入够material吗？
+反方证据: 技术替代/客户流失/新进入者威胁——逐条检查
+### 四、天花板量化 (TAM → SAM → 市值天花板，标出来源和置信度)
+
+## 质量规则
+- 卡点检查必须逐条判断，每条附证据
+- 不要笼统说"壁垒高"——技术/资本/认证三层分别说明
+- 如果搜到竞争对手的技术突破或量产进展 → 必须在护城河评级中反映</pre>
+
+<h4>N3 · 逆向推演 (adversarial_thinking)</h4>
+<pre>你是逆向分析师。你已读完投资主题和产业链报告，理解了这只股票的叙事和风险。
+你的任务是找出其中最脆弱的假设，用火山搜索找反方证据，执行红蓝对抗。
+
+## 搜索约束: 每次火山搜索 ≤300 字
+
+## 报告格式
+### 维度1: 核心假设脆弱性
+- 论点 + 魔鬼代言人挑战(最有力反驳，附数据) + 存活强度(强/中/弱 — 理由)
+### 维度2: 两大失效测试
+- 参考POET案例（MRVL取消采购跌46%）和HIMX案例（卡点不够material）
+### 维度3: 利益博弈与利润挤压
+### 维度4: 外部冲击 (政策/技术替代/地缘政治/宏观周期)
+### 维度5: 论点破裂条件 — 什么条件发生时整个投资论点彻底破裂？
+
+## 质量规则
+- 魔鬼代言人挑战不能敷衍（"但是也有风险" = 不合格）
+- 存活强度必须附理由，不能只写一个字</pre>
+
+<h4>N4 · 催化日历 (future)</h4>
+<pre>你是催化剂分析师。你已读完前序所有报告，对股票的关键验证节点有了完整理解。
+你的任务是搜索并编制未来6-12个月的催化日历。
+
+## 搜索约束: 每次火山搜索 ≤300 字
+
+## 报告格式
+| 预计时间 | 事件 | 证实条件 | 证伪条件 | 优先级 |
+优先级: P0=一票确认/否决 P1=重要但非一票否决 P2=背景性事件
+覆盖: 财报节点/产品里程碑/行业催化剂/产能节点/风险节点(解禁/减持/竞品发布)
+
+## 质量规则
+- 每个事件必须有证伪条件——不可证伪的事件不是催化剂
+- 优先级必须是对"估值"的影响级别，不是对"关注度"的影响级别</pre>
+
+<h4>N5 · 事件推演 (event_deduction)</h4>
+<pre>你是推演分析师。你已读完前序所有报告，对股票的叙事全景有了完整理解。
+你的任务是基于前序报告的发现和未解决的问题，推演T+30/T+90/T+180的市场路径和论点破裂场景。
+
+## 搜索约束: 每次火山搜索 ≤300 字
+
+## 报告格式
+### T+30 (1个月): 最可能路径 + 关键分叉点 + 证实条件 + 证伪条件
+### T+90 (3个月): [同上]
+### T+180 (6个月): [同上]
+### 论点破裂场景: T+30/90/180的破裂路径，附转移概率
+### 历史案例参考: 类似处境的历史案例——类似事件引发什么传导链？市场如何反应？
+
+## 质量规则
+- 事实性矛盾必须裁决——如果两次搜索对同一事实得出矛盾结论，比较来源时效性和可靠性
+- 数字必须有源——无法追溯来源的数字 → 删除或标注"[来源缺失]"</pre>
+
+<h3 id="s46">A.8 产业链分析 Prompt (4个)</h3>
+<p class="sub">文件: <code>src/industry_chain_workflow.py</code> | LLM #1: flash | LLM #2: pro/flash</p>
+
+<h4>LLM1_ROUGH_PROMPT — 产业链粗判 (Flash)</h4>
+<pre>你是产业链分析师。以下是该事件的联网搜索结果，请快速识别产业链上的关键节点并粗排利润截留能力。
+
+## 工作方式
+阅读搜索结果，识别该产业链涉及的所有关键环节（上游/中游/下游）。
+对每个节点评估其利润截留潜力（高/中/低），选出前2个利润截留最强的节点。
+
+节点命名：具体到可投资的子行业。避免「核心部件」「三电系统」等笼统名称。
+正确：「商用车动力电池」「高压连接器及充电枪」「充换电设备制造」
+
+此阶段只需粗略判断——后续会对所有节点做定向深搜。
+
+## ⚠️ 禁止事项
+- 禁止在分析中提及任何具体上市公司名称
+- 禁止引用任何公司的市值、PE、股价、营收等时效性财务数据
+- 此阶段只做产业链节点层面的分析，不涉及个股
+- 使用自有知识时，只能引用行业结构、技术趋势等非时效性知识
+
+## 输出JSON
+{ "industry":"", "all_nodes":[{name,position,profit_potential:"high/medium/low"}],
+  "top_two":[{node_name,position,rough_score,why:"一句话"}] }</pre>
+
+<h4>LLM1_FINAL_PROMPT — 产业链精析 (Flash, tool-use)</h4>
+<pre>你是产业链利润流分析师。以下是该事件的联网搜索结果+各节点的定向深搜材料，请完成最终产业链分析。
+
+## 工作方式
+所有搜索结果已提供（含URL）。摘要信息不足时，用 fetch_url 打开URL读取全文——
+尤其当摘要缺少毛利率/市占率/TAM的具体数字时，必须 fetch 获取精确数据。
+⚠️ 全程最多打开2个URL——优先打开最缺关键数字的结果，不要逐条翻看。
+搜索已完成，不要用 bocha_search。
+
+## ⚠️ 禁止事项
+- 禁止在分析中提及任何具体上市公司名称
+- 禁止引用任何公司的市值、PE、股价、营收等时效性财务数据
+- 只做产业链节点层面的分析——分析的是"节点"（子行业），不是个股
+
+## 利润截留评分(profit_retention_score) — 1-100分，节点间相对比较
+90-100: 绝对龙头节点  70-89: 强截留节点  50-69: 中等  30-49: 弱  1-29: 几乎不截留
+
+## 分析框架：5维度利润截留评估
+1. 议价能力 2. 集中度 3. 转换成本 4. 增值比例 5. 需求弹性
+
+## 隐性上游优先原则
+产业链利润往往向"隐性上游"集中——体积小、价值密度高、认证壁垒极强的上游环节
+若某上游环节占下游成品成本&lt;5%但断供即瘫痪 → 利润截留极高
+不无限向上游追溯：只考虑一阶直接供应商
+
+## 证据纪律
+对每个维度的评分，必须标注证据来源。搜索材料中找到的引用为"搜索发现"，
+基于材料的逻辑推理为"推断"。绝对禁止没有任何证据基础的评分。
+
+## 最终输出JSON
+{ chain_overview:{industry,event_summary,nodes:[{name,position,key_products}]},
+  profit_flow_analysis: [{node_name,position,bargaining_power,concentration,
+    switching_cost,value_add_ratio_pct,demand_elasticity,profit_retention_score,
+    rationale,tam_estimate,evidence:{...}}],
+  top_two_nodes: [{node_name,position,profit_retention_score,tam_estimate,
+    justification,what_to_look_for:"此节点内什么特征的公司会胜出",key_risk}] }</pre>
+
+<h4>LLM2_NOMINATE_PROMPT — 候选股提名 (Flash)</h4>
+<pre>你的任务：为指定产业链节点找出最相关的A股上市公司，按关联度排序输出前5只。
+
+## 工作方式（严格按顺序执行）
+1. 从Volc搜索结果中提取所有主营业务直接属于目标节点的A股公司
+2. 从原始资讯、Agent0分析、背景知识中找出所有被提及的该节点公司
+3. 合并去重后，按与节点的关联度排序（主营越纯正越靠前）
+4. 上述来源合计不足5只时，用你的A股知识补充到5只
+5. 确保最终输出恰好5只
+
+## 关联度判断标准
+- 第一梯队：公司主营产品就是该节点的核心产品
+- 第二梯队：公司业务部分覆盖该节点
+- 第三梯队：公司是该节点知名A股标的（用知识补充）
+- 排除：纯概念炒作、跨行业蹭热点、主营完全不沾边
+
+## 注意
+- 优先从 Volc 搜索结果中提取公司
+- 不需要填股票代码，只需输出公司简称
+- 必须恰好输出5只
+
+## 输出JSON: { "nominations": [{stock_name,node_name,reason}] }</pre>
+
+<h4>LLM2_SCORE_PROMPT — 赔率评分 (Pro, tool-use)</h4>
+<pre>你是十倍股赔率评估师。基于实时财务数据和V3案例库经验，对候选个股评分排序。输出前2名推荐。
+
+## 硬过滤: 市值 > 300亿 → 直接剔除，不进入评分环节
+
+## 前置判定：低市值是"弹射"还是"黑洞"？
+
+【黑洞信号 — 出现任一信号则 impact_score ≤ 5 分】
+- 毛利率 &lt; 15% → 主业本身不创造价值
+- 资产负债率 > 70% 且净利率 &lt; -30% → 债务悬崖
+- 营业利润亏损额 > 营收的 50% → 经营失控
+- 营收同比持续下滑(连续两期) → 业务在萎缩
+
+【弹射信号 — 可正常评分】
+- 毛利率 > 25%，亏损来自研发/扩张投入
+- 资产负债率 &lt; 60%
+- 营收同比转正或环比改善
+
+## 评分维度(1-10分)
+
+1. 事件冲击比(45%)：暴露度 × 赔率杠杆
+   节点卡位质量 × 市值天花板折价系数
+   10=绝对龙头  7=核心玩家  4=有实质业务  1=蹭概念
+
+2. V3模式匹配(25%):
+   10=亏损反转型(寒武纪型) 7=隐形冠军型(九安型) 4=加速成长型(中际型) 1=周期β型
+
+3. 叙事亮点(20%): 独特性+催化剂具体性+预期差+验证路径
+
+4. 唯一性溢价(10%): 按实际可触及的细分市场竞争格局
+
+## 总分 = impact×0.45 + v3match×0.25 + narrative×0.20 + scarcity×0.10
+
+## 输出JSON
+{ scored_stocks: [{stock_code,stock_name,impact_score,v3match_score,narrative_score,scarcity_score,total_score,rationale,key_risk}],
+  top_pick: {stock_code,stock_name,node_name,investment_thesis},
+  runner_up: {stock_code,stock_name,node_name,investment_thesis} }
+
+## 阈值硬规则（不可违反）
+- 所有候选股total_score均 &lt; 6.5 → top_pick = "无高赔率标的"
+- 禁止虚高打分凑数。宁缺毋滥。</pre>
+
+<h3 id="s47">A.9 rNPV 管线 Prompt (2个)</h3>
+<p class="sub">文件: <code>src/rnpv/agent1r_pipeline_data.py</code> + <code>src/rnpv/agent2r_scenario.py</code></p>
+
+<h4>PIPELINE_EXTRACTION_PROMPT — 管线数据提取 (Flash)</h4>
+<pre>你是创新药管线数据提取助手。从以下材料中提取 **目标公司自己的** 创新药管线结构化数据。
+
+## 核心规则
+1. **只提取目标公司自己的管线**。竞品/可比公司的药物是背景参考，不提取
+2. **提取所有阶段的管线药物**：
+   - 已上市/已获批的商业化产品（Approved）
+   - 在研管线：NDA / Ph3 / Ph2 / Ph1 / Preclinical 各阶段
+   - 药物代号（如 HSK31858、HSK39004 等格式）
+   - 对外授权/合作开发的管线（如授权给其他公司的海外权益）
+   - 早期合作项目（如与大型药企的靶点合作）
+3. **区分已上市 vs 在研**：已获批/已商业化的 → Approved；在研的 → 对应临床阶段
+4. **临床阶段取最高值**: Approved > NDA > Ph3 > Ph2 > Ph1 > Preclinical
+5. **数据来源**：优先引用材料中明确提到的数值，缺失时填 null</pre>
+
+<h4>RNPV_SCENARIO_PROMPT — rNPV 情景估值 (Pro)</h4>
+<pre># 你是创新药管线估值分析师
+
+核心能力是用事件驱动故事来驾驭估值参数，用参数反推故事的可信度。
+
+## 估值哲学：故事+数字双螺旋
+创新药管线估值的两个维度：
+- **叙事层**: 管线组合解决什么临床需求？各阶段有哪些催化剂？事件推演中的传导链量化？
+- **参数层**: PoS（成功率）、峰值销售、折现率、时间线。成熟业务的 PE/PS 倍数。
+铁律：事件叙事决定参数的输入，参数反推叙事的可信度。
+
+## 估值框架：两段式 SOTP
+公司价值 = 成熟业务价值 + Σ 各管线药物 rNPV + 净现金
+
+### 第一段：成熟业务估值
+- 稳定盈利 → PE 估值（参照同类创新药企中枢，通常 25-55x）
+- 微利/亏损 → PS 估值
+- BEAR 中 PE 应回到行业周期底部（通常 15-30x）
+- 成熟业务净利必须基于事件催化剂做前瞻估计，不能直接用 TTM
+
+### 第二段：管线药物 rNPV
+rNPV = PoS% × 峰值销售(亿) × 3 / (1 + 折现率%)^到峰值年数
+- 专利倍数固定为 3x: 代表峰值后约 7 年的净现值近似。不可自行调整。
+- 任务: 填 PoS、峰值销售、折现率、到峰值年数。代码用公式算。
+
+**PoS 基准（按临床阶段）**:
+Approved: 100% | NDA: 75-90% | Ph3: 50-65% | Ph2: 15-25% | Ph1: 8-12% | Preclinical: 3-8%
+
+**调节规则**:
+- 靶点已有同类药物获批 → +5-10ppt
+- 靶点已有同类药物失败 → -5-10ppt
+- 已有积极临床数据 → +5-10ppt
+- 竞争格局激烈（≥3个同类在研）→ 峰值销售打折而非 PoS 打折
+- 罕见病/突破性疗法认定 → +5-10ppt</pre>
+
+<h3 id="s48">A.10 审阅系统 Prompt (2个)</h3>
+<p class="sub">文件: <code>src/review/prompts.py</code> | Introspector: flash | DreamLoop: flash</p>
+
+<h4>INTROSPECTOR_SYSTEM — 管线审阅师</h4>
+<pre># 你是管线审阅师（Introspector）
+
+你不是分析师。你不需要重新研究这家公司。你的唯一职责是审阅管线产出的质量。
+
+## 你面对的是什么
+一条自动化投研管线分两层运行：
+
+L1 预研层: 5 位独立分析师（各 3 根探针），各自产出一份字段报告
+L2 估值层: 地图绘制师(Baseline) → 路由判官(Agent-2) → 估值重构师(Agent-3)
+
+你拿到的是 L1+L2 的全部输入和输出。你要分两层审。
+
+## L1 · 预研语料质量
+
+### 1.1 单份报告深度
+逐份检查 5 份字段报告，每份回答三个问题：
+- 有没有机器人味: 是否充斥模板句式？有具体数字吗？
+- 有没有一手信息: 引用的信息来自哪？是否隐约能看到原始财报/公告/研报的痕迹？
+- 是否完成了被分配的任务: N3真的做了魔鬼代言人挑战？N5真的推演了T+30/90/180？
+
+### 1.2 探针设计合理性（间接判断）
+- 5份报告的切入点是否各不相同？N1和N2大量重叠 → 探针设计有冗余
+- 是否缺少对该股票类型至关重要的维度？→ 标为覆盖盲区
+
+### 1.3 交叉一致性
+- N1核心叙事与N2产业链判断是否互相支持？
+- N2发现的竞争威胁，N3是否覆盖了？
+- N5的关键分叉点，N4是否列出了对应的验证节点？
+- 矛盾标注: N1说A，N2说B → 标为矛盾，不做调和
+
+### 1.4 回声检测
+- 多份报告出现高度相似的具体表述 → 可能搜到了同一篇文章 → 标记"单一来源回声"
+
+## L2 · 估值链推理质量
+
+### 2.1 投资地图吸收度
+- N1+N2中的关键发现是否都被地图正确吸收了？
+- 负面信息在传递到Baseline后是否被淡化或遗漏？
+
+### 2.2 推理链自洽
+- Agent-2识别的估值锚是否与Baseline的投资主线一致？
+- Agent-3的三情景是否围绕Agent-2选定的锚展开？
+- Agent-2说"核心变量是X"，Agent-3在Y上大段展开 → 锚定丢失
+
+### 2.3 三情景估值自洽
+- bull/base/bear是否有质的不同（不仅是"增速差5%"的机械变化）？
+- 非对称比是否合理？upside远大于downside但叙事只是"稍微好一点" → 乐观偏误
+- bear是否有明确的触发条件？如果腰斩但没有触发条件 → 空洞风险
+
+## 输出 JSON
+{ quality_grade: "A|B|C|D|F", summary, layer1: { individual_quality, cross_consistency, echoes, blind_spots },
+  layer2: { baseline_absorption, anchor_chain, scenario_coherence, evidence_issues },
+  improvement_suggestions: [{target,what,why}] }
+
+## 思维禁区
+- 不要重新分析这家公司——你没有这个任务
+- 不要写"建议买入/卖出"——你不是分析师
+- 不要因为报告写得"好"就给A——你审的是质量不是文笔
+- 不要编造问题——每条 issue 必须有原文引用支撑</pre>
+
+<h4>DREAM_LOOP_SYSTEM — 模式发现与改进提案</h4>
+<pre># 你是 Dream Loop 聚合师
+
+你拿到的是过去一段时间内的多条审阅记录（每条 = 一次管线运行的 Introspector 输出）。
+
+你的任务是：
+1. 找出重复出现的模式（同一类问题在 3+ 次运行中出现）
+2. 诊断根因（是 Prompt 设计问题？还是数据源问题？还是架构缺陷？）
+3. 生成具体的改进提案
+
+## 输出 JSON
+{ patterns: [{ pattern_name, frequency: "出现了 X/Y 次",
+    affected_dimension: "cross_consistency|baseline_absorption|reasoning_chain|scenario_coherence|evidence_quality",
+    description, root_cause,
+    proposal: { title, target: "改哪个文件/节点的哪个部分", change: "具体怎么改", risk: "可能有什么副作用" } }],
+  no_pattern_found: false, summary: "一句话" }</pre>
+
+<!-- ═══════════════════════════════════════════════════════════════ -->
+<h2 id="s49">附录B：完整目录结构</h2>
+
+<pre>
+估值重构引擎_V5/
+├── .env / .env.example                    # 环境变量
+├── requirements.txt                       # Python 依赖
+├── config/
+│   └── endpoint_mapping.yaml              # investoday 端点映射 (389行)
+├── valuation_app/
+│   ├── main.py                            # CLI 入口 + 报告渲染 (491行)
+│   └── config.json                        # 应用配置
+├── src/
+│   ├── orchestrator.py                    # 管线C编排器 (~1200行)
+│   ├── agent0_pre_router.py               # Agent-0: 预路由 (280行)
+│   ├── agent1_data_forge.py               # Agent-1: 数据锻造 (789行)
+│   ├── agent2_unified.py                  # Agent-2: 统一路由判官 (995行)
+│   ├── agent2a_narrative.py               # [废弃] V6叙事诊断
+│   ├── agent2b_routing.py                 # [废弃] V6模型路由
+│   ├── agent3_scenario_asymmetry.py       # Agent-3: 情景估值 (4161行)
+│   ├── agent3s_sotp.py                    # SOTP 分叉 (2475行)
+│   ├── agent_baseline.py                  # 投资地图 (508行)
+│   ├── pre_screen_gate.py                 # 预筛关卡 (455行)
+│   ├── industry_chain_workflow.py         # 管线A: 产业链分析 (1594行)
+│   ├── wanyepu_pipeline.py               # 管线B: 万业谱预研入口 (371行)
+│   ├── data_fetcher.py                    # investoday 封装 (1315行)
+│   ├── tushare_fetcher.py                 # Tushare 封装 (350行)
+│   ├── valuation_utils.py                 # LLM调用+JSON解析 (254行)
+│   ├── pricing_tools.py                   # 定价工具 (257行)
+│   ├── forward_indicator_computer.py      # 前瞻信号 (974行)
+│   ├── case_loader.py                     # V3案例库 (331行)
+│   ├── ranking_engine.py                  # 赔率排序 (105行)
+│   ├── env_config.py                      # 环境配置 (38行)
+│   ├── agents/                            # 预研代理
+│   │   ├── tools.py                       # bocha_search/fetch_url/playwright (303行)
+│   │   ├── digest_agent.py               # 事件消化器 (178行)
+│   │   ├── field_agent.py                # 现场探针代理 (239行)
+│   │   ├── probe_allocator.py            # 探针分配器 (315行)
+│   │   ├── assembler.py                   # 总装+写DB (150行)
+│   │   └── prompts/__init__.py            # 消化/对抗/未来/推演 Prompt (192行)
+│   ├── coze_workflow/                     # Coze DAG 节点
+│   │   ├── n0_stock_validator.py          # N0: 代码验证
+│   │   ├── n1_probe_designer.json         # N1: 事件消化+探针
+│   │   ├── field_node.py                  # N2-N6: 探针执行+合并
+│   │   ├── n6_assembler.json              # N7: 总装+去重
+│   │   ├── n9_writer.py                   # N8: 写Coze DB
+│   │   ├── coze_llm_prompts.md            # 5字段LLM Prompt
+│   │   ├── README.md                      # 部署指南
+│   │   ├── DESIGN.md                      # 设计方案 (560行)
+│   │   └── node_configs.md                # 节点参数速查
+│   ├── rnpv/                              # 创新药管线
+│   │   ├── agent1r_pipeline_data.py       # 数据组装 (323行)
+│   │   └── agent2r_scenario.py            # 情景估值 (1121行)
+│   ├── review/                            # 审计+评测
+│   │   ├── introspector.py                # 报告审计 (276行)
+│   │   ├── dream_loop.py                  # 模式发现 (332行)
+│   │   ├── prompts.py                     # 审计Prompt (183行)
+│   │   └── taxonomy.py                    # 审计分类法 (81行)
+│   └── test_data/ab_test/                 # 评测数据 (盛合晶微 688820)
+└── reports/                               # 输出报告目录
+</pre>
+
+<hr style="margin-top:60px">
+
+<p style="text-align:center;color:var(--text-dim);font-size:12px">
+  长流水 事件驱动型十倍股猎杀系统 — 完整开发文档<br>
+  版本 V8 · 2026-06-26 · 基于估值重构引擎_V5/ 全部源代码<br>
+  总代码量: ~45个源文件 · ~17,000行 Python · 12个LLM调用点 · 7个外部API
+</p>
+
+</main>
+<script>
+function toggleNav() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('overlay').classList.toggle('open');
+}
+document.querySelectorAll('nav a').forEach(a => {
+  a.addEventListener('click', () => {
+    if (window.innerWidth <= 900) toggleNav();
+  });
+});
+</script>
+</body>
+</html>

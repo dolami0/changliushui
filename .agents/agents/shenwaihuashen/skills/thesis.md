@@ -1,7 +1,9 @@
 ---
 name: shenwaihuashen-thesis
-description: 论点追踪 — 融合 Anthropic thesis-tracker，适配 A 股。建立/更新投资论点档案、支柱评分卡、催化剂日历、价格追踪日志。触发条件：决策通过或有条件通过后自动调用；后续追踪时独立调用。
+description: 论点追踪 — 融合 Anthropic thesis-tracker，适配 A 股。建立/更新投资论点档案、支柱评分卡、催化剂日历、价格追踪日志。触发条件：用户明确要求建档或追踪时调用。不可在 decision 后自动执行。
 ---
+
+> ⚠️ **不可自动触发**：decision 输出后，等待用户明确指令（"创建追踪令"/"建档"/"加入追踪"）再执行本 Skill。避免在标的被否决或用户需要修改 decision 参数前过早建档。
 
 # 论点追踪
 
