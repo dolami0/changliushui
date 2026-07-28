@@ -87,7 +87,7 @@ def _process_stock(
     if not verified_code.startswith(("60", "00", "68", "30")):
         if verbose:
             print(f"[N0.3] [SKIP] 非A股主板标的({verified_code})")
-        return None
+        return "skip"  # 非A股 → 标记已处理，不再重试
 
     t_start = time.time()
 
@@ -342,12 +342,12 @@ def fetch_industry_records(limit: int = 5) -> list[dict]:
     url = f"{COZE_BASE}/{DB_INDUSTRY}/records/query"
     payload = {
         "page_size": limit,
-        "order_by": [{"direction": "desc", "field_name": "created_at"}],
+        "order_by": [{"direction": "desc", "field_name": "bstudio_create_time"}],
         "filter": {
             "logic": "and",
             "conditions": [
                 {"left": "is_analyzed", "operation": "equal", "right": "false"},
-                {"left": "top_pick_code", "operation": "not_equal", "right": ""},
+                {"left": "top_pick_code", "operation": "not_equal", "right": "null"},
             ],
         },
     }
