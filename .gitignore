@@ -29,3 +29,7 @@ public/
 # 对比测试临时输出
 估值重构引擎_V5/_cmp_*.md
 估值重构引擎_V5/src/test_data/
+
+# 评测快照数据(放 evals/ 而非根目录)
+tmp_rec_*.json
+tmp_*.json
