@@ -9,6 +9,13 @@ import sys as _sys
 _sys.dont_write_bytecode = True  # 禁止生成 __pycache__，避免旧字节码缓存导致代码不更新
 import sys  # 保留 sys 别名供其余代码使用
 
+# Windows GBK 控制台默认编码无法处理 emoji 等 Unicode 字符，
+# print() 会抛 UnicodeEncodeError 导致 uvicorn 进程假死。
+# 强制 UTF-8 + errors=replace，任何非法字符打印为 ? 而非崩溃。
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 import asyncio
 import json
 import os
@@ -28,6 +35,7 @@ from valuation_app.pipeline_runner import PipelineRunner, ProgressEvent
 from valuation_app.scheduler import Scheduler
 from valuation_app.industry_chain_coze import IndustryChainCoze
 from valuation_app.industry_chain_scheduler import WangqiScheduler
+from valuation_app.wanyepu_scheduler import WanyepuScheduler
 
 # ── 全局状态 ──────────────────────────────
 
@@ -50,6 +58,7 @@ _state = {
 }
 _scheduler: Scheduler | None = None
 _wangqi: WangqiScheduler | None = None
+_wanyepu: WanyepuScheduler | None = None
 _ic_coze: IndustryChainCoze | None = None
 _config: dict = {}
 
@@ -131,7 +140,7 @@ def _handle_wangqi_progress(data: dict):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _config, _scheduler, _wangqi, _ic_coze
+    global _config, _scheduler, _wangqi, _wanyepu, _ic_coze
     _config = _load_config()
 
     # 初始化 CozeClient + PipelineRunner + Scheduler
@@ -173,6 +182,15 @@ async def lifespan(app: FastAPI):
         _wangqi = None
         _ic_coze = None
 
+    # 初始化万业谱预研调度器 — 两条独立管线轮询
+    try:
+        _wanyepu = WanyepuScheduler(_config)
+        await _wanyepu.start()
+    except Exception:
+        import logging
+        logging.getLogger(__name__).warning("WanyepuScheduler 初始化失败，万业谱调度器不可用", exc_info=True)
+        _wanyepu = None
+
     yield
 
     # 优雅关闭
@@ -181,6 +199,8 @@ async def lifespan(app: FastAPI):
     _state["scheduler_running"] = False
     if _wangqi:
         await _wangqi.stop()
+    if _wanyepu:
+        await _wanyepu.stop()
 
 
 app = FastAPI(title="估值重构引擎 V5", lifespan=lifespan)
@@ -370,6 +390,41 @@ async def api_scheduler_detail():
         "completed_jobs": _scheduler.completed_jobs[-10:],
         "latest_review": getattr(_scheduler, '_latest_review', None),
     })
+
+
+@app.get("/api/wanyepu/status")
+async def api_wanyepu_status():
+    """万业谱预研调度器状态"""
+    if not _wanyepu:
+        return JSONResponse({"error": "未初始化"}, status_code=503)
+    return JSONResponse({
+        "running": _wanyepu._running,
+        "tianji": {
+            "interval_sec": _wanyepu.interval_a,
+            "last_poll_at": _wanyepu.last_poll_a,
+            "next_poll_at": _wanyepu.next_poll_a,
+        },
+        "industry": {
+            "interval_sec": _wanyepu.interval_b,
+            "last_poll_at": _wanyepu.last_poll_b,
+            "next_poll_at": _wanyepu.next_poll_b,
+        },
+        "completed_jobs": _wanyepu.completed_jobs[-20:],
+    })
+
+
+@app.post("/api/wanyepu/poll/{pipeline}")
+async def api_wanyepu_poll(pipeline: str):
+    """手动触发万业谱轮询"""
+    if not _wanyepu:
+        return JSONResponse({"error": "未初始化"}, status_code=503)
+    if pipeline == "tianji":
+        await _wanyepu.poll_now_a()
+    elif pipeline == "industry":
+        await _wanyepu.poll_now_b()
+    else:
+        return JSONResponse({"error": "pipeline 必须是 tianji 或 industry"}, status_code=400)
+    return JSONResponse({"status": "ok", "completed": len(_wanyepu.completed_jobs)})
 
 
 # ── 报告审阅 API ──────
