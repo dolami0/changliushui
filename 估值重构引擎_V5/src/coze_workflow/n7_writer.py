@@ -72,7 +72,7 @@ record = {
     "knowledge_supplement": dedup.get("knowledge_supplement", "")[:10000],
     "uuid": uuid or "",
     "source_record_id": source_id or "",
-    "is_complete": "true",
+    "is_complete": "false",
     "created_at": now,
 }
 

@@ -12,7 +12,7 @@ import requests_async
 
 
 # ═══════════════════════════════════════════
-# 1. 代码验证: 东方财富行情API (免费/无需认证)
+# 1. 代码验证: 新浪行情API (免费/无需认证, GBK编码)
 # ═══════════════════════════════════════════
 
 async def verify_by_code(market, code):
@@ -21,16 +21,27 @@ async def verify_by_code(market, code):
     code: 6位数字如 "300308"
     返回: (名称, 代码) 或 (None, None)
     """
+    prefix = "sh" if market == "1" else "sz"
     try:
         r = await requests_async.get(
-            "https://push2.eastmoney.com/api/qt/stock/get",
-            params={"fields": "f57,f58", "secid": f"{market}.{code}"},
+            f"https://hq.sinajs.cn/list={prefix}{code}",
+            headers={
+                "Referer": "https://finance.sina.com.cn",
+                "User-Agent": "Mozilla/5.0"
+            },
             timeout=8
         )
-        data = r.json()
-        d = data.get("data")
-        if d and d.get("f58"):
-            return d["f58"], d["f57"]
+        r.encoding = "gbk"
+        text = r.text
+        # 格式: var hq_str_sh688025="杰普特,375.000,..."
+        if '""' in text or text.strip() == "":
+            return None, None
+        name_end = text.find(",")
+        name_start = text.find('"') + 1
+        if name_start > 0 and name_end > name_start:
+            name = text[name_start:name_end]
+            if name and len(name) < 20:
+                return name, code
     except Exception:
         pass
     return None, None
@@ -125,7 +136,7 @@ async def main(args: Args) -> Output:
 
     elif code_clean and len(code_clean) == 6:
         # ===== 场景A: 有代码 → 用行情API验证 =====
-        primary_market = "1" if code_clean.startswith("60") else "0"
+        primary_market = "1" if code_clean.startswith(("60", "68")) else "0"
 
         api_name, api_code = await verify_by_code(primary_market, code_clean)
 
@@ -158,11 +169,15 @@ async def main(args: Args) -> Output:
     elif name_clean:
         # ===== 场景B: 只有名称 → 用新浪API搜索 =====
         api_name, api_code, market = await search_by_name(name_clean)
-        if api_name and api_code:
+        if api_name and api_code and name_fuzzy_match(name_clean, api_name):
             verified_name = api_name
             verified_code = api_code
             stock_market = "SH" if market == "1" else "SZ"
             is_valid = True
+        elif api_name and api_code:
+            error_msg = f"名称'{name_clean}'匹配到'{api_name}'({api_code})但名称不一致"
+            verified_name = api_name
+            verified_code = api_code
         else:
             error_msg = f"名称'{name_clean}'未匹配到A股标的"
     else:

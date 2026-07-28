@@ -78,7 +78,7 @@ def assemble_and_write(
         "knowledge_supplement": knowledge_supplement[:10000],
         "uuid": uuid,
         "source_record_id": source_record_id,
-        "is_complete": "true",
+        "is_complete": "false",
         "created_at": now,
     }
 
