@@ -7,10 +7,24 @@
 
 import asyncio
 import json
+import os
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable
+
+
+def _write_audit_log(log: dict) -> None:
+    """写入审计日志到 reports/audit_logs/audit_YYYYMMDD.jsonl"""
+    try:
+        log_dir = Path(__file__).resolve().parent.parent / "reports" / "audit_logs"
+        os.makedirs(log_dir, exist_ok=True)
+        date_str = datetime.now().strftime("%Y%m%d")
+        filepath = log_dir / f"audit_{date_str}.jsonl"
+        with open(filepath, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
 
 
 class WangqiScheduler:
@@ -67,20 +81,52 @@ class WangqiScheduler:
         record = self.coze_io.get_record_by_id(record_id)
         if not record:
             return {"status": "error", "error": f"记录 {record_id} 未找到"}
+        t_start = time.time()
         self.coze_io.mark_analyzing(record_id)
         result = self.workflow.run_on_record(record, progress_cb=self._on_progress)
+        elapsed = round(time.time() - t_start, 1)
         if result.get("status") == "done":
+            write_ok = False
+            write_err = ""
             try:
                 self.coze_io.write_result(result)
+                write_ok = True
             except Exception as e:
-                result["write_error"] = str(e)[:500]
-            finally:
-                self.coze_io.mark_processed(record_id)
+                write_err = str(e)[:500]
+                result["write_error"] = write_err
+            self.coze_io.mark_processed(record_id)
+            _write_audit_log({
+                "record_id": record_id,
+                "pipeline": "wangqi",
+                "status": "done",
+                "elapsed_s": elapsed,
+                "write_status": "ok" if write_ok else "error",
+                "write_error": write_err if not write_ok else "",
+                "top_pick": _safe_pick_name(result.get("top_pick")),
+                "runner_up": _safe_pick_name(result.get("runner_up")),
+                "timestamp": datetime.now().isoformat(),
+            })
         elif result.get("status") == "skipped":
             self.coze_io.mark_processed(record_id)
+            _write_audit_log({
+                "record_id": record_id,
+                "pipeline": "wangqi",
+                "status": "skipped",
+                "elapsed_s": elapsed,
+                "error": result.get("error", ""),
+                "timestamp": datetime.now().isoformat(),
+            })
         else:
             # error: analyzing=true + analyzed=false → 不重试，可识别
             self.coze_io.mark_error(record_id, result.get("error", ""))
+            _write_audit_log({
+                "record_id": record_id,
+                "pipeline": "wangqi",
+                "status": "error",
+                "elapsed_s": elapsed,
+                "error": result.get("error", ""),
+                "timestamp": datetime.now().isoformat(),
+            })
         return result
 
     async def _loop(self):
@@ -104,6 +150,7 @@ class WangqiScheduler:
 
         for record in records[:10]:
             record_id = str(record.get("id", ""))
+            t_start = time.time()
             try:
                 # 标记分析中，防止调度器重复拉取
                 self.coze_io.mark_analyzing(record_id)
@@ -116,12 +163,17 @@ class WangqiScheduler:
                     "level": record.get("level"),
                 })
                 result = self.workflow.run_on_record(record, progress_cb=self._on_progress)
+                elapsed = round(time.time() - t_start, 1)
 
                 if result.get("status") == "done":
+                    write_ok = False
+                    write_err = ""
                     try:
                         self.coze_io.write_result(result)
+                        write_ok = True
                     except Exception as e:
-                        result["write_error"] = str(e)[:500]
+                        write_err = str(e)[:500]
+                        result["write_error"] = write_err
 
                     self.coze_io.mark_processed(record_id)
 
@@ -132,6 +184,17 @@ class WangqiScheduler:
                         "top_pick": tp,
                         "runner_up": ru,
                         "at": datetime.now(timezone.utc).isoformat(),
+                    })
+                    _write_audit_log({
+                        "record_id": record_id,
+                        "pipeline": "wangqi",
+                        "status": "done",
+                        "elapsed_s": elapsed,
+                        "write_status": "ok" if write_ok else "error",
+                        "write_error": write_err if not write_ok else "",
+                        "top_pick": tp,
+                        "runner_up": ru,
+                        "timestamp": datetime.now().isoformat(),
                     })
                     self._emit_progress({
                         "type": "tianji_job", "record_id": record_id, "status": "done",
@@ -145,6 +208,14 @@ class WangqiScheduler:
                         "error": result.get("error", ""),
                         "at": datetime.now(timezone.utc).isoformat(),
                     })
+                    _write_audit_log({
+                        "record_id": record_id,
+                        "pipeline": "wangqi",
+                        "status": "skipped",
+                        "elapsed_s": elapsed,
+                        "error": result.get("error", ""),
+                        "timestamp": datetime.now().isoformat(),
+                    })
                     self._emit_progress({
                         "type": "tianji_job", "record_id": record_id, "status": "skipped",
                         "error": result.get("error", "")[:200],
@@ -156,6 +227,14 @@ class WangqiScheduler:
                         "record_id": record_id, "status": result.get("status", "?"),
                         "error": result.get("error", ""),
                         "at": datetime.now(timezone.utc).isoformat(),
+                    })
+                    _write_audit_log({
+                        "record_id": record_id,
+                        "pipeline": "wangqi",
+                        "status": "error",
+                        "elapsed_s": elapsed,
+                        "error": result.get("error", ""),
+                        "timestamp": datetime.now().isoformat(),
                     })
                     self._emit_progress({
                         "type": "tianji_job", "record_id": record_id, "status": "error",
@@ -173,6 +252,14 @@ class WangqiScheduler:
                     self.coze_io.mark_error(record_id, str(e)[:500])
                 except Exception:
                     pass
+                _write_audit_log({
+                    "record_id": record_id,
+                    "pipeline": "wangqi",
+                    "status": "exception",
+                    "elapsed_s": round(time.time() - t_start, 1),
+                    "error": err,
+                    "timestamp": datetime.now().isoformat(),
+                })
 
         return results
 
