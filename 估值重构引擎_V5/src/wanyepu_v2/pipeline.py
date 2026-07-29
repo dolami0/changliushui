@@ -58,13 +58,13 @@ def _process_stock(
     record_id: str = "",
     industry_context: str = "",
     verbose: bool = True,
-) -> dict | None:
+) -> dict | str | None:
     """处理单只股票的完整管线 (N0→N0.3→N0.5→N1→N2→N5→N3→N4→N7)。
 
     Returns:
         dict: 处理成功
         None: 处理失败（调用方需判断原因）
-        "skip": N0 验证失败（股票不存在），调用方应标记已处理而非重试
+        ("skip", error_msg): N0 验证失败或非A股，调用方应标记已处理而非重试
     """
 
     news_clean = re.sub(r"<[^>]+>", "", news_content)
@@ -75,7 +75,7 @@ def _process_stock(
     n0 = validate_stock(stock_name=stock_name, stock_code=stock_code)
     if not n0["is_valid"]:
         print(f"[N0] [FAIL] 验证失败: {n0['error']}")
-        return "skip"
+        return ("skip", f"N0验证失败: {n0['error']}")
 
     verified_name = n0["verified_name"]
     verified_code = n0["verified_code"]
@@ -87,7 +87,7 @@ def _process_stock(
     if not verified_code.startswith(("60", "00", "68", "30")):
         if verbose:
             print(f"[N0.3] [SKIP] 非A股主板标的({verified_code})")
-        return "skip"  # 非A股 → 标记已处理，不再重试
+        return ("skip", f"非A股主板标的({verified_code})，跳过分析")
 
     t_start = time.time()
 
@@ -312,9 +312,14 @@ def run_tianji_pipeline(limit: int = 5, verbose: bool = True) -> list[dict]:
                 record_id=record_id,
                 verbose=verbose,
             )
-            if result == "skip":
-                # N0 验证失败（股票不存在）→ 标记已处理，不再重试
-                mark_tianji_processed(record_id, verbose=verbose)
+            if isinstance(result, tuple) and result[0] == "skip":
+                # N0 验证失败 / 非A股 → 标记已处理 + 写入 error_log
+                _update_coze_record(DB_TIANJIJUAN, record_id, {
+                    "is_analyzed": "true",
+                    "is_analyzing": "false",
+                    "analysis_time": datetime.now().isoformat(),
+                    "error_log": result[1],
+                })
             elif result:
                 mark_tianji_processed(record_id, verbose=verbose)
                 results.append(result)
@@ -427,14 +432,20 @@ def run_industry_pipeline(limit: int = 5, verbose: bool = True) -> list[dict]:
                 knowledge=knowledge,
                 step_one=step_one,
                 uuid=record.get("uuid", ""),
-                level="",
+                level=tianji.get("level", "") if tianji else "",
                 mode="产业模式",
                 bstudio_time=record.get("bstudio_create_time", ""),
                 record_id=record_id,
                 industry_context=industry_context,
                 verbose=verbose,
             )
-            if result:
+            if isinstance(result, tuple) and result[0] == "skip":
+                # N0 验证失败 / 非A股 → 标记已处理 + 写入 error_log
+                _update_coze_record(DB_INDUSTRY, record_id, {
+                    "is_analyzed": "true",
+                    "error_log": result[1],
+                })
+            elif result:
                 results.append(result)
         except Exception as e:
             print(f"[管线B] 处理异常: {e}")
