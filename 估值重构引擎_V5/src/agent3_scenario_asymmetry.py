@@ -1958,7 +1958,8 @@ def _call_llm_scenario(
 
     try:
         system_prompt = _build_model_aware_prompt(primary, validation_model)
-        resp = requests.post(
+        from http_session import get_session
+        resp = get_session().post(
             DEEPSEEK_API,
             headers={
                 "Content-Type": "application/json",
@@ -2003,7 +2004,7 @@ def _call_llm_scenario(
                     "保留全部分析内容——只修复格式。"
                 )},
             ]
-            retry_resp = requests.post(
+            retry_resp = get_session().post(
                 "https://api.deepseek.com/v1/chat/completions",
                 headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
                 json={"model": "deepseek-v4-pro", "messages": retry_msgs, "max_tokens": 40960, "temperature": 0.1},
@@ -2432,7 +2433,8 @@ SOTP触发: {mn.get('sotp_triggered', False)}
     for round_num in range(max_rounds):
         t_round = time.time()
         print(f"  [LLM-2] 轮次 {round_num + 1}/{max_rounds} 开始 (消息历史 {len(messages)} 条)...", flush=True)
-        resp = requests.post(
+        from http_session import get_session
+        resp = get_session().post(
             "https://api.deepseek.com/v1/chat/completions",
             headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
             json={
@@ -2501,7 +2503,7 @@ SOTP触发: {mn.get('sotp_triggered', False)}
                     "- 嵌套对象是否层级正确？"
                 )
             })
-            retry_resp = requests.post(
+            retry_resp = get_session().post(
                 "https://api.deepseek.com/v1/chat/completions",
                 headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
                 json={"model": "deepseek-v4-pro", "messages": messages, "max_tokens": 40960, "temperature": 0.1},
@@ -2545,7 +2547,7 @@ SOTP触发: {mn.get('sotp_triggered', False)}
                     "不需要修改已有字段——只补充空的字段。"
                     "输出完整 JSON（不要用 markdown 代码块包裹）。"
                 )})
-                retry_resp = requests.post(
+                retry_resp = get_session().post(
                     "https://api.deepseek.com/v1/chat/completions",
                     headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
                     json={"model": "deepseek-v4-pro", "messages": messages, "max_tokens": 16384, "temperature": 0.3},

@@ -93,7 +93,9 @@ def call_deepseek(
 ) -> dict:
     """调用 DeepSeek API，返回解析后的 JSON dict。"""
     key = api_key or DEEPSEEK_API_KEY
-    resp = requests.post(
+    # 用共享 session 复用 TCP 连接,防止 Windows socket 端口耗尽 (errno 22)
+    from http_session import get_session
+    resp = get_session().post(
         DEEPSEEK_API,
         headers={
             "Content-Type": "application/json",
