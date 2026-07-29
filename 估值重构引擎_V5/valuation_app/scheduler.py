@@ -267,6 +267,23 @@ class Scheduler:
             else:
                 job["status"] = "error"
                 logger.error(f"管线处理失败: {rec.get('stock_code')} — {result.get('error','未知错误')[:120]}")
+                # 完整 traceback 单独存文件，便于排查 errno 22 等异常根因
+                _tb = result.get('traceback', '')
+                if _tb:
+                    try:
+                        _err_dir = Path(__file__).resolve().parent.parent / "reports" / "errors"
+                        _err_dir.mkdir(parents=True, exist_ok=True)
+                        _err_file = _err_dir / f"{rec.get('stock_code','unknown')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+                        _err_file.write_text(
+                            f"stock: {rec.get('stock_code')} {rec.get('stock_name')}\n"
+                            f"record_id: {rec.get('id')}\n"
+                            f"error: {result.get('error','')}\n"
+                            f"--- traceback ---\n{_tb}",
+                            encoding="utf-8"
+                        )
+                        logger.error(f"  → traceback已存: {_err_file.name}")
+                    except Exception as _e:
+                        logger.warning(f"  traceback写入失败: {_e}")
                 self._handle_failure(rec)
 
         # 4. 跨股赔率排序
