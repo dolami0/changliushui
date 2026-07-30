@@ -36,11 +36,13 @@ from valuation_app.scheduler import Scheduler
 from valuation_app.industry_chain_coze import IndustryChainCoze
 from valuation_app.industry_chain_scheduler import WangqiScheduler
 from valuation_app.wanyepu_scheduler import WanyepuScheduler
+from valuation_app.tianjifeng_scheduler import TianjifengScheduler
 
 # ── 全局状态 ──────────────────────────────
 
 _progress_queues: list[queue.Queue] = []  # SSE 订阅者列表
 _wangqi_queues: list[queue.Queue] = []    # 天机 SSE 订阅者列表
+_tianjifeng_queues: list[queue.Queue] = []  # 天机峰 SSE 订阅者列表
 _state = {
     "active_jobs": [],
     "completed_jobs": [],
@@ -55,10 +57,18 @@ _state = {
         "next_poll_at": None,
         "scheduler_running": False,
     },
+    "tianjifeng": {
+        "active_jobs": [],
+        "completed_jobs": [],
+        "last_poll_at": None,
+        "next_poll_at": None,
+        "scheduler_running": False,
+    },
 }
 _scheduler: Scheduler | None = None
 _wangqi: WangqiScheduler | None = None
 _wanyepu: WanyepuScheduler | None = None
+_tianjifeng: TianjifengScheduler | None = None
 _ic_coze: IndustryChainCoze | None = None
 _config: dict = {}
 
@@ -136,11 +146,27 @@ def _handle_wangqi_progress(data: dict):
         _state["wangqi"]["completed_jobs"] = _wangqi.completed_jobs
 
 
+def _handle_tianjifeng_progress(data: dict):
+    """TianjifengScheduler 的 progress_cb — SSE 广播 + 状态同步"""
+    payload = json.dumps(data, ensure_ascii=False)
+    dead = []
+    for q in _tianjifeng_queues:
+        try:
+            q.put_nowait(payload)
+        except queue.Full:
+            dead.append(q)
+    for q in dead:
+        _tianjifeng_queues.remove(q)
+    if _tianjifeng:
+        _state["tianjifeng"]["scheduler_running"] = _tianjifeng._running
+        _state["tianjifeng"]["completed_jobs"] = _tianjifeng.completed_jobs
+
+
 # ── 应用生命周期 ──────────────────────────
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global _config, _scheduler, _wangqi, _wanyepu, _ic_coze
+    global _config, _scheduler, _wangqi, _wanyepu, _ic_coze, _tianjifeng
     _config = _load_config()
 
     # 初始化 CozeClient + PipelineRunner + Scheduler
@@ -191,6 +217,17 @@ async def lifespan(app: FastAPI):
         logging.getLogger(__name__).warning("WanyepuScheduler 初始化失败，万业谱调度器不可用", exc_info=True)
         _wanyepu = None
 
+    # 初始化天机峰调度器 — A 管线(快讯) + B 管线(研报)
+    if _config.get("tianjifeng_enabled", True):
+        try:
+            _tianjifeng = TianjifengScheduler(coze, _config, progress_cb=_handle_tianjifeng_progress)
+            await _tianjifeng.start()
+            _state["tianjifeng"]["scheduler_running"] = True
+        except Exception:
+            import logging
+            logging.getLogger(__name__).warning("TianjifengScheduler 初始化失败，天机峰调度器不可用", exc_info=True)
+            _tianjifeng = None
+
     yield
 
     # 优雅关闭
@@ -201,6 +238,8 @@ async def lifespan(app: FastAPI):
         await _wangqi.stop()
     if _wanyepu:
         await _wanyepu.stop()
+    if _tianjifeng:
+        await _tianjifeng.stop()
 
 
 app = FastAPI(title="估值重构引擎 V5", lifespan=lifespan)
