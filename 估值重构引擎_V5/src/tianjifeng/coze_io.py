@@ -99,11 +99,10 @@ class NewsPoolCoze:
         return self.coze.insert_records(self._db_id, rows)
 
     def query_unprocessed(self, limit: int = 20) -> list[dict]:
-        """条件查询未处理的快讯（is_processed=false），不全量扫描"""
-        return self.coze.query_with_filter(
-            self._db_id,
-            conditions=[{"left": "is_processed", "operation": "equal", "right": "false"}],
-        )[:limit]
+        """查询未处理的快讯（is_processed=false）"""
+        all_records = self.coze.query_all_records(self._db_id)
+        unprocessed = [r for r in all_records if str(r.get("is_processed", "")) == "false"]
+        return unprocessed[:limit]
 
     def mark_processed(self, record_id: str, level: str = "", status: str = "") -> None:
         """标记快讯为已处理，回写等级和状态（字段不存在时静默跳过）"""
