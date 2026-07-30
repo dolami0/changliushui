@@ -6,7 +6,8 @@ $WorkDir = "D:\长流水\估值重构引擎_V5"
 $LogDir = Join-Path $WorkDir "logs"
 if (-not (Test-Path $LogDir)) { New-Item -ItemType Directory -Path $LogDir | Out-Null }
 
-$host.ui.RawUI.WindowTitle = "估值引擎后端-自动重启"
+# SYSTEM 账户下无 UI host,跳过窗口标题设置
+try { $host.UI.RawUI.WindowTitle = "估值引擎后端" } catch {}
 
 while ($true) {
     $ts = Get-Date -Format "yyyyMMdd_HHmmss"
