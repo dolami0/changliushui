@@ -11,7 +11,7 @@ BOCHA_KEY = os.environ.get("BOCHA_KEY", "sk-090c432b4f5745caa8767ae70f5b348b")
 
 # DeepSeek
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
-DEEPSEEK_MODEL = "deepseek-v4-flash"
+DEEPSEEK_MODEL = "deepseek-v4-pro"
 
 # Kimi (Moonshot) — Kimi For Coding 订阅套餐
 KIMI_API_KEY = os.environ.get("KIMI_API_KEY", "sk-kimi-lQupxU1ZGzdieUBPu9q2b3nOJYvaPcQ6QxlKYPaV3Fbt2Sldqmjh5YNEQH9gdYu2")

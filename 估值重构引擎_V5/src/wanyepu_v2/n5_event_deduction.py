@@ -13,8 +13,8 @@ from .field_runner import call_deepseek as _call_deepseek, volc_search, CURRENT_
 
 
 def call_deepseek(system: str, user: str, max_tokens: int = 4096, **kw) -> str:
-    """N5 事件推演统一用 thinking=False — 忠实于搜索结果，避免幻觉。"""
-    return _call_deepseek(system, user, max_tokens=max_tokens, thinking=False)
+    """N5 事件推演打开 thinking — Pro 模型 + 思考链做 3 层因果递进推演。"""
+    return _call_deepseek(system, user, max_tokens=max_tokens, thinking=True)
 
 
 # ══════════════════════════════════════════════════════

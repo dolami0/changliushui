@@ -20,6 +20,10 @@ from .probe_prompts import FIELD_DESIGN_PROMPTS, FIELD_DESIGN_PROMPTS_V2, FIELD_
 
 BOCHA_URL = "https://api.bochaai.com/v1/web-search"
 
+# 共享 HTTP Session — 复用 TCP 连接，避免批量调用时 socket 耗尽
+_http_session = requests.Session()
+_http_session.headers.update({"Content-Type": "application/json"})
+
 # 当前日期 — 所有 LLM/火山调用的上下文都注入
 CURRENT_DATE = datetime.now().strftime("%Y-%m-%d")
 
@@ -68,16 +72,17 @@ FIELD_CN = {
 # LLM 调用
 # ══════════════════════════════════════════════════════
 
-def call_deepseek(system: str, user: str, max_tokens: int = 4096, temperature: float = 0, max_retries: int = 3, thinking: bool = True) -> str:
+def call_deepseek(system: str, user: str, max_tokens: int = 4096, temperature: float = 0, max_retries: int = 3, thinking: bool = True, model: str = "") -> str:
     """调用 DeepSeek，返回文本。失败重试 max_retries 次。
 
-    thinking=True: 用于探针设计（需要创造性）
-    thinking=False: 用于合并报告（需要严格忠实于探针结论，避免幻觉）
+    thinking=True: 全管线默认（探针设计 + 合并 + N4/N5/N6），Pro 模型 + 思考链产出更严谨
+    model: 覆盖默认模型，默认 deepseek-v4-pro
     """
+    use_model = model or DEEPSEEK_MODEL
     for attempt in range(max_retries):
         try:
             payload = {
-                "model": DEEPSEEK_MODEL,
+                "model": use_model,
                 "temperature": temperature,
                 "max_tokens": max_tokens,
                 "messages": [
@@ -87,12 +92,9 @@ def call_deepseek(system: str, user: str, max_tokens: int = 4096, temperature: f
             }
             if thinking:
                 payload["thinking"] = {"type": "enabled"}
-            r = requests.post(
+            r = _http_session.post(
                 DEEPSEEK_URL,
-                headers={
-                    "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
-                    "Content-Type": "application/json",
-                },
+                headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
                 json=payload,
                 timeout=120,
             )
@@ -163,17 +165,14 @@ def volc_search(query: str, timeout: int = 120, max_retries: int = 3) -> str:
 
     for attempt in range(max_retries):
         try:
-            r = requests.post(
+            r = _http_session.post(
                 VOLC_URL,
                 json={
                     "bot_id": VOLC_BOT_ID,
                     "stream": False,
                     "messages": [{"role": "user", "content": dated_query}],
                 },
-                headers={
-                    "Authorization": f"Bearer {VOLC_AGENT_KEY}",
-                    "Content-Type": "application/json",
-                },
+                headers={"Authorization": f"Bearer {VOLC_AGENT_KEY}"},
                 timeout=timeout,
             )
             if r.status_code == 200:
@@ -206,12 +205,9 @@ def volc_search(query: str, timeout: int = 120, max_retries: int = 3) -> str:
 def bocha_search(query: str, count: int = 5) -> str:
     """调用博查搜索。返回格式化网页摘要。"""
     try:
-        r = requests.post(
+        r = _http_session.post(
             BOCHA_URL,
-            headers={
-                "Authorization": f"Bearer {BOCHA_KEY}",
-                "Content-Type": "application/json",
-            },
+            headers={"Authorization": f"Bearer {BOCHA_KEY}"},
             json={
                 "query": query,
                 "count": min(count, 10),
@@ -518,12 +514,12 @@ def design_deep_probes(
 def merge_probes(field_name: str, probe_results: list[dict], llm_fn=None, verbose: bool = True) -> str:
     """将N个独立探针结论合并为字段报告。
 
-    用 thinking=False 调用：合并是严格的"忠实于探针结论"任务，
-    不需要创造性推理。thinking 模式在 temperature=0 时仍可能产生
-    幻觉（如把"数十亿元"写成"几百万元"），关闭后输出更稳定。
+    thinking=True：Pro 模型 + 思考模式产出更严谨的交叉验证和数字核对，
+    配合 prompt 中的"数字必须原样引用"约束，既保证忠实于探针结论，
+    又能利用思考链做单位/数量级自检。
     """
     if llm_fn is None:
-        llm_fn = lambda system, user, max_tokens, **kw: call_deepseek(system, user, max_tokens=max_tokens, thinking=False)
+        llm_fn = lambda system, user, max_tokens, **kw: call_deepseek(system, user, max_tokens=max_tokens, thinking=True)
     conclusions_text = "\n\n---\n\n".join(
         f"## 探针{i+1}: {p['name']}\n{p['conclusion']}"
         for i, p in enumerate(probe_results)

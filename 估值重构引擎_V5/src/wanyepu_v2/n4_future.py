@@ -10,8 +10,8 @@ from .field_runner import call_deepseek as _call_deepseek, volc_search, CURRENT_
 
 
 def call_deepseek(system: str, user: str, max_tokens: int = 4096, **kw) -> str:
-    """N4 催化日历统一用 thinking=False — 忠实于搜索结果，避免幻觉。"""
-    return _call_deepseek(system, user, max_tokens=max_tokens, thinking=False)
+    """N4 催化日历打开 thinking — Pro 模型 + 思考链做多维度时间线推演。"""
+    return _call_deepseek(system, user, max_tokens=max_tokens, thinking=True)
 
 
 N4_SYSTEM = """你是催化剂分析师。N5已产出事件推演（传导链+证伪条件+瓶颈节点），N3已产出逆向推演（攻击报告+降级条件）。你的任务是编制一份催化日历。
