@@ -178,6 +178,7 @@ class TianjifengCoze:
             "news_content": news_content,
             "level": level,
             "is_analyzed": "true" if is_analyzed else "false",
+            "is_analyzing": "false",
         }
         if step_one:
             row["step_one"] = step_one
