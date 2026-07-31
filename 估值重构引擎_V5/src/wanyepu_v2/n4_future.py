@@ -151,7 +151,7 @@ N3 逆向推演中的降级条件:
 {all_results}
 
 请输出催化日历报告。""",
-        max_tokens=8192,
+        max_tokens=65536,
     )
 
     elapsed = time.time() - t_start

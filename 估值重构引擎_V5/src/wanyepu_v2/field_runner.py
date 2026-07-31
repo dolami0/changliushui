@@ -72,7 +72,7 @@ FIELD_CN = {
 # LLM 调用
 # ══════════════════════════════════════════════════════
 
-def call_deepseek(system: str, user: str, max_tokens: int = 4096, temperature: float = 0, max_retries: int = 3, thinking: bool = True, model: str = "") -> str:
+def call_deepseek(system: str, user: str, max_tokens: int = 65536, temperature: float = 0, max_retries: int = 3, thinking: bool = True, model: str = "") -> str:
     """调用 DeepSeek，返回文本。失败重试 max_retries 次。
 
     thinking=True: 全管线默认（探针设计 + 合并 + N4/N5/N6），Pro 模型 + 思考链产出更严谨
@@ -296,7 +296,7 @@ def design_probes(
     content = llm_fn(
         system=design_prompt,
         user=f"{context}\n\n---\n请基于以上信息设计探针。直接输出JSON。",
-        max_tokens=4096,
+        max_tokens=65536,  # thinking 模式 reasoning 占 2-3k,5-6 个详细探针需 4-6k,留足预算
     )
 
     # 提取 JSON
@@ -309,11 +309,11 @@ def design_probes(
                 result = json.loads(match.group())
             except json.JSONDecodeError:
                 if verbose:
-                    print(f"  [{field_name}] 探针设计JSON解析失败: {content[:200]}")
+                    print(f"  [{field_name}] 探针设计JSON解析失败(长度{len(content)}c): {content[:200]}")
                 return [], "JSON解析失败"
         else:
             if verbose:
-                print(f"  [{field_name}] 探针设计JSON解析失败: {content[:200]}")
+                print(f"  [{field_name}] 探针设计JSON解析失败(长度{len(content)}c): {content[:200]}")
             return [], "JSON解析失败"
 
     # p1-p5 格式: {"p1": "...", "p2": "...", ...} → 转为标准 probes 格式
@@ -468,7 +468,7 @@ def design_deep_probes(
         content = llm_fn(
             system=DEEP_DIVE_SYSTEM,
             user=f"[当前日期: {CURRENT_DATE}]\n\n以下是{len(probe_results)}份独立探针结论:\n\n{conclusions_text}",
-            max_tokens=2048,
+            max_tokens=65536,  # thinking 模式 reasoning 占 1-3k,深入探针输出需 2-3k
         )
 
         # 解析 JSON
@@ -530,7 +530,7 @@ def merge_probes(field_name: str, probe_results: list[dict], llm_fn=None, verbos
     report = llm_fn(
         system=merge_prompt,
         user=f"[当前日期: {CURRENT_DATE}]\n\n以下是{len(probe_results)}份独立探针结论。请按照系统指令中的格式直接输出最终报告——不要复述指令、不要写过程说明，只输出报告本身:\n\n{conclusions_text}",
-        max_tokens=8192,
+        max_tokens=65536,
     )
 
     if verbose:

@@ -107,7 +107,7 @@ def run_round1(
 {search_result}
 
 请按输出格式完成第1轮分析。""",
-        max_tokens=8192,
+        max_tokens=65536,
     )
 
     if verbose:
@@ -197,7 +197,7 @@ def run_round2(
 {search_result}
 
 请按输出格式完成第2轮分析。""",
-        max_tokens=8192,
+        max_tokens=65536,
     )
 
     if verbose:
@@ -328,7 +328,7 @@ def run_round3(
 {search_result}
 
 请综合三轮发现，输出完整的事件推演报告。""",
-        max_tokens=8192,
+        max_tokens=65536,
     )
 
     if verbose:

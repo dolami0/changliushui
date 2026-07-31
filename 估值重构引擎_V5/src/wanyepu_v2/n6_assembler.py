@@ -112,13 +112,13 @@ def assemble(
 {event_deduction}
 
 ## 补充信息
-原始事件: {raw_text[:2000]}
-预研分析: {step_one[:1000]}"""
+原始事件: {raw_text}
+预研分析: {step_one}"""
 
     content = call_deepseek(
         system=ASSEMBLER_SYSTEM,
         user=user_msg,
-        max_tokens=8192,
+        max_tokens=65536,
     )
 
     # 解析 JSON
