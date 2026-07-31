@@ -102,9 +102,10 @@ def fetch_and_store(coze_client: CozeClient) -> int:
 # 四步 LLM 处理
 # ══════════════════════════════════════════════════════
 
-def step1_filter(title: str) -> dict:
+def step1_filter(title: str, summary: str = "") -> dict:
     """LLM #1: 初筛 — 0/1 二分类"""
-    raw = call_deepseek(system=FILTER_SYSTEM_PROMPT, user=title, max_tokens=500, temperature=0, thinking=True)
+    user_msg = f"标题：{title}\n内容：{summary}" if summary else title
+    raw = call_deepseek(system=FILTER_SYSTEM_PROMPT, user=user_msg, max_tokens=500, temperature=0, thinking=True)
     result = _parse_json_from_llm(raw)
     if result is None:
         return {"level": 1, "output": "JSON解析失败默认放行"}
@@ -195,7 +196,7 @@ def process_news(
     # ── 2. 初筛（可跳过）──────────────────────
     if not skip_filter:
         t0 = time.time()
-        filter_result = step1_filter(title)
+        filter_result = step1_filter(title, summary)
         _emit("filter", {"level": filter_result.get("level"), "output": filter_result.get("output"), "elapsed": round(time.time() - t0, 1)})
         if filter_result.get("level") == 0:
             result["status"] = "filtered"
