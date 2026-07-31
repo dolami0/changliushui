@@ -145,11 +145,14 @@ def _verify_a_stock(company_name: str) -> bool:
         return True
 
 
-def step4_gatekeeper(title: str, summary: str, knowledge: str, company: str) -> dict:
+def step4_gatekeeper(title: str, summary: str, knowledge: str, company: str, existing_titles: list[str] | None = None) -> dict:
     """LLM #3/#4: 守门员（pro 模型）"""
     is_stock = bool(company and company.strip())
     prompt = STOCK_GATEKEEPER_SYSTEM_PROMPT if is_stock else INDUSTRY_GATEKEEPER_SYSTEM_PROMPT
     user_msg = f"输入的资讯：{summary}\n标题：{title}\n更多实时的背景资料：{knowledge}"
+    if existing_titles:
+        recent = "\n".join(f"- {t[:80]}" for t in existing_titles[:30])
+        user_msg += f"\n\n天机卷近期已记录事件（如当前资讯与以下任一条为同一事件的不同表述，视为已充分定价，等级判定降一级）：\n{recent}"
     raw = call_deepseek(system=prompt, user=user_msg, max_tokens=4000, temperature=0, thinking=True, model=DEEPSEEK_MODEL_PRO)
     result = _parse_json_from_llm(raw)
     if result is None:
@@ -230,7 +233,7 @@ def process_news(
 
     # ── 5. 守门员 ─────────────────────────────
     t0 = time.time()
-    gate_result = step4_gatekeeper(title, summary, knowledge, company)
+    gate_result = step4_gatekeeper(title, summary, knowledge, company, existing_titles=tianjifeng_io._existing_titles if tianjifeng_io else None)
     _emit("gatekeeper", {"mode": gate_result.get("mode"), "level": gate_result.get("level"), "elapsed": round(time.time() - t0, 1)})
 
     mode = gate_result.get("mode", "个股模式" if company else "产业模式")
@@ -346,6 +349,10 @@ def process_yanbao(
     if not title:
         return {"status": "skip", "reason": "empty_title"}
 
+    # 研报用更低的天机卷去重阈值（同一事件不同券商标题差异大）
+    if tianjifeng_io and tianjifeng_io.is_duplicate(title, threshold=TianjifengCoze.DEDUP_SIMILARITY_YANBAO):
+        return {"status": "skip", "reason": "duplicate_yanbao", "title": title}
+
     news = {
         "title": title,
         "summary": news_content,
@@ -381,6 +388,41 @@ def run_yanbao_pipeline(
 
     if not records:
         return {"status": "no_news", "total": 0}
+
+    # 批次内去重：同一事件的多个券商版本只保留第一条
+    # 阈值 0.25：同事件研报标题相似度通常 0.25-0.62，不相关标题 <0.22
+    from .coze_io import _title_similarity
+    deduped = []
+    seen_titles = []
+    skipped_dup = 0
+    for r in records:
+        title, _ = YanbaoCoze.parse_news_content(str(r.get("news_content", "")))
+        if not title:
+            deduped.append(r)
+            continue
+        is_dup = False
+        for st in seen_titles:
+            if _title_similarity(title, st) >= 0.25:
+                is_dup = True
+                break
+        if is_dup:
+            skipped_dup += 1
+            if yanbao and r.get("id"):
+                try:
+                    yanbao.mark_analyzed(r["id"])
+                except Exception:
+                    pass
+        else:
+            seen_titles.append(title)
+            deduped.append(r)
+
+    if skipped_dup:
+        print(f"[yanbao] 批次内去重: 跳过 {skipped_dup} 条同事件研报", flush=True)
+
+    if not deduped:
+        return {"status": "no_news", "total": 0, "batch_dedup": skipped_dup}
+
+    records = deduped
 
     stats = {
         "total": len(records),

@@ -139,28 +139,36 @@ class TianjifengCoze:
     """天机峰专用 Coze 读写器"""
 
     DEDUP_DAYS = 7
+    DEDUP_SIMILARITY = 0.6
+    DEDUP_SIMILARITY_YANBAO = 0.25
 
     def __init__(self, coze_client: CozeClient):
         self.coze = coze_client
         self._db_id = DB_TIANJIJUAN
-        self._existing_titles: set[str] | None = None
+        self._existing_titles: list[str] | None = None
 
-    def load_existing_titles(self) -> set[str]:
+    def load_existing_titles(self) -> list[str]:
         """加载天机卷最近 N 天的 news_content，用于去重"""
         cutoff = (datetime.now() - timedelta(days=self.DEDUP_DAYS)).strftime("%Y-%m-%d")
         records = self.coze.query_all_records(self._db_id)
-        self._existing_titles = {
+        self._existing_titles = [
             str(r.get("news_content", ""))
             for r in records
             if str(r.get("date", "")) >= cutoff or str(r.get("bstudio_create_time", "")) >= cutoff
-        }
+        ]
         return self._existing_titles
 
-    def is_duplicate(self, title: str) -> bool:
-        """检查快讯标题是否已存在于天机卷"""
+    def is_duplicate(self, title: str, threshold: float = 0) -> bool:
+        """检查标题是否已存在于天机卷（精确匹配 + 相似度匹配）"""
         if self._existing_titles is None:
             self.load_existing_titles()
-        return title in self._existing_titles
+        th = threshold or self.DEDUP_SIMILARITY
+        for existing in self._existing_titles:
+            if title == existing:
+                return True
+            if _title_similarity(title, existing) >= th:
+                return True
+        return False
 
     def insert_record(
         self,
@@ -194,7 +202,7 @@ class TianjifengCoze:
         self.coze.insert_records(self._db_id, [row])
 
         if self._existing_titles is not None:
-            self._existing_titles.add(news_content)
+            self._existing_titles.append(news_content)
 
 
 class YanbaoCoze:
