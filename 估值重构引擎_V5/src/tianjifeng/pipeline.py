@@ -151,7 +151,7 @@ def step4_gatekeeper(title: str, summary: str, knowledge: str, company: str, exi
     prompt = STOCK_GATEKEEPER_SYSTEM_PROMPT if is_stock else INDUSTRY_GATEKEEPER_SYSTEM_PROMPT
     user_msg = f"输入的资讯：{summary}\n标题：{title}\n更多实时的背景资料：{knowledge}"
     if existing_titles:
-        recent = "\n".join(f"- {t[:80]}" for t in existing_titles[:30])
+        recent = "\n".join(f"- {t.split(chr(10), 1)[0][:80]}" for t in existing_titles[:30])
         user_msg += f"\n\n天机卷近期已记录事件（如当前资讯与以下任一条为同一事件的不同表述，视为已充分定价，等级判定降一级）：\n{recent}"
     raw = call_deepseek(system=prompt, user=user_msg, max_tokens=4000, temperature=0, thinking=True, model=DEEPSEEK_MODEL_PRO)
     result = _parse_json_from_llm(raw)
@@ -248,8 +248,9 @@ def process_news(
 
     # ── 6. 写入天机卷（仅 L4/L5）──────────────
     if not dry_run and tianjifeng_io and level >= full_write_level:
+        full_content = f"{title}\n{summary}" if summary else title
         tianjifeng_io.insert_record(
-            news_content=title, level=str(level), step_one=report,
+            news_content=full_content, level=str(level), step_one=report,
             mode=mode, stock_name=company, knowledge=knowledge,
             date=news.get("publish_time", ""),
         )

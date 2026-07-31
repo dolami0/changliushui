@@ -159,14 +159,17 @@ class TianjifengCoze:
         return self._existing_titles
 
     def is_duplicate(self, title: str, threshold: float = 0) -> bool:
-        """检查标题是否已存在于天机卷（精确匹配 + 相似度匹配）"""
+        """检查标题是否已存在于天机卷（精确匹配 + 相似度匹配）
+        existing 可能是"标题\n正文"格式，比对时只取第一行标题部分。
+        """
         if self._existing_titles is None:
             self.load_existing_titles()
         th = threshold or self.DEDUP_SIMILARITY
         for existing in self._existing_titles:
-            if title == existing:
+            existing_title = existing.split("\n", 1)[0]
+            if title == existing_title or title == existing:
                 return True
-            if _title_similarity(title, existing) >= th:
+            if _title_similarity(title, existing_title) >= th:
                 return True
         return False
 
