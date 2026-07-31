@@ -66,12 +66,14 @@ def _parse_json_from_llm(text: str) -> dict | None:
             return json.loads(text)
         except json.JSONDecodeError:
             pass
-    m = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text)
+    # ```json ... ``` 包裹（贪婪匹配到最外层 }）
+    m = re.search(r"```(?:json)?\s*(\{[\s\S]*\})\s*```", text)
     if m:
         try:
             return json.loads(m.group(1))
         except json.JSONDecodeError:
             pass
+    # 兜底：找最外层 {} 配对
     start = text.find("{")
     end = text.rfind("}")
     if start >= 0 and end > start:
