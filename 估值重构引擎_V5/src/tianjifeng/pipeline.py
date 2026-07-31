@@ -146,11 +146,13 @@ def _verify_a_stock(company_name: str) -> bool:
         return True
 
 
-def step4_gatekeeper(title: str, summary: str, knowledge: str, company: str, existing_titles: list[str] | None = None) -> dict:
+def step4_gatekeeper(title: str, summary: str, knowledge: str, company: str, existing_titles: list[str] | None = None, seed_report: str = "") -> dict:
     """LLM #3/#4: 守门员（pro 模型）"""
     is_stock = bool(company and company.strip())
     prompt = STOCK_GATEKEEPER_SYSTEM_PROMPT if is_stock else INDUSTRY_GATEKEEPER_SYSTEM_PROMPT
     user_msg = f"输入的资讯：{summary}\n标题：{title}\n更多实时的背景资料：{knowledge}"
+    if seed_report:
+        user_msg += f"\n\n上游种子探测结论：{seed_report}"
     if existing_titles:
         recent = "\n".join(f"- {t.split(chr(10), 1)[0][:80]}" for t in existing_titles[:30])
         user_msg += f"\n\n天机卷近期已记录事件（如当前资讯与以下任一条为同一事件的不同表述，视为已充分定价，等级判定降一级）：\n{recent}"
@@ -234,7 +236,7 @@ def process_news(
 
     # ── 5. 守门员 ─────────────────────────────
     t0 = time.time()
-    gate_result = step4_gatekeeper(title, summary, knowledge, company, existing_titles=tianjifeng_io._existing_titles if tianjifeng_io else None)
+    gate_result = step4_gatekeeper(title, summary, knowledge, company, existing_titles=tianjifeng_io._existing_titles if tianjifeng_io else None, seed_report=seed_result.get("report", ""))
     _emit("gatekeeper", {"mode": gate_result.get("mode"), "level": gate_result.get("level"), "elapsed": round(time.time() - t0, 1)})
 
     mode = gate_result.get("mode", "个股模式" if company else "产业模式")
