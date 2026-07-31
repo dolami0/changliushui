@@ -204,11 +204,11 @@ class YanbaoCoze:
         self._db_id = DB_YANBAO
 
     def query_unprocessed(self, limit: int = 10) -> list[dict]:
-        """查询 step_one 为空的研报，按时间倒序取最新"""
+        """查询未处理的研报（is_analyzed != true），按时间倒序取最新"""
         all_records = self.coze.query_all_records(self._db_id)
         unprocessed = [
             r for r in all_records
-            if not str(r.get("step_one", "")).strip()
+            if str(r.get("is_analyzed", "")).strip().lower() != "true"
         ]
         unprocessed.sort(key=lambda x: str(x.get("bstudio_create_time", "")), reverse=True)
         return unprocessed[:limit]

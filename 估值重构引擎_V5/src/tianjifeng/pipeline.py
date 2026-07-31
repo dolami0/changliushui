@@ -41,7 +41,6 @@ from .prompts import (
     INDUSTRY_GATEKEEPER_SYSTEM_PROMPT,
     SEED_DETECTOR_SYSTEM_PROMPT,
     STOCK_GATEKEEPER_SYSTEM_PROMPT,
-    YANBAO_SEED_DETECTOR_SYSTEM_PROMPT,
 )
 from .ths_fetcher import fetch_all
 
@@ -354,7 +353,7 @@ def process_yanbao(
     }
     return process_news(
         news, tianjifeng_io=tianjifeng_io, dry_run=dry_run, full_write_level=full_write_level,
-        progress_cb=progress_cb, skip_filter=True, seed_prompt=YANBAO_SEED_DETECTOR_SYSTEM_PROMPT,
+        progress_cb=progress_cb, skip_filter=True,
     )
 
 
