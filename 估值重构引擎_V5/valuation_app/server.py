@@ -1210,6 +1210,152 @@ async def api_ic_analyze_one(record_id: str):
     return JSONResponse(result)
 
 
+# ── 天机峰 调度器 API ──────────────────
+
+@app.get("/api/tianjifeng/status")
+async def api_tjf_status():
+    """天机峰调度器状态"""
+    if not _tianjifeng:
+        return JSONResponse({
+            "initialized": False,
+            "running": False,
+            "current_status": "not_initialized",
+            "pipeline_a": None,
+            "pipeline_b": None,
+            "completed_jobs": [],
+        })
+    return JSONResponse({
+        "initialized": True,
+        "running": _tianjifeng._running,
+        "current_status": _tianjifeng.current_status,
+        "pipeline_a": {
+            "interval_sec": _tianjifeng.interval,
+            "last_poll_at": _tianjifeng.last_poll_at,
+            "next_poll_at": _tianjifeng.next_poll_at,
+        },
+        "pipeline_b": {
+            "interval_sec": _tianjifeng.yanbao_interval,
+            "last_poll_at": _tianjifeng.last_yanbao_at,
+            "next_poll_at": _tianjifeng.next_yanbao_at,
+        },
+        "completed_count": len(_tianjifeng.completed_jobs),
+        "completed_jobs": _tianjifeng.completed_jobs[-20:],
+    })
+
+
+@app.post("/api/tianjifeng/start")
+async def api_tjf_start():
+    """启动天机峰调度器"""
+    if not _tianjifeng:
+        return JSONResponse({"error": "天机峰调度器未初始化"}, status_code=503)
+    if _tianjifeng._running:
+        return JSONResponse({"status": "ok", "message": "已在运行"})
+    await _tianjifeng.start()
+    return JSONResponse({"status": "ok", "message": "已启动"})
+
+
+@app.post("/api/tianjifeng/stop")
+async def api_tjf_stop():
+    """停止天机峰调度器"""
+    if not _tianjifeng:
+        return JSONResponse({"error": "天机峰调度器未初始化"}, status_code=503)
+    if not _tianjifeng._running:
+        return JSONResponse({"status": "ok", "message": "已停止"})
+    await _tianjifeng.stop()
+    return JSONResponse({"status": "ok", "message": "已停止"})
+
+
+@app.post("/api/tianjifeng/interval")
+async def api_tjf_interval(request: Request):
+    """设置天机峰轮询间隔（秒），持久化到 config.json
+
+    body: {"pipeline": "A"|"B", "interval_sec": int}
+    """
+    if not _tianjifeng:
+        return JSONResponse({"error": "天机峰调度器未初始化"}, status_code=503)
+    try:
+        body = await request.json()
+        pipeline = str(body.get("pipeline", "")).upper()
+        new_interval = int(body.get("interval_sec", 0))
+        if pipeline not in ("A", "B"):
+            return JSONResponse({"error": "pipeline 必须是 A 或 B"}, status_code=400)
+        if new_interval < 60:
+            return JSONResponse({"error": "间隔不能小于60秒"}, status_code=400)
+        if new_interval > 86400:
+            return JSONResponse({"error": "间隔不能超过86400秒(24小时)"}, status_code=400)
+
+        if pipeline == "A":
+            _tianjifeng.interval = new_interval
+            _config["tianjifeng_poll_interval_sec"] = new_interval
+        else:
+            _tianjifeng.yanbao_interval = new_interval
+            _config["tianjifeng_yanbao_interval_sec"] = new_interval
+
+        import json as _json
+        config_path = Path(__file__).resolve().parent / "config.json"
+        with open(config_path, "w", encoding="utf-8") as f:
+            _json.dump(_config, f, ensure_ascii=False, indent=2)
+        return JSONResponse({"status": "ok", "pipeline": pipeline, "interval_sec": new_interval})
+    except Exception as e:
+        return JSONResponse({"error": str(e)}, status_code=400)
+
+
+@app.post("/api/tianjifeng/trigger")
+async def api_tjf_trigger(request: Request):
+    """手动触发一轮天机峰轮询
+
+    body: {"pipeline": "A"|"B"|"both"}  默认 both
+    """
+    if not _tianjifeng:
+        return JSONResponse({"error": "天机峰调度器未初始化"}, status_code=503)
+    try:
+        body = await request.json() if request.headers.get("content-type", "").startswith("application/json") else {}
+    except Exception:
+        body = {}
+    pipeline = str(body.get("pipeline", "both")).upper()
+
+    result: dict = {"status": "ok"}
+    if pipeline in ("A", "BOTH"):
+        stats_a = await asyncio.to_thread(_tianjifeng._poll_sync_a)
+        result["pipeline_a"] = stats_a
+    if pipeline in ("B", "BOTH"):
+        stats_b = await asyncio.to_thread(_tianjifeng._poll_sync_b)
+        result["pipeline_b"] = stats_b
+    return JSONResponse(result)
+
+
+@app.get("/api/tianjifeng/progress/stream")
+async def api_tjf_sse(request: Request):
+    """天机峰 SSE 实时进度流"""
+    q: queue.Queue = queue.Queue(maxsize=100)
+    _tianjifeng_queues.append(q)
+
+    async def event_generator():
+        yield f"event: connected\ndata: {json.dumps({'type':'connected'})}\n\n"
+        try:
+            while True:
+                if await request.is_disconnected():
+                    break
+                try:
+                    data = q.get(timeout=1)
+                    yield f"event: tianjifeng\ndata: {data}\n\n"
+                except queue.Empty:
+                    yield f": heartbeat\n\n"
+        finally:
+            if q in _tianjifeng_queues:
+                _tianjifeng_queues.remove(q)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 # ── 身外化身 CC 发送 API ──────────────────
 
 # 身外化身 agent 目录
