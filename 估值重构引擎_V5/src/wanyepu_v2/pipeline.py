@@ -218,7 +218,12 @@ def _process_stock(
 # ══════════════════════════════════════════════════════
 
 def fetch_tianji_records(limit: int = 5) -> list[dict]:
-    """从天机卷拉取待处理记录。"""
+    """从天机卷拉取待处理记录。
+
+    Coze DB 对"从未写入过的字段"所有操作符都不匹配（null 黑洞），
+    因此 is_analyzing 不能放在 Coze filter 里 — 改为 Python 端兜底检查。
+    调度器本身是单线程串行，锁失败只是跳过，下一轮会重试，不会并发重复处理。
+    """
     url = f"{COZE_BASE}/{DB_TIANJIJUAN}/records/query"
     payload = {
         "page_size": limit,
@@ -229,7 +234,6 @@ def fetch_tianji_records(limit: int = 5) -> list[dict]:
                 {"left": "mode", "operation": "equal", "right": "个股模式"},
                 {"left": "level", "operation": "greater_than", "right": "3"},
                 {"left": "is_analyzed", "operation": "not_equal", "right": "true"},
-                {"left": "is_analyzing", "operation": "not_equal", "right": "true"},
             ],
         },
     }
@@ -237,7 +241,9 @@ def fetch_tianji_records(limit: int = 5) -> list[dict]:
         "Authorization": f"Bearer {COZE_SAT_TOKEN}",
         "Content-Type": "application/json",
     }, json=payload, timeout=30)
-    return r.json().get("data", {}).get("items", [])
+    items = r.json().get("data", {}).get("items", [])
+    # Python 端兜底: 跳过正在处理中的记录（防御并发）
+    return [it for it in items if it.get("is_analyzing", "") != "true"]
 
 
 def _update_coze_record(db_id: str, record_id: str, fields: dict) -> bool:
