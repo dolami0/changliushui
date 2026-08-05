@@ -140,22 +140,32 @@ def step1_filter(title: str, summary: str = "") -> dict:
 
 
 def step2_seed_detect(title: str, summary: str, prompt: str = "") -> dict:
-    """LLM #2: 种子探测（pro 模型）。prompt 可覆盖（研报用专用 prompt）"""
+    """LLM #2: 种子探测（pro 模型）。prompt 可覆盖（研报用专用 prompt）
+    pass=true 时校验 query 非空，否则重试一次。
+    """
     system = prompt or SEED_DETECTOR_SYSTEM_PROMPT
     user_msg = f"资讯：{summary}\n标题：{title}" if summary else f"资讯：{title}"
-    raw = call_deepseek(system=system, user=user_msg, temperature=0, thinking=True, model=DEEPSEEK_MODEL_PRO)
-    result = _parse_json_from_llm(raw)
-    if result is None:
-        return {"pass": False, "company": "", "query": "", "report": "JSON解析失败"}
-    return result
+    for attempt in range(2):
+        raw = call_deepseek(system=system, user=user_msg, temperature=0, thinking=True, model=DEEPSEEK_MODEL_PRO)
+        result = _parse_json_from_llm(raw)
+        if result is None:
+            if attempt == 0:
+                continue
+            return {"pass": False, "company": "", "query": "", "report": "JSON解析失败"}
+        # pass=true 但 query 为空 → 重试
+        if result.get("pass") and not result.get("query", "").strip():
+            if attempt == 0:
+                continue
+            result["report"] = (result.get("report", "") + " [query为空重试后仍为空]")
+        return result
+    return {"pass": False, "company": "", "query": "", "report": "重试2次均失败"}
 
 
 def step3_volc_search(query: str, summary: str) -> str:
-    """火山搜索背景补充。query为空时用summary兜底。"""
-    q = query or summary[:200]
-    if not q:
+    """火山搜索背景补充"""
+    if not query:
         return ""
-    return volc_search(q)
+    return volc_search(query)
 
 
 def _verify_a_stock(company_name: str) -> bool:
@@ -175,7 +185,9 @@ def _verify_a_stock(company_name: str) -> bool:
 
 
 def step4_gatekeeper(title: str, summary: str, knowledge: str, company: str, existing_titles: list[str] | None = None, seed_report: str = "", reverse_knowledge: str = "") -> dict:
-    """LLM #3/#4: 守门员（pro 模型）"""
+    """LLM #3/#4: 守门员（pro 模型）
+    level 不在 1-5 或 report 为空时重试一次。
+    """
     is_stock = bool(company and company.strip())
     prompt = STOCK_GATEKEEPER_SYSTEM_PROMPT if is_stock else INDUSTRY_GATEKEEPER_SYSTEM_PROMPT
     user_msg = f"输入的资讯：{summary}\n标题：{title}\n\n正向背景资料（支撑证据）：\n{knowledge}"
@@ -186,16 +198,33 @@ def step4_gatekeeper(title: str, summary: str, knowledge: str, company: str, exi
     if existing_titles:
         recent = "\n".join(f"- {t.split(chr(10), 1)[0][:80]}" for t in existing_titles[:30])
         user_msg += f"\n\n天机卷近期已记录事件（如当前资讯与以下任一条为同一事件的不同表述，视为已充分定价，等级判定降一级）：\n{recent}"
-    raw = call_deepseek(system=prompt, user=user_msg, temperature=0, thinking=True, model=DEEPSEEK_MODEL_PRO)
-    result = _parse_json_from_llm(raw)
-    if result is None:
-        # fallback：正则提取 mode 和 level
-        mode_match = re.search(r'"mode"\s*:\s*"([^"]+)"', raw)
-        level_match = re.search(r'"level"\s*:\s*(\d)', raw)
-        fb_mode = mode_match.group(1) if mode_match else ("个股模式" if is_stock else "产业模式")
-        fb_level = int(level_match.group(1)) if level_match else 0
-        return {"mode": fb_mode, "level": fb_level, "report": "JSON解析失败(截断)，已从残片中提取关键字段"}
-    return result
+
+    for attempt in range(2):
+        raw = call_deepseek(system=prompt, user=user_msg, temperature=0, thinking=True, model=DEEPSEEK_MODEL_PRO)
+        result = _parse_json_from_llm(raw)
+        if result is None:
+            if attempt == 0:
+                continue
+            # fallback：正则提取 mode 和 level
+            mode_match = re.search(r'"mode"\s*:\s*"([^"]+)"', raw)
+            level_match = re.search(r'"level"\s*:\s*(\d)', raw)
+            fb_mode = mode_match.group(1) if mode_match else ("个股模式" if is_stock else "产业模式")
+            fb_level = int(level_match.group(1)) if level_match else 0
+            return {"mode": fb_mode, "level": fb_level, "report": "JSON解析失败(截断)，已从残片中提取关键字段"}
+        # 校验 level 和 report
+        level = result.get("level")
+        report = result.get("report", "")
+        if isinstance(level, int) and 1 <= level <= 5 and report.strip():
+            return result
+        if attempt == 0:
+            continue
+        # 第二次仍不合格，修正后返回
+        if not isinstance(level, int) or not (1 <= level <= 5):
+            result["level"] = 0
+        if not report.strip():
+            result["report"] = "report为空"
+        return result
+    return {"mode": "个股模式" if is_stock else "产业模式", "level": 0, "report": "重试2次均失败"}
 
 
 # ══════════════════════════════════════════════════════
