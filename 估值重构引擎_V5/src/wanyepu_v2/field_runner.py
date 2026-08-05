@@ -8,6 +8,7 @@
 """
 
 import json
+import os
 import re
 import time
 import requests
@@ -293,28 +294,97 @@ def design_probes(
     if llm_fn is None:
         llm_fn = call_deepseek
 
-    content = llm_fn(
-        system=design_prompt,
-        user=f"{context}\n\n---\n请基于以上信息设计探针。直接输出JSON。",
-        max_tokens=65536,  # thinking 模式 reasoning 占 2-3k,5-6 个详细探针需 4-6k,留足预算
-    )
+    def _try_parse(content: str) -> dict | None:
+        """从 LLM 返回中提取 JSON。返回 None 表示解析失败。
 
-    # 提取 JSON
-    try:
-        result = json.loads(content)
-    except json.JSONDecodeError:
-        match = re.search(r"\{[\s\S]*\}", content)
+        Pro 模型的常见异常:
+        - markdown 代码块包装 (```json...```)
+        - 前导/尾随解释文字
+        - 字符串值里含未转义换行符 (JSON 规范不允许)
+        """
+        def _fix_inner_newlines(text: str) -> str:
+            """把字符串值里的真换行/制表符替换为空格 (状态机,只在双引号内替换)。"""
+            out = []
+            in_str = False
+            escape = False
+            for ch in text:
+                if escape:
+                    out.append(ch)
+                    escape = False
+                    continue
+                if ch == "\\":
+                    out.append(ch)
+                    escape = True
+                    continue
+                if ch == '"':
+                    out.append(ch)
+                    in_str = not in_str
+                    continue
+                if in_str and ch in "\n\r\t":
+                    out.append(" ")
+                    continue
+                out.append(ch)
+            return "".join(out)
+
+        try:
+            return json.loads(content)
+        except json.JSONDecodeError:
+            pass
+        # 去掉 markdown 代码块包装
+        cleaned = re.sub(r"^```(?:json)?\s*|\s*```$", "", content.strip(), flags=re.MULTILINE)
+        try:
+            return json.loads(cleaned)
+        except json.JSONDecodeError:
+            pass
+        # 抓取最外层 {} (贪婪)
+        match = re.search(r"\{[\s\S]*\}", cleaned)
         if match:
+            candidate = match.group()
             try:
-                result = json.loads(match.group())
+                return json.loads(candidate)
             except json.JSONDecodeError:
-                if verbose:
-                    print(f"  [{field_name}] 探针设计JSON解析失败(长度{len(content)}c): {content[:200]}")
-                return [], "JSON解析失败"
-        else:
-            if verbose:
-                print(f"  [{field_name}] 探针设计JSON解析失败(长度{len(content)}c): {content[:200]}")
-            return [], "JSON解析失败"
+                # 最后兜底: 清洗字符串内的非法控制字符
+                try:
+                    return json.loads(_fix_inner_newlines(candidate))
+                except json.JSONDecodeError:
+                    pass
+        return None
+
+    def _dump_fail(field: str, content: str, attempt: int) -> None:
+        """失败时落盘原始响应,便于事后诊断。"""
+        try:
+            fail_dir = os.path.join(os.path.dirname(__file__), "..", "..", "reports", "probe_design_fails")
+            os.makedirs(fail_dir, exist_ok=True)
+            ts = datetime.now().strftime("%Y%m%d_%H%M%S")
+            fp = os.path.join(fail_dir, f"{ts}_{field}_attempt{attempt}.txt")
+            with open(fp, "w", encoding="utf-8") as f:
+                f.write(f"=== field: {field} attempt: {attempt} ===\n")
+                f.write(f"=== content length: {len(content)}c ===\n\n")
+                f.write(content)
+        except Exception:
+            pass
+
+    # 最多重试 3 次
+    result = None
+    last_content = ""
+    for attempt in range(1, 4):
+        content = llm_fn(
+            system=design_prompt,
+            user=f"{context}\n\n---\n请基于以上信息设计探针。直接输出JSON。",
+            max_tokens=65536,
+        )
+        last_content = content
+        result = _try_parse(content)
+        if result is not None:
+            break
+        _dump_fail(field_name, content, attempt)
+        if verbose:
+            print(f"  [{field_name}] 探针设计JSON解析失败 attempt{attempt}/3 (长度{len(content)}c), 重试...")
+
+    if result is None:
+        if verbose:
+            print(f"  [{field_name}] 探针设计JSON解析失败, 3次重试均失败")
+        raise RuntimeError(f"[{field_name}] 探针设计失败: JSON解析失败(3次重试)")
 
     # p1-p5 格式: {"p1": "...", "p2": "...", ...} → 转为标准 probes 格式
     if "p1" in result:
@@ -593,15 +663,11 @@ def run_field(
             priors[f] = prior_reports[f]
 
     # Step 2: 设计探针
+    # 失败时抛异常,不要写入"[xx]探针设计失败"占位符——下游节点会把它当成正常报告引用,污染整条链
     probes, coverage = design_probes(
         field_name, priors, stock_name, stock_code,
         news_content, knowledge, step_one, company_profile, prompt_version, llm_fn, verbose,
     )
-
-    if not probes:
-        if verbose:
-            print(f"  [{field_name}] 探针设计失败: {coverage}")
-        return f"[{FIELD_CN.get(field_name, field_name)}] 探针设计失败: {coverage}"
 
     if verbose:
         print(f"  [{field_name}] 设计{len(probes)}个探针: {coverage[:80]}")
