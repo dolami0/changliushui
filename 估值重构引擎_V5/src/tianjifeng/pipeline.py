@@ -59,28 +59,53 @@ def _write_audit_log(log: dict) -> None:
 
 
 def _parse_json_from_llm(text: str) -> dict | None:
-    """从 LLM 输出中解析 JSON 对象"""
+    """从 LLM 输出中解析 JSON 对象。多层 fallback 确保截断/格式错误不丢数据。"""
     text = text.strip()
+
+    def _try_load(candidate: str) -> dict | None:
+        try:
+            return json.loads(candidate)
+        except json.JSONDecodeError:
+            return None
+
+    # 1. 纯 JSON
     if text.startswith("{"):
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            pass
-    # ```json ... ``` 包裹（贪婪匹配到最外层 }）
-    m = re.search(r"```(?:json)?\s*(\{[\s\S]*\})\s*```", text)
+        r = _try_load(text)
+        if r: return r
+
+    # 2. ```json ... ``` 包裹
+    m = re.search(r"```(?:json)?\s*(\{[\s\S]*?\})\s*```", text)
     if m:
-        try:
-            return json.loads(m.group(1))
-        except json.JSONDecodeError:
-            pass
-    # 兜底：找最外层 {} 配对
+        r = _try_load(m.group(1))
+        if r: return r
+
+    # 3. 找最外层 {} 配对（贪婪）
     start = text.find("{")
     end = text.rfind("}")
     if start >= 0 and end > start:
-        try:
-            return json.loads(text[start : end + 1])
-        except json.JSONDecodeError:
-            pass
+        r = _try_load(text[start : end + 1])
+        if r: return r
+
+    # 4. 截断容错：补全不完整的 JSON（缺 }, 缺 ], 缺引号等）
+    if start >= 0 and end == -1:
+        truncated = text[start:]
+        # 尝试依次补 1-3 个 }
+        for n in range(1, 4):
+            r = _try_load(truncated + "}" * n)
+            if r: return r
+
+    # 5. 最简 fallback：正则提取 pass 和 company
+    pass_match = re.search(r'"pass"\s*:\s*(true|false)', text, re.IGNORECASE)
+    if pass_match:
+        company_match = re.search(r'"company"\s*:\s*"([^"]*)"', text)
+        return {
+            "pass": pass_match.group(1).lower() == "true",
+            "company": company_match.group(1) if company_match else "",
+            "query": "",
+            "reverse_query": "",
+            "report": "JSON解析失败(截断)，已从残片中提取关键字段",
+        }
+
     return None
 
 
@@ -107,7 +132,7 @@ def fetch_and_store(coze_client: CozeClient) -> int:
 def step1_filter(title: str, summary: str = "") -> dict:
     """LLM #1: 初筛 — 0/1 二分类"""
     user_msg = f"标题：{title}\n内容：{summary}" if summary else title
-    raw = call_deepseek(system=FILTER_SYSTEM_PROMPT, user=user_msg, max_tokens=500, temperature=0, thinking=True)
+    raw = call_deepseek(system=FILTER_SYSTEM_PROMPT, user=user_msg, temperature=0, thinking=True)
     result = _parse_json_from_llm(raw)
     if result is None:
         return {"level": 1, "output": "JSON解析失败默认放行"}
@@ -118,7 +143,7 @@ def step2_seed_detect(title: str, summary: str, prompt: str = "") -> dict:
     """LLM #2: 种子探测（pro 模型）。prompt 可覆盖（研报用专用 prompt）"""
     system = prompt or SEED_DETECTOR_SYSTEM_PROMPT
     user_msg = f"资讯：{summary}\n标题：{title}" if summary else f"资讯：{title}"
-    raw = call_deepseek(system=system, user=user_msg, max_tokens=5000, temperature=0, thinking=True, model=DEEPSEEK_MODEL_PRO)
+    raw = call_deepseek(system=system, user=user_msg, temperature=0, thinking=True, model=DEEPSEEK_MODEL_PRO)
     result = _parse_json_from_llm(raw)
     if result is None:
         return {"pass": False, "company": "", "query": "", "report": "JSON解析失败"}
@@ -126,10 +151,11 @@ def step2_seed_detect(title: str, summary: str, prompt: str = "") -> dict:
 
 
 def step3_volc_search(query: str, summary: str) -> str:
-    """火山搜索背景补充"""
-    if not query:
+    """火山搜索背景补充。query为空时用summary兜底。"""
+    q = query or summary[:200]
+    if not q:
         return ""
-    return volc_search(query)
+    return volc_search(q)
 
 
 def _verify_a_stock(company_name: str) -> bool:
@@ -148,20 +174,27 @@ def _verify_a_stock(company_name: str) -> bool:
         return True
 
 
-def step4_gatekeeper(title: str, summary: str, knowledge: str, company: str, existing_titles: list[str] | None = None, seed_report: str = "") -> dict:
+def step4_gatekeeper(title: str, summary: str, knowledge: str, company: str, existing_titles: list[str] | None = None, seed_report: str = "", reverse_knowledge: str = "") -> dict:
     """LLM #3/#4: 守门员（pro 模型）"""
     is_stock = bool(company and company.strip())
     prompt = STOCK_GATEKEEPER_SYSTEM_PROMPT if is_stock else INDUSTRY_GATEKEEPER_SYSTEM_PROMPT
-    user_msg = f"输入的资讯：{summary}\n标题：{title}\n更多实时的背景资料：{knowledge}"
+    user_msg = f"输入的资讯：{summary}\n标题：{title}\n\n正向背景资料（支撑证据）：\n{knowledge}"
+    if reverse_knowledge:
+        user_msg += f"\n\n反向背景资料（证伪证据——能否涨5-10倍的质疑）：\n{reverse_knowledge}"
     if seed_report:
         user_msg += f"\n\n上游种子探测结论：{seed_report}"
     if existing_titles:
         recent = "\n".join(f"- {t.split(chr(10), 1)[0][:80]}" for t in existing_titles[:30])
         user_msg += f"\n\n天机卷近期已记录事件（如当前资讯与以下任一条为同一事件的不同表述，视为已充分定价，等级判定降一级）：\n{recent}"
-    raw = call_deepseek(system=prompt, user=user_msg, max_tokens=4000, temperature=0, thinking=True, model=DEEPSEEK_MODEL_PRO)
+    raw = call_deepseek(system=prompt, user=user_msg, temperature=0, thinking=True, model=DEEPSEEK_MODEL_PRO)
     result = _parse_json_from_llm(raw)
     if result is None:
-        return {"mode": "个股模式" if is_stock else "产业模式", "level": 0, "report": "JSON解析失败"}
+        # fallback：正则提取 mode 和 level
+        mode_match = re.search(r'"mode"\s*:\s*"([^"]+)"', raw)
+        level_match = re.search(r'"level"\s*:\s*(\d)', raw)
+        fb_mode = mode_match.group(1) if mode_match else ("个股模式" if is_stock else "产业模式")
+        fb_level = int(level_match.group(1)) if level_match else 0
+        return {"mode": fb_mode, "level": fb_level, "report": "JSON解析失败(截断)，已从残片中提取关键字段"}
     return result
 
 
@@ -202,7 +235,7 @@ def process_news(
         t0 = time.time()
         filter_result = step1_filter(title, summary)
         _emit("filter", {"level": filter_result.get("level"), "output": filter_result.get("output"), "elapsed": round(time.time() - t0, 1)})
-        if filter_result.get("level") == 0:
+        if int(filter_result.get("level", 1)) == 0:
             result["status"] = "filtered"
             result["level"] = "0"
             return result
@@ -230,15 +263,21 @@ def process_news(
             result["company"] = company
             return result
 
-    # ── 4. 火山搜索 ──────────────────────────
+    # ── 4. 正向火山搜索 ──────────────────────
     query = seed_result.get("query", "").strip()
     t0 = time.time()
     knowledge = step3_volc_search(query, summary)
     _emit("volc", {"query": query, "knowledge_len": len(knowledge), "elapsed": round(time.time() - t0, 1)})
 
+    # ── 4.5 反向火山搜索 ──────────────────────
+    reverse_query = seed_result.get("reverse_query", "").strip()
+    t0 = time.time()
+    reverse_knowledge = step3_volc_search(reverse_query, summary) if reverse_query else ""
+    _emit("volc_reverse", {"query": reverse_query, "knowledge_len": len(reverse_knowledge), "elapsed": round(time.time() - t0, 1)})
+
     # ── 5. 守门员 ─────────────────────────────
     t0 = time.time()
-    gate_result = step4_gatekeeper(title, summary, knowledge, company, existing_titles=tianjifeng_io._existing_titles if tianjifeng_io else None, seed_report=seed_result.get("report", ""))
+    gate_result = step4_gatekeeper(title, summary, knowledge, company, existing_titles=tianjifeng_io._existing_titles if tianjifeng_io else None, seed_report=seed_result.get("report", ""), reverse_knowledge=reverse_knowledge)
     _emit("gatekeeper", {"mode": gate_result.get("mode"), "level": gate_result.get("level"), "elapsed": round(time.time() - t0, 1)})
 
     mode = gate_result.get("mode", "个股模式" if company else "产业模式")
@@ -319,6 +358,8 @@ def run_pipeline(
                 "level": r.get("level", ""),
                 "mode": r.get("mode", ""),
                 "company": r.get("company", ""),
+                "seed_report": r.get("steps", {}).get("seed", {}).get("report", r.get("seed_report", "")),
+                "gatekeeper_report": r.get("steps", {}).get("gatekeeper", {}).get("report", r.get("report", "")),
                 "timestamp": datetime.now().isoformat(),
             })
 
@@ -455,10 +496,13 @@ def run_yanbao_pipeline(
         _write_audit_log({
             "pipeline": "tianjifeng_yanbao",
             "title": r.get("title", ""),
+            "source": "yanbao",
             "status": status,
             "level": r.get("level", ""),
             "mode": r.get("mode", ""),
             "company": r.get("company", ""),
+            "seed_report": r.get("steps", {}).get("seed", {}).get("report", r.get("seed_report", "")),
+            "gatekeeper_report": r.get("steps", {}).get("gatekeeper", {}).get("report", r.get("report", "")),
             "timestamp": datetime.now().isoformat(),
         })
 
