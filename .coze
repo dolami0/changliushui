@@ -1,9 +1,9 @@
 [project]
-sub_id = "f98169e5"
-name = "changliushui-frontend"
-entrypoint = "index.html"
+sub_id = "fd7ebe8b"
+name = "valuation-engine-frontend"
 requires = ["nodejs-24"]
 project_type = "web"
+entrypoint = "index.html"
 
 [preview]
 preview_enable = "enabled"
