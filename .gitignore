@@ -25,6 +25,7 @@ src_v1.0/
 估值重构引擎_V5/evals/
 估值重构引擎_V5/config/*
 !估值重构引擎_V5/config/endpoint_mapping.yaml
+!估值重构引擎_V5/config/README.md
 
 # 超大设计原稿（超过 GitHub Contents 1MB，运行时不需要）
 public/images/youqianhua-*.png
