@@ -8,8 +8,10 @@ __pycache__/
 *.log
 *.tgz
 .env
+.env.local
 tmp.json
 config.json
+.DS_Store
 
 # 历史备份
 src_backup_20260521/
@@ -30,6 +32,8 @@ public/
 估值重构引擎_V5/_cmp_*.md
 估值重构引擎_V5/src/test_data/
 
-# 评测快照数据(放 evals/ 而非根目录)
+# 本地临时导出 / 调试产物（勿再提交）
 tmp_rec_*.json
 tmp_*.json
+tmp_*.txt
+tmp_*.log
