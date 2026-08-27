@@ -56,7 +56,7 @@ function adaptTracking(r: CozeTrackingItem): TrackingItem {
   };
 }
 
-// ── 公开 API ─────────────────────────────────
+// ── 公开 API ──────────────────────────────────
 
 export async function fetchMemoryIndex(): Promise<MemoryIndex> {
   const [lg, cs, tr] = await Promise.all([fetchLingguang(), fetchCases(), fetchTracking()]);
