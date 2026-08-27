@@ -55,7 +55,7 @@ export const glass: React.CSSProperties = {
   padding: '24px',
 }
 
-export function glassRow(k: string, v: React.ReactNode, hl?: boolean): React.CSSProperties {
+export function glassRow(_k: string, _v: React.ReactNode, _hl?: boolean): React.CSSProperties {
   // Helper for key-value rows inside glass cards
   return {}
 }
@@ -72,7 +72,7 @@ export function DotGridBg() {
 /*  Section header                                                     */
 /* ================================================================== */
 
-export function SectionEyebrow({ children }: { children: string }) {
+export function SectionEyebrow({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
       fontFamily: F.mono,
@@ -85,7 +85,7 @@ export function SectionEyebrow({ children }: { children: string }) {
   )
 }
 
-export function SectionTitle({ children }: { children: string }) {
+export function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
     <h2 style={{
       fontFamily: F.display,
