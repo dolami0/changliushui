@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>长流水 · 移动端使用说明</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+    background: #050401; color: #CCC; line-height: 1.7;
+    max-width: 480px; margin: 0 auto; padding: 24px 20px 60px;
+  }
+  h1 { color: #ADFF00; font-size: 22px; margin-bottom: 4px; letter-spacing: 0.06em; }
+  .sub { color: #555; font-size: 13px; margin-bottom: 28px; }
+  h2 { color: #ADFF00; font-size: 16px; margin: 32px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #1A1A1A; letter-spacing: 0.04em; }
+  h3 { color: #DDD; font-size: 14px; margin: 16px 0 6px; }
+  p { font-size: 14px; color: #AAA; margin-bottom: 8px; }
+  ul { padding-left: 18px; margin-bottom: 12px; }
+  li { font-size: 14px; color: #AAA; margin-bottom: 4px; }
+  .badge { display:inline-block; font-size:11px; padding:1px 6px; border-radius:2px; margin-left:4px; }
+  .badge-green { color:#ADFF00; border:1px solid rgba(173,255,0,0.2); background:rgba(173,255,0,0.04); }
+  .badge-orange { color:#FF5C00; border:1px solid rgba(255,92,0,0.2); background:rgba(255,92,0,0.04); }
+  .tab-row { display:flex; gap:6px; margin:10px 0 16px; flex-wrap:wrap; }
+  .tab-chip { font-size:12px; padding:4px 10px; border:1px solid #2A2A2A; border-radius:4px; color:#888; white-space:nowrap; }
+  .tab-chip.active { color:#ADFF00; border-color:rgba(173,255,0,0.25); background:rgba(173,255,0,0.04); }
+  .note { background:rgba(173,255,0,0.03); border-left:2px solid rgba(173,255,0,0.2); padding:10px 14px; margin:16px 0; font-size:13px; color:#888; border-radius:0 4px 4px 0; }
+  .divider { border:none; border-top:1px solid #1A1A1A; margin:24px 0; }
+  code { font-family:'SF Mono','Fira Code',monospace; font-size:12px; color:#ADFF00; background:rgba(173,255,0,0.06); padding:1px 5px; border-radius:2px; }
+</style>
+</head>
+<body>
+
+<h1>长流水</h1>
+<p class="sub">赛博仙门十倍股猎杀系统 · 移动端使用说明</p>
+
+<p>打开网站后自动识别移动设备并跳转至移动版。底部固定五个标签页，点击切换。</p>
+
+<div class="tab-row">
+  <span class="tab-chip active">定数录</span>
+  <span class="tab-chip">跟踪令</span>
+  <span class="tab-chip">天机峰</span>
+  <span class="tab-chip">风闻入阵</span>
+  <span class="tab-chip">身外化身</span>
+</div>
+
+<hr class="divider" />
+
+<h2>1. 定数录</h2>
+<p>估值报告列表。每张卡片显示股票名称、代码、概率加权 upside、不对称比和交易等级。</p>
+<ul>
+  <li><strong>排序</strong>：顶部可按时间或 upside 排序</li>
+  <li><strong>点击卡片</strong>：进入详情，查看完整估值报告（Agent-0 至 Agent-3 四阶段分析）</li>
+  <li><strong>详情页</strong>：展示基准/乐观/悲观三情景估值、BS 检测结果、路由判决等</li>
+</ul>
+
+<h2>2. 跟踪令</h2>
+<p>主动跟踪的股票清单。每张卡片显示股票名、代码、论点摘要和跟踪状态。</p>
+<ul>
+  <li><strong>状态标签</strong>：<span class="badge badge-green">跟踪中</span> 或 <span class="badge badge-orange">已暂停</span></li>
+  <li><strong>暂停的记录</strong>：半透明显示，排在列表底部</li>
+  <li><strong>点击卡片</strong>：进入详情，可查看投资论点、四大支柱、风险清单、退出条件、催化剂日历和价格日志</li>
+  <li><strong>暂停/恢复</strong>：在详情页顶部，点击 <code>⏸</code> / <code>▶</code> 按钮切换跟踪状态</li>
+</ul>
+
+<h2>3. 天机峰</h2>
+<p>市场事件情报流。按等级 L0-L5 分类，从微澜到道变。</p>
+<ul>
+  <li><strong>等级颜色</strong>：L5 道变（红）、L4 天兆（橙）、L3 雷动（绿）、L2 风起 / L1 微澜 / L0 尘外（灰）</li>
+  <li><strong>点击卡片</strong>：查看事件详情，含摘要、影响分析和相关股票</li>
+  <li><strong>下拉刷新</strong>：在列表顶部下拉即可刷新数据</li>
+</ul>
+
+<h2>4. 风闻入阵</h2>
+<p>手动提交资讯或分析命题，送入估值引擎处理。</p>
+<ul>
+  <li>在文本框粘贴资讯内容（必填）</li>
+  <li>可选填股票代码和名称</li>
+  <li>点击「传讯入阵」提交，系统自动触发 4-Agent 估值重构管线</li>
+  <li>底部提供输入示例，可一键填入</li>
+</ul>
+
+<div class="note">
+  <strong>处理流程</strong>：Agent-0 预路由 → Agent-1 数据炼器 → Agent-2 路由判官 → Agent-3 推演裁决
+</div>
+
+<h2>5. 身外化身</h2>
+<p>AI 投资决策助手。选择一份定数录后，可查看完整报告、组装上下文 prompt，并与 AI 对话推演。</p>
+<ul>
+  <li><strong>选择定数录</strong>：从列表中选择一份估值报告</li>
+  <li><strong>展符</strong>：自动组装 Agent 报告数据为上下文 prompt</li>
+  <li><strong>复制</strong>：将 prompt 复制到剪贴板，可粘贴给其他 AI 工具</li>
+  <li><strong>对话</strong>：在底部输入框直接提问，AI 基于报告数据回答</li>
+  <li><strong>上下文配置</strong>：点击右上角数字按钮，可选择启用/禁用各 Agent 模块</li>
+  <li><strong>子视图</strong>：报告 / 灵光 / 案例 三个子标签切换查看</li>
+</ul>
+
+<hr class="divider" />
+
+<h2>通用操作</h2>
+<ul>
+  <li><strong>返回</strong>：详情页顶部有 ← 返回按钮</li>
+  <li><strong>下拉刷新</strong>：列表页顶部下拉即可刷新数据</li>
+  <li><strong>底部导航</strong>：五个标签随时切换，当前页高亮为绿色</li>
+</ul>
+
+</body>
+</html>
