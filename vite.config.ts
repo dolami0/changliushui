@@ -12,9 +12,9 @@ export default defineConfig({
     port: 5174,
     allowedHosts: ['.ngrok-free.dev'],
     proxy: {
-      '/api': { target: 'http://localhost:3002', changeOrigin: true },
-      '/admin/api': { target: 'http://localhost:3002', changeOrigin: true, rewrite: (p: string) => p.replace(/^\/admin/, '') },
-      '/review': { target: 'http://localhost:3002', changeOrigin: true },
+      '/api': { target: 'http://localhost:8080', changeOrigin: true },
+      '/admin/api': { target: 'http://localhost:8080', changeOrigin: true, rewrite: (p: string) => p.replace(/^\/admin/, '') },
+      '/review': { target: 'http://localhost:8080', changeOrigin: true },
     },
   },
 });
