@@ -1,4 +1,0 @@
-  File "<string>", line 34
-    print(f'{"ºÏ¼Æ":<20} {
-                       ^
-SyntaxError: '{' was never closed
