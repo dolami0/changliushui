@@ -315,7 +315,7 @@ export default function ValuationReportMobile() {
         {Boolean(G(ta, 'tier')) && (
           <Accordion title={`交易标注 · ${String(G(ta, 'tier') || '?')}`} accent={C.orange}>
             <div style={{ ...s.card, marginBottom: 8 }}>
-              {Object.entries({ odds_quality:'赔率质量', pricing_headroom:'定价空间', transmission_confidence:'传导确定', model_consistency:'模型自侽' }).map(([key, label]) => {
+              {Object.entries({ odds_quality:'赔率质量', pricing_headroom:'定价空间', transmission_confidence:'传导确定', model_consistency:'模型自洽' }).map(([key, label]) => {
                 const taScores = (G(ta, 'dimension_scores') || {}) as Record<string, number>;
                 return (
                   <Row key={key} label={label} value={`${taScores[key] || 0}/4`} hl={(taScores[key] || 0) >= 3} />
