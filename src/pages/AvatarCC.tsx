@@ -52,5 +52,3 @@ const MODULES: ContextModule[] = [
   { id: 'lingguang',      label: '灵光匹配',     category: 'match',  defaultOn: true },
   { id: 'cases',          label: '案例匹配',     category: 'match',  defaultOn: true },
 ];
-
-// SEE_NEXT_CHUNK - this is a test to see if full payload can be sent
