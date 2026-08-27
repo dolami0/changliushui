@@ -8,7 +8,7 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import {
   T, F, DotGridBg, SectionEyebrow, SectionTitle,
-  GlassCard, KvRow, Chip, ProgBar,
+  GlassCard, KvRow, Chip,
 } from '@/lib/report-theme'
 
 gsap.registerPlugin(ScrollTrigger)
