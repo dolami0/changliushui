@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { fetchReportFromCoze } from '@/services/cozeApi';
 import { renderMarkdown } from '../lib/utils';
 
 const C = { green: '#ADFF00', orange: '#FF5C00', gold: '#C88D3A', white: '#F2F4F3', dim: '#888', mute: '#555', line: '#2A2A2A', bg: '#050401' };
@@ -100,8 +101,8 @@ export default function ValuationReportMobile() {
 
   useEffect(() => {
     if (!code) { setError('无效股票代码'); setLoading(false); return; }
-    fetch(`/api/report/${code}/data`)
-      .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+    fetchReportFromCoze(code)
+      
       .then(setData)
       .catch((e: Error) => setError(`加载失败: ${e.message}`))
       .finally(() => setLoading(false));
@@ -111,8 +112,7 @@ export default function ValuationReportMobile() {
   if (error) return <div style={{ padding: 80, textAlign: 'center', color: C.orange, fontSize: 16 }}>{error}</div>;
   if (!data) return null;
 
-  const a0 = (data.event_meta || data.agent0 || {}) as Record<string,unknown>;
-  const baselineReport = String(data?.baseline_report || '');
+  const a0 = (data.agent0 || {}) as Record<string,unknown>;
   const a1 = (data.agent1 || {}) as Record<string,unknown>;
   const a2 = (data.agent2 || {}) as Record<string,unknown>;
   const a3 = (data.agent3 || {}) as Record<string,unknown>;
@@ -240,18 +240,12 @@ export default function ValuationReportMobile() {
           </Accordion>
         )}
 
-        {/* ── 投资地图 ── */}
-        {(baselineReport || Boolean(G(a0, 'investment_theme')) || Boolean(G(a0, 'event_deduction'))) && (
-          <Accordion title="投资地图" accent={C.green}>
-            {baselineReport ? (
-              <MD text={baselineReport.slice(0, 6000)} maxH={400} />
-            ) : (
-              <>
-                {Boolean(G(a0, 'investment_theme')) && <MD text={String(G(a0, 'investment_theme')).slice(0, 2000)} maxH={300} />}
-                {Boolean(G(a0, 'event_deduction')) && <MD text={String(G(a0, 'event_deduction')).slice(0, 2000)} maxH={300} />}
-                {Boolean(G(a0, 'preliminary_reasoning')) && <MD text={String(G(a0, 'preliminary_reasoning')).slice(0, 1500)} maxH={200} />}
-              </>
-            )}
+        {/* ── Agent0 预路由 ── */}
+        {(Boolean(G(a0, 'investment_theme')) || Boolean(G(a0, 'event_deduction'))) && (
+          <Accordion title="事件分析" accent={C.green}>
+            {Boolean(G(a0, 'investment_theme')) && <MD text={String(G(a0, 'investment_theme')).slice(0, 2000)} maxH={300} />}
+            {Boolean(G(a0, 'event_deduction')) && <MD text={String(G(a0, 'event_deduction')).slice(0, 2000)} maxH={300} />}
+            {Boolean(G(a0, 'preliminary_reasoning')) && <MD text={String(G(a0, 'preliminary_reasoning')).slice(0, 1500)} maxH={200} />}
           </Accordion>
         )}
 
@@ -321,7 +315,7 @@ export default function ValuationReportMobile() {
         {Boolean(G(ta, 'tier')) && (
           <Accordion title={`交易标注 · ${String(G(ta, 'tier') || '?')}`} accent={C.orange}>
             <div style={{ ...s.card, marginBottom: 8 }}>
-              {Object.entries({ odds_quality:'赔率质量', pricing_headroom:'定价空间', transmission_confidence:'传导确定', model_consistency:'模型自洽' }).map(([key, label]) => {
+              {Object.entries({ odds_quality:'赔率质量', pricing_headroom:'定价空间', transmission_confidence:'传导确定', model_consistency:'模型自侽' }).map(([key, label]) => {
                 const taScores = (G(ta, 'dimension_scores') || {}) as Record<string, number>;
                 return (
                   <Row key={key} label={label} value={`${taScores[key] || 0}/4`} hl={(taScores[key] || 0) >= 3} />
