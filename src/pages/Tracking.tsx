@@ -131,3 +131,46 @@ interface ValuationComparison {
   upAsymmetry: number
   verdict: string
 }
+
+/* ================================================================== */
+/*  Helpers                                                            */
+/* ================================================================== */
+
+const pillarStatusMeta: Record<string, { label: string; color: string; bg: string; border: string }> = {
+  on_track:   { label: '运转中', color: 'text-[#ADFF00]',   bg: 'bg-[#ADFF00]/10',   border: 'border-[#ADFF00]/30' },
+  pending:    { label: '待验证', color: 'text-amber-400',    bg: 'bg-amber-400/10',    border: 'border-amber-400/30' },
+  at_risk:    { label: '有风险', color: 'text-red-400',      bg: 'bg-red-400/10',      border: 'border-red-400/30' },
+  verified:   { label: '已验证', color: 'text-emerald-400',  bg: 'bg-emerald-400/10',  border: 'border-emerald-400/30' },
+}
+
+const impactColors: Record<string, string> = {
+  H: 'text-[#FF5C00] border-[#FF5C00]/40',
+  M: 'text-amber-400 border-amber-400/30',
+  L: 'text-muted-foreground border-white/10',
+}
+
+const tensionMeta: Record<string, { label: string; color: string; icon: string }> = {
+  rising:    { label: '叙事强化', color: 'text-[#ADFF00]',   icon: '▲' },
+  stable:    { label: '叙事稳定', color: 'text-amber-400',    icon: '▶' },
+  easing:    { label: '叙事弱化', color: 'text-orange-400',   icon: '▼' },
+  breaking:  { label: '叙事破裂', color: 'text-red-400',      icon: '✕' },
+}
+
+function fmtDate(d: string) {
+  if (!d) return '--'
+  const parts = d.split('-')
+  if (parts.length === 2) return `${parts[0]}年${parts[1]}月`
+  return d
+}
+
+function fmtDateTime(d: string) {
+  if (!d) return '--'
+  const m = d.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/)
+  if (m) return `${parseInt(m[2])}/${parseInt(m[3])} ${m[4]}:${m[5]}`
+  return fmtDate(d)
+}
+
+function fmtNum(n: number, decimals = 1) {
+  if (n == null) return '--'
+  return n.toFixed(decimals)
+}
