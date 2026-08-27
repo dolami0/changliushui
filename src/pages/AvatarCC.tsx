@@ -52,3 +52,33 @@ const MODULES: ContextModule[] = [
   { id: 'lingguang',      label: '灵光匹配',     category: 'match',  defaultOn: true },
   { id: 'cases',          label: '案例匹配',     category: 'match',  defaultOn: true },
 ];
+
+// ── 样式 ──
+const GLOBAL_CSS = `
+.cc-scroll::-webkit-scrollbar{display:none}.cc-scroll{scrollbar-width:none}
+.cc-card{position:relative;cursor:pointer;padding:14px 18px;background:${SURFACE};border:1px solid ${BORDER};border-left:3px solid transparent;transition:all .25s;margin-bottom:1px}
+.cc-card:hover{border-color:#352a18;background:#130f0a}
+.cc-card.sel{border-left-color:${CC};background:rgba(217,119,6,.06);border-color:rgba(217,119,6,.18)}
+.cc-msg-user{border:1px solid ${BORDER};background:${SURFACE};border-left:3px solid transparent;padding:18px 22px}
+.cc-msg-cc{border:1px solid rgba(217,119,6,.12);background:rgba(217,119,6,.03);border-left:3px solid ${CC};padding:18px 22px}
+.cc-btn{padding:10px 26px;font-family:'${MONO}';font-size:13px;letter-spacing:.1em;border:1px solid rgba(217,119,6,.25);background:transparent;color:${CC};cursor:pointer;transition:all .2s}
+.cc-btn:hover{background:rgba(217,119,6,.08)}
+.cc-btn.primary{background:${CC};color:#0a0806;border:none}
+.cc-btn.primary:hover{box-shadow:0 0 18px rgba(217,119,6,.3)}
+.cc-input{border:1px solid ${BORDER};background:${SURFACE};color:${TEXT};font-family:'${FONT}';font-size:15px;padding:12px 16px;outline:none;width:100%;box-sizing:border-box;transition:border-color .2s;line-height:1.6}
+.cc-input:focus{border-color:rgba(217,119,6,.35)}
+.cc-toggle{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;border:1px solid ${BORDER};border-radius:6px;background:${SURFACE};transition:all .2s;font-family:'${MONO}';font-size:12px;color:${MUTED};flex-shrink:0}
+.cc-toggle.on{border-color:${CC}40;background:rgba(217,119,6,.06);color:${CC}}
+.cc-toggle .dot{width:8px;height:8px;border-radius:50%;background:${BORDER};transition:all .2s}
+.cc-toggle.on .dot{background:${CC};box-shadow:0 0 6px ${CC}60}
+.cc-md{font-family:'${FONT}';font-size:14px;line-height:1.9;color:${TEXT}}
+.cc-md h1,.cc-md h2{color:${CC};font-size:16px;margin:12px 0 6px}
+.cc-md h3{color:#c4b5a0;font-size:14px;margin:10px 0 4px}
+.cc-md strong{color:#d97706;font-weight:600}
+.cc-md code{background:rgba(217,119,6,.1);color:${CC};padding:1px 6px;font-size:12px}
+.cc-md li{margin:4px 0;color:#a89a84;padding-left:8px}
+.cc-md table{width:100%;border-collapse:collapse;margin:8px 0;font-size:12px}
+.cc-md th{border-bottom:1px solid ${BORDER};padding:6px 10px;text-align:left;color:${CC};font-family:'${MONO}';font-size:11px}
+.cc-md td{border-bottom:1px solid rgba(255,255,255,.04);padding:6px 10px}
+.cc-md hr{border:none;border-top:1px solid ${BORDER};margin:12px 0}
+`;
