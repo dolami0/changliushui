@@ -1,238 +1,337 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { fetchTracking, isDemo, subscribeDemo } from './api';
-import { usePolling } from './hooks';
-import { ToastHost } from './toast';
-import type { ViewKey } from './types';
-import type { TrackingItem } from './services/cozeApi';
-import { BrandDot, BreathingDot } from './components/BreathingDot';
-import CommandPalette from './components/CommandPalette';
-import NotificationPanel from './components/NotificationPanel';
-import ArchiveView from './views/ArchiveView';
-import AvatarView from './views/AvatarView';
-import ConfigView from './views/ConfigView';
-import FengwenView from './views/FengwenView';
-import TrackingView from './views/TrackingView';
+import { useEffect, useRef, useState, Component } from 'react';
+import { Routes, Route, useLocation, useNavigate, Navigate, Link } from 'react-router-dom';
+import { siteConfig, navigationConfig } from './config';
 
-const NAV: { key: ViewKey; label: string }[] = [
-  { key: 'tracking', label: '追踪令' },
-  { key: 'archive', label: '藏经云' },
-  { key: 'fengwen', label: '风闻入阵' },
-  { key: 'avatar', label: '身外化身' },
-  { key: 'config', label: '配置' },
-];
-
-function useClock(): string {
-  const [now, setNow] = useState('--:--:--');
-  useEffect(() => {
-    const tick = () => {
-      const d = new Date();
-      const p = (n: number) => String(n).padStart(2, '0');
-      setNow(`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())} CST`);
-    };
-    tick();
-    const id = window.setInterval(tick, 1000);
-    return () => window.clearInterval(id);
-  }, []);
-  return now;
+/* ------------------------------------------------------------------ */
+/*  ErrorBoundary — 捕获渲染错误，防止白屏无反馈                          */
+/* ------------------------------------------------------------------ */
+class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state: { error: Error | null } = { error: null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 24, color: '#FF4444', background: '#111', minHeight: '100vh', fontFamily: 'monospace' }}>
+          <h2>渲染错误</h2>
+          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 13 }}>{this.state.error.message}</pre>
+          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 11, opacity: 0.7 }}>{this.state.error.stack}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
 }
+import Hero from './sections/Hero';
+import Facilities from './sections/Facilities';
+import CangjingYun from './sections/Archives';
+import Footer from './sections/Footer';
+import FacilityDetail from './pages/FacilityDetail';
+import Dashboard from './pages/Dashboard';
+import ValuationReport from './pages/ValuationReport';
+import AgentConfig from './pages/AgentConfig';
+import AgentAvatar from './pages/AgentAvatar';
+import AvatarCC from './pages/AvatarCC';
+import TianjiPeak from './pages/TianjiPeak';
+import Tracking from './pages/Tracking';
+import RedesignDemo from './pages/RedesignDemo';
+import { MobileShell } from './mobile/MobileShell';
+import { DingshuluList } from './mobile/tabs/DingshuluTab/DingshuluList';
+import { DingshuluDetail } from './mobile/tabs/DingshuluTab/DingshuluDetail';
+import { TrackingList } from './mobile/tabs/TrackingTab/TrackingList';
+import { TrackingDetail } from './mobile/tabs/TrackingTab/TrackingDetail';
+import { TianjiList } from './mobile/tabs/TianjiTab/TianjiList';
+import { TianjiDetail } from './mobile/tabs/TianjiTab/TianjiDetail';
+import { SubmitForm } from './mobile/tabs/SubmitTab/SubmitForm';
+import { AvatarChat } from './mobile/tabs/AvatarTab/AvatarChat';
+import gsap from 'gsap';
 
-export default function App() {
-  const [view, setView] = useState<ViewKey>('tracking');
-  const [paletteOpen, setPaletteOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
-  const [syncOpen, setSyncOpen] = useState(false);
-  const [selectedCode, setSelectedCode] = useState('688820');
-  const clock = useClock();
-  const demo = useSyncExternalStore(subscribeDemo, isDemo);
-
-  const trackingPoll = usePolling(() => fetchTracking().then((arr) => arr || []), 30000);
-  const stocks: Pick<TrackingItem, 'stockCode' | 'stockName' | 'conviction'>[] = trackingPoll.data ?? [];
-
-  const gotoView = useCallback((v: ViewKey) => {
-    setView(v);
-    setNotifOpen(false);
-  }, []);
-
-  const selectStock = useCallback((code: string) => setSelectedCode(code), []);
-
-  const paletteHandlers = useMemo(
-    () => ({
-      gotoView,
-      selectStock,
-      openSync: () => {
-        gotoView('tracking');
-        setSyncOpen(true);
-      },
-      openNotifications: () => setNotifOpen(true),
-    }),
-    [gotoView, selectStock],
-  );
+/* ------------------------------------------------------------------ */
+/*  PageTransition — 页面切换过渡动画                                  */
+/* ------------------------------------------------------------------ */
+function PageTransition({ children }: { children: React.ReactNode }) {
+  const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setPaletteOpen(true);
-      } else if (e.key === '/' && !(e.target as HTMLElement).closest('input,textarea')) {
-        e.preventDefault();
-        setPaletteOpen(true);
-      } else if (e.key === 'Escape') {
-        setPaletteOpen(false);
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, []);
-
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      const t = (e.target as HTMLElement).closest('.spot') as HTMLElement | null;
-      document.querySelectorAll<HTMLElement>('.spot').forEach((c) => {
-        if (c !== t) c.style.removeProperty('--mx');
-      });
-      if (t) {
-        const r = t.getBoundingClientRect();
-        t.style.setProperty('--mx', `${e.clientX - r.left}px`);
-        t.style.setProperty('--my', `${e.clientY - r.top}px`);
-      }
-    };
-    document.addEventListener('mousemove', onMove);
-    return () => document.removeEventListener('mousemove', onMove);
-  }, []);
-
-  useEffect(() => {
-    const onClick = (e: MouseEvent) => {
-      const el = e.target as HTMLElement;
-      if (!el.closest('.notif-panel') && !el.closest('#bell-btn')) setNotifOpen(false);
-    };
-    document.addEventListener('click', onClick);
-    return () => document.removeEventListener('click', onClick);
-  }, []);
-
-  useEffect(() => {
-    const content = document.getElementById('content');
-    if (content) content.scrollTop = 0;
-    const raf = requestAnimationFrame(() => {
-      document.querySelectorAll<HTMLElement>('.view.active .card').forEach((c, i) => {
-        c.style.animation = 'none';
-        void c.offsetHeight;
-        c.style.animation = `cardIn .5s cubic-bezier(.16,1,.3,1) ${Math.min(i * 0.045, 0.4)}s both`;
-      });
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [view]);
-
-  useEffect(() => {
-    const mobileTabs: ViewKey[] = ['tracking', 'archive'];
-    let startX = 0, startY = 0, tracking = false;
-    const isMobile = () => window.innerWidth < 768;
-    const onTouchStart = (e: TouchEvent) => {
-      if (!isMobile()) return;
-      if (document.querySelector('.drawer.open, .modal-mask.open, .palette-mask.open')) return;
-      const t = e.touches[0];
-      startX = t.clientX;
-      startY = t.clientY;
-      tracking = true;
-    };
-    const onTouchEnd = (e: TouchEvent) => {
-      if (!tracking || !isMobile()) return;
-      tracking = false;
-      const t = e.changedTouches[0];
-      const dx = t.clientX - startX;
-      const dy = t.clientY - startY;
-      if (Math.abs(dx) < 60) return;
-      if (Math.abs(dx) < Math.abs(dy) * 1.5) return;
-      const idx = mobileTabs.indexOf(view);
-      if (idx === -1) return;
-      if (dx < 0 && idx < mobileTabs.length - 1) gotoView(mobileTabs[idx + 1]);
-      else if (dx > 0 && idx > 0) gotoView(mobileTabs[idx - 1]);
-    };
-    const content = document.getElementById('content');
-    if (!content) return;
-    content.addEventListener('touchstart', onTouchStart, { passive: true });
-    content.addEventListener('touchend', onTouchEnd, { passive: true });
-    return () => {
-      content.removeEventListener('touchstart', onTouchStart);
-      content.removeEventListener('touchend', onTouchEnd);
-    };
-  }, [view, gotoView]);
-
-  const badgeCount = (key: ViewKey): number | null => {
-    if (key === 'tracking') return stocks.length || null;
-    return null;
-  };
+    if (!containerRef.current) return;
+    gsap.fromTo(containerRef.current,
+      { opacity: 0, y: 12 },
+      { opacity: 1, y: 0, duration: 0.35, ease: 'power2.out' }
+    );
+  }, [children]);
 
   return (
-    <>
-      <div className="aurora aur-1" />
-      <div className="aurora aur-2" />
-      <div className="app">
-        <div className="main">
-          <div className="topbar">
-            <div className="tb-brand">
-              <BrandDot />
-              <span className="brand-word">长流水</span>
-              <span style={{ color: 'rgba(255,255,255,.1)', fontSize: 18, fontWeight: 200, margin: '0 2px' }}>|</span>
-              <span className="tb-slogan">青山长流水，天天有钱花</span>
-            </div>
-            <nav className="tb-nav">
-              {NAV.map((n) => {
-                const cnt = badgeCount(n.key);
-                return (
-                  <button key={n.key} className={`tb-link${view === n.key ? ' active' : ''}`} onClick={() => gotoView(n.key)}>
-                    {n.label}
-                    {cnt !== null && <span className="nav-badge">{cnt}</span>}
-                  </button>
-                );
-              })}
-            </nav>
-            <div className="topbar-right">
-              <span className={`demo-ribbon${demo ? '' : ' live'}`} style={{ marginLeft: 0 }}>
-                {demo ? '\u25C8 演示数据' : '\u25CF 已连接 /api'}
-              </span>
-              <span className="pill mono" style={{ letterSpacing: 1 }}>
-                {clock}
-              </span>
-              <button className="pill" style={{ cursor: 'pointer', fontFamily: "'IBM Plex Mono',monospace" }} onClick={() => setPaletteOpen(true)}>
-                \u2318K
-              </button>
-              <button
-                className="icon-btn"
-                id="bell-btn"
-                title="通知"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setNotifOpen((v) => !v);
-                }}
-              >
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                  <path d="M18 8a6 6 0 1 0-12 0c0 7-3 8-3 8h18s-3-1-3-8M10.3 21a2 2 0 0 0 3.4 0" />
-                </svg>
-                <span className="nub" />
-              </button>
-              <div className="avatar">掌</div>
-            </div>
-          </div>
-          <div className="content" id="content">
-            <TrackingView
-              active={view === 'tracking'}
-              selectedCode={selectedCode}
-              onSelect={selectStock}
-              syncOpen={syncOpen}
-              setSyncOpen={setSyncOpen}
-              onDataChange={trackingPoll.reload}
-            />
-            <ArchiveView active={view === 'archive'} gotoView={gotoView} />
-            <FengwenView active={view === 'fengwen'} />
-            <AvatarView active={view === 'avatar'} gotoView={gotoView} />
-            <ConfigView active={view === 'config'} />
-          </div>
-        </div>
-      </div>
+    <div ref={containerRef}>
+      {children}
+    </div>
+  );
+}
 
-      <NotificationPanel open={notifOpen} items={[]} onGotoView={gotoView} />
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} stocks={stocks} handlers={paletteHandlers} />
-      <ToastHost />
+/* ------------------------------------------------------------------ */
+/*  NavigationGlow — 跨页面辉光过渡                                    */
+/* ------------------------------------------------------------------ */
+function NavigationGlow() {
+  const location = useLocation();
+  const glowRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!glowRef.current) return;
+    const tl = gsap.timeline();
+    tl.fromTo(glowRef.current,
+      { opacity: 0, scale: 0.3 },
+      { opacity: 0.6, scale: 1, duration: 0.2, ease: 'power2.out' }
+    );
+    tl.to(glowRef.current,
+      { opacity: 0, scale: 1.5, duration: 0.4, ease: 'power2.in', delay: 0.05 }
+    );
+  }, [location.pathname]);
+
+  return (
+    <div ref={glowRef} style={{
+      position: 'fixed',
+      top: '50%', left: '50%',
+      width: '600px', height: '600px',
+      borderRadius: '50%',
+      background: 'radial-gradient(circle, rgba(173,255,0,0.08) 0%, transparent 60%)',
+      pointerEvents: 'none',
+      zIndex: 9998,
+      transform: 'translate(-50%, -50%)',
+    }} />
+  );
+}
+
+function Home() {
+  return (
+    <>
+      <main>
+        <Hero />
+        <Facilities />
+      </main>
+      <Footer />
     </>
   );
 }
+
+/* ------------------------------------------------------------------ */
+/*  TopNav — 全局灵枢导航（所有页面可见）+ 千里江山长卷                    */
+/* ------------------------------------------------------------------ */
+function TopNav() {
+  const location = useLocation();
+  const currentPath = location.pathname;
+  const isHome = currentPath === '/'
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40)
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
+
+  function linkHref(item: { label: string; href: string }) {
+    if (item.href.startsWith('#')) return `/${item.href}`
+    return item.href
+  }
+
+  // 紧凑模式样式变量
+  const py = scrolled ? '8px' : '18px'
+  const brandSize = scrolled ? '18px' : '22px'
+  const linkSize = scrolled ? '14px' : '16px'
+  const dotSize = scrolled ? '6px' : '8px'
+  const sloganOpacity = scrolled ? 0 : 1
+
+  // 宗门锚点：首页直接用原生锚点跳转，其他页面用 React Router
+  function renderNavLink(item: { label: string; href: string }) {
+    const href = linkHref(item)
+    const isActive = currentPath === href || (href === '/#facilities' && currentPath === '/')
+    const isAnchor = item.href.startsWith('#')
+
+    const linkStyle: React.CSSProperties = {
+      fontFamily: "'Space Mono', 'Noto Sans SC', monospace",
+      fontSize: linkSize,
+      color: isActive ? '#ADFF00' : '#AAA',
+      textDecoration: 'none',
+      letterSpacing: '0.06em',
+      transition: 'color 0.25s, font-size 0.35s ease',
+      borderBottom: isActive ? '1px solid #ADFF00' : '1px solid transparent',
+      paddingBottom: '4px',
+      textShadow: isActive ? '0 0 8px rgba(173,255,0,0.35)' : 'none',
+    }
+
+    if (isAnchor && isHome) {
+      return (
+        <a key={item.label} href={item.href} style={linkStyle}
+          onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.color = '#ADFF00' }}
+          onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = '#AAA' }}
+        >
+          {item.label}
+        </a>
+      )
+    }
+    return (
+      <Link key={item.label} to={href} style={linkStyle}
+        onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.color = '#ADFF00' }}
+        onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.color = '#AAA' }}
+      >
+        {item.label}
+      </Link>
+    )
+  }
+
+  return (
+    <nav style={{
+      position: 'sticky', top: 0, zIndex: 60,
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: `${py} 40px`,
+      background: 'transparent',
+      transition: 'padding 0.35s ease',
+    }}>
+      {/* 毛玻璃背景层 */}
+      <div style={{
+        position: 'absolute', inset: 0, zIndex: 0,
+        backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+        background: 'rgba(5,4,1,0.15)',
+      }} />
+      {/* 底部羽化 */}
+      <div style={{
+        position: 'absolute', bottom: '-8px', left: 0, right: 0, height: '12px', zIndex: 0,
+        background: 'linear-gradient(180deg, rgba(5,4,1,0.3) 0%, transparent 100%)',
+        pointerEvents: 'none',
+      }} />
+      {/* 左：品牌 + 灵石 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', position: 'relative', zIndex: 2 }}>
+        <div style={{ position: 'relative', width: dotSize, height: dotSize, transition: 'width 0.35s ease, height 0.35s ease' }}>
+          <span style={{
+            position: 'absolute', inset: 0, borderRadius: '50%',
+            background: '#ADFF00',
+            boxShadow: '0 0 8px rgba(173,255,0,0.6), 0 0 20px rgba(173,255,0,0.2)',
+            animation: 'pulse 2.5s ease-in-out infinite',
+          }} />
+          <span style={{
+            position: 'absolute', inset: '-4px', borderRadius: '50%',
+            border: '1px solid rgba(173,255,0,0.12)',
+            animation: 'pulse 3s ease-in-out infinite 0.5s',
+          }} />
+        </div>
+        <Link
+          to="/"
+          style={{
+            fontFamily: "'Space Mono', 'Noto Sans SC', monospace",
+            fontSize: brandSize, fontWeight: 700,
+            color: '#ADFF00', letterSpacing: '0.06em', textDecoration: 'none',
+            textShadow: '0 0 8px rgba(173,255,0,0.2)',
+            transition: 'font-size 0.35s ease',
+          }}
+        >
+          {navigationConfig.brandName}
+        </Link>
+        <span style={{
+          color: 'rgba(255,255,255,0.10)', fontSize: '18px',
+          fontWeight: 200, margin: '0 2px',
+        }}>|</span>
+        <span style={{
+          fontFamily: "'Noto Sans SC', sans-serif",
+          fontSize: '12px', color: 'rgba(255,255,255,0.25)',
+          letterSpacing: '0.08em', whiteSpace: 'nowrap',
+          opacity: sloganOpacity, transition: 'opacity 0.35s ease',
+        }}>
+          {navigationConfig.brandSub}
+        </span>
+      </div>
+
+      {/* 右：导航链接 */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '28px', position: 'relative', zIndex: 2 }}>
+        {navigationConfig.links.filter(item => item.label !== '宗门').map(renderNavLink)}
+        <Link
+          to="/"
+          style={{
+            fontFamily: "'Space Mono', 'Noto Sans SC', monospace",
+            fontSize: linkSize, color: '#AAA', textDecoration: 'none',
+            letterSpacing: '0.06em', transition: 'color 0.25s, font-size 0.35s ease',
+            paddingBottom: '4px',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#ADFF00' }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = '#AAA' }}
+        >
+          返回首页
+        </Link>
+      </div>
+    </nav>
+  )
+}
+
+function isMobileDevice(): boolean {
+  if (typeof window === 'undefined') return false
+  const ua = navigator.userAgent || ''
+  return /Android|iPhone|iPad|iPod|webOS/i.test(ua) || (window.innerWidth < 768 && 'ontouchstart' in window)
+}
+
+function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isMobileRoute = location.pathname === '/m' || location.pathname.startsWith('/m/');
+
+  // 移动端自动重定向到 /m
+  useEffect(() => {
+    if (isMobileRoute) return; // 已经在移动端路由，不重复跳转
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      || (window.innerWidth <= 768);
+    if (isMobile) {
+      navigate('/m', { replace: true });
+    }
+  }, []); // 仅首次加载检测
+
+  useEffect(() => {
+    if (!isMobileRoute && isMobileDevice()) {
+      window.location.replace('/m/')
+    }
+  }, [isMobileRoute])
+
+  useEffect(() => {
+    document.title = siteConfig.siteTitle || '长流水';
+    document.documentElement.lang = siteConfig.language || 'zh-CN';
+
+    let metaDescription = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+    if (!metaDescription) {
+      metaDescription = document.createElement('meta');
+      metaDescription.name = 'description';
+      document.head.appendChild(metaDescription);
+    }
+    metaDescription.content = siteConfig.siteDescription || '';
+  }, []);
+
+  return (
+    <ErrorBoundary>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      {!isMobileRoute && <NavigationGlow />}
+      {!isMobileRoute && <TopNav />}
+      <div style={{ flex: 1, minHeight: 0 }}>
+        <Routes>
+          <Route path="/" element={<PageTransition key="home"><Home /></PageTransition>} />
+          <Route path="/facility/:slug" element={<PageTransition key="facility"><FacilityDetail /></PageTransition>} />
+          <Route path="/report/:code" element={<PageTransition key="report"><ValuationReport /></PageTransition>} />
+          <Route path="/report/v4/:code" element={<PageTransition key="v4report"><ValuationReport /></PageTransition>} />
+          <Route path="/cangjingyun" element={<PageTransition key="cangjingyun"><CangjingYun /></PageTransition>} />
+          <Route path="/dashboard" element={<PageTransition key="dashboard"><Dashboard /></PageTransition>} />
+          <Route path="/agent-config" element={<PageTransition key="agentconfig"><AgentConfig /></PageTransition>} />
+          <Route path="/avatar" element={<PageTransition key="avatar"><AgentAvatar /></PageTransition>} />
+          <Route path="/avatar-cc" element={<PageTransition key="avatarcc"><AvatarCC /></PageTransition>} />
+          <Route path="/tianjifeng" element={<PageTransition key="tianjifeng"><TianjiPeak /></PageTransition>} />
+          <Route path="/tracking" element={<PageTransition key="tracking"><Tracking /></PageTransition>} />
+          <Route path="/redesign" element={<RedesignDemo />} />
+          {/* 移动端路由 — 平铺到顶层，避免嵌套 Routes 刷新白屏 */}
+          <Route path="/m" element={<Navigate to="/m/dingshulu" replace />} />
+          <Route path="/m/dingshulu" element={<MobileShell><DingshuluList /></MobileShell>} />
+          <Route path="/m/dingshulu/:id" element={<MobileShell><DingshuluDetail /></MobileShell>} />
+          <Route path="/m/tracking" element={<MobileShell><TrackingList /></MobileShell>} />
+          <Route path="/m/tracking/:code" element={<MobileShell><TrackingDetail /></MobileShell>} />
+          <Route path="/m/tianyan" element={<MobileShell><TianjiList /></MobileShell>} />
+          <Route path="/m/tianyan/:id" element={<MobileShell><TianjiDetail /></MobileShell>} />
+          <Route path="/m/submit" element={<MobileShell><SubmitForm /></MobileShell>} />
+          <Route path="/m/avatar" element={<MobileShell><AvatarChat /></MobileShell>} />
+        </Routes>
+      </div>
+    </div>
+    </ErrorBoundary>
+  );
+}
+
+export default App;
