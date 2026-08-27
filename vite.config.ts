@@ -1,12 +1,20 @@
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
+import path from "path"
+import react from "@vitejs/plugin-react"
+import { defineConfig } from "vite"
 
-// API 代理：前端 /api/* → 后端 Express（文档 §21，uvicorn:8080 的 TS 重建对应物）
 export default defineConfig({
+  base: '/',
   plugins: [react()],
+  resolve: {
+    alias: { "@": path.resolve(__dirname, "./src") },
+  },
   server: {
+    port: 5174,
+    allowedHosts: ['.ngrok-free.dev'],
     proxy: {
-      '/api': 'http://localhost:8080',
+      '/api': { target: 'http://localhost:3002', changeOrigin: true },
+      '/admin/api': { target: 'http://localhost:3002', changeOrigin: true, rewrite: (p: string) => p.replace(/^\/admin/, '') },
+      '/review': { target: 'http://localhost:3002', changeOrigin: true },
     },
   },
 });
