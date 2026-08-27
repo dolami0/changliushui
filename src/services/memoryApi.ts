@@ -2,6 +2,7 @@
 import { fetchLingguang, saveLingguang as cozeSaveLingguang, deleteLingguang as cozeDeleteLingguang, fetchCases, saveCase as cozeSaveCase, fetchTracking, type LingguangItem as CozeLingguang, type CaseItem as CozeCase, type TrackingItem as CozeTrackingItem } from './cozeApi';
 export { updateTrackStatus } from './cozeApi';
 
+// 复用的类型 (保持向后兼容)
 export interface LingGuangItem {
   id: string; title: string; content: string; tags: string[]; source: string;
   confidence: number; revisionHistory: Array<{ version: number; date: string; change: string }>;
@@ -38,6 +39,7 @@ export interface MemoryIndex {
   trackingIndex: Record<string, { stockName: string; status: string; lastUpdated: string }>;
 }
 
+// Coze → legacy format adapters
 function adaptLingguang(c: CozeLingguang): LingGuangItem {
   return { ...c, revisionHistory: c.revisionHistory as LingGuangItem['revisionHistory'] };
 }
@@ -53,6 +55,8 @@ function adaptTracking(r: CozeTrackingItem): TrackingItem {
     createdAt: r.createdAt || '', updatedAt: r.updatedAt || '',
   };
 }
+
+// ── 公开 API ─────────────────────────────────
 
 export async function fetchMemoryIndex(): Promise<MemoryIndex> {
   const [lg, cs, tr] = await Promise.all([fetchLingguang(), fetchCases(), fetchTracking()]);
@@ -116,7 +120,9 @@ export async function fetchTrackingDetail(ticker: string): Promise<TrackingItem>
 }
 
 export async function saveTracking(ticker: string, data: Partial<TrackingItem>): Promise<{ ok: boolean }> {
+  // 通过 admin-server 写入 (需要后端, 暂时用 Coze 替代)
   const body: Record<string, unknown> = { stockCode: ticker, ...data, updatedAt: new Date().toISOString() };
+  // 写入 Coze 追踪令表
   const COZE_BASE = "https://api.coze.cn/v1/databases";
   const DB_TRACKING = "7645332166129287218";
   const TOKEN = (typeof window !== 'undefined' ? (window as unknown as Record<string, unknown>).__COZE_TOKEN : undefined) as string;
