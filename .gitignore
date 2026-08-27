@@ -25,8 +25,9 @@ src_v1.0/
 估值重构引擎_V5/evals/
 估值重构引擎_V5/config/
 
-# 案例导入数据（非构建产物）
-public/
+# 超大设计原稿（超过 GitHub Contents 1MB，运行时不需要）
+public/images/youqianhua-*.png
+public/images/设计有钱花*.psd
 
 # 对比测试临时输出
 估值重构引擎_V5/_cmp_*.md
