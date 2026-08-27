@@ -1,1 +1,1 @@
-PLACEHOLDER
+file:///tmp/coze-good.ts
