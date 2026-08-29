@@ -6,27 +6,9 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { fetchWangqi, type WangqiResult } from '../services/cozeApi';
 
 // ── 类型 ──────────────────────────────
-
-interface ChainAnalysis {
-  source_record_id: string;
-  news_content: string;
-  industry_chain: string;
-  event_summary: string;
-  top_nodes_json: string;
-  top_pick_code: string;
-  top_pick_name: string;
-  top_pick_score: string;
-  top_pick_thesis: string;
-  runner_up_code: string;
-  runner_up_name: string;
-  runner_up_score: string;
-  runner_up_thesis: string;
-  top5_json: string;
-  analysis_date: string;
-  status: string;
-}
 
 interface TopNode {
   node_name: string;
@@ -54,7 +36,7 @@ interface ScoredStock {
 // ── 组件 ──────────────────────────────
 
 export default function IndustryChain() {
-  const [records, setRecords] = useState<ChainAnalysis[]>([]);
+  const [records, setRecords] = useState<WangqiResult[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -71,9 +53,7 @@ export default function IndustryChain() {
     setRefreshing(true);
     setToast('');
     try {
-      const resp = await fetch('/api/industry-chain/results');
-      const data = await resp.json();
-      const newRecords = data.results || [];
+      const newRecords = await fetchWangqi(100);
       setRecords(newRecords);
       if (!loading && newRecords.length === prevCount) {
         setToast('无新增记录');

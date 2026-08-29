@@ -100,7 +100,6 @@ export const navigationConfig: NavigationConfig = {
     { label: '天机峰', href: '/tianjifeng' },
     { label: '身外化身', href: '/avatar' },
     { label: '追踪令', href: '/tracking' },
-    { label: '仪表盘', href: '/dashboard' },
   ],
 }
 

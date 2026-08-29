@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>报告风格预览 — 杂志排版 · 霓虹绿</title>
+<style>
+  @import url('https://fonts.loli.net/css2?family=Noto+Sans+SC:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&family=IBM+Plex+Mono:wght@300;400;600;700&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600;8..60,700&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #111; color: #eee; font-family: 'Noto Sans SC', system-ui, sans-serif; }
+
+  /* ======== TAB BAR ======== */
+  .tabs { display: flex; position: sticky; top: 0; z-index: 100; background: #0a0a0a; border-bottom: 1px solid #1a1a1a; }
+  .tab { flex: 1; text-align: center; padding: 16px 8px; cursor: pointer; font-size: 13px; font-weight: 600; color: #555; border-bottom: 2px solid transparent; transition: .2s; letter-spacing: .04em; }
+  .tab:hover { color: #999; }
+  .tab.active { color: #ADFF00; border-bottom-color: #ADFF00; }
+
+  /* BG picker */
+  .bg-picker { display:flex;align-items:center;padding:10px 40px;background:#0a0a0a;border-bottom:1px solid #1a1a1a;position:sticky;top:47px;z-index:99;gap:6px }
+  .bg-picker .lbl { font-size:10px;color:#555;letter-spacing:.1em;margin-right:8px }
+  .bg-btn { width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:.15s }
+  .bg-btn:hover { border-color:#555 }
+  .bg-btn.active { border-color:#ADFF00 }
+
+  .scene { display: none; padding: 32px 40px; max-width: 960px; margin: 0 auto; min-height: 100vh; }
+  .scene.active { display: block; }
+
+  /* ======== C: 杂志排版 · 霓虹绿 ======== */
+  .c-bg { background: #0a0b10; }
+
+  /* ---- Glass card ---- */
+  .glass {
+    background: rgba(255,255,255,.02);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,.06);
+    border-radius: 10px; padding: 24px; margin: 12px 0;
+  }
+  .glass-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid rgba(255,255,255,.04); font-size: 13px; color: #BBB; }
+  .glass-row:last-child { border-bottom: none; }
+  .glass-row .k { color: #999; font-family: 'IBM Plex Mono',monospace; font-size:11px; letter-spacing:.06em; min-width:80px }
+  .glass-row .v { color: #DDD; font-family: 'IBM Plex Mono',monospace; font-size:13px; text-align:right }
+
+  /* ---- Hero ---- */
+  .c-hero { padding: 80px 0 60px; position: relative; border-bottom: 1px solid rgba(255,255,255,.05); margin-bottom: 20px; }
+  .c-hero .eyebrow { font-family: 'IBM Plex Mono',monospace; font-size: 10px; color: #ADFF00; opacity: .6; letter-spacing: .2em; text-transform: uppercase; margin-bottom: 20px; }
+  .c-hero h1 { font-family: 'Source Serif 4','Noto Sans SC',serif; font-size: 56px; color: #F2F4F3; font-weight: 700; line-height: 1.1; letter-spacing: -.02em; margin-bottom: 24px; max-width: 700px; }
+  .c-hero .lead { font-size: 18px; color: #BBB; line-height: 1.9; max-width: 600px; font-weight: 300; }
+  .c-hero .meta-row { display: flex; gap: 24px; margin-top: 20px; font-family: 'IBM Plex Mono',monospace; font-size: 12px; color: #888; align-items: center; }
+
+  /* ---- Big numbers ---- */
+  .c-bignums { display: flex; gap: 8px; margin: 40px 0 50px; }
+  .c-bignum { flex: 1; padding: 28px 24px; background: rgba(255,255,255,.02); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,.04); border-radius: 10px; }
+  .c-bignum .val { font-family: 'Source Serif 4',serif; font-size: 46px; font-weight: 700; color: #F2F4F3; line-height: 1; }
+  .c-bignum .val.up   { color: #ADFF00; }
+  .c-bignum .val.down { color: #FF5C00; }
+  .c-bignum .lbl { font-size: 11px; color: #999; margin-top: 8px; letter-spacing: .1em; font-family: 'IBM Plex Mono',monospace; }
+
+  /* ---- Aside ---- */
+  .c-aside { float: right; width: 260px; margin: 0 0 24px 36px; }
+  .c-aside .glass { padding: 18px 20px; }
+
+  /* ---- Text block ---- */
+  .c-text { font-family: 'Source Serif 4','Noto Sans SC',serif; font-size: 16px; color: #BBB; line-height: 2.1; font-weight: 350; max-width: 640px; }
+  .c-text strong { color: #DDD; font-weight: 600; }
+  .c-text em { color: #ADFF00; font-style: normal; }
+
+  /* ---- Sections ---- */
+  .c-section { margin: 48px 0; clear: both; }
+  .c-section h2 { font-family: 'Source Serif 4',serif; font-size: 26px; color: #E8E8ED; font-weight: 600; margin-bottom: 18px; letter-spacing: -.01em; }
+  .c-section h3 { font-family: 'IBM Plex Mono',monospace; font-size: 10px; color: #ADFF00; opacity: .85; letter-spacing: .16em; margin-bottom: 14px; }
+
+  /* ---- Probability bar ---- */
+  .prob-bar { height: 4px; border-radius: 2px; overflow: hidden; margin: 0 0 28px; display: flex; }
+  .prob-bar .pb { height: 100%; }
+
+  /* ---- Divider ---- */
+  .c-divider { border: none; border-top: 1px solid rgba(255,255,255,.04); margin: 36px 0; }
+
+  /* ---- Progress bar ---- */
+  .prog { margin-bottom: 10px; }
+  .prog .row { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; margin-bottom: 5px; color: #CCC; }
+  .prog .row .score { font-family: 'IBM Plex Mono',monospace; font-weight:600; font-size: 14px; }
+  .prog .track { height: 3px; background: rgba(255,255,255,.04); border-radius: 2px; overflow: hidden; }
+  .prog .track .fill { height: 100%; border-radius: 2px; }
+
+  /* ---- Chips ---- */
+  .chip { display: inline-block; font-size: 10px; padding: 2px 8px; border-radius: 100px; font-family: 'IBM Plex Mono',monospace; letter-spacing:.04em }
+  .chip.g { border: 1px solid rgba(173,255,0,.2); color: #ADFF00; background: rgba(173,255,0,.04); }
+  .chip.o { border: 1px solid rgba(255,92,0,.2); color: #FF5C00; background: rgba(255,92,0,.04); }
+
+  /* ---- Footer ---- */
+  .c-footer { text-align: center; padding-top: 40px; margin-top: 40px; border-top: 1px solid rgba(255,255,255,.06); font-family: 'IBM Plex Mono',monospace; font-size: 10px; color: #666; letter-spacing:.04em; }
+
+  /* ---- Markdown content ---- */
+  .md-text { font-size: 15px; color: #CCC; line-height: 2; }
+  .md-text h1, .md-text h2 { font-family: 'Source Serif 4',serif; font-size: 20px; color: #E8E8ED; margin: 16px 0 8px; font-weight: 600; }
+  .md-text h3 { font-family: 'Source Serif 4',serif; font-size: 17px; color: #DDD; margin: 12px 0 6px; font-weight: 600; }
+  .md-text p { margin: 8px 0; }
+  .md-text strong { color: #E8E8ED; font-weight: 600; }
+  .md-text em { color: #ADFF00; font-style: normal; }
+  .md-text code { background: rgba(173,255,0,.06); color: #ADFF00; padding: 1px 6px; border-radius: 3px; font-family: 'IBM Plex Mono',monospace; font-size: 13px; }
+  .md-text ul { padding-left: 20px; }
+  .md-text li { margin: 4px 0; }
+  .md-text li::marker { color: rgba(173,255,0,.4); }
+</style>
+</head>
+<body>
+
+<div class="tabs">
+  <div class="tab" onclick="switchTab('A')">A · 霓虹绿玻璃</div>
+  <div class="tab" onclick="switchTab('B')">B · 极简蓝调</div>
+  <div class="tab active" onclick="switchTab('C')">C · 杂志排版 · 霓虹绿</div>
+</div>
+<div class="bg-picker">
+  <span class="lbl">底色</span>
+  <button class="bg-btn" onclick="setBg('#050401')" style="background:#050401" title="黑棕"></button>
+  <button class="bg-btn" onclick="setBg('#08090d')" style="background:#08090d" title="蓝黑"></button>
+  <button class="bg-btn active" onclick="setBg('#0a0b10')" style="background:#0a0b10" title="深蓝黑"></button>
+  <button class="bg-btn" onclick="setBg('#0d0d12')" style="background:#0d0d12" title="深灰黑"></button>
+  <button class="bg-btn" onclick="setBg('gradient')" style="background:linear-gradient(180deg,#07080e,#0d0f18,#0a0b10)" title="渐变"></button>
+</div>
+
+<div class="scene c-bg active" id="tab-C">
+
+  <!-- ═══════════ Hero ═══════════ -->
+  <div class="c-hero">
+    <div class="eyebrow">定数录 · 估值报告</div>
+    <h1>宏达电子</h1>
+    <div class="lead">全球TDDI龙头，OLED驱动芯片放量元年。车载DDIC突破国际Tier1，2025年营收增速有望达到40%以上。</div>
+    <div class="meta-row">
+      <span>300726 · 军工电子</span><span style="color:#444">|</span>
+      <span>主模型 <b style="color:#ADFF00">PE</b></span><span style="color:#444">|</span>
+      <span class="chip g">L3</span><span style="color:#444">|</span>
+      <span>市值 320 亿</span>
+    </div>
+  </div>
+
+  <!-- ═══════════ 四大数字 ═══════════ -->
+  <div class="c-bignums">
+    <div class="c-bignum"><div class="val up">+23.5%</div><div class="lbl">概率加权涨幅</div></div>
+    <div class="c-bignum"><div class="val">2.8×</div><div class="lbl">不对称比</div></div>
+    <div class="c-bignum"><div class="val">7 / 10</div><div class="lbl">置信度</div></div>
+    <div class="c-bignum"><div class="val down">−18.2%</div><div class="lbl">最大回撤</div></div>
+  </div>
+
+  <!-- ═══════════ BS检测 ═══════════ -->
+  <div class="c-section">
+    <h3>BS DETECTOR</h3>
+    <h2>市场定价了什么？</h2>
+    <div class="c-aside">
+      <div class="glass">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#ADFF00;opacity:.5;letter-spacing:.14em;margin-bottom:12px">◇ 关键数据</div>
+        <div class="glass-row"><span class="k">BS 评级</span><span class="v" style="color:#ADFF00">L3 部分合理</span></div>
+        <div class="glass-row"><span class="k">EV</span><span class="v">320 亿</span></div>
+        <div class="glass-row"><span class="k">ROIC</span><span class="v">12.8%</span></div>
+        <div class="glass-row"><span class="k">隐含 g</span><span class="v">4.2%</span></div>
+        <div class="glass-row"><span class="k">PE(TTM)</span><span class="v">28.5×</span></div>
+        <div class="glass-row"><span class="k">PB</span><span class="v">3.2×</span></div>
+        <div class="glass-row"><span class="k">WACC</span><span class="v">9.5%</span></div>
+      </div>
+    </div>
+    <div class="c-text">
+      当前市场对宏达电子的定价<strong>接近 BASE 情景</strong>，隐含永续增长率 4.2%，低于行业平均水平。我们认为市场存在两个关键认知偏差：第一，<em>OLED 驱动芯片在车载市场的渗透率</em>被低估——2025年全球车载 OLED 面板出货量预计同比增长 67%；第二，公司 TDDI 产品线在手机市场的份额仍在扩大，<em>价格战风险被高估</em>。
+    </div>
+  </div>
+
+  <hr class="c-divider">
+
+  <!-- ═══════════ 三情景 ═══════════ -->
+  <div class="c-section">
+    <h3>SCENARIO ANALYSIS</h3>
+    <h2>三情景概率分布</h2>
+    <div class="prob-bar">
+      <div class="pb" style="width:25%;background:rgba(255,92,0,.4)"></div>
+      <div class="pb" style="width:50%;background:rgba(255,255,255,.08)"></div>
+      <div class="pb" style="width:25%;background:rgba(173,255,0,.3)"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+      <!-- BEAR -->
+      <div class="glass" style="border-color:rgba(255,92,0,.1);background:rgba(255,92,0,.02)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:#FF5C00;letter-spacing:.06em">BEAR</span>
+          <span style="font-family:'Source Serif 4',serif;font-size:24px;font-weight:700;color:#FF5C00;opacity:.35">25<small style="font-size:13px">%</small></span>
+        </div>
+        <div style="font-size:28px;font-weight:700;color:#FF5C00;font-family:'IBM Plex Mono',monospace;margin-bottom:12px">−12.3<small style="font-size:14px;opacity:.5">%</small></div>
+        <div class="glass-row"><span class="k">ROIC</span><span class="v">8.5%</span></div>
+        <div class="glass-row"><span class="k">PE</span><span class="v">18×</span></div>
+        <div class="glass-row"><span class="k">目标市值</span><span class="v">280 亿</span></div>
+        <div style="font-size:12px;color:#999;line-height:1.7;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.05)">手机TDDI价格战加剧，OLED渗透低于预期</div>
+      </div>
+      <!-- BASE -->
+      <div class="glass" style="position:relative;border-color:rgba(255,255,255,.08)">
+        <div style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);background:#0a0b10;padding:1px 12px;border:1px solid rgba(255,255,255,.08);border-radius:10px;font-size:10px;color:#999;font-family:'IBM Plex Mono',monospace;letter-spacing:.1em">基准情景</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:#AAA;letter-spacing:.06em">BASE</span>
+          <span style="font-family:'Source Serif 4',serif;font-size:24px;font-weight:700;color:#999;opacity:.35">50<small style="font-size:13px">%</small></span>
+        </div>
+        <div style="font-size:28px;font-weight:700;color:#CCC;font-family:'IBM Plex Mono',monospace;margin-bottom:12px">+28.7<small style="font-size:14px;opacity:.5">%</small></div>
+        <div class="glass-row"><span class="k">ROIC</span><span class="v">15.2%</span></div>
+        <div class="glass-row"><span class="k">PE</span><span class="v">25×</span></div>
+        <div class="glass-row"><span class="k">目标市值</span><span class="v">420 亿</span></div>
+        <div style="font-size:12px;color:#999;line-height:1.7;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.05)">OLED份额稳步提升，车载DDIC突破Tier1</div>
+      </div>
+      <!-- BULL -->
+      <div class="glass" style="border-color:rgba(173,255,0,.1);background:rgba(173,255,0,.015)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:13px;font-weight:700;color:#ADFF00;letter-spacing:.06em">BULL</span>
+          <span style="font-family:'Source Serif 4',serif;font-size:24px;font-weight:700;color:#ADFF00;opacity:.35">25<small style="font-size:13px">%</small></span>
+        </div>
+        <div style="font-size:28px;font-weight:700;color:#ADFF00;font-family:'IBM Plex Mono',monospace;margin-bottom:12px">+85.3<small style="font-size:14px;opacity:.5">%</small></div>
+        <div class="glass-row"><span class="k">ROIC</span><span class="v">22.1%</span></div>
+        <div class="glass-row"><span class="k">PE</span><span class="v">35×</span></div>
+        <div class="glass-row"><span class="k">目标市值</span><span class="v">680 亿</span></div>
+        <div style="font-size:12px;color:#999;line-height:1.7;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,.05)">车载OLED全面放量，手机+车载双轮驱动估值重估</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="c-divider">
+
+  <!-- ═══════════ 估值路由 ═══════════ -->
+  <div class="c-section">
+    <h3>VALUATION ROUTING</h3>
+    <h2>估值路由与模型决策</h2>
+    <div class="glass" style="display:flex;gap:0">
+      <div style="flex:1;padding-right:20px;border-right:1px solid rgba(255,255,255,.04)">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#ADFF00;opacity:.5;letter-spacing:.14em;margin-bottom:10px">主模型</div>
+        <div style="font-size:20px;font-weight:600;color:#ADFF00;font-family:'IBM Plex Mono',monospace">PE</div>
+        <div style="font-size:13px;color:#AAA;margin-top:4px">消费电子 + 半导体双轨</div>
+      </div>
+      <div style="flex:1;padding:0 20px;border-right:1px solid rgba(255,255,255,.04)">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#ADFF00;opacity:.5;letter-spacing:.14em;margin-bottom:10px">校验模型</div>
+        <div style="font-size:20px;font-weight:600;color:#CCC;font-family:'IBM Plex Mono',monospace">PS</div>
+        <div style="font-size:13px;color:#AAA;margin-top:4px">参考韦尔、格科微可比</div>
+      </div>
+      <div style="flex:2;padding-left:20px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:#ADFF00;opacity:.5;letter-spacing:.14em;margin-bottom:10px">路由理由</div>
+        <div style="font-size:13px;color:#BBB;line-height:1.8">ROIC > 12% 且盈利为正，PE 为主模型；营收高速增长期，PS 校验补充市场空间维度</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="c-divider">
+
+  <!-- ═══════════ 基线分析 ═══════════ -->
+  <div class="c-section">
+    <h3>BASELINE</h3>
+    <h2>基线分析</h2>
+    <div class="glass">
+      <div class="md-text">
+        <h2>一、公司身份</h2>
+        <p>宏达电子是全球 <strong>TDDI</strong>（触控与显示驱动集成）芯片龙头，市占率约 18%。公司已完成从 LCD TDDI 向 OLED DDIC 的产品升级，<em>2024 年 OLED 驱动芯片营收占比首次超过 30%</em>。</p>
+        <h2>二、财务基线</h2>
+        <p>营收 TTM <strong>¥48.5 亿</strong>，净利 TTM ¥6.2 亿，ROIC 12.8%，毛利率 38.2%。经营现金流 ¥5.8 亿，资本开支 ¥2.1 亿，自由现金流充沛。</p>
+        <h2>三、产业位置</h2>
+        <p>半导体设计行业，Fabless 模式。下游覆盖手机（60%）、车载（18%）、平板/笔电（15%）、IoT（7%）。手机 OLED 渗透率仍在提升（2025E 52% → 2027E 72%），<em>车载 DDIC 是第二增长曲线</em>。</p>
+      </div>
+    </div>
+  </div>
+
+  <hr class="c-divider">
+
+  <!-- ═══════════ 背景知识 ═══════════ -->
+  <div class="c-section">
+    <h3>BACKGROUND</h3>
+    <h2>背景知识补充</h2>
+    <div class="glass">
+      <div class="md-text">
+        <p>DDIC（显示驱动芯片）是面板产业链中价值量最高的芯片环节。TDDI 将触控与显示驱动集成至单芯片，是手机市场的主流方案。OLED DDIC 单价是 LCD TDDI 的 <strong>2-3 倍</strong>，随着手机 OLED 面板渗透率持续提升，DDIC 市场呈结构性增长。车载 DDIC 由于可靠性要求高、认证周期长（通常 2-3 年），进入壁垒远高于消费电子，但单片价值量和毛利率也更高。</p>
+      </div>
+    </div>
+  </div>
+
+  <hr class="c-divider">
+
+  <!-- ═══════════ 置信度 ═══════════ -->
+  <div class="c-section">
+    <h3>CONFIDENCE</h3>
+    <h2>置信度评估：7 / 10</h2>
+    <div class="glass">
+      <div class="prog">
+        <div class="row"><span>商业模式稳定性</span><span class="score" style="color:#ADFF00">8<small style="font-size:11px;font-weight:400;opacity:.4">/10</small></span></div>
+        <div class="track"><div class="fill" style="width:80%;background:#ADFF00;opacity:.6"></div></div>
+      </div>
+      <div class="prog">
+        <div class="row"><span>数据质量</span><span class="score" style="color:#ADFF00">7<small style="font-size:11px;font-weight:400;opacity:.4">/10</small></span></div>
+        <div class="track"><div class="fill" style="width:70%;background:#ADFF00;opacity:.5"></div></div>
+      </div>
+      <div class="prog">
+        <div class="row"><span>预期差清晰度</span><span class="score" style="color:#C88D3A">6<small style="font-size:11px;font-weight:400;opacity:.4">/10</small></span></div>
+        <div class="track"><div class="fill" style="width:60%;background:#C88D3A;opacity:.5"></div></div>
+      </div>
+      <div class="prog">
+        <div class="row"><span>催化剂确定性</span><span class="score" style="color:#FF5C00">5<small style="font-size:11px;font-weight:400;opacity:.4">/10</small></span></div>
+        <div class="track"><div class="fill" style="width:50%;background:#FF5C00;opacity:.5"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="c-divider">
+
+  <!-- ═══════════ 预路由（折叠示意） ═══════════ -->
+  <div class="c-section" style="opacity:.5">
+    <h3>AGENT-0 PRE-ROUTING</h3>
+    <h2>预路由 · 事件分析</h2>
+    <div class="glass">
+      <div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:#999">▶ 展开预路由分析</span>
+        <span class="chip g">L3</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="c-footer">估值重构引擎 V5 · 300726 · 不构成投资建议</div>
+</div>
+
+<script>
+function switchTab(id) {
+  document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  document.querySelectorAll('.tab')[id==='A'?0:id==='B'?1:2].classList.add('active');
+}
+function setBg(color) {
+  document.querySelectorAll('.bg-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  const c = document.querySelector('.c-bg');
+  c.style.background = color === 'gradient' ? 'linear-gradient(180deg, #07080e 0%, #0d0f18 50%, #0a0b10 100%)' : color;
+}
+</script>
+</body>
+</html>

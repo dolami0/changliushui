@@ -30,13 +30,18 @@
     font-size: 22px;
   }
 
+  html, body, #root {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
+  }
+
   body {
     font-family: 'Noto Sans SC', 'Space Mono', 'IBM Plex Mono', sans-serif;
     background: #050401;
     color: #F2F4F3;
     margin: 0;
     padding: 0;
-    overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -48,6 +53,17 @@
   .note-runes { animation: runeFall 8s linear infinite; pointer-events: none; position: absolute; inset: 0; overflow: hidden; }
   .hide-scroll { scrollbar-width: none; -ms-overflow-style: none; }
   .hide-scroll::-webkit-scrollbar { display: none; }
+
+  /* 移动端全局隐藏滚动条 */
+  @media (max-width: 768px) {
+    * {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+    *::-webkit-scrollbar {
+      display: none !important;
+    }
+  }
   .note-runes::before {
     content: '◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈ ◇ ◆ ◈';
     white-space: pre;
@@ -106,7 +122,7 @@
 
 @font-face {
   font-family: 'Geist Pixel';
-  src: url('../node_modules/geist/dist/fonts/geist-pixel/GeistPixel-Line.woff2') format('woff2');
+  src: url('/fonts/GeistPixel-Line.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
@@ -396,4 +412,106 @@
   .facilities-grid > div:last-child {
     border-bottom: none;
   }
+}
+
+/* ── 移动端字号重置 ── */
+#mobile-root {
+  font-size: 15px;
+}
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── 移动端报告渲染样式 ── */
+#mobile-root .report-content { line-height: 1.65; }
+
+/* metric mini-table */
+#mobile-root table.rp-table {
+  width: 100%; border-collapse: collapse; margin: 6px 0;
+}
+#mobile-root table.rp-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.03);
+  font-size: 0.75em;
+}
+#mobile-root table.rp-table td:first-child {
+  color: #777; width: 40%; white-space: nowrap; padding-right: 8px;
+}
+#mobile-root table.rp-table td:last-child {
+  color: #DDD; text-align: right; font-weight: 500;
+}
+#mobile-root table.rp-table td b { color: #ADFF00; font-weight: 700; }
+#mobile-root .rp-metrics {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-bottom: 8px;
+}
+#mobile-root .rp-chip {
+  display: inline-flex; flex-direction: column; align-items: center;
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 4px; padding: 6px 10px; min-width: 60px;
+}
+#mobile-root .rp-chip b {
+  font-size: 0.95em; color: #ADFF00; font-weight: 700;
+}
+#mobile-root .rp-chip small {
+  font-size: 0.6em; color: #666; margin-top: 1px; text-transform: uppercase; letter-spacing: 0.05em;
+}
+#mobile-root .rp-text { color: #BBB; font-size: 0.8em; margin: 6px 0; }
+#mobile-root .rp-text p { margin: 4px 0; }
+#mobile-root .rp-section { margin: 6px 0; }
+#mobile-root .rp-sec-title {
+  color: #ADFF00; font-size: 0.75em; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  margin-bottom: 4px; padding-bottom: 3px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+#mobile-root .rp-card {
+  background: rgba(255,255,255,0.015); border: 1px solid rgba(255,255,255,0.04);
+  border-radius: 3px; padding: 8px 10px; margin: 4px 0;
+}
+#mobile-root .rp-item {
+  padding: 3px 0; padding-left: 12px; border-left: 2px solid rgba(173,255,0,0.12);
+  margin: 3px 0; font-size: 0.78em; color: #AAA;
+}
+
+/* Legacy report tables — still used for simple kv display */
+#mobile-root .report-html table.dv,
+#mobile-root .report-content table.kv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8em;
+}
+#mobile-root .report-html table.dv td,
+#mobile-root .report-content table.kv-table td {
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  vertical-align: top;
+}
+#mobile-root .report-html table.dv td.k,
+#mobile-root .report-content table.kv-table td.kv-label {
+  color: #666;
+  white-space: nowrap;
+  padding-right: 12px;
+  font-weight: 500;
+}
+#mobile-root .report-html table.dv td.v,
+#mobile-root .report-content table.kv-table td.kv-value {
+  color: #CCC;
+  word-break: break-word;
+}
+#mobile-root .report-html h4 {
+  font-size: 0.85em;
+  color: #ADFF00;
+  margin: 10px 0 4px;
+  font-weight: 600;
+}
+#mobile-root .report-html .tx,
+#mobile-root .report-content .md-block {
+  color: #BBB;
+  line-height: 1.7;
+  font-size: 0.8em;
+}
+#mobile-root .report-html .tx p,
+#mobile-root .report-content .md-block p {
+  margin: 4px 0;
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMobile } from '../hooks/useMobile';
-import { fetchDingshulu, type DingshuluRecord } from '../services/cozeApi';
+import { fetchDingshulu, fetchReportFromCoze, type DingshuluRecord } from '../services/cozeApi';
 import { loadMemory, callAgentAI } from '../services/agentMemory';
 import { fetchLingGuangList, saveLingGuang, deleteLingGuang, fetchCaseList, fetchTrackingList, type LingGuangItem, type CaseSummary, type TrackingItem } from '../services/memoryApi';
 import { renderMarkdown } from '../lib/utils';
@@ -57,21 +57,24 @@ const MODULES = [
   { id: 'summary', label: '估值摘要', cat: 'core', on: true },
   { id: 'scenarios', label: '三情景', cat: 'core', on: true },
   { id: 'bs', label: 'BS检测', cat: 'core', on: true },
-  { id: 'routing', label: '路由', cat: 'core', on: false },
-  { id: 'financial', label: '财务+WACC', cat: 'core', on: false },
-  { id: 'gap', label: '预期差', cat: 'core', on: false },
-  { id: 'confidence', label: '置信度', cat: 'core', on: false },
-  { id: 'trade', label: '标注', cat: 'core', on: false },
-  { id: 'kpi', label: 'KPI', cat: 'core', on: false },
-  { id: 'triggers', label: '触发', cat: 'core', on: false },
+  { id: 'routing', label: '路由', cat: 'core', on: true },
+  { id: 'financial', label: '财务+WACC', cat: 'core', on: true },
+  { id: 'gap', label: '预期差', cat: 'core', on: true },
+  { id: 'confidence', label: '置信度', cat: 'core', on: true },
+  { id: 'trade', label: '标注', cat: 'core', on: true },
+  { id: 'kpi', label: 'KPI', cat: 'core', on: true },
+  { id: 'triggers', label: '触发', cat: 'core', on: true },
+  { id: 'baseline', label: '基线分析', cat: 'core', on: true },
   { id: 'narrative', label: '叙事诊断', cat: 'core', on: true },
-  { id: 'signal', label: '信号审计', cat: 'core', on: false },
+  { id: 'signal', label: '信号审计', cat: 'core', on: true },
   { id: 'a0_theme', label: '投资主题', cat: 'a0', on: true },
   { id: 'a0_deduction', label: '事件推演', cat: 'a0', on: true },
-  { id: 'a0_reasoning', label: '推理', cat: 'a0', on: false },
-  { id: 'a0_adversarial', label: '对抗', cat: 'a0', on: false },
-  { id: 'a0_knowledge', label: '知识', cat: 'a0', on: false },
-  { id: 'a0_research', label: '行业', cat: 'a0', on: false },
+  { id: 'a0_reasoning', label: '推理', cat: 'a0', on: true },
+  { id: 'a0_adversarial', label: '对抗', cat: 'a0', on: true },
+  { id: 'a0_knowledge', label: '知识', cat: 'a0', on: true },
+  { id: 'a0_research', label: '行业', cat: 'a0', on: true },
+  { id: 'a0_raw_event', label: '原始事件', cat: 'a0', on: true },
+  { id: 'a0_future', label: '前瞻', cat: 'a0', on: true },
   { id: 'lingguang', label: '灵光', cat: 'match', on: true },
   { id: 'cases', label: '案例', cat: 'match', on: true },
 ];
@@ -228,8 +231,8 @@ export default function AgentAvatar() {
   // Load report when record selected
   useEffect(() => {
     if (!selectedId || !selectedRecord) { setReportJSON(null); return; }
-    fetch(`/api/report/${selectedRecord.stock_code}/data`)
-      .then(r => r.ok ? r.json() : null)
+    fetchReportFromCoze(selectedRecord.stock_code)
+      
       .then(json => setReportJSON(json))
       .catch(() => setReportJSON(null));
     setResult('');
@@ -353,9 +356,15 @@ export default function AgentAvatar() {
     }
     if (toggles.triggers) add('风险触发器', `- 牛: ${String(triggers?.bull_trigger || '')}\n- 熊: ${String(triggers?.bear_trigger || '')}`);
 
+    if (toggles.baseline) {
+      const bl = String(G(reportJSON, 'baseline_report') || '');
+      if (bl) add('基线分析', bl.slice(0, 4000));
+    }
+
     const a0Map: Record<string, string> = {
       a0_theme: 'investment_theme', a0_deduction: 'event_deduction', a0_reasoning: 'preliminary_reasoning',
       a0_adversarial: 'adversarial_thinking', a0_knowledge: 'knowledge_supplement', a0_research: 'industry_expert_research',
+      a0_raw_event: 'raw_event_text', a0_future: 'future',
     };
     Object.entries(a0Map).forEach(([id, key]) => {
       if (!toggles[id]) return;
@@ -427,8 +436,9 @@ export default function AgentAvatar() {
   const handleDeleteLingGuang = async (slug: string) => { await deleteLingGuang(slug); refreshMemory(); };
 
   // ── Toggle helpers ──
-  const a0Ids = MODULES.filter(m => m.cat === 'a0').map(m => m.id);
-  const a0AllOn = a0Ids.every(id => toggles[id]);
+  const allIds = MODULES.map(m => m.id);
+  const allOn = allIds.every(id => toggles[id]);
+  const toggleAll = () => { setToggles(prev => { const next = { ...prev }; const on = !allOn; allIds.forEach(id => next[id] = on); return next; }); };
 
   const TBtn = ({ id, label }: { id: string; label: string }) => (
     <button onClick={() => setToggles(p => ({ ...p, [id]: !p[id] }))}
@@ -551,8 +561,16 @@ export default function AgentAvatar() {
                     {MODULES.filter(m => m.cat === 'core').map(m => <TBtn key={m.id} id={m.id} label={m.label} />)}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: F.mono, fontSize: 10, color: '#555', marginRight: 4 }}>全局</span>
+                    <button onClick={toggleAll}
+                      style={{
+                        fontFamily: F.mono, fontSize: 10, padding: '4px 10px', borderRadius: 4,
+                        border: `1px solid ${allOn ? 'rgba(255,92,0,.3)' : '#333'}`,
+                        background: allOn ? 'rgba(255,92,0,.06)' : 'transparent',
+                        color: allOn ? '#FF5C00' : '#555', cursor: 'pointer', transition: '.2s', whiteSpace: 'nowrap',
+                      }}
+                    >{allOn ? '全部 OFF' : '全部 ON'}</button>
                     <span style={{ fontFamily: F.mono, fontSize: 10, color: '#555', marginRight: 4 }}>A0</span>
-                    <TBtn id="_a0" label={a0AllOn ? '全部 ON' : '全部 OFF'} />
                     {MODULES.filter(m => m.cat === 'a0').map(m => <TBtn key={m.id} id={m.id} label={m.label} />)}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap' }}>

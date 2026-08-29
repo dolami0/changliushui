@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useMobile } from '../hooks/useMobile';
-import { fetchTotalCount, fetchTianjijuanToday } from '../services/cozeApi';
+import { fetchTotalCount, fetchTianjijuanToday, fetchWangqi } from '../services/cozeApi';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -228,11 +228,9 @@ export default function Facilities() {
         const highToday = items.filter((r) => (r.level === '4' || r.level === '5') && (r.bstudio_create_time || '').startsWith(today)).length;
         setMetrics((m) => ({ ...m, tianji: `今日监测到天下异象 ${highToday} 处` }));
       }),
-      fetch('/api/industry-chain/results')
-        .then((r) => r.json())
-        .then((data) => {
-          const records = data.results || [];
-          const chains = [...new Set(records.map((r: { industry_chain?: string }) => r.industry_chain).filter(Boolean))];
+      fetchWangqi()
+        .then((records) => {
+          const chains = [...new Set(records.map((r) => r.industry_chain).filter(Boolean))];
           const total = chains.length;
           const shown = chains.slice(0, 5).join(' · ');
           svcRef.current = { ...svcRef.current, wangqi: true };

@@ -1,6 +1,26 @@
-import { useEffect, useRef, useState } from 'react';
-import { Routes, Route, useLocation, Link } from 'react-router-dom';
+import { useEffect, useRef, useState, Component } from 'react';
+import { Routes, Route, useLocation, useNavigate, Navigate, Link } from 'react-router-dom';
 import { siteConfig, navigationConfig } from './config';
+
+/* ------------------------------------------------------------------ */
+/*  ErrorBoundary — 捕获渲染错误，防止白屏无反馈                          */
+/* ------------------------------------------------------------------ */
+class ErrorBoundary extends Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state: { error: Error | null } = { error: null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 24, color: '#FF4444', background: '#111', minHeight: '100vh', fontFamily: 'monospace' }}>
+          <h2>渲染错误</h2>
+          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 13 }}>{this.state.error.message}</pre>
+          <pre style={{ whiteSpace: 'pre-wrap', fontSize: 11, opacity: 0.7 }}>{this.state.error.stack}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import Hero from './sections/Hero';
 import Facilities from './sections/Facilities';
 import CangjingYun from './sections/Archives';
@@ -13,6 +33,16 @@ import AgentAvatar from './pages/AgentAvatar';
 import AvatarCC from './pages/AvatarCC';
 import TianjiPeak from './pages/TianjiPeak';
 import Tracking from './pages/Tracking';
+import RedesignDemo from './pages/RedesignDemo';
+import { MobileShell } from './mobile/MobileShell';
+import { DingshuluList } from './mobile/tabs/DingshuluTab/DingshuluList';
+import { DingshuluDetail } from './mobile/tabs/DingshuluTab/DingshuluDetail';
+import { TrackingList } from './mobile/tabs/TrackingTab/TrackingList';
+import { TrackingDetail } from './mobile/tabs/TrackingTab/TrackingDetail';
+import { TianjiList } from './mobile/tabs/TianjiTab/TianjiList';
+import { TianjiDetail } from './mobile/tabs/TianjiTab/TianjiDetail';
+import { SubmitForm } from './mobile/tabs/SubmitTab/SubmitForm';
+import { AvatarChat } from './mobile/tabs/AvatarTab/AvatarChat';
 import gsap from 'gsap';
 
 /* ------------------------------------------------------------------ */
@@ -228,7 +258,33 @@ function TopNav() {
   )
 }
 
+function isMobileDevice(): boolean {
+  if (typeof window === 'undefined') return false
+  const ua = navigator.userAgent || ''
+  return /Android|iPhone|iPad|iPod|webOS/i.test(ua) || (window.innerWidth < 768 && 'ontouchstart' in window)
+}
+
 function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isMobileRoute = location.pathname === '/m' || location.pathname.startsWith('/m/');
+
+  // 移动端自动重定向到 /m
+  useEffect(() => {
+    if (isMobileRoute) return; // 已经在移动端路由，不重复跳转
+    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      || (window.innerWidth <= 768);
+    if (isMobile) {
+      navigate('/m', { replace: true });
+    }
+  }, []); // 仅首次加载检测
+
+  useEffect(() => {
+    if (!isMobileRoute && isMobileDevice()) {
+      window.location.replace('/m/')
+    }
+  }, [isMobileRoute])
+
   useEffect(() => {
     document.title = siteConfig.siteTitle || '长流水';
     document.documentElement.lang = siteConfig.language || 'zh-CN';
@@ -243,9 +299,10 @@ function App() {
   }, []);
 
   return (
+    <ErrorBoundary>
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      <NavigationGlow />
-      <TopNav />
+      {!isMobileRoute && <NavigationGlow />}
+      {!isMobileRoute && <TopNav />}
       <div style={{ flex: 1, minHeight: 0 }}>
         <Routes>
           <Route path="/" element={<PageTransition key="home"><Home /></PageTransition>} />
@@ -259,9 +316,21 @@ function App() {
           <Route path="/avatar-cc" element={<PageTransition key="avatarcc"><AvatarCC /></PageTransition>} />
           <Route path="/tianjifeng" element={<PageTransition key="tianjifeng"><TianjiPeak /></PageTransition>} />
           <Route path="/tracking" element={<PageTransition key="tracking"><Tracking /></PageTransition>} />
+          <Route path="/redesign" element={<RedesignDemo />} />
+          {/* 移动端路由 — 平铺到顶层，避免嵌套 Routes 刷新白屏 */}
+          <Route path="/m" element={<Navigate to="/m/dingshulu" replace />} />
+          <Route path="/m/dingshulu" element={<MobileShell><DingshuluList /></MobileShell>} />
+          <Route path="/m/dingshulu/:id" element={<MobileShell><DingshuluDetail /></MobileShell>} />
+          <Route path="/m/tracking" element={<MobileShell><TrackingList /></MobileShell>} />
+          <Route path="/m/tracking/:code" element={<MobileShell><TrackingDetail /></MobileShell>} />
+          <Route path="/m/tianyan" element={<MobileShell><TianjiList /></MobileShell>} />
+          <Route path="/m/tianyan/:id" element={<MobileShell><TianjiDetail /></MobileShell>} />
+          <Route path="/m/submit" element={<MobileShell><SubmitForm /></MobileShell>} />
+          <Route path="/m/avatar" element={<MobileShell><AvatarChat /></MobileShell>} />
         </Routes>
       </div>
     </div>
+    </ErrorBoundary>
   );
 }
 

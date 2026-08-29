@@ -1,0 +1,115 @@
+# investoday-api endpoint mapping
+# DataFetcher hardcodes CLI paths today; this file is loaded at init.
+# The original 389-line mapping was never in git (config/ was gitignored)
+# and was not found in sibling dolami0 repos. This stub is enough for
+# DataFetcher / IndustryChainWorkflow / WangqiScheduler to construct.
+# Paths below match docs/01_\u73af\u5883\u914d\u7f6e.md layer list.
+
+version: 1
+source: stub
+description: minimal mapping so engine boot does not FileNotFoundError
+
+layers:
+  1_company_snapshot:
+    priority: P0
+    endpoints:
+      - path: stock-quote/realtime
+        method: GET
+        note: 实时行情
+      - path: stock/finance/valuation
+        method: GET
+        note: 估值指标+行业/历史排名
+      - path: stock/income-statements-ttm
+        method: POST
+        note: 利润表 TTM
+      - path: stock/balance-sheets-ttm
+        method: POST
+        note: 资产负债表 TTM
+      - path: stock/cash-flows-ttm
+        method: POST
+        note: 现金流量表 TTM
+      - path: stock/dupont-analysis
+        method: GET
+        note: 杜邦分析
+      - path: stock/industries
+        method: GET
+        note: 申万行业分类
+      - path: stock/score
+        method: GET
+        note: 个股综合得分
+      - path: stock/operating-reviews
+        method: GET
+        note: 经营评述
+      - path: stock/fin-der-inds
+        method: GET
+        note: 财务衍生指标
+      - path: stock/finance/profit-ability
+        method: GET
+        note: 盈利能力指标+历史排名
+  2_industry_comps:
+    priority: P1
+    endpoints:
+      - path: industry-quote/realtime
+        method: GET
+        note: 行业实时行情
+      - path: industry/forecasts
+        method: GET
+        note: 行业增长预测
+      - path: stock/fin-ind-sw-rnk-q
+        method: GET
+        note: 行业内财务排名
+  3_events:
+    priority: P0
+    endpoints:
+      - path: stock/major-contracts
+        method: GET
+        note: 重大合同
+      - path: stock/arbitration-cases
+        method: GET
+        note: 诉讼仲裁
+      - path: stock/violation-penalties
+        method: GET
+        note: 违规处罚
+      - path: report/research
+        method: GET
+        note: 研究报告
+      - path: stock/consultations
+        method: GET
+        note: 互动问答
+  4_market_state:
+    priority: P1
+    endpoints:
+      - path: stock-quote/capital-flow
+        method: GET
+        note: 资金流向
+      - path: economic/gover-bond-yield
+        method: GET
+        note: 国债收益率
+      - path: economic/money-supplies
+        method: GET
+        note: 货币供应量
+      - path: economic/social-financing-sto
+        method: GET
+        note: 社融
+  5_catalysts:
+    priority: P2
+    endpoints:
+      - path: stock/report-schema
+        method: GET
+        note: 财报披露日程
+      - path: stock/forecast-ratings
+        method: GET
+        note: 分析师一致预期
+  6_industry_chain:
+    priority: P0
+    note: Wangqi / IndustryChainWorkflow related
+    endpoints:
+      - path: chain/industry-info
+        method: GET
+        note: 产业链行业分类
+      - path: chain/pro-relation
+        method: GET
+        note: 产品上下游关系
+      - path: chain/pro-ind-maps
+        method: GET
+        note: 产品行业映射

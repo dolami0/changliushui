@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMobile } from '../hooks/useMobile';
-import { fetchDingshulu, type DingshuluRecord } from '../services/cozeApi';
+import { fetchDingshulu, fetchReportFromCoze, type DingshuluRecord } from '../services/cozeApi';
 import { loadMemory } from '../services/agentMemory';
 import { renderMarkdown } from '../lib/utils';
 
@@ -29,22 +29,25 @@ const MODULES: ContextModule[] = [
   { id: 'summary',        label: '估值摘要',     category: 'core',   defaultOn: true },
   { id: 'scenarios',      label: '三情景推演',   category: 'core',   defaultOn: true },
   { id: 'bs',             label: 'BS检测器',     category: 'core',   defaultOn: true },
-  { id: 'routing',        label: '估值路由',     category: 'core',   defaultOn: false },
-  { id: 'financial',      label: '财务全景+WACC', category: 'core',  defaultOn: false },
-  { id: 'gap',            label: '预期差',       category: 'core',   defaultOn: false },
-  { id: 'confidence',     label: '置信度评分',   category: 'core',   defaultOn: false },
-  { id: 'trade',          label: '交易标注',     category: 'core',   defaultOn: false },
-  { id: 'signal',         label: '信号审计',     category: 'core',   defaultOn: false },
-  { id: 'kpi',            label: '监测KPI',      category: 'core',   defaultOn: false },
-  { id: 'triggers',       label: '风险触发器',   category: 'core',   defaultOn: false },
+  { id: 'routing',        label: '估值路由',     category: 'core',   defaultOn: true },
+  { id: 'financial',      label: '财务全景+WACC', category: 'core',  defaultOn: true },
+  { id: 'gap',            label: '预期差',       category: 'core',   defaultOn: true },
+  { id: 'confidence',     label: '置信度评分',   category: 'core',   defaultOn: true },
+  { id: 'trade',          label: '交易标注',     category: 'core',   defaultOn: true },
+  { id: 'signal',         label: '信号审计',     category: 'core',   defaultOn: true },
+  { id: 'kpi',            label: '监测KPI',      category: 'core',   defaultOn: true },
+  { id: 'triggers',       label: '风险触发器',   category: 'core',   defaultOn: true },
+  { id: 'baseline',       label: '基线分析',     category: 'core',   defaultOn: true },
   { id: 'narrative',      label: '叙事诊断',     category: 'core',   defaultOn: true },
   // Agent0 预路由 — 可整组开关
   { id: 'a0_theme',       label: '投资主题',     category: 'agent0', defaultOn: true },
   { id: 'a0_deduction',   label: '事件推演',     category: 'agent0', defaultOn: true },
-  { id: 'a0_reasoning',   label: '推理依据',     category: 'agent0', defaultOn: false },
-  { id: 'a0_adversarial', label: '对抗思考',     category: 'agent0', defaultOn: false },
-  { id: 'a0_knowledge',   label: '知识补充',     category: 'agent0', defaultOn: false },
-  { id: 'a0_research',    label: '行业研究',     category: 'agent0', defaultOn: false },
+  { id: 'a0_reasoning',   label: '推理依据',     category: 'agent0', defaultOn: true },
+  { id: 'a0_adversarial', label: '对抗思考',     category: 'agent0', defaultOn: true },
+  { id: 'a0_knowledge',   label: '知识补充',     category: 'agent0', defaultOn: true },
+  { id: 'a0_research',    label: '行业研究',     category: 'agent0', defaultOn: true },
+  { id: 'a0_raw_event',   label: '原始事件',     category: 'agent0', defaultOn: true },
+  { id: 'a0_future',      label: '前瞻',         category: 'agent0', defaultOn: true },
   // 匹配引擎
   { id: 'lingguang',      label: '灵光匹配',     category: 'match',  defaultOn: true },
   { id: 'cases',          label: '案例匹配',     category: 'match',  defaultOn: true },
@@ -197,8 +200,8 @@ export default function AvatarCC() {
   // Load report when record selected
   useEffect(() => {
     if (!selectedRecord) { setReportJSON(null); setAssembledText(''); setPreviewHTML(''); return; }
-    fetch(`/api/report/${selectedRecord.stock_code}/data`)
-      .then(r => r.ok ? r.json() : null)
+    fetchReportFromCoze(selectedRecord.stock_code)
+      
       .then(json => { setReportJSON(json); })
       .catch(() => setReportJSON(null));
   }, [selectedRecord]);
@@ -332,6 +335,11 @@ export default function AvatarCC() {
       `- 熊触发: ${String(triggers?.bear_trigger || '—')}`,
     ].join('\n'));
 
+    if (toggles['baseline']) {
+      const bl = String(G(reportJSON, 'baseline_report') || '');
+      if (bl) add('基线分析', bl.slice(0, 4000));
+    }
+
     if (toggles['narrative']) {
       const ep = (G(a2a, 'event_pricing') || {}) as Record<string,unknown>;
       const epr = (G(ep, 'event_profile') || {}) as Record<string,unknown>;
@@ -362,8 +370,9 @@ export default function AvatarCC() {
     const a0Fields: [ModuleId, string, number][] = [
       ['a0_theme', '投资主题', 2500], ['a0_deduction', '事件推演', 1500], ['a0_reasoning', '推理依据', 1500],
       ['a0_adversarial', '对抗思考', 1000], ['a0_knowledge', '知识补充', 1000], ['a0_research', '行业研究', 1500],
+      ['a0_raw_event', '原始事件', 1000], ['a0_future', '前瞻', 1000],
     ];
-    const a0Map: Record<string,string> = { a0_theme: 'investment_theme', a0_deduction: 'event_deduction', a0_reasoning: 'preliminary_reasoning', a0_adversarial: 'adversarial_thinking', a0_knowledge: 'knowledge_supplement', a0_research: 'industry_expert_research' };
+    const a0Map: Record<string,string> = { a0_theme: 'investment_theme', a0_deduction: 'event_deduction', a0_reasoning: 'preliminary_reasoning', a0_adversarial: 'adversarial_thinking', a0_knowledge: 'knowledge_supplement', a0_research: 'industry_expert_research', a0_raw_event: 'raw_event_text', a0_future: 'future' };
     a0Fields.forEach(([id, label, _max]) => {
       if (!toggles[id]) return;
       const text = String(G(a0, a0Map[id]) || '');
@@ -470,13 +479,13 @@ export default function AvatarCC() {
   };
 
   // ── UI ──
-  const a0ToggleIds = MODULES.filter(m => m.category === 'agent0').map(m => m.id);
-  const a0AllOn = a0ToggleIds.every(id => toggles[id]);
-  const toggleA0 = () => {
+  const allToggleIds = MODULES.map(m => m.id);
+  const allOn = allToggleIds.every(id => toggles[id]);
+  const toggleAll = () => {
     setToggles(prev => {
       const next = { ...prev };
-      const on = !a0AllOn;
-      a0ToggleIds.forEach(id => next[id] = on);
+      const on = !allOn;
+      allToggleIds.forEach(id => next[id] = on);
       return next;
     });
   };
@@ -547,10 +556,14 @@ export default function AvatarCC() {
                   <Toggle key={m.id} label={m.label} on={toggles[m.id]} onChange={() => setToggles(prev => ({ ...prev, [m.id]: !prev[m.id] }))} />
                 ))}
               </div>
-              {/* Agent0 字段 */}
+              {/* 全局切换 */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}>
+                <span style={{ fontFamily: MONO, fontSize: 10, color: DIM, marginRight: 4 }}>全局</span>
+                <div onClick={toggleAll} className={`cc-toggle${allOn ? ' on' : ''}`}>
+                  <div className="dot" />
+                  <span>{allOn ? '全部 OFF' : '全部 ON'}</span>
+                </div>
                 <span style={{ fontFamily: MONO, fontSize: 10, color: DIM, marginRight: 4 }}>A0</span>
-                <Toggle label={a0AllOn ? '全部ON' : '全部OFF'} on={a0AllOn} onChange={toggleA0} />
                 {MODULES.filter(m => m.category === 'agent0').map(m => (
                   <Toggle key={m.id} label={m.label} on={toggles[m.id]} onChange={() => setToggles(prev => ({ ...prev, [m.id]: !prev[m.id] }))} />
                 ))}

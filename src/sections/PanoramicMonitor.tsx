@@ -3,10 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import AsciiCanvas from '../components/AsciiCanvas';
 import { useMobile } from '../hooks/useMobile';
-import { useBackendHealth } from '../hooks/useBackendHealth';
 import {
-  fetchDingshulu, fetchTianjijuan, fetchTotalCount,
-  extractNewsTitle, extractReportFilename, type DingshuluRecord,
+  fetchDingshulu, fetchTianjijuan, fetchTracking, fetchReportByFilename, fetchWangqi,
+  extractReportFilename, type DingshuluRecord, type WangqiResult,
 } from '../services/cozeApi';
 
 /* ================================================================== */
@@ -56,14 +55,8 @@ const PANEL_HEADER_STYLE: React.CSSProperties = {
 
 function formatDate(ts: string) {
   if (!ts) return '';
-  // 直接从字符串截取日期，绕过 JS Date 时区解析差异
-  const match = ts.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (match) return `${parseInt(match[2])}/${parseInt(match[3])}`;
-  // 回退: 用 Date 解析（处理非标准格式）
   const d = new Date(ts);
-  if (isNaN(d.getTime())) return '';
-  const parts = d.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit', timeZone: 'Asia/Shanghai' }).split('/');
-  return `${parseInt(parts[0])}/${parseInt(parts[1])}`;
+  return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
 const PANEL_BODY_STYLE: React.CSSProperties = {
@@ -108,7 +101,7 @@ export function ZhenfaBorder({ active }: { active: boolean }) {
   );
 }
 
-function PanelHeader({ code, name, subtitle, status, onClick }: {
+function PanelHeader({ code, name: _name, subtitle, status, onClick }: {
   code: string; name: string; subtitle: string; status?: 'active' | 'idle' | 'warning';
   onClick?: () => void;
 }) {
@@ -162,32 +155,22 @@ interface TianjiEvent {
 export function TianyanPanel() {
   const navigate = useNavigate();
   const [hover, setHover] = useState(false);
+  const [viewMode, setViewMode] = useState<'tianyan' | 'wangqi'>('tianyan');
   const [allRecords, setAllRecords] = useState<TianjiEvent[]>([]);
-  const [pollInfo, setPollInfo] = useState({ last: '—', next: '—' });
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [fullContent, setFullContent] = useState<Record<string, string>>({});
   const [showBackTop, setShowBackTop] = useState(false);
+  const [wangqiRecords, setWangqiRecords] = useState<WangqiResult[]>([]);
+  const [wangqiLoading, setWangqiLoading] = useState(false);
+  const [wangqiExpanded, setWangqiExpanded] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => { if (viewMode === 'wangqi' && wangqiRecords.length === 0) { setWangqiLoading(true); fetchWangqi().then(setWangqiRecords).catch(() => {}).finally(() => setWangqiLoading(false)); } }, [viewMode]);
+
   const refresh = useCallback(() => {
-    Promise.all([
-      fetchTianjijuan().then((items) => {
-        setAllRecords(items.sort((a, b) => (b.bstudio_create_time || '').localeCompare(a.bstudio_create_time || '')) as TianjiEvent[]);
-      }),
-      fetch('/api/status')
-        .then((r) => r.json())
-        .then((s) => {
-          setPollInfo({
-            last: s.last_poll_at
-              ? new Date(s.last_poll_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' })
-              : '—',
-            next: s.next_poll_at
-              ? new Date(s.next_poll_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' })
-              : '—',
-          });
-        })
-        .catch(() => {}),
-    ]).catch(() => {});
+    fetchTianjijuan().then((items) => {
+      setAllRecords(items.sort((a, b) => (b.bstudio_create_time || '').localeCompare(a.bstudio_create_time || '')) as TianjiEvent[]);
+    }).catch(() => {});
   }, []);
 
   useEffect(() => { refresh(); const id = setInterval(refresh, 60_000); return () => clearInterval(id); }, [refresh]);
@@ -220,8 +203,30 @@ export function TianyanPanel() {
       onMouseLeave={(e) => { setHover(false); e.currentTarget.style.borderColor = 'rgba(173,255,0,0.1)'; }}
     >
       <Corners hover={hover} />
-      <PanelHeader code="天眼司" name="天眼" subtitle="监听天下异象" status="active" onClick={() => navigate('/tianjifeng')} />
-      <div ref={scrollRef} style={PANEL_BODY_STYLE} className="hide-scroll"
+      <div style={{ ...PANEL_HEADER_STYLE, justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }} onClick={() => navigate('/tianjifeng')}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#ADFF00', boxShadow: '0 0 8px rgba(173,255,0,0.5)', animation: 'pulse 2s ease-in-out infinite', flexShrink: 0 }} />
+          <span style={{ fontFamily: "'Space Mono',monospace", fontSize: 14, color: '#F2F4F3', letterSpacing: '0.1em' }}>天眼司</span>
+          <span style={{ width: 14, height: 1, background: 'rgba(255,255,255,0.04)' }} />
+          <span style={{ fontFamily: "'Space Mono',monospace", fontSize: 11, color: '#888' }}>{viewMode === 'tianyan' ? '监听天下异象' : '观脉寻龙气运'}</span>
+        </div>
+        <div style={{ display: 'flex', gap: 0, border: '1px solid rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+          <button onClick={e => { e.stopPropagation(); setViewMode('tianyan'); }}
+            style={{ fontFamily:"'Space Mono',monospace", fontSize:13, letterSpacing:'0.08em', padding:'5px 18px', cursor:'pointer', border:'none',
+              background: viewMode==='tianyan' ? 'rgba(173,255,0,0.12)' : 'transparent',
+              color: viewMode==='tianyan' ? '#ADFF00' : '#888',
+              transition: 'all 0.35s cubic-bezier(0.22,0.61,0.36,1)',
+              borderRight: '1px solid rgba(255,255,255,0.06)',
+            }}>天眼</button>
+          <button onClick={e => { e.stopPropagation(); setViewMode('wangqi'); }}
+            style={{ fontFamily:"'Space Mono',monospace", fontSize:13, letterSpacing:'0.08em', padding:'5px 18px', cursor:'pointer', border:'none',
+              background: viewMode==='wangqi' ? 'rgba(173,255,0,0.12)' : 'transparent',
+              color: viewMode==='wangqi' ? '#ADFF00' : '#888',
+              transition: 'all 0.35s cubic-bezier(0.22,0.61,0.36,1)',
+            }}>望气</button>
+        </div>
+      </div>
+      <div style={{ ...PANEL_BODY_STYLE, flex: viewMode === 'tianyan' ? 1 : 0, height: viewMode === 'tianyan' ? 'auto' : 0, opacity: viewMode === 'tianyan' ? 1 : 0, pointerEvents: viewMode === 'tianyan' ? 'auto' : 'none', transition: 'opacity 0.35s ease, flex 0.35s ease' }} className="hide-scroll"
         onScroll={() => { if (scrollRef.current) setShowBackTop(scrollRef.current.scrollTop > 200); }}>
         {allRecords.length === 0 && (
           <div style={{ padding: '20px', textAlign: 'center', fontFamily: "'Space Mono', monospace", fontSize: '24px', color: '#555' }}>
@@ -316,11 +321,57 @@ export function TianyanPanel() {
           <span style={{ color: '#ADFF00', fontSize: '14px', lineHeight: 1 }}>▲</span>
         </div>
       )}
-      <div style={{ padding: '7px 18px', borderTop: '1px solid rgba(255,255,255,0.04)', textAlign: 'right', flexShrink: 0, cursor: 'pointer', transition: 'background 0.15s' }}
+      <div style={{ display: viewMode === 'tianyan' ? 'block' : 'none', padding: '7px 18px', borderTop: '1px solid rgba(255,255,255,0.04)', textAlign: 'right', flexShrink: 0, cursor: 'pointer', transition: 'background 0.15s' }}
         onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; const s = e.currentTarget.querySelector('span'); if (s) { s.style.opacity = '1'; s.style.textShadow = '0 0 8px rgba(173,255,0,0.3)'; } }}
         onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; const s = e.currentTarget.querySelector('span'); if (s) { s.style.opacity = '0.6'; s.style.textShadow = 'none'; } }}
         onClick={() => navigate('/tianjifeng')}
         ><span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#ADFF00', letterSpacing: '0.08em', opacity: 0.6 }}>→ 天机峰</span>
+      </div>
+      {/* ── 望气视图 ── */}
+      <div style={{ ...PANEL_BODY_STYLE, flex: viewMode === 'wangqi' ? 1 : 0, height: viewMode === 'wangqi' ? 'auto' : 0, opacity: viewMode === 'wangqi' ? 1 : 0, pointerEvents: viewMode === 'wangqi' ? 'auto' : 'none', transition: 'opacity 0.35s ease' }} className="hide-scroll">
+        {wangqiLoading ? (
+          <div style={{ padding: 20, textAlign: 'center', fontFamily: "'Space Mono',monospace", fontSize: 14, color: '#555' }}>观望气运中...</div>
+        ) : wangqiRecords.length === 0 ? (
+          <div style={{ padding: 20, textAlign: 'center', fontFamily: "'Space Mono',monospace", fontSize: 14, color: '#555' }}>暂无气运数据</div>
+        ) : (
+          <div>
+            {(() => {
+              const chains = [...new Set(wangqiRecords.map(r => r.industry_chain).filter(Boolean))];
+              return (<div>
+                <div style={{ fontFamily: "'Space Mono','Noto Sans SC',monospace", fontSize: 14, color: '#C88D3A', letterSpacing: '0.08em', marginBottom: 8, borderBottom: '1px solid rgba(200,141,58,0.12)', paddingBottom: 6 }}>气运汇集 · {chains.length} 处</div>
+                {chains.map((chain, ci) => {
+                  const recs = wangqiRecords.filter(r => r.industry_chain === chain);
+                  const top = recs.find(r => r.top_pick_name && r.top_pick_name !== '无高赔率标的');
+                  const eid = `wq-${ci}`; const isOpen = wangqiExpanded.has(eid); const first = recs[0];
+                  return (<div key={ci} style={{ marginBottom: 4, border: isOpen ? '1px solid rgba(173,255,0,0.12)' : '1px solid rgba(255,255,255,0.03)', borderLeft: isOpen ? '3px solid #ADFF00' : '3px solid rgba(255,255,255,0.04)', background: isOpen ? 'rgba(255,255,255,0.02)' : 'transparent', transition: 'all 0.25s', cursor: 'pointer' }}>
+                    <div onClick={() => { setWangqiExpanded(p => { const n = new Set(p); if (n.has(eid)) n.delete(eid); else n.add(eid); return n; }); }} style={{ padding: '5px 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ fontFamily: "'Space Mono',monospace", fontSize: 14, color: '#C88D3A', fontWeight: 600, flexShrink: 0, maxWidth: '40%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{chain}</span>
+                      <span style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.03)' }} />
+                      {top ? (<>
+                        <span style={{ fontFamily: "'IBM Plex Mono','Noto Sans SC',monospace", fontSize: 17, fontWeight: 600, color: '#ADFF00', flexShrink: 0 }}>{top.top_pick_name}</span>
+                        <span style={{ fontFamily: "'Space Mono',monospace", fontSize: 14, color: '#666', flexShrink: 0 }}>{top.top_pick_code}</span>
+                      </>) : (<span style={{ fontFamily: "'Space Mono',monospace", fontSize: 14, color: '#666', flexShrink: 0 }}>暂无标的</span>)}
+                      <span style={{ fontSize: 14, color: isOpen ? '#ADFF00' : '#555', transition: 'transform 0.25s', transform: isOpen ? 'rotate(180deg)' : 'none' }}>▼</span>
+                    </div>
+                    {isOpen && first && (<div style={{ padding: '10px 12px', borderTop: '1px solid rgba(255,255,255,0.04)', background: 'rgba(0,0,0,0.18)' }}>
+                      {first.event_summary && <div style={{ fontSize: 14, color: '#AAA', lineHeight: 1.8, marginBottom: 10 }}>{first.event_summary}{!top && <span style={{ color: '#C88D3A', marginLeft: 6 }}>（无高赔率标的）</span>}</div>}
+                      {top && (<div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+                        <span style={{ fontSize: 14, color: '#ADFF00', fontWeight: 600, border: '1px solid rgba(173,255,0,0.15)', padding: '2px 10px' }}>🥇 {top.top_pick_name} {top.top_pick_score}</span>
+                        {(() => { const ru = recs.find(r => r.runner_up_name && r.runner_up_name !== '无高赔率标的'); return ru ? <span style={{ fontSize: 14, color: '#C88D3A', fontWeight: 600, border: '1px solid rgba(200,141,58,0.15)', padding: '2px 10px' }}>🥈 {ru.runner_up_name} {ru.runner_up_score}</span> : null; })()}
+                      </div>)}
+                      {top && first.top_pick_thesis && <div style={{ fontSize: 14, color: '#ADFF00', fontFamily: "'Space Mono',monospace", marginBottom: 4, padding: '8px 10px', background: 'rgba(173,255,0,0.04)', borderLeft: '2px solid rgba(173,255,0,0.2)', lineHeight: 1.8 }}>
+                        🥇 {top.top_pick_name}：{first.top_pick_thesis}
+                      </div>}
+                      {first.runner_up_thesis && first.runner_up_name !== '无高赔率标的' && <div style={{ fontSize: 14, color: '#C88D3A', fontFamily: "'Space Mono',monospace", padding: '8px 10px', background: 'rgba(200,141,58,0.04)', borderLeft: '2px solid rgba(200,141,58,0.2)', lineHeight: 1.8 }}>
+                        🥈 {first.runner_up_name}：{first.runner_up_thesis}
+                      </div>}
+                    </div>)}
+                  </div>);
+                })}
+              </div>);
+            })()}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -347,7 +398,7 @@ export function DingshuluPanel() {
 
   const reports = React.useMemo(() => {
     const sorted = sortMode === 'time'
-      ? [...rawReports].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))
+      ? [...rawReports].sort((a, b) => (b.bstudio_create_time || '').localeCompare(a.bstudio_create_time || ''))
       : [...rawReports].sort((a, b) => parseFloat(b.base_upside_pct || '0') - parseFloat(a.base_upside_pct || '0'));
     return sorted.slice(0, 15);
   }, [rawReports, sortMode]);
@@ -357,13 +408,29 @@ export function DingshuluPanel() {
     if (!expandedId) return;
     const rep = reports.find((r, i) => (r.id || String(i)) === expandedId);
     if (!rep?.report_html_url || narratives[expandedId]) return;
-    const parts = rep.report_html_url.split('/');
-    const filename = parts[parts.length - 1];
-    fetch(`/api/report/data/${filename}`)
-      .then(r => r.json())
+    // 解析 URL: /report/300726_20260522_1004 或 /report/300726?at=20260522_1004 或 /report/603477
+    const urlPart = rep.report_html_url.split('/').pop() || '';
+    const qIdx = urlPart.indexOf('?');
+    let filename: string;
+    if (qIdx > 0) {
+      const code = urlPart.slice(0, qIdx);
+      const at = new URLSearchParams(urlPart.slice(qIdx)).get('at') || '';
+      filename = at ? `${code}_${at}` : code;
+    } else {
+      filename = urlPart;
+    }
+    fetchReportByFilename(filename)
       .then(d => {
-        const n = d.agent3?.narrative || d.narrative || '';
-        if (n) setNarratives(prev => ({ ...prev, [expandedId]: String(n) }));
+        if (!d) return;
+        // 尝试多个叙事路径: agent3.narrative > agent2a.narrative > 顶层 narrative
+        const a3 = (d.agent3 || {}) as Record<string, unknown>;
+        const a2a = (d.agent2a || {}) as Record<string, unknown>;
+        const n: string = String(
+          a3.narrative || a3.executive_summary || a3.summary ||
+          a2a.narrative || a2a.summary ||
+          d.narrative || d.summary || ''
+        );
+        if (n) setNarratives(prev => ({ ...prev, [expandedId]: n }));
       })
       .catch(() => {});
   }, [expandedId, reports]);
@@ -390,6 +457,7 @@ export function DingshuluPanel() {
     high: reports.filter((r) => r.quality_flag === 'HIGH_QUALITY').length,
     spec: reports.filter((r) => r.quality_flag === 'SPECULATIVE').length,
   };
+  void stats; // suppress unused warning
 
   return (
     <div ref={containerRef} style={{ ...PANEL_STYLE, position: 'relative' }}
@@ -517,7 +585,7 @@ export function DingshuluPanel() {
 interface TrackingSummary {
   stockCode: string;
   stockName: string;
-  trackStatus: 'active' | 'paused';
+  trackStatus: 'active' | 'paused' | 'hidden';
   conviction: number;
   convictionDelta: string;
   thesisStatus: string;
@@ -542,9 +610,9 @@ export function TrackingPanel() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    fetch('/api/tracking')
-      .then((r) => r.json())
-      .then((data: Array<Record<string, unknown>>) => {
+    fetchTracking()
+       
+      .then((data) => {
         const summaries: TrackingSummary[] = (data as any[]).map((d: any) => {
           const lastPrice = d.priceLog?.[d.priceLog.length - 1];
           const tl = d.thesisLog || [];
@@ -560,11 +628,10 @@ export function TrackingPanel() {
               if (aTriggered !== bTriggered) return bTriggered - aTriggered;
               return (a.date || '9999').localeCompare(b.date || '9999');
             });
-          if (d.track_status === 'paused') return null;
           return {
             stockCode: d.stockCode,
             stockName: d.stockName,
-            trackStatus: d.track_status || 'active',
+            trackStatus: d.trackStatus || 'active',
             conviction: d.conviction || 0,
             convictionDelta: latestTl?.delta || '0',
             thesisStatus: (d.pillars || []).some((p: any) => p.status === 'at_risk')
@@ -583,14 +650,15 @@ export function TrackingPanel() {
             verifiedCount: verifiedPillars.length,
             onTrackCount: onTrackPillars.length,
           };
-        }).filter(Boolean) as TrackingSummary[];
-        summaries.sort((a, b) => {
+        });
+        const activeSummaries = summaries.filter((s) => s.trackStatus !== 'paused');
+        activeSummaries.sort((a, b) => {
           if (a.thesisStatus === 'at_risk' && b.thesisStatus !== 'at_risk') return -1;
           if (b.thesisStatus === 'at_risk' && a.thesisStatus !== 'at_risk') return 1;
           return (a.nextCatalyst?.date || '9999').localeCompare(b.nextCatalyst?.date || '9999');
         });
-        setStocks(summaries);
-        setExpanded(new Set(summaries.filter((s) => s.thesisStatus === 'at_risk').map((s) => s.stockCode)));
+        setStocks(activeSummaries);
+        setExpanded(new Set());
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -598,9 +666,6 @@ export function TrackingPanel() {
 
   const thesisColor: Record<string, string> = {
     on_track: '#ADFF00', at_risk: '#FF5C00', pending: '#C88D3A', verified: '#888',
-  };
-  const thesisLabel: Record<string, string> = {
-    on_track: '运转', at_risk: '警告', pending: '待验', verified: '已验',
   };
   const tensionIcon: Record<string, string> = {
     rising: '▲', stable: '▶', easing: '▼', breaking: '✕',
@@ -651,6 +716,7 @@ export function TrackingPanel() {
           const stockKey = s.stockCode || `s-${i}`;
           const isOpen = expanded.has(stockKey);
           const hasDelta = s.convictionDelta !== '0' && s.convictionDelta !== '';
+          const deltaShort = hasDelta && s.convictionDelta.length <= 6;
           return (
             <div key={stockKey} style={{
               marginBottom: '6px',
@@ -679,29 +745,34 @@ export function TrackingPanel() {
                 {/* 股票名 + 代码 */}
                 <span style={{
                   fontFamily: "'IBM Plex Mono', 'Noto Sans SC', monospace",
-                  fontSize: '20px', fontWeight: 600, color: '#F2F4F3',
+                  fontSize: '16px', fontWeight: 600, color: '#F2F4F3',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                 }}>{s.stockName}</span>
-                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '15px', color: '#666' }}>{s.stockCode}</span>
-                <span style={{ flex: 1 }} />
-                {/* Conviction + delta */}
+                <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '13px', color: '#666', flexShrink: 0 }}>{s.stockCode}</span>
+                {/* Risk badge */}
+                {s.thesisStatus === 'at_risk' && (
+                  <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '10px', color: '#FF5C00', border: '1px solid rgba(255,92,0,0.3)', borderRadius: 3, padding: '1px 5px', flexShrink: 0 }}>!</span>
+                )}
+                <span style={{ flex: 1, minWidth: 8 }} />
+                {/* Conviction + delta (short only) */}
                 <span style={{
-                  fontFamily: "'Space Mono', monospace", fontSize: '15px', color: '#888',
+                  fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#888', flexShrink: 0,
                 }}>
                   信<span style={{ color: s.conviction >= 70 ? '#ADFF00' : s.conviction >= 40 ? '#C88D3A' : '#FF5C00' }}>{s.conviction}</span>
-                  {hasDelta && (
-                    <span style={{ fontSize: '14px', color: s.convictionDelta.startsWith('+') ? '#ADFF00' : '#FF5C00', marginLeft: '1px' }}>
+                  {deltaShort && (
+                    <span style={{ fontSize: '13px', color: s.convictionDelta.startsWith('+') ? '#ADFF00' : '#FF5C00', marginLeft: '1px' }}>
                       {s.convictionDelta}
                     </span>
                   )}
                 </span>
                 {/* 涨跌幅 */}
                 <span style={{
-                  fontFamily: "'Geist Pixel', monospace", fontSize: '20px',
+                  fontFamily: "'Geist Pixel', monospace", fontSize: '18px', flexShrink: 0,
                   color: s.returnPct >= 0 ? '#ADFF00' : '#FF5C00',
                 }}>
                   {s.returnPct >= 0 ? '+' : ''}{s.returnPct.toFixed(1)}%
                 </span>
-                <span style={{ color: '#444', fontSize: '16px', transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none' }}>▼</span>
+                <span style={{ color: '#444', fontSize: '14px', flexShrink: 0, transition: 'transform 0.2s', transform: isOpen ? 'rotate(180deg)' : 'none' }}>▼</span>
               </div>
 
               {/* ====== 展开详情 ====== */}
@@ -715,6 +786,13 @@ export function TrackingPanel() {
                   </div>
 
                   {/* 最新变动 */}
+                  {hasDelta && !deltaShort && (
+                    <div style={{ margin: '6px 0', padding: '6px 10px', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.04)', borderRadius: 4 }}>
+                      <div style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '13px', color: '#999', lineHeight: 1.5 }}>
+                        {s.convictionDelta}
+                      </div>
+                    </div>
+                  )}
                   {s.latestTrigger && (
                     <div style={{ margin: '4px 0', padding: '4px 8px', borderLeft: `2px solid ${tensionColor[s.narrativeTension]}60` }}>
                       <div style={{ fontFamily: "'Noto Sans SC', sans-serif", fontSize: '14px', color: '#888', lineHeight: 1.4 }}>
@@ -905,50 +983,6 @@ function OrgMiniCards() {
   );
 }
 
-const SLIM_ORGS = [
-  { id: 'tianji', name: '天机峰', route: '/tianjifeng' },
-  { id: 'cangjing', name: '藏经云', route: '/cangjingyun' },
-  { id: 'dashboard', name: '总控台', route: '/dashboard' },
-  { id: 'avatar', name: '身外化身', route: '/avatar' },
-  { id: 'tracking', name: '追踪令', route: '/tracking' },
-  { id: 'agent-config', name: '炼器房', route: '/agent-config' },
-];
-
-function SlimOrgStatus() {
-  const [pollInfo, setPollInfo] = useState({ last: '—', next: '—' });
-  const [time, setTime] = useState('');
-
-  useEffect(() => {
-    fetch('/api/status').then(r => r.json()).then(s => {
-      setPollInfo({
-        last: s.last_poll_at ? new Date(s.last_poll_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' }) : '—',
-        next: s.next_poll_at ? new Date(s.next_poll_at).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Shanghai' }) : '—',
-      });
-    }).catch(() => {});
-    const tick = () => { const d = new Date(); setTime(`${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`); };
-    tick(); const id = setInterval(tick, 1000); return () => clearInterval(id);
-  }, []);
-
-  return (
-    <div style={{
-      position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2,
-      display: 'flex', alignItems: 'center', gap: '12px',
-      padding: '5px 20px',
-      borderTop: '1px solid rgba(173,255,0,0.06)',
-      background: 'rgba(5,4,1,0.85)',
-    }}>
-      <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#ADFF00', boxShadow: '0 0 6px rgba(173,255,0,0.5)', flexShrink: 0 }} />
-      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#888', letterSpacing: '0.06em' }}>
-        调度 {pollInfo.last} → {pollInfo.next}
-      </span>
-      <span style={{ flex: 1 }} />
-      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#555' }}>UTC+8 {time}</span>
-      <span style={{ color: 'rgba(255,255,255,0.08)' }}>|</span>
-      <span style={{ fontFamily: "'Space Mono', monospace", fontSize: '14px', color: '#444' }}>长流水宗门</span>
-    </div>
-  );
-}
-
 /* ================================================================== */
 /*  PanoramicMonitor — 全景监控主布局                                    */
 /* ================================================================== */
@@ -977,8 +1011,7 @@ export default function PanoramicMonitor() {
           <OrgMiniCards />
           <MascotCorner />
         </div>
-        <SlimOrgStatus />
-      </div>
+        </div>
     );
   }
 
@@ -1031,7 +1064,6 @@ export default function PanoramicMonitor() {
         </div>
       </div>
 
-      <SlimOrgStatus />
     </div>
   );
 }

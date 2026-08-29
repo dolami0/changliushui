@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { TrendingUp, TrendingDown, Target, Shield, Calendar, AlertTriangle, Activity, X, Zap, Building2, Unlock, Coins } from 'lucide-react'
+import { Target, Shield, Calendar, AlertTriangle, Activity, X, Zap, Building2, Unlock, Coins, Pause, Play } from 'lucide-react'
 import { useMobile } from '@/hooks/useMobile'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -7,6 +7,7 @@ import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { fetchTracking, updateTrackStatus } from '@/services/cozeApi'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip,
   ResponsiveContainer, ReferenceLine
@@ -79,9 +80,10 @@ interface ThesisVersion {
 }
 
 interface TrackingData {
+  id: string
   stockCode: string
   stockName: string
-  track_status: 'active' | 'paused'
+  trackStatus: 'active' | 'paused' | 'hidden'
   thesis: string
   conviction: number
   decisionDate: string
@@ -200,18 +202,15 @@ function ConvictionRing({ value }: { value: number }) {
 }
 
 function TrackStatusBadge({ status }: { status: string }) {
-  const meta: Record<string, { label: string; color: string; border: string; bg: string }> = {
-    active:  { label: '跟踪中', color: 'text-[#ADFF00]', border: 'border-[#ADFF00]/30', bg: 'bg-[#ADFF00]/5' },
-    paused:  { label: '已暂停', color: 'text-amber-400',  border: 'border-amber-400/30',  bg: 'bg-amber-400/5' },
+  const cfg: Record<string, { label: string; color: string; border: string; bg: string }> = {
+    active: { label: '跟踪中', color: 'text-[#ADFF00]', border: 'border-[#ADFF00]/30', bg: 'bg-[#ADFF00]/5' },
+    paused: { label: '已暂停', color: 'text-yellow-400', border: 'border-yellow-400/30', bg: 'bg-yellow-400/5' },
   }
-  const m = meta[status] ?? meta.active
+  const c = cfg[status] || cfg.active
   return (
-    <span className={cn(
-      'inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-sm font-medium border',
-      m.color, m.border, m.bg
-    )}>
-      {status === 'active' ? <Activity size={12} /> : <AlertTriangle size={12} />}
-      {m.label}
+    <span className={cn('inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-sm font-medium border', c.color, c.border, c.bg)}>
+      {status === 'paused' ? <Pause size={12} /> : <Activity size={12} />}
+      {c.label}
     </span>
   )
 }
@@ -223,7 +222,6 @@ function TrackStatusBadge({ status }: { status: string }) {
 function StockListItem({ stock, isSelected, onClick }: {
   stock: TrackingData; isSelected: boolean; onClick: () => void
 }) {
-  const isPaused = stock.track_status === 'paused'
   return (
     <button
       onClick={onClick}
@@ -231,15 +229,15 @@ function StockListItem({ stock, isSelected, onClick }: {
         'w-full text-left p-4 border-b border-white/5 transition-colors',
         'hover:bg-white/[0.03] focus:outline-none',
         isSelected && 'bg-white/[0.05] border-l-2 border-l-[#ADFF00]',
-        isPaused && 'opacity-50'
+        stock.trackStatus === 'paused' && 'opacity-50'
       )}
     >
       <div className="flex items-center justify-between mb-1.5">
-        <div className="flex items-center gap-2">
+        <div>
           <span className="text-base font-semibold">{stock.stockName}</span>
-          <span className="text-sm text-muted-foreground font-mono">{stock.stockCode}</span>
+          <span className="text-sm text-muted-foreground ml-2 font-mono">{stock.stockCode}</span>
         </div>
-        <TrackStatusBadge status={stock.track_status} />
+        <TrackStatusBadge status={stock.trackStatus} />
       </div>
       <div className="flex items-center gap-2 mt-2">
         <div className="flex-1">
@@ -397,7 +395,6 @@ function ValuationCompare({ vc, basePrice, baseMarketCap }: { vc: ValuationCompa
           const s = vc.scenarios[scenario]
           const c = SCENARIO_COLORS[scenario]
           const returnColor = s.myReturn >= 0 ? 'text-[#ADFF00]' : 'text-red-400'
-          const upReturnColor = s.upReturn >= 0 ? 'text-[#ADFF00]/60' : 'text-red-400/60'
           return (
             <div key={scenario} className={cn('rounded-lg border p-3', c.border, c.bg)}>
               {/* 情景标签 + 涨跌幅 + 目标市值/价 */}
@@ -495,6 +492,7 @@ function ThesisTimeline({ thesisLog }: { thesisLog: ThesisVersion[] }) {
   const [expanded, setExpanded] = useState(false)
   const latest = thesisLog[thesisLog.length - 1]
   const hasHistory = thesisLog.length > 1
+  if (!latest) return null
 
   return (
     <Card className="border-white/5 bg-[#050401]">
@@ -573,7 +571,7 @@ function ThesisTimeline({ thesisLog }: { thesisLog: ThesisVersion[] }) {
         {/* ---- 演进历史 ---- */}
         {expanded && hasHistory && (
           <div className="relative pl-5 border-l border-white/10 space-y-4 mt-4 pt-2">
-            {thesisLog.slice().reverse().map((v, i) => (
+            {thesisLog.slice().reverse().map((v, _idx) => (
               <div key={v.version} className="relative">
                 <div className="absolute -left-[21px] top-1 w-2 h-2 rounded-full border border-[#C88D3A]/50 bg-[#C88D3A]/20" />
                 <div className="flex items-center gap-2 mb-1">
@@ -726,15 +724,33 @@ export default function Tracking() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    fetch('/api/tracking')
-      .then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json() })
-      .then((data: TrackingData[]) => {
-        setStocks(data)
-        if (data.length > 0) setSelected(data[0])
+    fetchTracking()
+      .then((data) => {
+        const stocks = data as unknown as TrackingData[];
+        setStocks(stocks);
+        if (stocks.length > 0) setSelected(stocks[0]);
         setLoading(false)
       })
       .catch(e => { setError(e.message); setLoading(false) })
   }, [])
+
+  const handleToggleStatus = async (stock: TrackingData) => {
+    const newStatus = stock.trackStatus === 'paused' ? 'active' : 'paused'
+    // Optimistic update
+    setStocks(prev => prev.map(s => s.stockCode === stock.stockCode ? { ...s, trackStatus: newStatus } : s))
+    if (selected?.stockCode === stock.stockCode) {
+      setSelected(prev => prev ? { ...prev, trackStatus: newStatus } : null)
+    }
+    try {
+      await updateTrackStatus(stock.id, newStatus)
+    } catch {
+      // Revert on failure
+      setStocks(prev => prev.map(s => s.stockCode === stock.stockCode ? { ...s, trackStatus: stock.trackStatus } : s))
+      if (selected?.stockCode === stock.stockCode) {
+        setSelected(prev => prev ? { ...prev, trackStatus: stock.trackStatus } : null)
+      }
+    }
+  }
 
   const selectedStock = selected
 
@@ -785,7 +801,11 @@ export default function Tracking() {
           </div>
         ) : (
           <ScrollArea className="flex-1" style={{ minHeight: 0 }}>
-            {[...stocks].sort((a, b) => (a.track_status === 'paused' ? 1 : 0) - (b.track_status === 'paused' ? 1 : 0)).map(s => (
+            {[...stocks].sort((a, b) => {
+              const aPaused = a.trackStatus === 'paused' ? 1 : 0;
+              const bPaused = b.trackStatus === 'paused' ? 1 : 0;
+              return aPaused - bPaused;
+            }).map(s => (
               <StockListItem
                 key={s.stockCode}
                 stock={s}
@@ -812,48 +832,38 @@ export default function Tracking() {
           <ScrollArea className="flex-1" style={{ minHeight: 0 }}>
             <div className="p-6 space-y-5 max-w-4xl">
               {/* ---- 概览头部 ---- */}
-              <div className="flex items-start justify-between flex-wrap gap-4">
-                <div className="flex items-start gap-4">
-                  <ConvictionRing value={selectedStock.conviction} />
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <h1 className="text-2xl font-semibold">{selectedStock.stockName}</h1>
-                      <span className="text-base font-mono text-muted-foreground">{selectedStock.stockCode}</span>
-                      <TrackStatusBadge status={selectedStock.track_status} />
-                      <button
-                        onClick={async () => {
-                          const next = selectedStock.track_status === 'active' ? 'paused' : 'active'
-                          try {
-                            const res = await fetch(`/api/tracking/${selectedStock.stockCode}/status`, {
-                              method: 'PATCH',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ track_status: next }),
-                            })
-                            if (res.ok) {
-                              const updated = { ...selectedStock, track_status: next }
-                              setSelected(updated)
-                              setStocks(prev => prev.map(s => s.stockCode === selectedStock.stockCode ? updated : s))
-                            }
-                          } catch { /* ignore */ }
-                        }}
-                        className="text-xs text-muted-foreground hover:text-[#ADFF00] transition-colors px-1.5 py-0.5 rounded border border-white/10 hover:border-[#ADFF00]/30"
-                        title="切换跟踪状态"
-                      >
-                        ⇄
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2">
-                      <span>决议: {selectedStock.decisionDate}</span>
-                      <span className="text-[#ADFF00]">{selectedStock.decision}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-sm">
-                      <span className="text-muted-foreground">
-                        建议仓位 <span className="text-[#ADFF00] font-mono">{selectedStock.recommendedPosition}%</span>
-                      </span>
-                      <span className="text-muted-foreground">
-                        实际仓位 <span className="font-mono">{selectedStock.actualPosition}%</span>
-                      </span>
-                    </div>
+              <div className="flex items-start gap-4 flex-wrap">
+                <ConvictionRing value={selectedStock.conviction} />
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h1 className="text-2xl font-semibold">{selectedStock.stockName}</h1>
+                    <span className="text-base font-mono text-muted-foreground">{selectedStock.stockCode}</span>
+                    <TrackStatusBadge status={selectedStock.trackStatus} />
+                    {/* Pause / Resume — right next to badge */}
+                    <button
+                      onClick={() => handleToggleStatus(selectedStock)}
+                      className={cn(
+                        'p-1.5 rounded-full transition-colors',
+                        selectedStock.trackStatus === 'paused'
+                          ? 'text-[#ADFF00]/50 hover:text-[#ADFF00] hover:bg-[#ADFF00]/10'
+                          : 'text-yellow-400/50 hover:text-yellow-400 hover:bg-yellow-400/10'
+                      )}
+                      title={selectedStock.trackStatus === 'paused' ? '恢复跟踪' : '暂停跟踪'}
+                    >
+                      {selectedStock.trackStatus === 'paused' ? <Play size={15} /> : <Pause size={15} />}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2">
+                    <span>决议: {selectedStock.decisionDate}</span>
+                    <span className="text-[#ADFF00]">{selectedStock.decision}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className="text-muted-foreground">
+                      建议仓位 <span className="text-[#ADFF00] font-mono">{selectedStock.recommendedPosition}%</span>
+                    </span>
+                    <span className="text-muted-foreground">
+                      实际仓位 <span className="font-mono">{selectedStock.actualPosition}%</span>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -867,7 +877,7 @@ export default function Tracking() {
               )}
 
               {/* ---- 核心论点 (叙事演进) ---- */}
-              <ThesisTimeline thesisLog={selectedStock.thesisLog || [{
+              <ThesisTimeline thesisLog={(selectedStock.thesisLog && selectedStock.thesisLog.length > 0) ? selectedStock.thesisLog : [{
                 version: 1,
                 date: selectedStock.decisionDate,
                 thesis: selectedStock.thesis,

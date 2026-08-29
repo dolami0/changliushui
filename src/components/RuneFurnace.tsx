@@ -49,7 +49,6 @@ function RuneFurnaceCore({ active, totalReports }: { active: boolean; totalRepor
     if (!ctx) return;
 
     let t0 = performance.now();
-    let time = 0;
 
     /* ---- 初始化符文粒子 ---- */
     if (runeParticles.current.length === 0) {
@@ -167,7 +166,7 @@ function RuneFurnaceCore({ active, totalReports }: { active: boolean; totalRepor
           else ctx.lineTo(x, y);
         }
         ctx.closePath();
-        const grad = ctx.createRadialGradient(0, 0, radii[layer] * 0.4, 0, 0, radii[layer] * 1.1);
+        const grad = ctx.createRadialGradient(0, 0, radii * 0.4, 0, 0, radii * 1.1);
         grad.addColorStop(0, `rgba(173,255,0,${alphas * 2})`);
         grad.addColorStop(0.5, `rgba(173,255,0,${alphas})`);
         grad.addColorStop(1, 'rgba(173,255,0,0)');
@@ -271,7 +270,7 @@ function RuneFurnaceCore({ active, totalReports }: { active: boolean; totalRepor
       embers.current = survivors;
     }
 
-    function drawBasePlatform(t: number) {
+    function drawBasePlatform() {
       ctx.save();
       ctx.translate(CX, CY + 95);
       const w = 140;
@@ -308,7 +307,6 @@ function RuneFurnaceCore({ active, totalReports }: { active: boolean; totalRepor
 
     function loop(now: number) {
       const t = now - t0;
-      time = t;
       ctx.clearRect(0, 0, FURNACE_W, FURNACE_H);
 
       // 鼠标平滑追踪
@@ -324,7 +322,7 @@ function RuneFurnaceCore({ active, totalReports }: { active: boolean; totalRepor
       ctx.fillRect(0, 0, FURNACE_W, FURNACE_H);
 
       drawOctagonFrame(t);
-      drawBasePlatform(t);
+      drawBasePlatform();
       drawRuneRing(t);
       drawFurnaceBody(t);
       drawEmbers(t);
