@@ -448,7 +448,7 @@ class BaselineMapDrawer:
                     "temperature": 0.1,
                     "stream": False,
                     "thinking": {"type": "enabled"},
-                    "reasoning_effort": "max",
+                    "reasoning_effort": "low",
                 },
                 timeout=300,
             )

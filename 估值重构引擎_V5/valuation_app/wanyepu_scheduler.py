@@ -64,11 +64,17 @@ class WanyepuScheduler:
         return (target - now).total_seconds()
 
     async def _loop_a(self):
-        """管线 A (天机卷): 每个整点的第 30 分触发。"""
+        """管线 A (天机卷): 每个整点的第 30 分触发，高峰时段跳过（DeepSeek 峰谷定价避峰）。"""
         await asyncio.sleep(5)  # 启动延迟，让 server 先起来
+        from valuation_app.offpeak import is_peak_bj, seconds_until_offpeak
         while self._running:
             wait_sec = self._wait_until_minute(30)
             next_time = datetime.now(timezone.utc) + timedelta(seconds=wait_sec)
+            if is_peak_bj(next_time):
+                extra = seconds_until_offpeak(next_time)
+                next_time = next_time + timedelta(seconds=extra)
+                wait_sec += extra
+                logger.info(f"管线A高峰避峰，顺延至 {next_time.isoformat()}")
             self.next_poll_a = next_time.isoformat()
             logger.info(f"管线A下次轮询: {next_time.isoformat()} (等待 {wait_sec:.0f}s)")
             await asyncio.sleep(wait_sec)
@@ -80,11 +86,17 @@ class WanyepuScheduler:
                 logger.error(f"管线A轮询异常: {e}")
 
     async def _loop_b(self):
-        """管线 B (产业链): 每个整点的第 45 分触发。"""
+        """管线 B (产业链): 每个整点的第 45 分触发，高峰时段跳过（DeepSeek 峰谷定价避峰）。"""
         await asyncio.sleep(5)  # 启动延迟
+        from valuation_app.offpeak import is_peak_bj, seconds_until_offpeak
         while self._running:
             wait_sec = self._wait_until_minute(45)
             next_time = datetime.now(timezone.utc) + timedelta(seconds=wait_sec)
+            if is_peak_bj(next_time):
+                extra = seconds_until_offpeak(next_time)
+                next_time = next_time + timedelta(seconds=extra)
+                wait_sec += extra
+                logger.info(f"管线B高峰避峰，顺延至 {next_time.isoformat()}")
             self.next_poll_b = next_time.isoformat()
             logger.info(f"管线B下次轮询: {next_time.isoformat()} (等待 {wait_sec:.0f}s)")
             await asyncio.sleep(wait_sec)

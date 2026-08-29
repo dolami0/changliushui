@@ -1,6 +1,7 @@
 """第3层: 总装 — 去重、knowledge_supplement、透传合并、Coze 写入"""
 
 import json
+import os
 import time
 import requests
 from typing import Optional
@@ -8,7 +9,7 @@ from datetime import datetime
 
 from urllib.parse import quote
 
-COZE_TOKEN = "sat_UxIpTimxUFwh0BGedY1yxK7YJbqrqryebdRVyt8AjducYxsH8cFkkso6Orh2RTGc"
+COZE_TOKEN = os.environ.get("COZE_SAT_TOKEN", "")
 COZE_BASE = "https://api.coze.cn/v1/databases"
 DB_WANYEPU = "7639784337973477386"
 

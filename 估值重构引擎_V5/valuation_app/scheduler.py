@@ -79,12 +79,19 @@ class Scheduler:
         return next_local.astimezone(timezone.utc)
 
     async def _loop(self):
-        """主循环：每整点轮询 (北京时间)"""
+        """主循环：每整点轮询 (北京时间)，高峰时段跳过（DeepSeek 峰谷定价避峰）"""
         await asyncio.sleep(3)
+        from valuation_app.offpeak import is_peak_bj, seconds_until_offpeak
         while self._running:
             next_hour = self._next_hour_local()
             now_utc = datetime.now(timezone.utc)
             wait_sec = max(10, (next_hour - now_utc).total_seconds())
+            # 高峰时段（北京 9:00-12:00 / 14:00-18:00）不执行，顺延到空闲时段
+            if is_peak_bj(next_hour):
+                extra = seconds_until_offpeak(next_hour)
+                wait_sec += extra
+                next_hour = next_hour + timedelta(seconds=extra)
+                logger.info(f"高峰时段避峰，顺延至 {next_hour.isoformat()} (额外等待 {extra:.0f}s)")
             self.next_poll_at = next_hour.isoformat()
             logger.info(f"下次轮询: {next_hour.isoformat()} (等待 {wait_sec:.0f}s, 配置间隔 {self.interval}s)")
             await asyncio.sleep(wait_sec)
@@ -180,6 +187,37 @@ class Scheduler:
                         self.coze.mark_record_complete(self.agent0_db_id, record_id)
                     except Exception:
                         logger.error(f"标记无效记录失败: id={record_id}")
+                continue
+
+            # 关键语料缺失检查：预研管线某节点静默失败会留下空语料，
+            # 这种记录进估值引擎产出的报告作废。检测到缺失→不走估值，
+            # 复用 PreScreen 回写通道标注"语料缺失"，大屏可见。
+            CORPUS_FIELDS = {
+                "investment_theme": "投资主题",
+                "industry_expert_research": "产业链研究",
+                "adversarial_thinking": "逆向推演",
+                "event_deduction": "事件推演",
+                "future": "催化日历",
+            }
+            missing = [cn for f, cn in CORPUS_FIELDS.items()
+                       if not (rec.get(f, "") or "").strip()]
+            if missing:
+                record_id = rec.get("id", "")
+                reason = f"语料缺失: {','.join(missing)}"
+                logger.warning(f"[CorpusMissing] 拦截 {stock_code}({rec.get('stock_name','?')}): {reason}")
+                if record_id:
+                    try:
+                        self.coze.update_records(
+                            self.agent0_db_id,
+                            [{"field_name": "pre_screen_score", "value": "0"},
+                             {"field_name": "pre_screen_detail",
+                              "value": json.dumps({"corpus_missing": missing, "cut_reason": reason},
+                                                  ensure_ascii=False)[:15000]}],
+                            {"logic": "and", "conditions": [{"left": "id", "operation": "equal", "right": record_id}]},
+                        )
+                        self.coze.mark_record_complete(self.agent0_db_id, record_id)
+                    except Exception as e:
+                        logger.error(f"[CorpusMissing] 回写失败: {stock_code} — {e}")
                 continue
 
             # ── 同session去重 ──

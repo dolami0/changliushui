@@ -154,6 +154,11 @@ N3 逆向推演中的降级条件:
         max_tokens=65536,
     )
 
+    # 最终防线：call_deepseek 内部已做无效检测+原样重试+reasoning兜底，
+    # 走到这里仍空说明多次重试都失败，抛异常，绝不写空语料进万业谱
+    if not (report or "").strip():
+        raise RuntimeError(f"[N4 催化日历] LLM 返回空报告（{stock_name} {stock_code}，多次重试后仍空）")
+
     elapsed = time.time() - t_start
     if verbose:
         print(f"[N4 催化日历] 完成: {elapsed:.0f}s {len(report)}c")

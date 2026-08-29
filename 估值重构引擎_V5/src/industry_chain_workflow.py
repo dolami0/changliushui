@@ -29,8 +29,8 @@ from agents.tools import bocha_search, TOOL_DEFINITIONS, TOOL_MAP
 # API 配置
 # ═══════════════════════════════════════
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
-DEEPSEEK_MODEL = "deepseek-v4-pro"
-DEEPSEEK_MODEL_FAST = "deepseek-v4-flash"  # 统一用 Flash 开思考
+DEEPSEEK_MODEL = "deepseek-v4-flash"  # 降级为 flash（pro 涨价，望气环节不必要）
+DEEPSEEK_MODEL_FAST = "deepseek-v4-flash"
 BOCHA_TOOLS = [t for t in TOOL_DEFINITIONS if t["function"]["name"] in ("bocha_search", "fetch_url")]
 VOLC_URL = "https://open.feedcoopapi.com/agent_api/agent/chat/completion"
 VOLC_BOT_ID = "7640524154441156122"
@@ -738,7 +738,7 @@ class IndustryChainWorkflow:
             try:
                 import tushare as ts
                 config_path = Path(__file__).parent.parent / 'valuation_app' / 'config.json'
-                with open(config_path) as f:
+                with open(config_path, encoding='utf-8') as f:
                     cfg = json.load(f)
                 pro = ts.pro_api(cfg.get('tushare_token', ''))
 
@@ -798,7 +798,10 @@ class IndustryChainWorkflow:
                     short = short[len(prefix):]
                     break
             core = _re.sub(r'[^一-鿿]', '', short)
-            for window in [4, 3, 2]:
+            # 只允许窗口≥3的兜底匹配。window=2 会把"XX公司""XX股份"这类
+            # 泛化名称错配到任意同名尾缀公司（如"不存在公司"→"中金公司"）。
+            # 匹配质量要求：短名至少保留3个核心字。
+            for window in [4, 3]:
                 if len(core) >= window:
                     kw = core[-window:]
                     fuzzy2 = df[df['name'].str.contains(kw, na=False)]
@@ -901,7 +904,7 @@ class IndustryChainWorkflow:
             try:
                 import tushare as ts
                 config_path = Path(__file__).parent.parent / 'valuation_app' / 'config.json'
-                with open(config_path) as f:
+                with open(config_path, encoding='utf-8') as f:
                     cfg = json.load(f)
                 pro = ts.pro_api(cfg.get('tushare_token', ''))
 
@@ -1288,7 +1291,7 @@ class IndustryChainWorkflow:
                 }
                 if use_thinking:
                     payload["thinking"] = {"type": "enabled"}
-                    payload["reasoning_effort"] = "high"
+                    payload["reasoning_effort"] = "low"
                 r = requests.post(DEEPSEEK_URL, json=payload,
                     headers={"Authorization": f"Bearer {self.dk}", "Content-Type": "application/json"}, timeout=600)
                 if r.status_code != 200:
@@ -1337,6 +1340,7 @@ class IndustryChainWorkflow:
                 if is_last_turn and model == DEEPSEEK_MODEL_FAST:
                     payload["model"] = DEEPSEEK_MODEL
                     payload["thinking"] = {"type": "enabled"}
+                    payload["reasoning_effort"] = "low"
                 elif is_last_turn:
                     pass  # v4-pro already set, thinking handled below
                 # 前N-1轮: 传tools; 最后轮: 不传tools强制输出JSON
@@ -1344,7 +1348,7 @@ class IndustryChainWorkflow:
                     payload["tools"] = tools
                     if use_thinking:
                         payload["thinking"] = {"type": "enabled"}
-                        payload["reasoning_effort"] = "high"
+                        payload["reasoning_effort"] = "low"
                 else:
                     messages.append({
                         "role": "user",

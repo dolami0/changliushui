@@ -1,17 +1,21 @@
 """快讯抓取 — 双源汇聚
 
 东方财富 7×24 快讯：公开 JSON API，50条/次，偏 A 股公告/交易面
-36氪快讯：SSR 页面内嵌 JSON，~20条/次，偏科技/创投/产业趋势
+36氪 RSS：XML Feed，~20条/日，偏科技/创投/产业趋势
 """
 
 import json
 import re
 import time
+import html
 from datetime import datetime
+from email.utils import parsedate_to_datetime
+from xml.etree import ElementTree as ET
 
 import requests
 
 _EM_URL = "https://newsapi.eastmoney.com/kuaixun/v1/getlist_101_ajaxResult_50_1_.html"
+_36KR_RSS_URL = "https://www.36kr.com/feed"
 _36KR_URL = "https://36kr.com/newsflashes"
 
 _HEADERS = {
@@ -55,55 +59,79 @@ def fetch_eastmoney(max_retries: int = 3) -> list[dict]:
 
 
 def fetch_36kr(max_retries: int = 3) -> list[dict]:
-    """抓取 36氪快讯（解析 SSR 页面内嵌 JSON）。返回统一格式列表。"""
+    """抓取 36氪 RSS Feed。老 SSR 数据嵌入方式已失效，用 RSS 降级替代。"""
     for attempt in range(max_retries):
         try:
-            resp = requests.get(_36KR_URL, headers=_HEADERS, timeout=15)
+            resp = requests.get(_36KR_RSS_URL, headers=_HEADERS, timeout=15)
             resp.raise_for_status()
+            raw = resp.text
 
-            m = re.search(
-                r"window\.initialState\s*=\s*({.*?})\s*;?\s*</script>",
-                resp.text, re.DOTALL,
-            )
-            if not m:
-                print("[fetcher] 36氪页面未找到 initialState", flush=True)
+            # 36kr RSS 偶尔包含非标准字符，清理 & 编码
+            raw = re.sub(r"&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)", "&amp;", raw)
+
+            try:
+                root = ET.fromstring(raw)
+            except ET.ParseError:
+                if attempt < max_retries - 1:
+                    time.sleep(2 * (attempt + 1))
+                    continue
+                print("[fetcher] 36氪 RSS XML 解析失败", flush=True)
                 return []
 
-            data = json.loads(m.group(1))
-            items = (
-                data.get("newsflashCatalogData", {})
-                .get("data", {})
-                .get("newsflashList", {})
-                .get("data", {})
-                .get("itemList", [])
-            )
-
             results = []
-            for item in items:
-                mat = item.get("templateMaterial", {})
-                title = mat.get("widgetTitle", "")
+            for item in root.iter("item"):
+                title_el = item.find("title")
+                link_el = item.find("link")
+                pub_el = item.find("pubDate")
+                desc_el = item.find("description")
+
+                title = html.unescape((title_el.text or "").strip()) if title_el is not None else ""
                 if not title:
                     continue
-                item_id = item.get("itemId", "")
-                ts_ms = mat.get("publishTime", 0)
-                try:
-                    pub_time = datetime.fromtimestamp(int(ts_ms) / 1000).strftime("%Y-%m-%d %H:%M:%S")
-                except (ValueError, OSError):
-                    pub_time = ""
+
+                link = ""
+                if link_el is not None:
+                    link = (link_el.text or "").strip()
+                    link = re.sub(r"<!\[CDATA\[(.*?)\]\]>", r"\1", link)
+
+                pub_time = ""
+                if pub_el is not None:
+                    raw_pub = (pub_el.text or "").strip()
+                    try:
+                        pub_time = parsedate_to_datetime(raw_pub).strftime("%Y-%m-%d %H:%M:%S")
+                    except (ValueError, OSError):
+                        pub_time = raw_pub[:19]
+
+                desc_text = ""
+                if desc_el is not None:
+                    desc_text = html.unescape((desc_el.text or "")[:200]).strip()
+                    desc_text = re.sub(r"<[^>]+>", "", desc_text)
+                    desc_text = re.sub(r"\s+", " ", desc_text)
+
+                item_id = re.search(r"/p/(\d+)", link)
+                news_id = f"36kr_{item_id.group(1)}" if item_id else f"36kr_{hash(title) & 0x7fffffff}"
+
                 results.append({
-                    "news_id": f"36kr_{item_id}",
-                    "title": str(title),
-                    "summary": str(mat.get("widgetContent", "")),
+                    "news_id": news_id,
+                    "title": title,
+                    "summary": desc_text,
                     "source": "36kr",
-                    "url": f"https://36kr.com/newsflashes/{item_id}" if item_id else "",
+                    "url": link,
                     "publish_time": pub_time,
                 })
-            return results
+
+            if results:
+                return results
+
+            if attempt < max_retries - 1:
+                time.sleep(2 * (attempt + 1))
+                continue
+            return []
         except Exception as e:
             if attempt < max_retries - 1:
                 time.sleep(2 * (attempt + 1))
                 continue
-            print(f"[fetcher] 36氪抓取失败: {e}", flush=True)
+            print(f"[fetcher] 36氪 RSS 抓取失败: {e}", flush=True)
             return []
     return []
 
@@ -113,7 +141,7 @@ def fetch_all() -> list[dict]:
     em = fetch_eastmoney()
     kr = fetch_36kr()
     combined = em + kr
-    print(f"[fetcher] 东方财富 {len(em)} 条 + 36氪 {len(kr)} 条 = 共 {len(combined)} 条", flush=True)
+    print(f"[fetcher] 东方财富 {len(em)} 条 + 36氪RSS {len(kr)} 条 = 共 {len(combined)} 条", flush=True)
     return combined
 
 

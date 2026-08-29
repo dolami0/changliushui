@@ -436,7 +436,7 @@ def process_yanbao(
     }
     return process_news(
         news, tianjifeng_io=tianjifeng_io, dry_run=dry_run, full_write_level=full_write_level,
-        progress_cb=progress_cb, skip_filter=True,
+        progress_cb=progress_cb, skip_filter=False,
     )
 
 

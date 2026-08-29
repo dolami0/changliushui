@@ -11,7 +11,7 @@ from typing import Optional
 # Tool 1: 博查 Web Search
 # ═══════════════════════════════════════════════
 
-BOCHA_KEY = os.environ.get("BOCHA_KEY", "sk-090c432b4f5745caa8767ae70f5b348b")
+BOCHA_KEY = os.environ.get("BOCHA_KEY", "")
 BOCHA_URL = "https://api.bochaai.com/v1/web-search"
 
 

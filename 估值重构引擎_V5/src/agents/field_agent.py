@@ -36,6 +36,7 @@ def call_deepseek_fc(
         "max_tokens": max_tokens,
         "messages": messages,
         "thinking": {"type": "enabled"},
+        "reasoning_effort": "low",
     }
     if tools:
         payload["tools"] = tools

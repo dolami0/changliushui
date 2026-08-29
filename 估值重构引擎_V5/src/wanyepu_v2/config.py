@@ -7,14 +7,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from env_config import DEEPSEEK_API_KEY, COZE_SAT_TOKEN, VOLC_AGENT_KEY, TUSHARE_TOKEN
 
 import os
-BOCHA_KEY = os.environ.get("BOCHA_KEY", "sk-090c432b4f5745caa8767ae70f5b348b")
+BOCHA_KEY = os.environ.get("BOCHA_KEY", "")
+if not BOCHA_KEY:
+    import warnings
+    warnings.warn("BOCHA_KEY 未设置,博查搜索将不可用")
 
 # DeepSeek
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
-DEEPSEEK_MODEL = "deepseek-v4-pro"
+DEEPSEEK_MODEL = "deepseek-v4-pro"  # 探针设计/合并恢复 pro（筛选已用 flash 省成本）
 
-# Kimi (Moonshot) — Kimi For Coding 订阅套餐
-KIMI_API_KEY = os.environ.get("KIMI_API_KEY", "sk-kimi-lQupxU1ZGzdieUBPu9q2b3nOJYvaPcQ6QxlKYPaV3Fbt2Sldqmjh5YNEQH9gdYu2")
+# Kimi (Moonshot) — 已废弃,保留配置结构避免下游 import 报错
+KIMI_API_KEY = os.environ.get("KIMI_API_KEY", "")
 KIMI_URL = "https://api.kimi.com/coding/v1/chat/completions"
 KIMI_MODEL = "k3"
 

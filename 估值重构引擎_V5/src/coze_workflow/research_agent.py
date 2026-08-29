@@ -29,7 +29,7 @@ DEEPSEEK_MODEL = "deepseek-v4-flash"
 # DeepSeek key: Coze Code 节点中通过环境变量或直接硬编码
 # 部署到 Coze 时替换为实际 key
 import os as _os
-DEEPSEEK_KEY = _os.environ.get("DEEPSEEK_API_KEY", "sk-8f02dfb2f5a44e02b7afea5e2daa5814")
+DEEPSEEK_KEY = _os.environ.get("DEEPSEEK_API_KEY", "")
 
 # ═══════════════════════════════════════
 # 搜索 — 火山 Agent API (feedcoop bot)

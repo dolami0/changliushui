@@ -8,7 +8,7 @@ Coze Code节点 — Python 3
 import json, requests, re, sys
 from datetime import datetime
 
-COZE_TOKEN = "sat_UxIpTimxUFwh0BGedY1yxK7YJbqrqryebdRVyt8AjducYxsH8cFkkso6Orh2RTGc"
+COZE_TOKEN = ""  # Coze 平台注入
 COZE_BASE = "https://api.coze.cn/v1/databases"
 DB_WANYEPU = "7639784337973477386"
 DB_TIANJI = "7479116110479048754"

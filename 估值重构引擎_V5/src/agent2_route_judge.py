@@ -268,7 +268,7 @@ def _call_deepseek(system: str, user_message: str, max_tokens: int = 30720,
             "temperature": temperature,
             "stream": False,
             "thinking": {"type": "enabled"},
-            "reasoning_effort": "max",
+            "reasoning_effort": "low",
         },
         timeout=600,
     )

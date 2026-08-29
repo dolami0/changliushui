@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>长流水 · 管线监控大屏</title>
+<style>
+:root {
+  --bg: #0b0e14;
+  --panel: #131722;
+  --panel2: #1a1f2e;
+  --border: #232a3a;
+  --text: #d5dbe8;
+  --muted: #7a869c;
+  --green: #22c55e;
+  --yellow: #eab308;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --cyan: #06b6d4;
+  --purple: #a855f7;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+  font-size: 13px;
+  padding: 16px;
+}
+h1 {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  letter-spacing: 1px;
+}
+.sub { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 14px;
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.panel h2 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.dot.green { background: var(--green); box-shadow: 0 0 8px var(--green); }
+.dot.yellow { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+.dot.red { background: var(--red); box-shadow: 0 0 8px var(--red); animation: blink 1.2s infinite; }
+@keyframes blink { 50% { opacity: 0.3; } }
+.health-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.health-row:last-child { border-bottom: none; }
+.health-row .reason { color: var(--muted); font-size: 11px; margin-left: auto; }
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 8px 0;
+}
+.stat {
+  background: var(--panel2);
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-align: center;
+}
+.stat .num {
+  font-size: 20px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.stat .lbl { color: var(--muted); font-size: 11px; margin-top: 2px; }
+.stat .num.green { color: var(--green); }
+.stat .num.yellow { color: var(--yellow); }
+.stat .num.red { color: var(--red); }
+.stat .num.blue { color: var(--cyan); }
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 12px;
+}
+.bar-row .lbl { width: 110px; color: var(--muted); flex-shrink: 0; }
+.bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--panel2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width .5s;
+}
+.bar-row .val { width: 56px; text-align: right; font-variant-numeric: tabular-nums; }
+.alert {
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 6px 0;
+  font-size: 12px;
+  color: #fca5a5;
+}
+.warn {
+  background: rgba(234, 179, 8, 0.08);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 6px 0;
+  font-size: 12px;
+  color: #fde68a;
+}
+.suggestion-list {
+  margin-top: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  grid-column: 1 / -1;
+}
+.suggestion-list h2 { font-size: 14px; margin-bottom: 8px; }
+.suggestion-list li {
+  list-style: none;
+  padding: 6px 10px;
+  border-left: 3px solid var(--yellow);
+  background: var(--panel2);
+  border-radius: 4px;
+  margin: 4px 0;
+  font-size: 12px;
+}
+.pick-item {
+  padding: 5px 8px;
+  background: var(--panel2);
+  border-radius: 6px;
+  margin: 4px 0;
+  font-size: 12px;
+}
+.pick-item .t { font-weight: 600; }
+.pick-item .m { color: var(--muted); font-size: 11px; }
+</style>
+</head>
+<body>
+<h1>长流水 · 管线监控</h1>
+<div class="sub" id="generated">加载中...</div>
+
+<div class="grid" id="grid">
+  <div class="panel">
+    <h2>调度器健康</h2>
+    <div id="health"></div>
+  </div>
+
+  <div class="panel">
+    <h2>天机峰 A（快讯）· 今日</h2>
+    <div id="tja"></div>
+    <h2 style="margin-top:12px">天机峰 B（研报）· 今日</h2>
+    <div id="tjb"></div>
+  </div>
+
+  <div class="panel">
+    <h2>望气（产业链）</h2>
+    <div id="wangqi"></div>
+  </div>
+
+  <div class="panel">
+    <h2>万业谱（预研 A/B）</h2>
+    <div id="wanyepu"></div>
+  </div>
+
+  <div class="panel">
+    <h2>主估值引擎</h2>
+    <div id="valuation"></div>
+  </div>
+
+  <div class="suggestion-list">
+    <h2>⚠️ 偏差检测 & 调优建议</h2>
+    <ul id="suggestions"></ul>
+  </div>
+
+  <div class="panel" style="grid-column: 1 / -1;">
+    <h2>📋 数据表直查</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+      <select id="tblSelect" onchange="loadTables()" style="background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px"></select>
+      <select id="catSelect" onchange="loadTables()" style="background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px">
+        <option value="">全部状态</option>
+      </select>
+      <input id="searchInput" placeholder="搜索关键词（标题/代码/名称）" onkeyup="debounceSearch()"
+        style="flex:1;min-width:180px;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:6px;padding:5px 8px">
+      <span id="tblSummary" style="color:var(--muted);font-size:12px"></span>
+    </div>
+    <div id="tblSummaryChips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px"></div>
+    <div id="tblRecords" style="max-height:480px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+function healthHTML(health) {
+  const names = {
+    tianjifeng_a: '天机峰 A（快讯）', tianjifeng_b: '天机峰 B（研报）',
+    wanyepu_a: '万业谱 A（天机）', wanyepu_b: '万业谱 B（产业链）',
+    wangqi: '望气（产业链）', main: '主估值'
+  };
+  return Object.entries(health).map(([k, v]) => {
+    const dot = v.status === 'green' ? 'green' : v.status === 'yellow' ? 'yellow' : 'red';
+    return `<div class="health-row">
+      <span class="dot ${dot}"></span>
+      <span>${names[k] || k}</span>
+      <span class="reason">${v.reason}</span>
+    </div>`;
+  }).join('');
+}
+
+function barRow(label, val, max, color) {
+  const pct = max > 0 ? Math.min(100, val / max * 100) : 0;
+  return `<div class="bar-row">
+    <span class="lbl">${label}</span>
+    <div class="bar-track"><div class="bar-fill" style="width:${pct}%;background:${color}"></div></div>
+    <span class="val">${val}</span>
+  </div>`;
+}
+
+function statHTML(num, lbl, color) {
+  return `<div class="stat"><div class="num ${color}">${num}</div><div class="lbl">${lbl}</div></div>`;
+}
+
+function tjaHTML(d) {
+  const a = d.pipeline_a || {};
+  const s = a.stats_today || {};
+  const written = s.written_l4 || 0;
+  const passedL3 = s.passed_l3 || 0;
+  const rate = a.release_rate_today ?? 0;
+  const rateColor = written > 0 ? 'green' : 'yellow';
+  let html = `<div class="stat-grid">
+    ${statHTML(s.total || 0, '处理资讯', 'blue')}
+    ${statHTML(written, '写入天机卷L4+', written > 0 ? 'green' : 'yellow')}
+    ${statHTML(passedL3, 'L3不写入', 'yellow')}
+  </div>`;
+  const reasons = s.reasons || {};
+  const maxReason = Math.max(1, ...Object.values(reasons));
+  for (const [k, v] of Object.entries(reasons)) {
+    html += barRow(k, v, maxReason, '#7a869c');
+  }
+  if (a.recent_releases?.length) {
+    html += '<div style="margin-top:8px;color:var(--muted)">最近写入天机卷:</div>';
+    for (const r of a.recent_releases) {
+      html += `<div class="pick-item"><span class="t">${r.title}</span> <span class="m">L${r.level} ${r.time}</span></div>`;
+    }
+  }
+  return html;
+}
+
+function tjbHTML(d) {
+  const b = d.pipeline_b || {};
+  const s = b.stats_today || {};
+  const written = b.written_l4_today || 0;
+  const passedL3 = b.passed_l3_today || 0;
+  let html = `<div class="stat-grid">
+    ${statHTML(s.total || 0, '处理研报', 'blue')}
+    ${statHTML(written, '写入天机卷L4+', written > 0 ? 'green' : 'yellow')}
+    ${statHTML(passedL3, 'L3不写入', 'yellow')}
+  </div>`;
+  const reasons = s.reasons || {};
+  const maxReason = Math.max(1, ...Object.values(reasons));
+  for (const [k, v] of Object.entries(reasons)) {
+    html += barRow(k, v, maxReason, '#7a869c');
+  }
+  return html;
+}
+
+function wangqiHTML(d) {
+  const rate = d.no_pick_rate_7d;
+  const rateColor = rate > 0.85 ? 'red' : rate > 0.6 ? 'yellow' : 'green';
+  let html = `<div class="stat-grid">
+    ${statHTML(d.stats_7d.done || 0, '7天完成', 'blue')}
+    ${statHTML(d.stats_7d.no_pick || 0, '无高赔率', 'yellow')}
+    ${statHTML((rate * 100).toFixed(0) + '%', '空手率', rateColor)}
+  </div>
+  <div class="stat-grid">
+    ${statHTML(d.stats_today.done || 0, '今日完成', 'blue')}
+    ${statHTML(d.stats_today.no_pick || 0, '今日空手', 'yellow')}
+    ${statHTML(d.stats_today.error || 0, '今日错误', d.stats_today.error > 0 ? 'red' : 'green')}
+  </div>`;
+  if (d.recent_picks?.length) {
+    html += '<div style="margin-top:8px;color:var(--muted)">最近有产出:</div>';
+    for (const p of d.recent_picks) {
+      html += `<div class="pick-item"><span class="t">${p.top}</span> <span class="m">${p.time} · ${p.elapsed}s</span></div>`;
+    }
+  }
+  return html;
+}
+
+function wanyepuHTML(d) {
+  const d2 = d.wanyepu || {};
+  let html = `<div class="stat-grid">
+    ${statHTML(d2.polls_a_today || 0, 'A轮询', 'blue')}
+    ${statHTML(d2.done_a_today || 0, 'A完成', 'green')}
+    ${statHTML(d2.pending_tianji || 0, 'A待处理', d2.pending_tianji > 0 ? 'yellow' : 'green')}
+  </div>
+  <div class="stat-grid">
+    ${statHTML(d2.polls_b_today || 0, 'B轮询', 'blue')}
+    ${statHTML(d2.done_b_today || 0, 'B完成', 'green')}
+    ${statHTML(d2.pending_industry || 0, 'B待处理', d2.pending_industry > 0 ? 'yellow' : 'green')}
+  </div>`;
+  if (d2.recent_done?.length) {
+    html += '<div style="margin-top:8px;color:var(--muted)">最近完成:</div>';
+    for (const j of d2.recent_done) {
+      html += `<div class="pick-item"><span class="t">${j.name}</span> <span class="m">${j.elapsed}s ${j.time}</span></div>`;
+    }
+  }
+  for (const e of d2.recent_events || []) {
+    html += `<div class="warn" style="margin-top:6px">${e.time} ${e.msg}</div>`;
+  }
+  return html;
+}
+
+function valuationHTML(d) {
+  let html = `<div class="stat-grid">
+    ${statHTML(d.reports_today || 0, '今日报告', 'blue')}
+  </div>`;
+  const reports = d.recent_reports || [];
+  if (reports.length) {
+    html += '<div style="margin-top:8px;color:var(--muted)">最近估值:</div>';
+    for (const r of reports.slice(-5)) {
+      const up = r.upside;
+      const color = up === null || up === undefined ? 'var(--muted)' : up > 0 ? 'var(--green)' : 'var(--red)';
+      const sign = up === null || up === undefined ? '' : up > 0 ? '+' : '';
+      html += `<div class="pick-item"><span class="t">${r.name || r.code}</span> <span class="m" style="color:${color}">${sign}${up ?? '—'}%</span></div>`;
+    }
+  }
+  return html;
+}
+
+function suggestionsHTML(items) {
+  if (!items?.length) return '<li style="border-color:var(--green)">✅ 所有管线运行正常，无偏差</li>';
+  return items.map(s => `<li>${s}</li>`).join('');
+}
+
+async function refresh() {
+  try {
+    const resp = await fetch('/api/pipeline/dashboard');
+    const d = await resp.json();
+    $('generated').textContent = '生成于 ' + d.generated_at.replace('T', ' ').slice(0, 19) + ' UTC · 自动刷新 60s';
+    $('health').innerHTML = healthHTML(d.health);
+    $('tja').innerHTML = tjaHTML(d.tianjifeng);
+    $('tjb').innerHTML = tjbHTML(d.tianjifeng);
+    $('wangqi').innerHTML = wangqiHTML(d.wangqi);
+    $('wanyepu').innerHTML = wanyepuHTML(d);
+    $('valuation').innerHTML = valuationHTML(d.valuation);
+    $('suggestions').innerHTML = suggestionsHTML(d.suggestions);
+  } catch (e) {
+    $('generated').textContent = '⚠️ 无法连接后端: ' + e.message;
+  }
+}
+
+// ── 数据表直查 ──
+let tblMeta = null;
+let searchTimer = null;
+
+async function initTables() {
+  try {
+    const resp = await fetch('/api/pipeline/tables/meta');
+    tblMeta = await resp.json();
+    const sel = $('tblSelect');
+    sel.innerHTML = tblMeta.tables.map(t => `<option value="${t.key}">${t.name}</option>`).join('');
+    const catSel = $('catSelect');
+    const extra = tblMeta.categories.map(c => `<option value="${c.key}">${c.label} (${c.desc})</option>`).join('');
+    catSel.innerHTML = '<option value="">全部状态</option>' + extra;
+    loadTables();
+  } catch (e) {
+    $('tblSummary').textContent = '⚠️ 无法加载表元数据';
+  }
+}
+
+function debounceSearch() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(loadTables, 500);
+}
+
+async function loadTables() {
+  const table = $('tblSelect').value;
+  const category = $('catSelect').value;
+  const search = $('searchInput').value.trim();
+  try {
+    const resp = await fetch(`/api/pipeline/tables?table=${table}&category=${category}&search=${encodeURIComponent(search)}&limit=100`);
+    const d = await resp.json();
+    if (d.error) {
+      $('tblSummary').textContent = '⚠️ ' + d.error;
+      $('tblRecords').innerHTML = '';
+      $('tblSummaryChips').innerHTML = '';
+      return;
+    }
+    $('tblSummary').textContent = `${d.table_name}: 共 ${d.total} 条 | 筛选后 ${d.filtered_total} 条 | 显示 ${d.shown} 条`;
+    // 状态分布 chips
+    const chips = Object.entries(d.summary).map(([k, v]) => {
+      const label = d.summary_labels[k] || k;
+      const colorMap = { locked: '#ef4444', problem: '#f59e0b', passed: '#22c55e', not_passed: '#7a869c', corpus_missing: '#e879f9', pending: '#3b82f6', done: '#06b6d4' };
+      return `<span style="background:var(--panel2);border:1px solid ${colorMap[k] || 'var(--border)'};color:${colorMap[k] || 'var(--text)'};border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer" onclick="quickFilter('${k}')">${label}: ${v}</span>`;
+    }).join('');
+    $('tblSummaryChips').innerHTML = chips;
+    // 记录表
+    if (!d.records.length) {
+      $('tblRecords').innerHTML = '<div style="color:var(--muted);padding:20px;text-align:center">无匹配记录</div>';
+      return;
+    }
+    const headers = [...new Set(d.records.flatMap(r => Object.keys(r)))];
+    const headHtml = headers.map(h => `<th style="position:sticky;top:0;background:var(--panel);padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">${h}</th>`).join('');
+    const bodyHtml = d.records.map(r => {
+      const cells = headers.map(h => {
+        let v = r[h] ?? '';
+        v = String(v);
+        if (v.length > 80) v = v.slice(0, 80) + '…';
+        return `<td style="padding:5px 10px;border-bottom:1px solid var(--border);font-size:11px;white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis">${v}</td>`;
+      }).join('');
+      return `<tr>${cells}</tr>`;
+    }).join('');
+    $('tblRecords').innerHTML = `<table style="width:100%;border-collapse:collapse"><thead><tr>${headHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>`;
+  } catch (e) {
+    $('tblSummary').textContent = '⚠️ 查询失败: ' + e.message;
+  }
+}
+
+function quickFilter(cat) {
+  $('catSelect').value = cat;
+  loadTables();
+}
+
+refresh();
+initTables();
+setInterval(refresh, 60000);
+</script>
+</body>
+</html>

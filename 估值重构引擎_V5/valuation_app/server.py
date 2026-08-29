@@ -1356,6 +1356,85 @@ async def api_tjf_sse(request: Request):
     )
 
 
+# ── 监控大屏 API ──────────────────
+
+@app.get("/api/pipeline/dashboard")
+async def api_pipeline_dashboard():
+    """聚合所有管线健康状态 + 偏差检测 + 调优建议"""
+    from valuation_app import dashboard_data
+    schedulers = {
+        "tianjifeng": {
+            "running": _tianjifeng._running if _tianjifeng else False,
+            "last_poll_at": _tianjifeng.last_poll_at if _tianjifeng else None,
+            "last_yanbao_at": _tianjifeng.last_yanbao_at if _tianjifeng else None,
+            "interval": _tianjifeng.interval if _tianjifeng else 600,
+            "yanbao_interval": _tianjifeng.yanbao_interval if _tianjifeng else 1800,
+        },
+        "wangqi": {
+            "running": _wangqi._running if _wangqi else False,
+            "last_poll_at": _wangqi.last_poll_at if _wangqi else None,
+            "interval": _wangqi.interval if _wangqi else 1800,
+        },
+        "wanyepu": {
+            "running": _wanyepu._running if _wanyepu else False,
+            "last_poll_a": _wanyepu.last_poll_a if _wanyepu else None,
+            "last_poll_b": _wanyepu.last_poll_b if _wanyepu else None,
+            "interval_a": _wanyepu.interval_a if _wanyepu else 1800,
+            "interval_b": _wanyepu.interval_b if _wanyepu else 2700,
+            "completed_jobs": _wanyepu.completed_jobs if _wanyepu else [],
+        },
+        "main": {
+            "running": _scheduler._running if _scheduler else False,
+            "last_poll_at": _scheduler.last_poll_at if _scheduler else None,
+            "interval": _scheduler.interval if _scheduler else 3600,
+        },
+    }
+    result = dashboard_data.build_dashboard(schedulers)
+    return JSONResponse(result)
+
+
+@app.get("/api/pipeline/dashboard/html")
+async def api_pipeline_dashboard_html():
+    """监控大屏 HTML 页面"""
+    static_file = Path(__file__).resolve().parent / "static" / "dashboard.html"
+    return FileResponse(str(static_file), media_type="text/html")
+
+
+@app.get("/api/pipeline/tables")
+async def api_pipeline_tables(request: Request):
+    """直查管线数据表。参数: table, category, search, limit"""
+    from valuation_app import dashboard_data
+    params = dict(request.query_params)
+    table_key = params.get("table", "tianjijuan")
+    category = params.get("category", "")
+    search = params.get("search", "")
+    try:
+        limit = min(int(params.get("limit", 100)), 500)
+    except ValueError:
+        limit = 100
+
+    token = _config.get("coze_sat_token", "")
+    coze = CozeClient(token=token, workspace_id=_config.get("coze_workspace_id", ""))
+    result = dashboard_data.build_tables(coze, table_key, category, search, limit)
+    return JSONResponse(result)
+
+
+@app.get("/api/pipeline/tables/meta")
+async def api_pipeline_tables_meta():
+    """表清单 + 分类标签（大屏筛选用）"""
+    from valuation_app import dashboard_data
+    return JSONResponse({
+        "tables": [
+            {"key": k, "name": v["name"], "db_id": v["db_id"]}
+            for k, v in dashboard_data.TABLE_DEFS.items()
+        ],
+        "categories": [
+            {"key": k, "label": v[0], "desc": v[1]}
+            for k, v in dashboard_data.CATEGORY_LABELS.items()
+        ],
+    })
+
+
 # ── 身外化身 CC 发送 API ──────────────────
 
 # 身外化身 agent 目录

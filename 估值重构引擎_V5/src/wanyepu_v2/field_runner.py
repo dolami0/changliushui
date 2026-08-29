@@ -79,6 +79,15 @@ def call_deepseek(system: str, user: str, max_tokens: int = 65536, temperature: 
     thinking=True: 全管线默认（探针设计 + 合并 + N4/N5/N6），Pro 模型 + 思考链产出更严谨
     model: 覆盖默认模型，默认 deepseek-v4-pro
     """
+def call_deepseek(system: str, user: str, max_tokens: int = 65536, temperature: float = 0, max_retries: int = 3, thinking: bool = True, model: str = "", reasoning_effort: str = "low") -> str:
+    """调用 DeepSeek，返回文本。失败重试 max_retries 次。
+
+    thinking=True: 全管线默认（探针设计 + 合并 + N4/N5/N6），Pro 模型 + 思考链产出更严谨
+    reasoning_effort: 思考强度 low/high/max，默认 low。
+        high 强度思考链动辄数千 token，实测会把 content 挤空/挤碎（finish=stop 但 content 为空
+        或吐出伪工具标签）。low 强度思考链大幅缩短，content 反而更长更稳，且省 token。
+    model: 覆盖默认模型，默认 deepseek-v4-pro
+    """
     use_model = model or DEEPSEEK_MODEL
     for attempt in range(max_retries):
         try:
@@ -93,6 +102,7 @@ def call_deepseek(system: str, user: str, max_tokens: int = 65536, temperature: 
             }
             if thinking:
                 payload["thinking"] = {"type": "enabled"}
+                payload["reasoning_effort"] = reasoning_effort
             r = _http_session.post(
                 DEEPSEEK_URL,
                 headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
@@ -101,7 +111,22 @@ def call_deepseek(system: str, user: str, max_tokens: int = 65536, temperature: 
             )
             data = r.json()
             if "choices" in data:
-                return data["choices"][0]["message"]["content"]
+                msg = data["choices"][0].get("message", {})
+                content = msg.get("content") or ""
+                # 无效输出检测：空串，或模型复述 system prompt 里的"使用火山联网搜索"
+                # 指令吐出伪工具标签（<...搜索...>），这两类都不能当正常报告写入
+                invalid = (not content.strip()) or ("<火山" in content and "搜索" in content)
+                if not invalid:
+                    return content
+                # content 无效 → 尝试 reasoning_content 兜底（思考链里常有实质内容）
+                reasoning = msg.get("reasoning_content") or ""
+                if reasoning.strip() and len(reasoning.strip()) >= 200 and "搜索" not in reasoning[:50]:
+                    return reasoning.strip()
+                # 服务端偶发抽风：原样重试（保留 thinking，不换模式），仍无效再抛
+                if attempt < max_retries - 1:
+                    time.sleep(2)
+                    continue
+                raise RuntimeError(f"DeepSeek 返回无效content: finish={data['choices'][0].get('finish_reason')} usage={data.get('usage')} content_len={len(content)}")
             # API 错误 → 重试
             if attempt < max_retries - 1:
                 time.sleep(2)
@@ -603,6 +628,11 @@ def merge_probes(field_name: str, probe_results: list[dict], llm_fn=None, verbos
         max_tokens=65536,
     )
 
+    # 最终防线：call_deepseek 内部已做无效检测+原样重试+reasoning兜底，
+    # 走到这里仍空说明多次重试都失败，抛异常触发外层记录重试/标记 error，绝不写空语料
+    if not (report or "").strip():
+        raise RuntimeError(f"[{FIELD_CN.get(field_name, field_name)}] 合并返回空报告（多次重试后仍空）")
+
     if verbose:
         print(f"  [{field_name}] 合并完成: {len(report)}c")
 
@@ -668,6 +698,11 @@ def run_field(
         field_name, priors, stock_name, stock_code,
         news_content, knowledge, step_one, company_profile, prompt_version, llm_fn, verbose,
     )
+
+    # 空探针保护: JSON 合法但 probes=[] 时抛异常触发整条记录重试,
+    # 避免把空报告当正常报告写入万业谱污染下游估值管线
+    if not probes:
+        raise RuntimeError(f"[{FIELD_CN.get(field_name, field_name)}] 探针设计返回空列表: {coverage[:100]}")
 
     if verbose:
         print(f"  [{field_name}] 设计{len(probes)}个探针: {coverage[:80]}")

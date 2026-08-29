@@ -36,8 +36,8 @@ PROBE_MAX = 6  # ← 投资主题/产业链建议6, 逆向建议5, 催化/推演
 # ==== API 配置 ====
 # ══════════════════════════════════════════════════════
 
-DEEPSEEK_KEY = "sk-8f02dfb2f5a44e02b7afea5e2daa5814"
-BOCHA_KEY = "sk-090c432b4f5745caa8767ae70f5b348b"
+DEEPSEEK_KEY = ""  # Coze 平台环境变量注入
+BOCHA_KEY = ""     # Coze 平台环境变量注入
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 BOCHA_URL = "https://api.bochaai.com/v1/web-search"
 
@@ -483,7 +483,7 @@ def design_probes(prior_reports, field_name):
     resp = requests.post(DEEPSEEK_URL,
         headers={"Authorization": f"Bearer {DEEPSEEK_KEY}", "Content-Type": "application/json"},
         json={"model": "deepseek-v4-flash", "temperature": 0, "max_tokens": 4096,
-              "messages": messages, "thinking": {"type": "enabled"}},
+              "messages": messages, "thinking": {"type": "enabled"}, "reasoning_effort": "low"},
         timeout=90)
 
     data = resp.json()
@@ -538,7 +538,7 @@ def run_single_probe(probe_name, probe_task, stock_info, max_searches=2):
                 headers={"Authorization": f"Bearer {DEEPSEEK_KEY}", "Content-Type": "application/json"},
                 json={"model": "deepseek-v4-flash", "temperature": 0, "max_tokens": 2048,
                       "messages": messages + [{"role": "user", "content": "搜索已达上限。立即输出4项结论。"}],
-                      "tools": None, "thinking": {"type": "enabled"}}, timeout=60)
+                      "tools": None, "thinking": {"type": "enabled"}, "reasoning_effort": "low"}, timeout=60)
             data = resp.json()
             if "choices" in data and data["choices"][0]["message"].get("content"):
                 return {"name": probe_name, "conclusion": data["choices"][0]["message"]["content"], "searches": sd, "queries": log}
@@ -547,7 +547,7 @@ def run_single_probe(probe_name, probe_task, stock_info, max_searches=2):
         resp = requests.post(DEEPSEEK_URL,
             headers={"Authorization": f"Bearer {DEEPSEEK_KEY}", "Content-Type": "application/json"},
             json={"model": "deepseek-v4-flash", "temperature": 0, "max_tokens": 4096,
-                  "messages": messages, "tools": TOOLS_DEF, "thinking": {"type": "enabled"}}, timeout=60)
+                  "messages": messages, "tools": TOOLS_DEF, "thinking": {"type": "enabled"}, "reasoning_effort": "low"}, timeout=60)
         data = resp.json()
         if "choices" not in data: break
 
@@ -595,7 +595,7 @@ def merge_probes(field_name, probe_results):
     resp = requests.post(DEEPSEEK_URL,
         headers={"Authorization": f"Bearer {DEEPSEEK_KEY}", "Content-Type": "application/json"},
         json={"model": "deepseek-v4-flash", "temperature": 0, "max_tokens": 8192,
-              "messages": messages, "thinking": {"type": "enabled"}},
+              "messages": messages, "thinking": {"type": "enabled"}, "reasoning_effort": "low"},
         timeout=120)
 
     data = resp.json()

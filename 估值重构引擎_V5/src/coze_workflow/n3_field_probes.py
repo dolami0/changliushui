@@ -23,8 +23,8 @@ import concurrent.futures
 # 配置
 # ═══════════════════════════════════════════════
 
-DEEPSEEK_KEY = "sk-8f02dfb2f5a44e02b7afea5e2daa5814"
-BOCHA_KEY = "sk-090c432b4f5745caa8767ae70f5b348b"
+DEEPSEEK_KEY = ""  # Coze 平台注入
+BOCHA_KEY = ""     # Coze 平台注入
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 BOCHA_URL = "https://api.bochaai.com/v1/web-search"
 
@@ -155,6 +155,7 @@ def run_single_probe(probe_name, probe_task, stock_info, max_searches=2):
                     ],
                     "tools": None,
                     "thinking": {"type": "enabled"},
+                    "reasoning_effort": "low",
                 },
                 timeout=60,
             )
@@ -182,6 +183,7 @@ def run_single_probe(probe_name, probe_task, stock_info, max_searches=2):
                 "messages": messages,
                 "tools": TOOLS_DEF,
                 "thinking": {"type": "enabled"},
+                "reasoning_effort": "low",
             },
             timeout=60,
         )
@@ -380,6 +382,7 @@ P0 = 一票确认或一票否决
             "max_tokens": 8192,
             "messages": messages,
             "thinking": {"type": "enabled"},
+            "reasoning_effort": "low",
         },
         timeout=120,
     )

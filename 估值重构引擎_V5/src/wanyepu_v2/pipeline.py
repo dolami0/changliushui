@@ -89,6 +89,13 @@ def _process_stock(
             print(f"[N0.3] [SKIP] 非A股主板标的({verified_code})")
         return ("skip", f"非A股主板标的({verified_code})，跳过分析")
 
+    # N0.4: 市值门禁 — 大于500亿直接跳过，避免大市值标的浪费全管线token
+    from .n04_market_cap_gate import check_market_cap_gate
+    gate = check_market_cap_gate(verified_code, verified_name, verbose=verbose)
+    if gate["skip"]:
+        return ("skip", gate["reason"])
+    total_mv_yi = gate.get("total_mv_yi", 0)
+
     t_start = time.time()
 
     # N0.5: 公司前置认知

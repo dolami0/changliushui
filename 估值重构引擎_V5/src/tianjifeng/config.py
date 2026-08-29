@@ -8,7 +8,7 @@ from env_config import DEEPSEEK_API_KEY, COZE_SAT_TOKEN, VOLC_AGENT_KEY  # noqa:
 # DeepSeek
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
 DEEPSEEK_MODEL = "deepseek-v4-flash"
-DEEPSEEK_MODEL_PRO = "deepseek-v4-pro"
+DEEPSEEK_MODEL_PRO = "deepseek-v4-flash"  # 降级为 flash（pro 涨价，筛选环节不必要）
 
 # 火山 Agent
 VOLC_URL = "https://open.feedcoopapi.com/agent_api/agent/chat/completion"

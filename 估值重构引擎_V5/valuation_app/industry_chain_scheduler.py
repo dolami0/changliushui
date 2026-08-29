@@ -130,7 +130,16 @@ class WangqiScheduler:
         return result
 
     async def _loop(self):
+        from valuation_app.offpeak import is_peak_bj, seconds_until_offpeak
         while self._running:
+            # 高峰时段（北京 9:00-12:00 / 14:00-18:00）跳过，避峰省成本
+            if is_peak_bj():
+                wait = seconds_until_offpeak()
+                self.current_poll_status = f"offpeak_wait {wait:.0f}s"
+                self.next_poll_at = (datetime.now(timezone.utc) + timedelta(seconds=wait)).isoformat()
+                await asyncio.sleep(min(wait, 1800))
+                self.last_poll_at = datetime.now(timezone.utc).isoformat()
+                continue
             try:
                 self.current_poll_status = "polling"
                 self._emit_progress({"type": "tianji_cycle", "status": "started"})

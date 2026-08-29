@@ -1,7 +1,7 @@
 """将追踪 JSON 同步到 Coze 云数据库 7645332166129287218"""
 import json, os, sys, urllib.request, urllib.error
 
-COZE_TOKEN = "sat_UxIpTimxUFwh0BGedY1yxK7YJbqrqryebdRVyt8AjducYxsH8cFkkso6Orh2RTGc"
+COZE_TOKEN = os.environ.get("COZE_SAT_TOKEN", "")
 DB_ID = "7645332166129287218"
 BASE_URL = f"https://api.coze.cn/v1/databases/{DB_ID}"
 

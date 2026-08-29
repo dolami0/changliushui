@@ -1975,7 +1975,7 @@ def _call_llm_scenario(
                 "temperature": 0.1,
                 "stream": False,
                 "thinking": {"type": "enabled"},
-                "reasoning_effort": "max",
+                "reasoning_effort": "low",
             },
             timeout=600,
         )
@@ -2443,6 +2443,7 @@ SOTP触发: {mn.get('sotp_triggered', False)}
                 "max_tokens": 40960,
                 "temperature": 0.1,
                 "thinking": {"type": "enabled"},
+                "reasoning_effort": "low",
             },
             timeout=600,
         )
