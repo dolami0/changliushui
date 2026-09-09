@@ -14,7 +14,7 @@ if not BOCHA_KEY:
 
 # DeepSeek
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
-DEEPSEEK_MODEL = "deepseek-v4-pro"  # 探针设计/合并恢复 pro（筛选已用 flash 省成本）
+DEEPSEEK_MODEL = "deepseek-v4.1-flash-expires-on-0910"  # 全管线统一(临时测试模型, 0910到期)
 
 # Kimi (Moonshot) — 已废弃,保留配置结构避免下游 import 报错
 KIMI_API_KEY = os.environ.get("KIMI_API_KEY", "")

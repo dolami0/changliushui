@@ -217,7 +217,7 @@ query要求：自由格式，不需要关键词罗列。明确告诉火山你需
                     qresp = _r.post(
                         'https://api.deepseek.com/v1/chat/completions',
                         headers={'Content-Type': 'application/json', 'Authorization': f'Bearer {self.api_key}'},
-                        json={'model': 'deepseek-v4-pro', 'temperature': 0.0, 'max_tokens': 300,
+                        json={'model': 'deepseek-v4.1-flash-expires-on-0910', 'temperature': 0.0, 'max_tokens': 300,
                               'messages': [
                                   {'role': 'system', 'content': sysprompt},
                                   {'role': 'user', 'content': '生成query'},

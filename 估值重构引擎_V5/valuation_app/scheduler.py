@@ -245,13 +245,13 @@ class Scheduler:
                 logger.error(f"处理 {rec.get('stock_code', '?')} 超时(>{rec_timeout}s)，强制中断")
                 job["status"] = "error"
                 results.append({"agent0": rec, "status": "error", "error": f"单记录超时(>{rec_timeout}s)"})
-                self._handle_failure(rec)
+                self._handle_failure(rec, error="timeout")
                 continue
             except Exception as e:
                 logger.error(f"处理 {rec.get('stock_code', '?')} 失败: {e}")
                 job["status"] = "error"
                 results.append({"agent0": rec, "status": "error", "error": str(e)})
-                self._handle_failure(rec)
+                self._handle_failure(rec, error=str(e))
                 continue
             finally:
                 _exec.shutdown(wait=False)  # 不等待卡死线程
@@ -322,7 +322,7 @@ class Scheduler:
                         logger.error(f"  → traceback已存: {_err_file.name}")
                     except Exception as _e:
                         logger.warning(f"  traceback写入失败: {_e}")
-                self._handle_failure(rec)
+                self._handle_failure(rec, error=result.get('error', ''))
 
         # 4. 跨股赔率排序
         try:
@@ -365,8 +365,12 @@ class Scheduler:
         except Exception as e:
             logger.error(f"[MARK] 补标失败(不影响结果): stock={rec.get('stock_code','?')} — {e}")
 
-    def _handle_failure(self, rec: dict):
-        """管线失败 → 按重试上限决定是否强制标记完成"""
+    def _handle_failure(self, rec: dict, error: str = ""):
+        """管线失败 → 按重试上限决定是否强制标记完成
+
+        数据类失败(E101/E102, 上游API瞬时抖动)给更多重试机会(6次),
+        因为同一只票换个时间点数据往往就正常了; 其他错误(代码bug)2次即放弃。
+        """
         rid = rec.get("id", "")
         if not rid:
             return
@@ -375,7 +379,9 @@ class Scheduler:
             self._fail_tracker_date = datetime.now().strftime("%Y%m%d")
         fails = self._fail_tracker.get(rid, 0) + 1
         self._fail_tracker[rid] = fails
-        if fails >= 2:
+        # 数据拉取失败(E101/E102)是瞬时的,每小时重试最多6次; 其余错误2次封顶
+        cap = 6 if ("E101" in error or "E102" in error) else 2
+        if fails >= cap:
             logger.warning(f"记录 {rid}({rec.get('stock_code')}) 连续失败{fails}次，强制标记完成")
             try:
                 self.coze.mark_record_complete(self.agent0_db_id, rid)
@@ -383,7 +389,7 @@ class Scheduler:
             except Exception as e:
                 logger.error(f"强制标记也失败: {rec.get('stock_code')} — {e}")
         else:
-            logger.info(f"记录 {rid} 失败 {fails}/2 次，退回 is_complete=false 等待重试")
+            logger.info(f"记录 {rid} 失败 {fails}/{cap} 次，退回 is_complete=false 等待重试")
             try:
                 self.coze.update_records(
                     self.agent0_db_id,

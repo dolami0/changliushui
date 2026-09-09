@@ -1966,7 +1966,7 @@ def _call_llm_scenario(
                 "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
             },
             json={
-                "model": "deepseek-v4-pro",
+                "model": "deepseek-v4.1-flash-expires-on-0910",
                 "messages": [
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_msg},
@@ -2007,7 +2007,7 @@ def _call_llm_scenario(
             retry_resp = get_session().post(
                 "https://api.deepseek.com/v1/chat/completions",
                 headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
-                json={"model": "deepseek-v4-pro", "messages": retry_msgs, "max_tokens": 40960, "temperature": 0.1},
+                json={"model": "deepseek-v4.1-flash-expires-on-0910", "messages": retry_msgs, "max_tokens": 40960, "temperature": 0.1},
                 timeout=600,
             )
             retry_resp.raise_for_status()
@@ -2438,7 +2438,7 @@ SOTP触发: {mn.get('sotp_triggered', False)}
             "https://api.deepseek.com/v1/chat/completions",
             headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
             json={
-                "model": "deepseek-v4-pro",
+                "model": "deepseek-v4.1-flash-expires-on-0910",
                 "messages": messages,  # ← 带完整历史，不是单条大字符串
                 "max_tokens": 40960,
                 "temperature": 0.1,
@@ -2507,7 +2507,7 @@ SOTP触发: {mn.get('sotp_triggered', False)}
             retry_resp = get_session().post(
                 "https://api.deepseek.com/v1/chat/completions",
                 headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
-                json={"model": "deepseek-v4-pro", "messages": messages, "max_tokens": 40960, "temperature": 0.1},
+                json={"model": "deepseek-v4.1-flash-expires-on-0910", "messages": messages, "max_tokens": 40960, "temperature": 0.1},
                 timeout=600,
             )
             retry_resp.raise_for_status()
@@ -2551,7 +2551,7 @@ SOTP触发: {mn.get('sotp_triggered', False)}
                 retry_resp = get_session().post(
                     "https://api.deepseek.com/v1/chat/completions",
                     headers={"Authorization": f"Bearer {DEEPSEEK_API_KEY}"},
-                    json={"model": "deepseek-v4-pro", "messages": messages, "max_tokens": 16384, "temperature": 0.3},
+                    json={"model": "deepseek-v4.1-flash-expires-on-0910", "messages": messages, "max_tokens": 16384, "temperature": 0.3},
                     timeout=600,
                 )
                 retry_resp.raise_for_status()

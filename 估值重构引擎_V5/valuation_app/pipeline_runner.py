@@ -130,13 +130,16 @@ class PipelineRunner:
             return result
 
         except Exception as e:
+            # 携带结构化 details(如 DataForgeError 的 missing/source_errors),否则日志只剩一句干巴巴的消息
+            _detail = getattr(e, "details", None)
+            _err_msg = str(e) + (f" | details={_detail}" if _detail else "")
             return {
                 "agent0": record,
                 "agent1": {},
                 "agent2": {},
                 "agent3": {},
                 "status": "error",
-                "error": str(e),
+                "error": _err_msg,
                 "traceback": traceback.format_exc(),
             }
 

@@ -401,6 +401,21 @@ def _extract_core_fields(raw_bundle: dict, stock_code: str) -> dict[str, Any]:
         if abs(fw_ocf - core_ocf) > 0.01:  # 差异>0.01亿时同步
             fields["ocf_ttm_yi"] = round(fw_ocf, 2)
 
+    # ── 必填字段的"原始响应存在性"标记 ──
+    # E101 门禁必须区分两种情况:
+    #   a) 拉取失败 → 原始字段为 None → 真缺失,应拦截
+    #   b) 拉取成功但真实值约等于0(如亏损-44万→四舍五入-0.0亿) → 合法数据,应放行
+    # _num() 会把 None 和真实 0 都抹成 0.0,信息在提取时丢失,所以在这里单独记录原始存在性
+    fields["_required_present"] = {
+        "market_cap_yi": bool(ts_mcap or q.get("market_cap")),
+        "revenue_ttm_yi": inc.get("revenue_ttm") is not None,
+        "net_profit_ttm_yi": inc.get("net_profit_ttm") is not None,
+        "total_assets_yi": bal.get("total_assets") is not None,
+        "total_equity_yi": bal.get("total_equity") is not None,
+        "pe_ttm": bool(ts_db.get("pe_ttm") or v.get("pe_ttm")),
+        "pb": bool(ts_db.get("pb") or v.get("pb")),
+    }
+
     return fields
 
 
@@ -501,16 +516,19 @@ class DataForge:
             "market_cap_yi", "revenue_ttm_yi", "net_profit_ttm_yi",
             "total_assets_yi", "total_equity_yi", "pe_ttm", "pb",
         ]
-        # 市值/营收/净资产/PE 为零或 None 均视为数据拉取失败
+        # 缺失判定基于原始响应存在性,而非提取后的数值:
+        # 真实负值/零值(如TTM净利润-44万→-0.0亿)是合法数据,只有源字段根本没返回才算拉取失败
+        present = core_pkg.fields.get("_required_present", {})
         for k in core_required:
             v = core_pkg.fields.get(k)
-            if v is None or v == 0:
+            if v is None or (not v and not present.get(k, False)):
                 core_pkg.missing_fields.append(k)
 
         if core_pkg.missing_fields:
             raise DataForgeError(
                 "E101", "core_package 关键字段缺失",
-                {"missing": core_pkg.missing_fields, "stock_code": ticker},
+                {"missing": core_pkg.missing_fields, "stock_code": ticker,
+                 "source_errors": [e for e in self._raw_bundle.get("errors", [])]},
             )
 
         core_pkg.status = "complete"

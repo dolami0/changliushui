@@ -13,7 +13,7 @@ import time
 import requests
 from datetime import datetime
 
-from .config import COZE_SAT_TOKEN, COZE_BASE, DB_TIANJIJUAN
+from .config import COZE_SAT_TOKEN, COZE_BASE, DB_TIANJIJUAN, DB_WANYEPU
 from .n0_validator import validate_stock
 from .field_runner import run_field, FIELD_CONFIGS, FIELD_CN
 from .n5_event_deduction import run_event_deduction
@@ -21,6 +21,42 @@ from .n4_future import run_future
 from .n7_writer import write_wanyepu, mark_tianji_processed, unlock_tianji
 
 DB_INDUSTRY = "7640928034144698374"
+
+# 个股级冷却去重: 同一股票 N 天内已有万业谱记录则跳过
+# 背景: 望气对不同产业事件反复锚定同一只票(如华海诚科16次/凯盛科技两次折叠屏),
+# 每次全量预研+估值 token 成本约 25min×2, 但语料高度重复
+DEDUP_COOLDOWN_DAYS = 5
+
+
+def fetch_recent_wanyepu_codes(days: int = DEDUP_COOLDOWN_DAYS) -> dict:
+    """拉取万业谱最近记录,返回 {stock_code: 最新created_at}。
+
+    created_at 是 'YYYY-MM-DD HH:MM:SS' 字符串,字典序可直接比较时间先后。
+    """
+    url = f"{COZE_BASE}/{DB_WANYEPU}/records/query"
+    payload = {
+        "page_size": 100,
+        "order_by": [{"direction": "desc", "field_name": "created_at"}],
+        "is_async": False,
+    }
+    try:
+        r = requests.post(url, headers={
+            "Authorization": f"Bearer {COZE_SAT_TOKEN}",
+            "Content-Type": "application/json",
+        }, json=payload, timeout=30)
+        items = r.json().get("data", {}).get("items", [])
+    except Exception as e:
+        print(f"[去重] 拉取万业谱失败({e}),本轮不去重")
+        return {}
+    from datetime import timedelta
+    cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+    latest = {}
+    for it in items:
+        code = str(it.get("stock_code", "") or "").strip()
+        ca = str(it.get("created_at", "") or "")
+        if code and ca >= cutoff and code not in latest:
+            latest[code] = ca
+    return latest
 
 
 # ══════════════════════════════════════════════════════
@@ -302,10 +338,27 @@ def run_tianji_pipeline(limit: int = 5, verbose: bool = True) -> list[dict]:
 
     print(f"[管线A-天机卷] 获取 {len(records)} 条待处理记录")
 
+    # 个股级冷却去重: N 天内已有万业谱记录的股票直接跳过(标记已处理,不消耗token)
+    recent_codes = fetch_recent_wanyepu_codes()
+
     results = []
     for i, record in enumerate(records):
         record_id = record.get("id", "")
         print(f"\n[管线A] [{i+1}/{len(records)}] {record.get('stock_name', '?')}({record.get('stock_code', '?')})")
+
+        code = str(record.get("stock_code", "") or "").strip()
+        if code and code in recent_codes:
+            print(f"[管线A] 冷却跳过: {code} {DEDUP_COOLDOWN_DAYS}天内已有万业谱记录({recent_codes[code]})")
+            mark_tianji_processed(record_id, verbose=verbose)
+            _write_audit_log({
+                "record_id": record_id,
+                "pipeline": "tianji",
+                "status": "cooldown_skip",
+                "stock_code": code,
+                "recent_record_at": recent_codes[code],
+                "timestamp": datetime.now().isoformat(),
+            })
+            continue
 
         if not lock_tianji(record_id):
             print(f"[管线A] 加锁失败，跳过")
@@ -409,6 +462,9 @@ def run_industry_pipeline(limit: int = 5, verbose: bool = True) -> list[dict]:
 
     print(f"[管线B-产业链] 获取 {len(records)} 条待处理记录")
 
+    # 个股级冷却去重名单
+    recent_codes = fetch_recent_wanyepu_codes()
+
     results = []
     for i, record in enumerate(records):
         record_id = record.get("id", "")
@@ -417,6 +473,21 @@ def run_industry_pipeline(limit: int = 5, verbose: bool = True) -> list[dict]:
         source_record_id = record.get("source_record_id", "")
 
         print(f"\n[管线B] [{i+1}/{len(records)}] {top_pick_name}({top_pick_code})")
+
+        # 个股级冷却去重: N 天内已有万业谱记录的股票直接跳过(标记已分析,不消耗token)
+        # 典型场景: 望气对不同产业事件反复锚定同一只票(华海诚科16次/凯盛科技两次折叠屏)
+        if top_pick_code and top_pick_code in recent_codes:
+            print(f"[管线B] 冷却跳过: {top_pick_code} {DEDUP_COOLDOWN_DAYS}天内已有万业谱记录({recent_codes[top_pick_code]})")
+            lock_industry(record_id)  # 标记已分析,防止下轮重复拉取
+            _write_audit_log({
+                "record_id": record_id,
+                "pipeline": "industry",
+                "status": "cooldown_skip",
+                "stock_code": top_pick_code,
+                "recent_record_at": recent_codes[top_pick_code],
+                "timestamp": datetime.now().isoformat(),
+            })
+            continue
 
         # 拉取关联天机卷记录
         tianji = fetch_tianji_by_source_id(source_record_id) if source_record_id else None
