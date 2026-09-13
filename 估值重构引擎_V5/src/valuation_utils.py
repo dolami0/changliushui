@@ -88,7 +88,7 @@ def call_deepseek(
     max_tokens: int = 40960,
     temperature: float = 0,
     api_key: str | None = None,
-    model: str = "deepseek-v4.1-flash-expires-on-0910",
+    model: str = "deepseek-flash",
     print_usage: bool = True,
 ) -> dict:
     """调用 DeepSeek API，返回解析后的 JSON dict。"""

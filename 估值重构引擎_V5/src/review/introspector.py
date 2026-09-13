@@ -31,7 +31,7 @@ from review.prompts import INTROSPECTOR_SYSTEM
 from review.taxonomy import QUALITY_GRADE, ERROR_TYPE, SEVERITY, AUDIT_DIMENSIONS
 
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
-INTROSPECTOR_MODEL = "deepseek-v4-flash"  # 审阅不需要深度推理，Flash 够快够便宜
+INTROSPECTOR_MODEL = "deepseek-flash"  # 审阅不需要深度推理，Flash 够快够便宜
 
 
 class Introspector:

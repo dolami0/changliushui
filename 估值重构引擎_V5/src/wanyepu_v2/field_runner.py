@@ -73,20 +73,14 @@ FIELD_CN = {
 # LLM 调用
 # ══════════════════════════════════════════════════════
 
-def call_deepseek(system: str, user: str, max_tokens: int = 65536, temperature: float = 0, max_retries: int = 3, thinking: bool = True, model: str = "") -> str:
-    """调用 DeepSeek，返回文本。失败重试 max_retries 次。
-
-    thinking=True: 全管线默认（探针设计 + 合并 + N4/N5/N6），Pro 模型 + 思考链产出更严谨
-    model: 覆盖默认模型，默认 deepseek-v4-pro
-    """
 def call_deepseek(system: str, user: str, max_tokens: int = 65536, temperature: float = 0, max_retries: int = 3, thinking: bool = True, model: str = "", reasoning_effort: str = "low") -> str:
     """调用 DeepSeek，返回文本。失败重试 max_retries 次。
 
-    thinking=True: 全管线默认（探针设计 + 合并 + N4/N5/N6），Pro 模型 + 思考链产出更严谨
+    thinking=True: 全管线默认（探针设计 + 合并 + N4/N5/N6），Flash 模型 + 思考链产出更严谨
     reasoning_effort: 思考强度 low/high/max，默认 low。
         high 强度思考链动辄数千 token，实测会把 content 挤空/挤碎（finish=stop 但 content 为空
         或吐出伪工具标签）。low 强度思考链大幅缩短，content 反而更长更稳，且省 token。
-    model: 覆盖默认模型，默认 deepseek-v4-pro
+    model: 覆盖默认模型，默认 deepseek-flash
     """
     use_model = model or DEEPSEEK_MODEL
     for attempt in range(max_retries):

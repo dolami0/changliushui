@@ -482,7 +482,7 @@ def design_probes(prior_reports, field_name):
 
     resp = requests.post(DEEPSEEK_URL,
         headers={"Authorization": f"Bearer {DEEPSEEK_KEY}", "Content-Type": "application/json"},
-        json={"model": "deepseek-v4-flash", "temperature": 0, "max_tokens": 4096,
+        json={"model": "deepseek-flash", "temperature": 0, "max_tokens": 4096,
               "messages": messages, "thinking": {"type": "enabled"}, "reasoning_effort": "low"},
         timeout=90)
 
@@ -536,7 +536,7 @@ def run_single_probe(probe_name, probe_task, stock_info, max_searches=2):
         if sd >= max_searches:
             resp = requests.post(DEEPSEEK_URL,
                 headers={"Authorization": f"Bearer {DEEPSEEK_KEY}", "Content-Type": "application/json"},
-                json={"model": "deepseek-v4-flash", "temperature": 0, "max_tokens": 2048,
+                json={"model": "deepseek-flash", "temperature": 0, "max_tokens": 2048,
                       "messages": messages + [{"role": "user", "content": "搜索已达上限。立即输出4项结论。"}],
                       "tools": None, "thinking": {"type": "enabled"}, "reasoning_effort": "low"}, timeout=60)
             data = resp.json()
@@ -546,7 +546,7 @@ def run_single_probe(probe_name, probe_task, stock_info, max_searches=2):
 
         resp = requests.post(DEEPSEEK_URL,
             headers={"Authorization": f"Bearer {DEEPSEEK_KEY}", "Content-Type": "application/json"},
-            json={"model": "deepseek-v4-flash", "temperature": 0, "max_tokens": 4096,
+            json={"model": "deepseek-flash", "temperature": 0, "max_tokens": 4096,
                   "messages": messages, "tools": TOOLS_DEF, "thinking": {"type": "enabled"}, "reasoning_effort": "low"}, timeout=60)
         data = resp.json()
         if "choices" not in data: break
@@ -594,7 +594,7 @@ def merge_probes(field_name, probe_results):
 
     resp = requests.post(DEEPSEEK_URL,
         headers={"Authorization": f"Bearer {DEEPSEEK_KEY}", "Content-Type": "application/json"},
-        json={"model": "deepseek-v4-flash", "temperature": 0, "max_tokens": 8192,
+        json={"model": "deepseek-flash", "temperature": 0, "max_tokens": 8192,
               "messages": messages, "thinking": {"type": "enabled"}, "reasoning_effort": "low"},
         timeout=120)
 

@@ -143,7 +143,7 @@ def run_single_probe(probe_name, probe_task, stock_info, max_searches=2):
                     "Content-Type": "application/json",
                 },
                 json={
-                    "model": "deepseek-v4-flash",
+                    "model": "deepseek-flash",
                     "temperature": 0,
                     "max_tokens": 2048,
                     "messages": messages
@@ -177,7 +177,7 @@ def run_single_probe(probe_name, probe_task, stock_info, max_searches=2):
                 "Content-Type": "application/json",
             },
             json={
-                "model": "deepseek-v4-flash",
+                "model": "deepseek-flash",
                 "temperature": 0,
                 "max_tokens": 4096,
                 "messages": messages,
@@ -377,7 +377,7 @@ P0 = 一票确认或一票否决
             "Content-Type": "application/json",
         },
         json={
-            "model": "deepseek-v4-flash",
+            "model": "deepseek-flash",
             "temperature": 0,
             "max_tokens": 8192,
             "messages": messages,

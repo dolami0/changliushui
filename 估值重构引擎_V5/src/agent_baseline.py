@@ -37,7 +37,7 @@ import requests
 from env_config import DEEPSEEK_API_KEY
 
 DEEPSEEK_API = "https://api.deepseek.com/chat/completions"
-BASELINE_MODEL = "deepseek-v4.1-flash-expires-on-0910"  # 需要综合推理能力，不用 Flash
+BASELINE_MODEL = "deepseek-flash"  # 需要综合推理能力，不用 Flash
 
 # ═══════════════════════════════════════
 # System Prompt

@@ -21,7 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from env_config import DEEPSEEK_API_KEY
 
 DEEPSEEK_API = "https://api.deepseek.com/chat/completions"
-FLASH_MODEL = "deepseek-v4-flash"
+FLASH_MODEL = "deepseek-flash"
 
 # ═══════════════════════════════════════
 # Prompt

@@ -24,7 +24,7 @@ import asyncio
 # ═══════════════════════════════════════
 
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
-DEEPSEEK_MODEL = "deepseek-v4-flash"
+DEEPSEEK_MODEL = "deepseek-flash"
 
 # DeepSeek key: Coze Code 节点中通过环境变量或直接硬编码
 # 部署到 Coze 时替换为实际 key

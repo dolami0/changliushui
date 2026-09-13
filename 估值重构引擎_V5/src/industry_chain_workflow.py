@@ -29,8 +29,8 @@ from agents.tools import bocha_search, TOOL_DEFINITIONS, TOOL_MAP
 # API 配置
 # ═══════════════════════════════════════
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
-DEEPSEEK_MODEL = "deepseek-v4-flash"  # 降级为 flash（pro 涨价，望气环节不必要）
-DEEPSEEK_MODEL_FAST = "deepseek-v4-flash"
+DEEPSEEK_MODEL = "deepseek-flash"  # 降级为 flash（pro 涨价，望气环节不必要）
+DEEPSEEK_MODEL_FAST = "deepseek-flash"
 BOCHA_TOOLS = [t for t in TOOL_DEFINITIONS if t["function"]["name"] in ("bocha_search", "fetch_url")]
 VOLC_URL = "https://open.feedcoopapi.com/agent_api/agent/chat/completion"
 VOLC_BOT_ID = "7640524154441156122"

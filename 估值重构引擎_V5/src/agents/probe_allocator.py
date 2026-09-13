@@ -260,7 +260,7 @@ def allocate_probes(
             "Content-Type": "application/json",
         },
         json={
-            "model": "deepseek-v4-flash",
+            "model": "deepseek-flash",
             "temperature": 0,
             "max_tokens": 4096,
             "messages": messages,

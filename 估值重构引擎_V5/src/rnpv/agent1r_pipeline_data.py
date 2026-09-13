@@ -9,7 +9,7 @@ Agent-1r 管线数据组装 (PipelineDataAssembler) — rNPV 管线 V7
 
 设计原则:
   - 提取用 Flash 模型（deepseek-chat），便宜快速
-  - 推演用 Pro 模型（deepseek-v4-pro），推理深度
+  - 推演用 Flash 模型（deepseek-flash）
   - 先搜索后提取：LLM 能同时看到 Coze 预研和 Volc 搜索结果
 """
 
@@ -62,7 +62,7 @@ def _call_volc(query: str, timeout: int = 120) -> str:
 # Flash 模型管线提取
 # ═══════════════════════════════════════
 
-FLASH_MODEL = "deepseek-v4-flash"  # 便宜快速，仅做提取不做推理
+FLASH_MODEL = "deepseek-flash"  # 便宜快速，仅做提取不做推理
 
 PIPELINE_EXTRACTION_PROMPT = """你是创新药管线数据提取助手。从以下材料中提取 **目标公司自己的** 创新药管线结构化数据。
 

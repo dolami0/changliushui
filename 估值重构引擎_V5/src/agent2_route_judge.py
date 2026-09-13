@@ -259,7 +259,7 @@ def _call_deepseek(system: str, user_message: str, max_tokens: int = 30720,
             "Authorization": f"Bearer {DEEPSEEK_API_KEY}",
         },
         json={
-            "model": "deepseek-v4.1-flash-expires-on-0910",
+            "model": "deepseek-flash",
             "messages": [
                 {"role": "system", "content": system},
                 {"role": "user", "content": user_message},

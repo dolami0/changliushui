@@ -32,7 +32,7 @@ from review.prompts import DREAM_LOOP_SYSTEM
 from review.taxonomy import ERROR_TYPE
 
 DEEPSEEK_URL = "https://api.deepseek.com/chat/completions"
-DREAM_MODEL = "deepseek-v4-flash"
+DREAM_MODEL = "deepseek-flash"
 
 # 目录
 _REVIEW_DIR = Path(__file__).resolve().parent

@@ -166,7 +166,7 @@ def _gen_volc_query(
                     "Authorization": f"Bearer {api_key}",
                 },
                 json={
-                    "model": "deepseek-v4.1-flash-expires-on-0910",
+                    "model": "deepseek-flash",
                     "temperature": 0.0,
                     "max_tokens": 300,
                     "messages": [
