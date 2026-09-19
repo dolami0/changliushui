@@ -1362,23 +1362,39 @@ async def api_tjf_sse(request: Request):
 async def api_pipeline_dashboard():
     """聚合所有管线健康状态 + 偏差检测 + 调优建议"""
     from valuation_app import dashboard_data
+    def _task_alive(task) -> bool | None:
+        """asyncio 任务是否存活（用于区分"卡在长等待"与"loop 已死"）。"""
+        if task is None:
+            return None
+        return not task.done()
+
     schedulers = {
         "tianjifeng": {
             "running": _tianjifeng._running if _tianjifeng else False,
             "last_poll_at": _tianjifeng.last_poll_at if _tianjifeng else None,
+            "next_poll_at": _tianjifeng.next_poll_at if _tianjifeng else None,
             "last_yanbao_at": _tianjifeng.last_yanbao_at if _tianjifeng else None,
+            "next_yanbao_at": _tianjifeng.next_yanbao_at if _tianjifeng else None,
+            "task_a_alive": _task_alive(_tianjifeng._task_a) if _tianjifeng else None,
+            "task_b_alive": _task_alive(_tianjifeng._task_b) if _tianjifeng else None,
             "interval": _tianjifeng.interval if _tianjifeng else 600,
             "yanbao_interval": _tianjifeng.yanbao_interval if _tianjifeng else 1800,
         },
         "wangqi": {
             "running": _wangqi._running if _wangqi else False,
             "last_poll_at": _wangqi.last_poll_at if _wangqi else None,
+            "next_poll_at": _wangqi.next_poll_at if _wangqi else None,
+            "task_alive": _task_alive(_wangqi._task) if _wangqi else None,
             "interval": _wangqi.interval if _wangqi else 1800,
         },
         "wanyepu": {
             "running": _wanyepu._running if _wanyepu else False,
             "last_poll_a": _wanyepu.last_poll_a if _wanyepu else None,
             "last_poll_b": _wanyepu.last_poll_b if _wanyepu else None,
+            "next_poll_a": _wanyepu.next_poll_a if _wanyepu else None,
+            "next_poll_b": _wanyepu.next_poll_b if _wanyepu else None,
+            "task_a_alive": _task_alive(_wanyepu._task_a) if _wanyepu else None,
+            "task_b_alive": _task_alive(_wanyepu._task_b) if _wanyepu else None,
             "interval_a": _wanyepu.interval_a if _wanyepu else 1800,
             "interval_b": _wanyepu.interval_b if _wanyepu else 2700,
             "completed_jobs": _wanyepu.completed_jobs if _wanyepu else [],
@@ -1386,6 +1402,8 @@ async def api_pipeline_dashboard():
         "main": {
             "running": _scheduler._running if _scheduler else False,
             "last_poll_at": _scheduler.last_poll_at if _scheduler else None,
+            "next_poll_at": _scheduler.next_poll_at if _scheduler else None,
+            "task_alive": _task_alive(_scheduler._task) if _scheduler else None,
             "interval": _scheduler.interval if _scheduler else 3600,
         },
     }

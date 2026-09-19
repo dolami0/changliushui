@@ -9,6 +9,8 @@ __pycache__/
 *.tgz
 .env
 .env.local
+.env.cloud
+.env.*.cloud
 tmp.json
 config.json
 .DS_Store

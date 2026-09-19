@@ -71,21 +71,41 @@ def _load_audit(days: int = 7) -> list[dict]:
     return rows
 
 
-def _health(status_running: bool, last_activity: str | None, interval_sec: int) -> dict:
-    """红黄绿健康判定。识别避峰顺延状态（调度器主动跳过高峰时段）。"""
+def _health(status_running: bool, last_activity: str | None, interval_sec: int,
+            next_poll_at: str | None = None, task_alive: bool | None = None) -> dict:
+    """红黄绿健康判定。
+
+    判定优先级（从权威信号到兜底）:
+      1. 调度器未运行 / asyncio 任务已死 → 红
+      2. 已排程未来轮询(next_poll_at 在未来) → 绿。等待属正常行为:
+         避峰顺延可产生 3.5h 长等待, 仅看"最后活动多久前"会误报红灯
+      3. 排程已过期或缺失 → 按最后活动时长兜底(黄/红)
+    """
     if not status_running:
         return {"status": "red", "reason": "调度器未运行"}
+    if task_alive is False:
+        return {"status": "red", "reason": "调度任务已停止（loop 退出）"}
+
+    now = _now_utc()
     last = _parse_ts(last_activity)
+    age_sec = (now - last).total_seconds() if last else None
+    nxt = _parse_ts(next_poll_at)
+
+    # 调度器已明确排程未来轮询 → 健康（无论等待多久）
+    if nxt is not None and nxt > now:
+        from valuation_app.offpeak import is_peak_bj
+        if age_sec is not None and age_sec > interval_sec * 2 and is_peak_bj():
+            return {"status": "green", "reason": f"避峰顺延中（{age_sec/60:.0f}min 前活动，等峰时结束）"}
+        if age_sec is not None and age_sec <= interval_sec * 2:
+            return {"status": "green", "reason": f"活跃（{age_sec/60:.0f}min 前）"}
+        wait_min = (nxt - now).total_seconds() / 60
+        return {"status": "green", "reason": f"已排程等待（{wait_min:.0f}min 后轮询）"}
+
+    # 排程已过期或缺失 → 用活动时长兜底
     if last is None:
         return {"status": "yellow", "reason": "无活动记录"}
-    age_sec = (_now_utc() - last).total_seconds()
-    # 避峰顺延：最后活动在 interval*4 内且当前处于北京高峰时段
-    if age_sec > interval_sec * 2:
-        from valuation_app.offpeak import is_peak_bj
-        if is_peak_bj() and age_sec <= interval_sec * 4:
-            return {"status": "green", "reason": f"避峰顺延中（{age_sec/60:.0f}min 前活动，等峰时结束）"}
     if age_sec > interval_sec * 4:
-        return {"status": "red", "reason": f"最后活动 {age_sec/3600:.1f}h 前（间隔 {interval_sec/60:.0f}min）"}
+        return {"status": "red", "reason": f"最后活动 {age_sec/3600:.1f}h 前，排程已过期（间隔 {interval_sec/60:.0f}min）"}
     if age_sec > interval_sec * 2:
         return {"status": "yellow", "reason": f"最后活动 {age_sec/60:.0f}min 前，可能卡顿"}
     return {"status": "green", "reason": f"活跃（{age_sec/60:.0f}min 前）"}
@@ -405,36 +425,34 @@ def build_dashboard(schedulers: dict) -> dict:
     wanyepu = build_wanyepu(schedulers)
     valuation = build_valuation(schedulers.get("main", {}))
     # 健康状态
+    _tj = schedulers.get("tianjifeng", {})
+    _wy = schedulers.get("wanyepu", {})
+    _wq = schedulers.get("wangqi", {})
+    _mn = schedulers.get("main", {})
     health = {
         "tianjifeng_a": _health(
-            schedulers.get("tianjifeng", {}).get("running", False),
-            schedulers.get("tianjifeng", {}).get("last_poll_at"),
-            schedulers.get("tianjifeng", {}).get("interval", 600),
+            _tj.get("running", False), _tj.get("last_poll_at"), _tj.get("interval", 600),
+            next_poll_at=_tj.get("next_poll_at"), task_alive=_tj.get("task_a_alive"),
         ),
         "tianjifeng_b": _health(
-            schedulers.get("tianjifeng", {}).get("running", False),
-            schedulers.get("tianjifeng", {}).get("last_yanbao_at"),
-            schedulers.get("tianjifeng", {}).get("yanbao_interval", 1800),
+            _tj.get("running", False), _tj.get("last_yanbao_at"), _tj.get("yanbao_interval", 1800),
+            next_poll_at=_tj.get("next_yanbao_at"), task_alive=_tj.get("task_b_alive"),
         ),
         "wanyepu_a": _health(
-            schedulers.get("wanyepu", {}).get("running", False),
-            schedulers.get("wanyepu", {}).get("last_poll_a"),
-            schedulers.get("wanyepu", {}).get("interval_a", 1800),
+            _wy.get("running", False), _wy.get("last_poll_a"), _wy.get("interval_a", 1800),
+            next_poll_at=_wy.get("next_poll_a"), task_alive=_wy.get("task_a_alive"),
         ),
         "wanyepu_b": _health(
-            schedulers.get("wanyepu", {}).get("running", False),
-            schedulers.get("wanyepu", {}).get("last_poll_b"),
-            schedulers.get("wanyepu", {}).get("interval_b", 2700),
+            _wy.get("running", False), _wy.get("last_poll_b"), _wy.get("interval_b", 2700),
+            next_poll_at=_wy.get("next_poll_b"), task_alive=_wy.get("task_b_alive"),
         ),
         "wangqi": _health(
-            schedulers.get("wangqi", {}).get("running", False),
-            schedulers.get("wangqi", {}).get("last_poll_at"),
-            schedulers.get("wangqi", {}).get("interval", 1800),
+            _wq.get("running", False), _wq.get("last_poll_at"), _wq.get("interval", 1800),
+            next_poll_at=_wq.get("next_poll_at"), task_alive=_wq.get("task_alive"),
         ),
         "main": _health(
-            schedulers.get("main", {}).get("running", False),
-            schedulers.get("main", {}).get("last_poll_at"),
-            schedulers.get("main", {}).get("interval", 3600),
+            _mn.get("running", False), _mn.get("last_poll_at"), _mn.get("interval", 3600),
+            next_poll_at=_mn.get("next_poll_at"), task_alive=_mn.get("task_alive"),
         ),
     }
 
