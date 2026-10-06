@@ -1,0 +1,90 @@
+{
+  "stockCode": "600356",
+  "stockName": "恒丰纸业",
+  "track_status": "active",
+  "thesis": "烟草特种纸龙头(市占率>32%)处于历史估值底部(PE 11.5x/PB 0.84x)，传统业务提供安全垫，HNB国标征求意见稿提速+海外订单放量+烟标产能投产构成三重增量，核心验证点为中烟HNB首批供应商名录(2026Q4-2027Q1)和烟标投产进度。",
+  "conviction": 45,
+  "decisionDate": "2026-07-30",
+  "decision": "有条件通过",
+  "recommendedPosition": 3,
+  "actualPosition": 0,
+  "entryCondition": "当前PE 11.5x/PB 0.84x极度折价，可小仓位布局3%；中烟HNB首批供应商名录公示后若进入则加仓至5%，若未进入则减仓至1%",
+  "entryPriceTarget": 7.5,
+  "pillars": [
+    {
+      "name": "传统烟纸龙头→安全垫",
+      "quantifiedTarget": "2026年烟草工业用纸收入≥18.5亿，毛利率≥26%",
+      "status": "on_track", "verificationDate": "2026-08-31", "lastChecked": "2026-08-04",
+      "history": [{"date": "2026-07-30", "actual": "2025年烟草工业用纸18.77亿(+0.3%)，GM 27.49%确认。H2 2025收入-10.2%减速信号关注中。", "trend": "flat"}]
+    },
+    {
+      "name": "HNB海外订单→确定性增量",
+      "quantifiedTarget": "2026年海外收入占比≥30%",
+      "status": "on_track", "verificationDate": "2026-12-31", "lastChecked": "2026-08-04",
+      "history": [{"date": "2026-07-30", "actual": "菲莫RRP系列供货确认，英美烟草HNB增量超传统。", "trend": "up"}]
+    },
+    {
+      "name": "烟标产能投产→新业务执行",
+      "quantifiedTarget": "一期40万箱投产并获首单",
+      "status": "on_track", "verificationDate": "2026-12-31", "lastChecked": "2026-08-04",
+      "history": [{"date": "2026-07-30", "actual": "3.49亿项目5月开工，一期40万箱预计2026末释放。在建工程2.67亿+1470%。", "trend": "up"}]
+    },
+    {
+      "name": "HNB国内国标→期权价值",
+      "quantifiedTarget": "中烟HNB首批供应商名录公示，进入名录",
+      "status": "on_track", "verificationDate": "2027-03-31", "lastChecked": "2026-08-04",
+      "history": [{"date": "2026-07-30", "actual": "HNB国标征求意见稿7/28发布→实质提速信号。仙鹤股份已切入PMI/BAT/JTI供应链→竞争约束。", "trend": "up"}]
+    }
+  ],
+  "risks": [
+    {"name": "HNB国标延后至2028年以后", "probability": "中", "impact": "HNB期权价值归零", "monitoring": "国家烟草专卖局/标准化管理委员会公告"},
+    {"name": "仙鹤股份获HNB全品类供应资质", "probability": "中", "impact": "恒丰国内份额下调", "monitoring": "中烟HNB供应商名录+仙鹤公告"},
+    {"name": "烟标投产延后或中标不及预期", "probability": "低-中", "impact": "新业务逻辑证伪", "monitoring": "季报中在建工程转固+烟标收入"},
+    {"name": "木浆价单季涨>20%", "probability": "低", "impact": "毛利率同比下滑>3pct", "monitoring": "Suzano/ARAUCO季度报价"},
+    {"name": "传统烟纸增速转负", "probability": "低", "impact": "安全垫变薄", "monitoring": "季度烟草工业用纸收入增速"},
+    {"name": "可比公司估值引用过时", "probability": "已发生", "impact": "民丰PE 177x/PS 1.43x(非15-20x/1.5-2.0x)", "monitoring": "已记录"}
+  ],
+  "exitConditions": [
+    "HNB国标延后至2028年及以后→减仓至1%",
+    "未进入中烟HNB首批名录→减仓至1%",
+    "烟标投产延后超6个月→减仓50%",
+    "木浆单季涨幅>20%+毛利率同比下滑>3pct→减仓50%"
+  ],
+  "catalystCalendar": [
+    {"date": "2026-08", "event": "中报：净利润+毛利率+烟标进展", "type": "财报", "impact": "H", "bull": "H1净利≥1.1亿+GM≥19%", "bear": "净利<1.0亿+GM<18%", "status": "pending", "lastChecked": "2026-08-04"},
+    {"date": "2026-09-26", "event": "HNB国标征求意见截止", "type": "行业", "impact": "M", "status": "pending", "lastChecked": "2026-08-04"},
+    {"date": "2026Q4-2027Q1", "event": "中烟HNB首批供应商名录公示", "type": "验证", "impact": "H", "status": "pending", "lastChecked": "2026-08-04"},
+    {"date": "2026-Q4", "event": "烟标一期40万箱投产", "type": "公司", "impact": "M", "status": "pending", "lastChecked": "2026-08-04"}
+  ],
+  "basePrice": 7.9,
+  "baseMarketCap": 26.0,
+  "baseDate": "2026-07-30",
+  "priceLog": [
+    {"date": "2026-07-30", "price": 7.9, "pe": 11.49, "mv_yi": 26.0, "return_pct": 0.0, "mv_change_pct": 0.0, "note": "建档基准价。"},
+    {"date": "2026-07-30", "price": 8.23, "pe": 11.92, "mv_yi": 27.1, "return_pct": 4.2, "mv_change_pct": 4.2, "pct_chg_daily": 4.2, "note": "巡检。HNB国标发布后首日+4.2%。"},
+    {"date": "2026-08-04", "price": 8.24, "pe": 11.93, "mv_yi": 27.2, "return_pct": 4.3, "mv_change_pct": 4.6, "pct_chg_daily": 0.1, "note": "巡检。10天+0.1%几乎无变动。无新催化，等待中报+中烟名录。"}
+  ],
+  "positionLog": [],
+  "valuationComparison": {
+    "date": "2026-07-30", "method": "闭卷推导→开卷对比",
+    "scenarios": {
+      "bear": {"myMcap": 28, "myReturn": 8, "upMcap": 38, "upReturn": 44.6},
+      "base": {"myMcap": 44, "myReturn": 69, "upMcap": 62, "upReturn": 136.5},
+      "bull": {"myMcap": 71, "myReturn": 173, "upMcap": 84, "upReturn": 223.8}
+    },
+    "myWeightedReturn": 77, "upWeightedReturn": 140.2,
+    "verdict": "报告三情景均偏高。核心分歧：可比PS过时、仙鹤HNB竞争约束被低估、锦丰增厚实际约2300万。"
+  },
+  "aShareTracking": {
+    "pledgeCheck": {"lastChecked": "2026-08-04", "result": "待首次月度专检"},
+    "unlockCheck": {"lastChecked": "2026-08-04", "result": "待首次月度专检"},
+    "marginCheck": {"lastChecked": "2026-08-04", "result": "待首次月度专检"},
+    "insiderTrading": {"lastChecked": "2026-08-04", "result": "未发现异常减持"}
+  },
+  "reviewSchedule": {"nextFullReview": "2026-08-31(中报)", "nextQuickCheck": "2026-08-05(明日巡检)", "lastCheck": "2026-08-04(巡检)", "patrolFrequency": "每日 22:00"},
+  "thesisLog": [
+    {"version": 1, "date": "2026-07-30T12:00:00", "thesis": "烟草特种纸龙头(市占率>32%)处于历史估值底部(PE 11.5x/PB 0.84x)，传统业务提供安全垫，HNB国标征求意见稿提速+海外订单放量+烟标产能投产构成三重增量。", "conviction": 45, "delta": "今日建档。V5 SOTP报告复核完成。4处关键偏差(可比PS/仙鹤竞争/锦丰增厚/SOTP争议)。", "trigger": "V5报告复核后建档", "narrative": "建档，估值极度折价+海外订单已验证。Conviction 45。", "verifiedAssumptions": ["烟草收入18.77亿/GM 27.5%", "Q1净利+103%", "菲莫/英美烟草合作"], "invalidatedAssumptions": ["民丰PE 15-20x→177x", "仙鹤HNB前期阶段→已切入供应链", "锦丰增厚3000万→2300万"], "newUnknowns": ["中烟名录", "烟标投产进度", "仙鹤是否获中烟资质"], "narrativeTension": "stable"},
+    {"version": 2, "date": "2026-07-30T22:00:00", "thesis": "烟草特种纸龙头(市占率>32%)处于历史估值底部(PE 11.5x/PB 0.84x)，传统业务提供安全垫，HNB国标征求意见稿提速+海外订单放量+烟标产能投产构成三重增量。", "conviction": 45, "delta": "建档首日+4.2%。估值极度折价+政策提速。", "trigger": "每日巡检", "narrative": "首日巡检，HNB国标发布后市场反应积极。", "verifiedAssumptions": [], "invalidatedAssumptions": [], "newUnknowns": [], "narrativeTension": "stable"},
+    {"version": 3, "date": "2026-08-04T22:00:00", "thesis": "烟草特种纸龙头(市占率>32%)处于历史估值底部(PE 11.5x/PB 0.84x)，传统业务提供安全垫，HNB国标征求意见稿提速+海外订单放量+烟标产能投产构成三重增量。", "conviction": 45, "delta": "10天+0.1%几乎无变动。无新催化，等中报+HNB国标反馈截止(9/26)+中烟名录(Q4-Q1)。", "trigger": "每日巡检", "narrative": "10天+0.1%。无新催化，维持等待模式。估值极度折价不担心下行。", "verifiedAssumptions": [], "invalidatedAssumptions": [], "newUnknowns": [], "narrativeTension": "stable"}
+  ]
+}

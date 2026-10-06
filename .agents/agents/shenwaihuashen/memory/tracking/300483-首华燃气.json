@@ -1,0 +1,113 @@
+{
+  "stockCode": "300483",
+  "stockName": "首华燃气",
+  "track_status": "active",
+  "thesis": "鄂东煤层气增储上产政策驱动的民营先锋，石楼西区块35亿方备案产能爬坡（当前9.26亿方利用率仅26%），核心验证点为管输提容落地时间+半年报产量进度（≥5亿方），管输瓶颈是当前最主要的分叉变量。",
+  "conviction": 42,
+  "decisionDate": "2026-07-30",
+  "decision": "有条件通过",
+  "recommendedPosition": 3,
+  "actualPosition": 0,
+  "entryCondition": "2026年半年报(8/24)产量≥5亿方(全年12亿方进度≥42%)后建仓3%；若永西连接线提容公告提前发布且合同负债回升至0.5亿以上可提前建观察仓",
+  "entryPriceTarget": 18.0,
+  "pillars": [
+    {
+      "name": "产量爬坡→收入增长",
+      "expectation": "2026年产量12亿方(+30%)，2027年15亿方，2028年18亿方(3年CAGR 25%)，驱动收入从29.4亿→57.4亿",
+      "quantifiedTarget": "2026H1产量≥5亿方(全年12亿方进度≥42%)，2026全年≥12亿方",
+      "status": "on_track",
+      "verificationDate": "2026-08-24",
+      "lastChecked": "2026-08-04",
+      "history": [
+        {"date": "2026-07-30", "actual": "2025年产量9.26亿方(+98%)，Q1 2026产量+38%确认。2026年目标12亿方。", "trend": "up"}
+      ]
+    },
+    {
+      "name": "管输提容→外输能力突破",
+      "expectation": "永西连接线从10亿方/年提容至14.6亿方/年，2026年底前完成",
+      "quantifiedTarget": "2026年12月31日前提容公告发布",
+      "status": "on_track",
+      "verificationDate": "2026-12-31",
+      "lastChecked": "2026-08-04",
+      "history": [
+        {"date": "2026-07-30", "actual": "提容改造时间表未披露，资本开支预算仅1亿以内。", "trend": "flat"}
+      ]
+    },
+    {
+      "name": "气价维持高位→利润弹性",
+      "expectation": "山西非居民气价维持3.5-3.9元/方区间",
+      "quantifiedTarget": "2026H2气价均值≥3.2元/方",
+      "status": "on_track",
+      "verificationDate": "2026-12-31",
+      "lastChecked": "2026-08-04",
+      "history": [
+        {"date": "2026-07-30", "actual": "2026年6月山西非居民气价3.65-3.9元/方确认。", "trend": "flat"}
+      ]
+    },
+    {
+      "name": "需求端验证→合同负债回升",
+      "expectation": "合同负债从0.08亿回升至1亿以上",
+      "quantifiedTarget": "2026Q2合同负债≥0.5亿",
+      "status": "off_track",
+      "verificationDate": "2026-08-24",
+      "lastChecked": "2026-08-04",
+      "history": [
+        {"date": "2026-07-30", "actual": "🔴 合同负债仅827万(0.08亿)，QoQ -42.9%。", "trend": "down"}
+      ]
+    }
+  ],
+  "risks": [
+    {"name": "管输提容滞后超6个月", "probability": "中", "impact": "10亿方/年管输上限锁死产量外输", "monitoring": "跟踪公司公告，Q4为关键窗口"},
+    {"name": "气价回落>20%", "probability": "低-中", "impact": "利润弹性大幅压缩", "monitoring": "山西非居民气价+中俄东线输气量+地缘政治"},
+    {"name": "OCF数据异常", "probability": "中", "impact": "报告OCF 38.56亿与实际17.69亿存在偏差，OCF可持续性待验证", "monitoring": "季度OCF变化"},
+    {"name": "高管减持", "probability": "低", "impact": "7/17公告5名高管拟减持19.2万股(0.05%)", "monitoring": "深交所减持公告"},
+    {"name": "应收账款恶化", "probability": "中", "impact": "QoQ +837%至2.25亿", "monitoring": "季度应收周转率"},
+    {"name": "单一区块依赖+央企竞争", "probability": "结构性", "impact": "35亿方满产后无后续产能接续", "monitoring": "公司是否获取周边区块合作开发权"}
+  ],
+  "exitConditions": [
+    "半年报产量<5亿方→触发bear证伪条件",
+    "提容滞后超6个月+气价回落>20%叠加→清仓",
+    "连续两个季度OCF为负→清仓",
+    "高管减持超公告上限→减仓50%"
+  ],
+  "catalystCalendar": [
+    {"date": "2026-08-24", "event": "2026年半年报", "type": "财报", "impact": "H", "bull": "产量≥5亿方+GM≥20%", "bear": "产量<5亿方+合同负债持续零", "sourceLevel": "L5", "status": "pending", "lastChecked": "2026-08-04"},
+    {"date": "2026-09-10", "event": "煤层气专项补贴细则发布", "type": "行业", "impact": "M", "status": "pending", "lastChecked": "2026-08-04"},
+    {"date": "2026-Q4", "event": "永西连接线提容改造完成公告", "type": "公司", "impact": "H", "status": "pending", "lastChecked": "2026-08-04"},
+    {"date": "2026-07-17", "event": "高管减持预披露公告", "type": "公司", "impact": "M", "status": "triggered", "lastChecked": "2026-08-04"},
+    {"date": "2026-07-29", "event": "股权激励计划草案发布", "type": "公司", "impact": "M", "bull": "净利润考核目标彰显信心", "status": "triggered", "lastChecked": "2026-08-04"}
+  ],
+  "basePrice": 20.11,
+  "baseMarketCap": 77.4,
+  "baseDate": "2026-07-30",
+  "priceLog": [
+    {"date": "2026-07-30", "price": 20.11, "pe": 38.38, "mv_yi": 77.4, "return_pct": 0.0, "mv_change_pct": 0.0, "note": "建档基准价。"},
+    {"date": "2026-07-30", "price": 21.53, "pe": 38.81, "mv_yi": 82.9, "return_pct": 7.1, "mv_change_pct": 7.1, "pct_chg_daily": 7.1, "note": "巡检。7/17高管减持+7/29股权激励。+7.1%。"},
+    {"date": "2026-08-04", "price": 23.29, "pe": 41.98, "mv_yi": 89.7, "return_pct": 15.8, "mv_change_pct": 15.9, "pct_chg_daily": 8.2, "note": "巡检。6天+8.2%。双激励落地获券商积极评价，减持窗口期8/10开启。半年报8/24。"}
+  ],
+  "positionLog": [],
+  "valuationComparison": {
+    "date": "2026-07-30",
+    "method": "闭卷推导→开卷对比",
+    "scenarios": {
+      "bear": {"myCAGR": 3, "myPS": 2.0, "myReturn": -22, "upCAGR": 5, "upPS": 1.7, "upReturn": -25.2},
+      "base": {"myCAGR": 20, "myPS": 3.5, "myReturn": 131, "upCAGR": 25, "upPS": 4.0, "upReturn": 196.8},
+      "bull": {"myCAGR": 28, "myPS": 4.5, "myReturn": 259, "upCAGR": 35, "upPS": 6.0, "upReturn": 460.7}
+    },
+    "myWeightedReturn": 106,
+    "upWeightedReturn": 218.4,
+    "verdict": "报告CAGR和PS均偏乐观。核心分歧：bull产量25亿方超出管输物理上限14.6亿方；可比公司PS引用过时；OCF 38.56亿数据错误。"
+  },
+  "aShareTracking": {
+    "pledgeCheck": {"lastChecked": "2026-08-04", "result": "待首次月度专检"},
+    "unlockCheck": {"lastChecked": "2026-08-04", "result": "待首次月度专检"},
+    "marginCheck": {"lastChecked": "2026-08-04", "result": "待首次月度专检"},
+    "insiderTrading": {"lastChecked": "2026-08-04", "result": "7/17公告5名高管拟减持19.2万股(0.05%)，窗口期8/10-11/9"}
+  },
+  "reviewSchedule": {"nextFullReview": "2026-08-24(半年报)", "nextQuickCheck": "2026-08-05(明日巡检)", "lastCheck": "2026-08-04(巡检)", "patrolFrequency": "每日 22:00"},
+  "thesisLog": [
+    {"version": 1, "date": "2026-07-30T12:00:00", "thesis": "鄂东煤层气增储上产政策驱动的民营先锋，石楼西区块35亿方备案产能爬坡（当前9.26亿方利用率仅26%），核心验证点为管输提容落地时间+半年报产量进度（≥5亿方），管输瓶颈是当前最主要的分叉变量。", "conviction": 42, "delta": "今日建档。V5报告全流程复核完成。核心发现：OCF数据错误、可比PS引用过时、bull产量超管输上限。", "trigger": "V5报告复核后建档", "narrative": "今日建档。Conviction 42：方向正确但执行待验证。中报(8/24)产量≥5亿方后建仓3%。", "verifiedAssumptions": ["产量9.26亿方", "Q1+38%", "气价3.65-3.9"], "invalidatedAssumptions": ["OCF 38.56亿", "蓝焰PS 2.8x"], "newUnknowns": ["半年报产量", "提容时间", "合同负债回升"], "narrativeTension": "stable"},
+    {"version": 2, "date": "2026-07-30T22:00:00", "thesis": "鄂东煤层气增储上产政策驱动的民营先锋，石楼西区块35亿方备案产能爬坡（当前9.26亿方利用率仅26%），核心验证点为管输提容落地时间+半年报产量进度（≥5亿方），管输瓶颈是当前最主要的分叉变量。", "conviction": 42, "delta": "建档首日+7.1%。7/29股权激励+7/28董事会决议→正面信号对冲减持。", "trigger": "每日巡检", "narrative": "首日巡检，股权激励+治理完善正面，等8/24中报验证。", "verifiedAssumptions": [], "invalidatedAssumptions": [], "newUnknowns": [], "narrativeTension": "stable"},
+    {"version": 3, "date": "2026-08-04T22:00:00", "thesis": "鄂东煤层气增储上产政策驱动的民营先锋，石楼西区块35亿方备案产能爬坡（当前9.26亿方利用率仅26%），核心验证点为管输提容落地时间+半年报产量进度（≥5亿方），管输瓶颈是当前最主要的分叉变量。", "conviction": 42, "delta": "6天+8.2%(21.53→23.29)。MV 82.9→89.7亿。双激励获券商积极评价，减持窗口期8/10开启。半年报8/24第一张验证牌。", "trigger": "每日巡检", "narrative": "6天+8.2%。双激励+券商研报正面，但减持窗口期卖压风险存在(量极小0.05%)。维持42。", "verifiedAssumptions": [], "invalidatedAssumptions": [], "newUnknowns": [], "narrativeTension": "stable"}
+  ]
+}
